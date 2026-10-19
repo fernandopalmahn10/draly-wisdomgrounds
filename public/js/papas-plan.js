@@ -15,7 +15,10 @@
 //   plan(raw) → { goal, sealed, words, of, complete, current, trainDone,
 //                 exps: [{ n, name, pic, sealed, count, best, open, train, hw: { of, sent }, done, state }],
 //                 tareas: { of, sent, week: { exp, of, left } | null },
-//                 sim, focus }
+//                 sim, focus, hws: [{ id, exp, sent }] }
+//   today(plan) → the KID's one next step (the home's «Hoy», the module page's bubble): the ladder of the current
+//                 experience, the homework due as a reminder (see today() below). Papás reads `focus` (the parents'
+//                 order, homework first): one file, one data source, so the two never contradict each other.
 //
 // An experience is COMPLETE when every word is marked, its practice is at the goal, and its homework is sent (every
 // homework of it, or it has none yet). `current` = the first experience not complete (null: all of them are).
@@ -77,33 +80,55 @@
     else focus = { kind: 'fine', sim: sim && sim.passed ? sim : null };
 
     return { goal, sealed, words, of: exps.length, complete: exps.filter((e) => e.done).length, current: cur ? cur.n : null,
-      exps, tareas, trainDone, sim, focus };
+      exps, tareas, trainDone, sim, focus, hws: hws.map((h) => ({ id: h.id, exp: Number(h.exp) || null, sent: !!h.sent })) };
   }
 
-  // «Hoy» on the kid's home («Mi Dralingo» part 3, his approved design 2026-10-18): the SAME decision as «Lo más
-  // importante esta semana» (focus above), in the kid's own words, so the home and Papás never disagree.
-  //   today(plan) → { kind, exp (the experience it opens, or null), step (1 Palabras · 2 Práctica · 3 Tu tarea, or null),
-  //                   dorado (true: it opens El Simulacro Dorado), id (the homework, kind 'tarea'), text }
+  // «Hoy» on the kid's home and the bubble of La Ruta Dorada's module page (js/ruta.js): ONE next step for the kid
+  // (review 2026-10-18: «one next-step rule, following the ladder»). The current experience (the first one not done;
+  // `current` above) and, inside it, its ladder: 1 Palabras → 2 Práctica → 3 Tu tarea, the first step not done. A
+  // homework due elsewhere never jumps the ladder: it rides along as a reminder line (`remind`) and the red «N por
+  // mandar» badges. Papás keeps «homework to send» first (`focus`, for the parents): the same numbers, a parent's order.
+  //   today(plan) → { kind: 'words' | 'practice' | 'tarea' | 'teacher' | 'fine', exp (the experience it opens, or null),
+  //                   step (1 · 2 · 3, or null), dorado (true: it opens El Simulacro Dorado), id (the homework, 'tarea'),
+  //                   go (the button: what it does), text, remind: null | { exp, id (the newest due), left, text } }
   function today(p) {
     const P = p && typeof p === 'object' ? p : plan({});
-    const f = P.focus || { kind: 'fine' };
     const exps = Array.isArray(P.exps) ? P.exps : [];
-    const nameOf = (n) => { const e = exps.find((x) => x.n === Number(n)); return e ? e.name : ''; };
+    const goal = Number(P.goal) || 70;
+    const cur = P.current != null ? exps.find((x) => x.n === P.current) || null : null;
     const hoy = (n) => '¡Hoy toca la Experiencia ' + n + '!';
-    if (f.kind === 'tarea') {
-      if (f.exp) return { kind: 'tarea', exp: f.exp, step: 3, dorado: false, id: f.id, text: hoy(f.exp) + ' Manda tu tarea de ' + (nameOf(f.exp) || f.name) + '.' };
-      return { kind: 'tarea', exp: null, step: 3, dorado: false, id: f.id, text: '¡Hoy toca mandar tu tarea!' };
+    let t;
+    if (cur) {
+      const wordsDone = cur.count > 0 && cur.sealed >= cur.count;
+      const practiceDone = cur.best != null && cur.best >= goal;
+      if (!wordsDone && cur.count > 0) {
+        const left = cur.count - cur.sealed;
+        t = { kind: 'words', exp: cur.n, step: 1, dorado: false, go: 'Marcar mis palabras',
+          text: hoy(cur.n) + (cur.sealed === 0 ? ' Empieza por marcar sus palabras.' : left === 1 ? ' Marca sus palabras: te falta 1.' : ' Marca sus palabras: te faltan ' + left + '.') };
+      } else if (!practiceDone) {
+        t = { kind: 'practice', exp: cur.n, step: 2, dorado: false, go: 'Practicar aquí', text: hoy(cur.n) + ' Practica ' + cur.name + ' hasta llegar al ' + goal + ' %.' };
+      } else {
+        const hw = (Array.isArray(P.hws) ? P.hws : []).find((h) => Number(h.exp) === cur.n && !h.sent) || null;
+        t = { kind: 'tarea', exp: cur.n, step: 3, dorado: false, id: hw ? hw.id : null, go: 'Mandar mi tarea', text: hoy(cur.n) + ' Manda tu tarea de ' + cur.name + '.' };
+      }
+    } else if (P.trainDone && !(P.sim && P.sim.passed)) {
+      t = { kind: 'teacher', exp: null, step: null, dorado: true, go: 'Avisar a mi profe', text: '¡Terminaste El Entrenamiento! Avísale a tu profe: ya puedes hacer El Simulacro Dorado.' };
+    } else if (P.sim && P.sim.passed) {
+      t = { kind: 'fine', exp: null, step: null, dorado: true, go: 'Ver mi libro dorado', text: '¡Aprobaste El Simulacro Dorado con ' + P.sim.percent + ' %! Repasa tu libro dorado.' };
+    } else {
+      const n = exps[0] ? exps[0].n : null;
+      t = { kind: 'fine', exp: n, step: null, dorado: false, go: 'Ver mi Ruta', text: n ? '¡Vas muy bien! Repasa cuando quieras.' : '¡Vas muy bien! Muy pronto, tu Ruta Dorada.' };
     }
-    if (f.kind === 'practice') return { kind: 'practice', exp: f.exp, step: 2, dorado: false, text: hoy(f.exp) + ' Practica ' + f.name + ' hasta llegar al ' + f.goal + ' %.' };
-    if (f.kind === 'words') {
-      const e = exps.find((x) => x.n === f.exp);
-      return { kind: 'words', exp: f.exp, step: 1, dorado: false,
-        text: hoy(f.exp) + (e && e.sealed === 0 ? ' Empieza por marcar sus palabras.' : f.left === 1 ? ' Marca sus palabras: te falta 1.' : ' Marca sus palabras: te faltan ' + f.left + '.') };
+    // the homework that waits outside today's step: one reminder line («Y tu tarea de esta semana: 1 por mandar.»)
+    const due = (Array.isArray(P.hws) ? P.hws : []).filter((h) => !h.sent && !(t.kind === 'tarea' && Number(h.exp) === t.exp));
+    t.remind = null;
+    if (due.length) {
+      const week = P.tareas && P.tareas.week ? P.tareas.week.exp : null;
+      const allWeek = week != null && due.every((h) => Number(h.exp) === week);
+      t.remind = { exp: Number(due[0].exp) || null, id: due[0].id, left: due.length,
+        text: allWeek ? 'Y tu tarea de esta semana: ' + due.length + ' por mandar.' : due.length === 1 ? 'Y tienes 1 tarea por mandar.' : 'Y tienes ' + due.length + ' tareas por mandar.' };
     }
-    if (f.kind === 'teacher') return { kind: 'teacher', exp: null, step: null, dorado: true, text: '¡Terminaste El Entrenamiento! Avísale a tu profe: ya puedes hacer El Simulacro Dorado.' };
-    if (f.sim) return { kind: 'fine', exp: null, step: null, dorado: true, text: '¡Aprobaste El Simulacro Dorado con ' + f.sim.percent + ' %! Repasa tu libro dorado.' };
-    const n = P.current || (exps[0] && exps[0].n) || null;
-    return { kind: 'fine', exp: n, step: null, dorado: false, text: n ? '¡Vas muy bien! Sigue con la Experiencia ' + n + '.' : '¡Vas muy bien! Muy pronto, tu Ruta Dorada.' };
+    return t;
   }
 
   return { plan, today };

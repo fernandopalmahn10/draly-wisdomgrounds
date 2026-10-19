@@ -577,7 +577,9 @@
   // kid looking at another module, only plays its homework (no marks, no counts)
   const mineOf = (ctx, m) => !ctx.ruta.teacher && (!ctx.ruta.student || m.slug === ctx.ruta.home);
   // a kid logged in on this phone (their home is /homework, «Mi Dralingo»)
-  const kidIn = (ctx) => !!(ctx && ctx.ruta && ctx.ruta.student && !ctx.ruta.teacher);
+  // (review 2026-10-18: never an unclaimed automatic account still wearing its placeholder name, `ruta.auto`: /homework
+  // would greet it with «¿Quién eres?», not with its home)
+  const kidIn = (ctx) => !!(ctx && ctx.ruta && ctx.ruta.student && !ctx.ruta.teacher && !ctx.ruta.auto);
   // 🔒 2026-10-18: El Simulacro Dorado in class (the server's `solo: false`: a kid never starts one from here; a teacher
   // still sees and opens everything)
   const classMode = (ctx) => ctx.ruta.solo === false && !ctx.ruta.teacher;
@@ -904,11 +906,16 @@
     // (the extra worlds, Pinyin and the exam questions, never hold the kid back from El Simulacro Dorado)
     else if (s2.state !== 'locked' && s2.state !== 'soon' && s2.next && s2.next.kind === 'world') cur = 2;
     else if (s3.state === 'fresh' || s3.state === 'started' || s3.state === 'ready') cur = 3;
+    // (review 2026-10-18) a kid's open module says what «Hoy» says on their home (js/papas-plan.js today(): the current
+    // experience's ladder), so the two pages never disagree; the step that glows follows it
+    const T = kidToday(ctx, m, pr, tw, need);
+    if (T) cur = T.step === 1 ? 1 : T.step === 2 ? 2 : T.dorado ? 3 : null;
     const steps = [s1, s2, s3];
     steps.forEach((s) => { s.current = s.n === cur; });
     // the one instruction, for this kid now
     let say;
-    if (!m.open) say = 'Escribe la clave de ' + m.name + ' para abrir tu ruta. Está en el mensaje de tu maestra.';
+    if (!m.open) say = 'Escribe la clave de ' + m.name + ' para abrir tu ruta. Está en el mensaje de tu profe.';
+    else if (T) say = T.text;
     else if (cur === 1) {
       say = s1.state === 'fresh' ? '¡Empieza aquí! Toca el 1, La Base, y marca las palabras que ya sabes.'
         : (s1.world ? '¡Sigue con el 1! Marca las palabras del mundo ' + (s1.world.short || s1.world.n) + ': te ' + ((s1.world.count - s1.world.sealed) === 1 ? 'falta 1.' : 'faltan ' + (s1.world.count - s1.world.sealed) + '.')
@@ -934,7 +941,27 @@
         : 'Practica cada mundo con ' + need + ' % o más y se abre el 3, El Simulacro Dorado.';
     } else if (s3.state === 'done') say = '¡Terminaste tu ruta! Repasa tus errores en el libro dorado.';
     else say = '¡Muy bien! Repasa cuando quieras.';
-    return { steps, say, st, anon, cb, pr, tw, cur, teacher: !!ctx.ruta.teacher, msg: s3.cls ? teacherMsg(ctx, m) : '' };
+    return { steps, say, today: T, st, anon, cb, pr, tw, cur, teacher: !!ctx.ruta.teacher, msg: s3.cls ? teacherMsg(ctx, m) : '' };
+  }
+  // the kid's one next step on this module, from this page's own numbers (its seals, its practice, this phone's homework
+  // marks): the SAME rule as «Hoy» on /homework (js/papas-plan.js today()). null: a teacher, a locked module, no seals
+  // to read, or the plan file missing (the page's own ladder lines then)
+  function kidToday(ctx, m, pr, tw, need) {
+    const Plan = window.DralyPapasPlan;
+    if (!Plan || !Plan.today || ctx.ruta.teacher || !m.open || !pr || !pr.worlds.length) return null;
+    const names = {};
+    (Array.isArray(m.exps) ? m.exps : []).forEach((e) => { names[Number(e.n)] = e.name; });
+    const marks = tMarksFor(ctx.ruta, m.tareas);
+    const raw = {
+      pct: need, words: pr.words,
+      worlds: pr.worlds.map((w) => {
+        const t = tw.find((x) => x.kind === 'world' && x.n === w.n);
+        return { n: w.n, name: names[w.n] || w.short || 'Experiencia ' + w.n, count: w.count, sealed: w.sealed, best: t ? t.best : null, open: !!(t && t.open) };
+      }),
+      hws: ctx.homeworksOf(m.slug).map((h) => ({ id: h.id, exp: h.exp, round: h.round, title: h.title, sent: !!(marks[h.id] && marks[h.id].s) })),
+      sim: m.simLast || null,
+    };
+    try { return Plan.today(Plan.plan(raw)); } catch (_) { return null; }
   }
 
   // one step card (the design's picture card)
@@ -1200,7 +1227,7 @@
       '<a class="rp-hw-open" href="/audios/' + esc(h.id) + esc(link || '') + '" data-nav>' +
         '<img class="rp-hw-pic" src="' + esc(pic) + '" alt="" width="200" height="200" loading="lazy" decoding="async"' +
           (h.thumb && pic !== h.thumb ? ' data-alt="' + esc(h.thumb) + '"' : '') + '>' +
-        '<span class="rp-hw-kicker">Tarea · Ronda ' + (Number(h.round) || 1) + '</span>' +
+        '<span class="rp-hw-kicker">Tarea ' + (Number(h.round) || 1) + '</span>' +
         '<h4 class="rp-hw-title">' + esc(h.title) + '</h4>' +
         (state === 'other' ? '' : '<span class="rp-hw-state" data-state>' + stateTag(state === 'preview' ? 'new' : state) + '</span>') +
       '</a>' +
@@ -1357,8 +1384,11 @@
         (hws.length && mine ? '<a class="rp-hero-tareas" href="#tareas"' + (toSend ? '' : ' hidden') + '>Tareas: ' + toSend + ' por mandar</a>' : '') + '</div>' +
         '<p class="rp-hero-sub">' + esc(facts || (FAMILY_SUB[m.family] || '')) + '</p>' +
         '<p class="rp-say" id="rp-say">' + esc(L.say) +
-          // (a phone: the current step may be further down; one tap brings it up)
-          (L.cur > 1 ? '<a class="rp-say-go" href="#paso-' + L.cur + '">Ver el paso ' + L.cur + I.down + '</a>' : '') + '</p></div>' +
+          // (a phone: the current step may be further down; one tap brings it up; the homework today's step asks for, or
+          // the one due (the home's reminder line), is in «Tus tareas»)
+          (L.today && L.today.kind === 'tarea' && hws.length ? '<a class="rp-say-go" href="#tareas">Ver mi tarea' + I.down + '</a>'
+            : L.cur > 1 ? '<a class="rp-say-go" href="#paso-' + L.cur + '">Ver el paso ' + L.cur + I.down + '</a>' : '') +
+          (L.today && L.today.remind && hws.length && mine ? '<a class="rp-say-go rp-say-rem" href="#tareas">' + esc(L.today.remind.text) + '</a>' : '') + '</p></div>' +
       '<img class="rp-hero-dragon" src="/assets/dralingo/point.webp" alt="Dralingo señala el paso que toca" width="332" height="480" decoding="async" fetchpriority="high">' +
       '</section>';
     const ladder = '<h2 class="rp-ladder-t">Tu camino, paso a paso</h2>' +

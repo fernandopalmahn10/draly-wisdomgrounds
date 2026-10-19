@@ -6,24 +6,30 @@
 //   the band     the kid's avatar (→ Mi perfil), «¡Hola, <nombre>!», «N días seguidos» (a day counts with a real step:
 //                core/student-records.js streakOf) and the level, «Papás» (part 2), «Mi perfil»
 //   «Hoy»        the current experience's scene, Dralingo pointing and ONE direct instruction from js/papas-plan.js
-//                today(): the SAME decision as Papás' «Lo más importante esta semana» (a homework to send → practice to
-//                the goal → words to mark → tell the teacher). «Empezar aquí» opens that experience at its next step.
-//                Below it, «De tu profe»: the teacher's tareas of no experience (custom tareas).
+//                today() (review 2026-10-18: the current experience = the first one not done, and inside it the ladder
+//                1 Palabras → 2 Práctica → 3 Tu tarea; a homework due elsewhere is a reminder line + the red badges;
+//                Papás reads the same plan in a parent's order, homework first; La Ruta Dorada's module page says the
+//                same, js/ruta.js). Its button names what it does («Marcar mis palabras», «Practicar aquí», «Mandar mi
+//                tarea», «Avisar a mi profe», «Ver mi libro dorado») and opens that experience at that step. Right
+//                under it, one line «De tu profe»: the teacher's tareas of no experience (custom tareas).
 //   La Ruta      the level's experiences as a path of scene cards (8 for New HSK 1 and HSK 1, 6 for YCT 1): number, word
-//                sticker, three little bars (palabras · práctica · tarea), done = green ✓, today's glows gold with
-//                «¡Empieza aquí!», the rest calm; it ends at El Simulacro Dorado («En clase, con tu profe»). A laptop
+//                sticker, three little bars (palabras · práctica · tarea; a dotted third = no homework yet, YCT 1 has
+//                two), done = green ✓, today's glows gold with «¡Empieza aquí!», the rest calm; «N de M listas»; it ends
+//                at El Simulacro Dorado (✓ «Aprobado» once passed, «Avisa a tu profe» when ready). A laptop
 //                (≥ 1000 px) shows it as a grid with the chosen experience beside it; a phone as a zig-zag whose cards open
 //                the experience's own page.
 //   experience   1 Palabras (its world of La Base: seals «N de M marcadas», a few word pictures, the base at #mundo-N)
-//                → 2 Práctica (its world of El Entrenamiento, best % vs the goal, «Practicar aquí»; «De tu profe»: the
-//                teacher's tareas of THIS experience: YCT 1's game rounds of the world, HSK 1's EXP sentence tarea and its
-//                Sim-Trainer tiers) → 3 Tu tarea (its homework audios: «Escuchar», «¡Ya la mandé!», «Deshacer», the SAME
-//                code as La Ruta Dorada's «Tus tareas», js/ruta.js Ruta.hwCards; Aileen's line in voseo). The whole
-//                experience done: Aileen and Dralingo celebrate.
-//   El Simulacro Dorado   class mode (the teacher runs it with a PIN): locked until El Entrenamiento is done, then
-//                «Avisarle a mi profe» (WhatsApp / copy). It also holds the simulations taken in class with their libro
-//                dorado, the exam's practice rounds («Simulacro del examen»), «Mis exámenes» and «Exámenes de lectura»
-//                with «Ver mis errores».
+//                → 2 Práctica (its world of El Entrenamiento, best % vs the goal, «Practicar aquí») → 3 Tu tarea (its
+//                homework audios: «Escuchar», «¡Ya la mandé!», «Deshacer», the SAME code as La Ruta Dorada's «Tus
+//                tareas», js/ruta.js Ruta.hwCards; Aileen's line in voseo; none in a level with no homework audio).
+//                Each number once, in its circle; a step that can't open yet = a lock and one line, no button. After
+//                the steps, «Preguntas de tu profe»: the teacher's tareas of THIS experience (YCT 1's game rounds of the
+//                world, HSK 1's sentence tarea and its «Preguntas del simulacro»). Everything done and nothing new from
+//                the teacher: Aileen and Dralingo celebrate.
+//   El Simulacro Dorado   class mode (the teacher runs it with a PIN): ✓ «Aprobado», or «¡Ya estás listo!» +
+//                «Avisar a mi profe» (WhatsApp / copy); «Tus simulacros» (each class simulation, its latest try and its
+//                libro dorado); ONE folder «De tu profe · Practica el examen» (Simulacro del examen, the teacher's
+//                Simulacro rounds, HSK 1's reading tests with «Ver mis errores»); how it opens, under them.
 //   Mensajes · Mis oraciones · Desafío del día («Muy pronto», DESAFIO_LIVE = false keeps the old daily challenge)
 //                tabs at the bottom on a phone, a dock under the path on a laptop.
 // Views by the address's hash (a real link everywhere, never history): '' · #exp-N · #dorado · #mensajes · #oraciones ·
@@ -69,6 +75,7 @@
     'escape/fuente/bg-s.webp': 'escape/fuente/bg.webp', 'escape/muralla/bg-s.webp': 'escape/muralla/bg.webp', 'escape/pista/bg-s.webp': 'escape/pista/bg.webp',
     'scenes/shanghai-s.webp': 'paint/shanghai/bg.webp', 'scenes/templo-s.webp': 'trapdoor/templo/bg.webp', 'scenes/luna-s.webp': 'trapdoor/luna/bg.webp',
     'scenes/rio-s.webp': 'paint/rio/bg.webp', 'scenes/dubai-s.webp': 'paint/dubai/bg.webp',
+    'scenes/deportes-s.webp': 'scenes/deportes.webp', 'scenes/magia-s.webp': 'scenes/magia.webp', 'scenes/espejo-s.webp': 'scenes/espejo.webp', 'scenes/numeros-s.webp': 'scenes/numeros.webp',
   };
   const sceneOf = (slug, n) => (window.DralyPapas && window.DralyPapas.sceneOf ? window.DralyPapas.sceneOf(slug, n) : A + 'escape/jardin/bg-s.webp');
   const bigOf = (src) => { const k = String(src || '').replace(A, ''); return BIG[k] ? A + BIG[k] : src; };
@@ -111,6 +118,8 @@
   // Sim-Trainer tier of EXPn), El Simulacro Dorado (the exam's practice rounds, the reading tests), or «De tu profe»
   // under «Hoy» (a custom tarea, anything of no experience). Nothing the old folders showed is left out.
   const PASS = 80;
+  // a tarea's name as a parent reads it: no «EXP1 ·» code, no emoji or symbol in front
+  const plainTitle = (t) => String(t || '').replace(/^[^0-9A-Za-zÀ-ÿ¡¿«]+/, '').replace(/^EXP\s*\d+\s*[·:.-]\s*/i, '').trim();
   function mapTareas(d, s) {
     const out = { byExp: {}, dorado: [], loose: [], readings: [] };
     if (!s) return out;
@@ -121,7 +130,11 @@
     if (r && Array.isArray(r.exps) && r.exps.some((e) => e.world)) r.exps.forEach((e) => { if (e.world) worldN[e.world] = Number(e.n); });
     else if (Array.isArray(s.folders)) s.folders.filter((f) => f && f.id !== 'simulacro' && f.id !== 'pinyin').forEach((f, i) => { worldN[f.id] = i + 1; });
     const subs = Array.isArray(s.submissions) ? s.submissions : [];
-    const push = (n, it) => (out.byExp[n] || (out.byExp[n] = [])).push(it);
+    // (review 2026-10-18) an «EXPn» above the level's experiences (a typo, another level's tarea) goes to «De tu profe»
+    // under «Hoy», never to a bucket nobody draws
+    const maxN = r && Array.isArray(r.exps) && r.exps.length ? r.exps.length
+      : Array.isArray(s.folders) ? s.folders.filter((f) => f && f.id !== 'simulacro' && f.id !== 'pinyin').length : 0;
+    const push = (n, it) => { if (maxN && (n < 1 || n > maxN)) { out.loose.push(it); return; } (out.byExp[n] || (out.byExp[n] = [])).push(it); };
     (Array.isArray(s.assignments) ? s.assignments : []).forEach((a, k) => {
       if (!a || !a.id) return;
       const att = subs.filter((x) => x.assignmentId === a.id);
@@ -130,7 +143,8 @@
       const pct = att.length ? Math.round(Math.max.apply(null, att.map((x) => (Number(x.score) / tot(x)) * 100))) : null;
       const lab = String(a.expLabel || '');
       const quiz = a.type === 'pack-quiz';
-      const title = String(a.title || 'Tarea').replace(/^EXP\s*\d+\s*·\s*/i, '');
+      // (review 2026-10-18: words a parent can read: never «EXP1» or an emoji in front)
+      const title = plainTitle(a.title) || 'Tarea';
       const it = { kind: 'asg', id: a.id, order: k, type: a.type || 'sentence-building',
         title: quiz && lab !== 'simulacro' ? title.replace(/^.+? · /, '') : title,
         sub: quiz ? a.itemCount + ' preguntas' : a.type === 'word-sack' ? 'Bolsa de palabras' : a.itemCount + ' oraciones',
@@ -152,8 +166,10 @@
           if (!m || !(Number(row[exp]) > 0)) return;
           const id = 'trainer-t' + tier.tier + '-' + exp;
           const best = subs.filter((x) => x.assignmentId === id).reduce((b, x) => Math.max(b, Number(x.score) || 0), -1);
+          // (review 2026-10-18: «Preguntas del simulacro · Palabras y audio», never «Tier 1» or «Simulación»)
           push(Number(m[1]), { kind: 'trainer', id, tier: tier.tier, exp, order: 1000 + Number(tier.tier),
-            title: 'Entrenamiento de Simulación · ' + String(tier.title || 'Nivel ' + tier.tier), sub: row[exp] + ' preguntas del examen',
+            title: 'Preguntas del simulacro · ' + (plainTitle(String(tier.title || '').replace(/^\s*tier\s*\d+\s*[·:.-]?\s*/i, '')) || 'Parte ' + tier.tier),
+            sub: row[exp] + ' preguntas',
             status: best < 0 ? 'new' : best >= passPct ? 'done' : 'retry', pct: best < 0 ? null : best, tried: best >= 0 });
         });
       });
@@ -163,7 +179,7 @@
       const a = c && c.a;
       if (!a || !a.id) return;
       const pct = c.best && c.best.total ? Math.round((Number(c.best.score) / Number(c.best.total)) * 100) : null;
-      out.loose.push({ kind: 'custom', id: a.id, order: -1, title: a.title || 'Tarea especial', sub: (a.itemCount || 0) + ' oraciones',
+      out.loose.push({ kind: 'custom', id: a.id, order: -1, title: plainTitle(a.title) || 'Tarea especial', sub: (a.itemCount || 0) + ' oraciones',
         status: c.status === 'done' ? 'done' : c.status === 'pending' ? 'retry' : 'new', pct, tried: !!c.best });
     });
     out.readings = (Array.isArray(s.readings) ? s.readings : []).filter((x) => x && x.storyId);
@@ -200,24 +216,35 @@
       const order = [['words', 1], ['practice', 2]].concat(hws.length ? [['tarea', 3]] : []);
       const first = order.find((o) => bars[o[0]] !== 'done');
       const next = t && !t.dorado && t.exp === e.n && t.step ? t.step : (first ? first[1] : 0);
+      const teacher = tareas.byExp[e.n] || [];
       return { n: e.n, name: e.name, pic: x.pic || e.pic || '', peek: Array.isArray(x.peek) ? x.peek : [], scene: sceneOf(slug, e.n),
         sealed: e.sealed, count: e.count, best: e.best, open: !!e.open, train: e.train || null, hws, bars, next,
         left: hws.filter((h) => !(mk[h.id] && mk[h.id].s)).length, done: !!e.done,
         today: !!(t && !t.dorado && t.exp === e.n), started: bars.words !== 'none' || bars.practice !== 'none' || bars.tarea === 'half' || bars.tarea === 'done',
-        teacher: tareas.byExp[e.n] || [] };
+        teacher, teacherNew: teacher.filter((x) => x.status !== 'done').length };
     });
     if (t && !t.dorado && !exps.some((e) => e.today)) { const c = exps.find((e) => e.n === p.current); if (c) c.today = true; }
     const open = r.open !== false;
-    // «Hoy»: today() (the same decision as Papás); a level this phone can't open yet asks for its key first
-    let hoy = null;
-    if (!open) hoy = { kind: 'key', text: 'Escribe la clave de ' + levelName + ' para abrir tu Ruta Dorada.', href: r.key || '', exp: null, step: 0, dorado: false };
-    else if (t) hoy = Object.assign({}, t, t.kind === 'tarea' && !t.exp && t.id ? { href: '/audios/' + t.id + '?from=homework' } : {});
+    const books = Array.isArray(r.books) ? r.books : [];
     const teacherReady = !!(r.dorado && r.dorado.teacher);
+    const ready = !!(p.trainDone || teacherReady);
+    const passed = !!(p.sim && p.sim.passed);
+    // «Hoy»: today() (the kid's ladder; Papás reads the same plan); its button says what it does; a level this phone can't
+    // open yet asks for its key first
+    let hoy = null;
+    if (!open) hoy = { kind: 'key', text: 'Escribe la clave de ' + levelName + ' para abrir tu Ruta Dorada.', href: r.key || '', go: 'Escribir la clave', exp: null, step: 0, dorado: false, remind: null };
+    else if (t) {
+      hoy = Object.assign({}, t);
+      // («Ver mi libro dorado» opens the book of the simulation it names)
+      if (t.kind === 'fine' && t.dorado && p.sim) { const b = books.find((x) => x.n === p.sim.n && x.book); if (b) hoy.href = b.book; }
+      if (t.kind === 'teacher') hoy.wa = true;
+    }
     return Object.assign(base0, {
       ruta: true, slug, name: r.name || levelName, open, key: r.key || '', route: r.route || '/audios/' + slug, base: r.base || null,
       plan: p, today: t, hoy, exps, doneN: exps.filter((e) => e.done).length, goal: p.goal, sim: p.sim,
-      dorado: { ready: !!(p.trainDone || teacherReady), passed: !!(p.sim && p.sim.passed), glow: !!(t && t.dorado), practiced: exps.filter((e) => e.bars.practice === 'done').length },
-      books: Array.isArray(r.books) ? r.books : [], extra: r.extra || {}, hws: hwsAll, marks: mk, anyHw: hwsAll.length > 0,
+      // El Simulacro Dorado: passed (✓ «Aprobado»), ready (El Entrenamiento done: «Avisa a tu profe»), or on its way
+      dorado: { ready, passed, tell: ready && !passed, practiced: exps.filter((e) => e.bars.practice === 'done').length },
+      books, extra: r.extra || {}, hws: hwsAll, marks: mk, anyHw: hwsAll.length > 0,
     });
   }
 
@@ -248,7 +275,11 @@
     if (!s.code) return Promise.resolve();
     if (!force && D && D.__code === s.code && Date.now() - loadedAt < 15000) return Promise.resolve();
     const seq = ++loadSeq;
-    const url = '/api/homework/home?accessCode=' + encodeURIComponent(s.accessCode || '') + '&studentCode=' + encodeURIComponent(s.code);
+    // (review 2026-10-18: the phone's time zone: «N días seguidos» on the kid's own calendar, never UTC)
+    let tz = '';
+    try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (_) { tz = ''; }
+    const url = '/api/homework/home?accessCode=' + encodeURIComponent(s.accessCode || '') + '&studentCode=' + encodeURIComponent(s.code) +
+      (tz ? '&tz=' + encodeURIComponent(tz) : '');
     return fetch(url, { credentials: 'same-origin', cache: 'no-store' })
       .then((r) => r.json().catch(() => null), () => null)
       .then((d) => {
@@ -260,8 +291,15 @@
           ctxR = ctxOf(d);
           failed = false;
         } else failed = !D;
-        if (H && H.screen() === 'list') draw();
+        if (H && H.screen() === 'list') redraw();
       });
+  }
+  // a fresh answer, a new message, a tarea handed in: draw again, except over a homework audio that is playing (review
+  // 2026-10-18: load() → draw() stopped it mid-sentence): then only the numbers move (soft)
+  function redraw() {
+    const p = $('au-player');
+    if (p && !p.paused && cards) { soft(); return; }
+    draw();
   }
 
   // ═══════════════════════════════════════════════════════════════════
@@ -304,48 +342,66 @@
   }
 
   // ── «Hoy» ──
+  // (review 2026-10-18) the button names what it does («Marcar mis palabras», «Practicar aquí», «Mandar mi tarea»,
+  // «Avisar a mi profe», «Ver mi libro dorado»); a homework due outside today's step rides along as one reminder line
+  function waHref() { return 'https://wa.me/?text=' + encodeURIComponent(teacherMsg()); }
   function hoyHtml() {
     const h = M.hoy;
     const e = h && h.exp ? M.exps.find((x) => x.n === h.exp) : null;
     const small = h && h.dorado ? ART.dubaiS : e ? e.scene : (M.exps[0] ? M.exps[0].scene : ART.dubaiS);
-    const kicker = e ? 'Hoy · Experiencia ' + e.n : h && h.dorado ? 'Hoy · El Simulacro Dorado' : 'Hoy';
-    const btn = !h ? '' : h.href ? '<a class="md-go" href="' + esc(h.href) + '"' + (h.kind === 'key' ? '' : ' data-out') + '><span>' + (h.kind === 'key' ? 'Escribir la clave' : 'Empezar aquí') + '</span>' + I.go + '</a>'
-      : '<button type="button" class="md-go" data-act="today"><span>Empezar aquí</span>' + I.go + '</button>';
+    const kicker = e && h.step ? 'Hoy · Experiencia ' + e.n : h && h.dorado ? 'Hoy · El Simulacro Dorado' : 'Hoy';
+    const label = h ? h.go || 'Empezar aquí' : '';
+    let btn = '';
+    if (h && h.kind === 'key') btn = '<a class="md-go" href="' + esc(h.href) + '"><span>' + esc(label) + '</span>' + I.go + '</a>';
+    else if (h && h.wa) btn = '<a class="md-go is-wa" href="' + esc(waHref()) + '" target="_blank" rel="noopener">' + I.wa + '<span>' + esc(label) + '</span></a>';
+    else if (h && h.href) btn = '<a class="md-go" href="' + esc(h.href) + '" data-out><span>' + esc(label) + '</span>' + I.go + '</a>';
+    else if (h) btn = '<button type="button" class="md-go" data-act="today"><span>' + esc(label) + '</span>' + I.go + '</button>';
+    // (a homework of no experience opens its own audio page)
+    const rem = !h || !h.remind ? ''
+      : h.remind.exp ? '<button type="button" class="md-hoy-rem" data-act="remind" data-exp="' + esc(h.remind.exp) + '"><span id="md-hoy-rem">' + esc(h.remind.text) + '</span>' + I.go + '</button>'
+        : h.remind.id ? '<a class="md-hoy-rem" href="/audios/' + esc(h.remind.id) + '?from=homework" data-out><span id="md-hoy-rem">' + esc(h.remind.text) + '</span>' + I.go + '</a>' : '';
     // (the big scene only on a laptop: 30 phones in a class each take the small one)
     return '<section class="md-hoy" aria-labelledby="md-hoy-k">' +
       '<picture><source media="(min-width: 1000px)" srcset="' + esc(bigOf(small)) + '">' +
         '<img class="md-hoy-bg" src="' + esc(small) + '" alt="" decoding="async" fetchpriority="high"></picture>' +
       '<span class="md-hoy-shade" aria-hidden="true"></span>' +
       '<div class="md-hoy-in"><p class="md-hoy-k" id="md-hoy-k">' + esc(kicker) + '</p>' +
-        '<p class="md-hoy-t" id="md-hoy-t">' + esc(h ? h.text : '') + '</p>' + btn + '</div>' +
+        '<p class="md-hoy-t" id="md-hoy-t">' + esc(h ? h.text : '') + '</p><div class="md-hoy-acts">' + btn + rem + '</div></div>' +
       '<img class="md-hoy-dr" src="' + ART.point + '" alt="Dralingo señala lo que toca hoy" width="332" height="480" decoding="async" fetchpriority="high">' +
       '</section>';
   }
-  // a teacher's tarea («De tu profe»): its name, its mark (Nueva / Otra vez / ✓ done = green), its button, «Ver mis errores»
-  function tpRow(it) {
-    const chip = it.status === 'done' ? '<span class="md-tp-chip is-done">' + I.check + (it.pct != null ? it.pct + ' %' : 'Hecha') + '</span>'
-      : it.status === 'retry' ? '<span class="md-tp-chip is-retry">' + (it.pct != null ? it.pct + ' %' : 'Otra vez') + '</span>'
-        : '<span class="md-tp-chip is-new">Nueva</span>';
+  // a teacher's tarea: its name, its mark (Nueva / Otra vez / ✓ done = green), its button, «Ver mis errores»
+  function tpGo(it) {
     const label = it.status === 'done' ? 'Otra vez' : it.status === 'retry' ? 'Seguir' : 'Hacer';
-    const go = it.kind === 'trainer'
+    return it.kind === 'trainer'
       ? '<button type="button" class="md-tp-go" data-act="trainer" data-tier="' + esc(it.tier) + '" data-exp="' + esc(it.exp) + '">' + label + '</button>'
       : '<button type="button" class="md-tp-go" data-assignment-id="' + esc(it.id) + '">' + label + '</button>';
-    const rev = it.kind === 'asg' && it.tried ? '<button type="button" class="md-tp-rev" data-act="review" data-id="' + esc(it.id) + '" data-title="' + esc(it.title) + '">Ver mis errores</button>' : '';
-    return '<li class="md-tp is-' + it.status + '"><span class="md-tp-t"><b>' + esc(it.title) + '</b><small>' + esc(it.sub) + '</small></span>' + chip +
-      '<span class="md-tp-acts">' + go + rev + '</span></li>';
   }
-  function profeHtml() {
+  const tpChip = (it) => (it.status === 'done' ? '<span class="md-tp-chip is-done">' + I.check + (it.pct != null ? it.pct + ' %' : 'Hecha') + '</span>'
+    : it.status === 'retry' ? '<span class="md-tp-chip is-retry">' + (it.pct != null ? it.pct + ' %' : 'Otra vez') + '</span>'
+      : '<span class="md-tp-chip is-new">Nueva</span>');
+  function tpRow(it) {
+    const rev = it.kind === 'asg' && it.tried ? '<button type="button" class="md-tp-rev" data-act="review" data-id="' + esc(it.id) + '" data-title="' + esc(it.title) + '">Ver mis errores</button>' : '';
+    return '<li class="md-tp is-' + it.status + '"><span class="md-tp-t"><b>' + esc(it.title) + '</b><small>' + esc(it.sub) + '</small></span>' + tpChip(it) +
+      '<span class="md-tp-acts">' + tpGo(it) + rev + '</span></li>';
+  }
+  // «De tu profe» under «Hoy» (review 2026-10-18: one line, so the path and the dock fit the first screen): the teacher's
+  // own tareas of no experience. One tarea: its name and «Hacer» right there; more: «Ver» opens the list
+  function stripHtml() {
     const list = M.tareas.loose;
     if (!list.length) return '';
     const todo = list.filter((x) => x.status !== 'done');
     const done = list.filter((x) => x.status === 'done');
-    return '<section class="md-profe" aria-labelledby="md-profe-t">' +
-      '<img class="md-profe-fer" src="' + ART.ferHello + '" alt="" width="200" height="240" loading="lazy" decoding="async">' +
-      '<div class="md-profe-in"><h2 class="md-h2" id="md-profe-t">De tu profe</h2>' +
-        (todo.length ? '<ul class="md-tp-list">' + todo.map(tpRow).join('') + '</ul>' : '<p class="md-quiet">¡Hiciste todas las tareas de tu profe!</p>') +
-        (done.length ? '<details class="md-done-list"><summary>' + I.check + '<span>' + (done.length === 1 ? '1 hecha' : done.length + ' hechas') + '</span></summary>' +
-          '<ul class="md-tp-list">' + done.map(tpRow).join('') + '</ul></details>' : '') +
-      '</div></section>';
+    const fer = '<img class="md-strip-fer" src="' + ART.ferHello + '" alt="" width="40" height="40" loading="lazy" decoding="async">';
+    if (todo.length === 1 && !done.length) {
+      const it = todo[0];
+      return '<section class="md-strip" aria-label="De tu profe">' + fer + '<p class="md-strip-t"><b>De tu profe</b><span>' + esc(it.title) + ' · ' + esc(it.sub) + '</span></p>' +
+        tpChip(it) + tpGo(it) + '</section>';
+    }
+    const line = todo.length === 1 ? esc(todo[0].title) : todo.length ? todo.length + ' tareas nuevas' : '¡Hiciste todas sus tareas!';
+    return '<details class="md-strip"><summary>' + fer + '<span class="md-strip-t"><b>De tu profe</b><span>' + line + '</span></span>' +
+      (todo.length ? '<span class="md-tp-chip is-new">' + (todo.length === 1 ? '1 nueva' : todo.length + ' nuevas') + '</span>' : '<span class="md-tp-chip is-done">' + I.check + (done.length === 1 ? '1 hecha' : done.length + ' hechas') + '</span>') +
+      '<span class="md-strip-more">Ver</span></summary><ul class="md-tp-list">' + todo.concat(done).map(tpRow).join('') + '</ul></details>';
   }
 
   // no La Ruta Dorada on this phone (no session of this kid): every tarea of the teacher in one «De tu profe» list
@@ -368,82 +424,93 @@
         (e.done ? '<span class="md-node-ok">' + I.check + '</span>' : e.today ? '<span class="md-node-tag">¡Empieza aquí!</span>' : '') + '</span>' +
       '<span class="md-node-name">' + esc(e.name) + '</span>' + barsHtml(e.bars, e.n) + '</a></li>';
   }
+  // El Simulacro Dorado at the end of the path (review 2026-10-18): passed = green ✓ «Aprobado» (never «¡Empieza
+  // aquí!»), ready = «Avisa a tu profe», else calm
   function goldNodeHtml(sel) {
-    const pend = M.tareas.dorado.filter((x) => x.status !== 'done').length;
     const d = M.dorado;
-    const cls = 'md-node md-gold' + (d.glow ? ' is-today' : d.passed ? ' is-done' : '') + (sel ? ' is-sel' : '');
-    return '<li class="md-node-li md-gold-li"><a class="' + cls + '" href="#dorado" aria-label="El Simulacro Dorado: en clase, con tu profe"' + (sel ? ' aria-current="true"' : '') + '>' +
+    const cls = 'md-node md-gold' + (d.passed ? ' is-done' : d.tell ? ' is-today' : '') + (sel ? ' is-sel' : '');
+    const say = 'El Simulacro Dorado: ' + (d.passed ? 'aprobado' : d.tell ? 'avisa a tu profe' : 'en clase, con tu profe');
+    return '<li class="md-node-li md-gold-li"><a class="' + cls + '" href="#dorado" aria-label="' + esc(say) + '"' + (sel ? ' aria-current="true"' : '') + '>' +
       '<span class="md-node-art"><img class="md-node-scene" src="' + ART.dubaiS + '" alt="" width="480" height="270" loading="lazy" decoding="async">' +
         '<img class="md-gold-star" src="' + ART.star + '" alt="" width="200" height="220" loading="lazy" decoding="async">' +
-        (d.glow ? '<span class="md-node-tag">¡Empieza aquí!</span>' : d.passed ? '<span class="md-node-ok">' + I.check + '</span>'
-          : pend ? '<span class="md-node-badge">' + (pend === 1 ? '1 ronda' : pend + ' rondas') + '</span>' : '') + '</span>' +
-      '<span class="md-node-name md-gold-name">El Simulacro Dorado</span><span class="md-gold-sub">En clase, con tu profe</span></a></li>';
+        (d.passed ? '<span class="md-node-pass">' + I.check + '<span>Aprobado</span></span>' : d.tell ? '<span class="md-node-tag">Avisa a tu profe</span>' : '') + '</span>' +
+      '<span class="md-gold-cap"><span class="md-node-name md-gold-name">El Simulacro Dorado</span><span class="md-gold-sub">En clase, con tu profe</span></span></a></li>';
   }
+  const ofText = () => M.doneN + ' de ' + M.exps.length + ' listas';
   function pathHtml(sel) {
     const nodes = M.exps.map((e, i) => nodeHtml(e, i, sel === 'exp-' + e.n)).join('') + goldNodeHtml(sel === 'dorado');
+    // (the dotted third bar: an experience whose homework hasn't come yet; YCT 1, with no homework audio, has two bars)
+    const na = M.anyHw && M.exps.some((e) => e.bars.tarea === 'na');
     const legend = '<p class="md-legend" aria-hidden="true"><span>Las ' + (M.anyHw ? '3' : '2') + ' rayitas:</span>' +
-      '<span><i class="is-done"></i>palabras</span><span><i class="is-done"></i>práctica</span>' + (M.anyHw ? '<span><i class="is-done"></i>tarea mandada</span>' : '') + '</p>';
+      '<span><i class="is-done"></i>palabras</span><span><i class="is-done"></i>práctica</span>' + (M.anyHw ? '<span><i class="is-done"></i>tarea mandada</span>' : '') +
+      (na ? '<span><i class="is-na"></i>sin tarea todavía</span>' : '') + '</p>';
     return '<section class="md-ruta" aria-labelledby="md-ruta-t">' +
       '<div class="md-ruta-head"><h1 class="md-ruta-t" id="md-ruta-t" tabindex="-1">La Ruta Dorada</h1>' +
-        '<span class="md-ruta-of" id="md-ruta-of">' + M.doneN + ' de ' + M.exps.length + ' experiencias listas</span></div>' +
+        '<span class="md-ruta-of" id="md-ruta-of">' + ofText() + '</span></div>' +
       '<ol class="md-path" aria-label="Las experiencias de ' + esc(M.levelName) + '">' + nodes + '</ol>' +
-      '<div class="md-ruta-foot">' + legend +
-        '<a class="md-ruta-all" href="' + esc(M.route) + '?from=homework" data-out>' + I.book + '<span>Ver toda La Ruta Dorada de ' + esc(M.levelName) + '</span></a></div>' +
-      '</section>';
+      '<div class="md-ruta-foot">' + legend + '</div></section>';
   }
 
-  // ── an experience: 1 Palabras → 2 Práctica → 3 Tu tarea ──
+  // ── an experience: 1 Palabras → 2 Práctica → 3 Tu tarea, then «Preguntas de tu profe» ──
   function missingText(e) {
     const left = [];
     if (e.bars.words !== 'done') left.push('las palabras');
     if (e.bars.practice !== 'done') left.push('la práctica');
     if (e.bars.tarea !== 'done' && e.bars.tarea !== 'na') left.push('tu tarea');
-    if (!left.length) return e.done ? '¡Experiencia lista! Puedes repasar cuando quieras.' : 'Tu profe te manda la tarea en clase.';
-    return 'Te falta: ' + (left.length === 1 ? left[0] : left.slice(0, -1).join(', ') + ' y ' + left[left.length - 1]) + '.';
+    if (left.length) return 'Te falta: ' + (left.length === 1 ? left[0] : left.slice(0, -1).join(', ') + ' y ' + left[left.length - 1]) + '.';
+    // (review 2026-10-18: never «¡Experiencia lista!» while the teacher's new work for it is listed below)
+    if (e.teacherNew) return 'Hiciste los ' + (M.anyHw ? '3' : '2') + ' pasos. Tu profe te dejó ' + (e.teacherNew === 1 ? '1 más' : e.teacherNew + ' más') + '.';
+    if (e.bars.tarea === 'na' && M.anyHw) return 'Palabras y práctica listas. Tu tarea llega cuando tu clase llegue a esta experiencia.';
+    return '¡Experiencia lista! Puedes repasar cuando quieras.';
   }
   function stepState(e, k, done) {
     if (done) return 'done';
     return e.next === k ? 'next' : 'todo';
   }
   const baseHref = (n) => (M.base ? M.base.href + '?from=homework#mundo-' + n : M.route + '?from=homework');
+  // Aileen's line in «Tu tarea» (voseo): what to do, or, once every homework of the experience is sent, the praise
+  const aileenText = (e) => (e.hws.length && !e.left ? '«¡Qué crack! Tu profe ya tiene tus videos.»'
+    : '«¡Dale! Escuchá el audio, grabá tu video y mandáselo a tu profe por WhatsApp. Después tocá <b>¡Ya la mandé!</b>»');
   function expHtml(e, mode) {
     const page = mode === 'page';
     const s1 = !M.open ? 'locked' : stepState(e, 1, e.bars.words === 'done');
     const s2 = !M.open ? 'locked' : !e.open ? 'closed' : stepState(e, 2, e.bars.practice === 'done');
     const s3 = !e.hws.length ? 'soon' : stepState(e, 3, e.bars.tarea === 'done');
     const tag = (st) => (st === 'next' ? '<span class="md-step-tag">¡Empieza aquí!</span>' : '');
-    const num = (st, k) => '<span class="md-step-n">' + (st === 'done' ? I.check : st === 'locked' || st === 'closed' ? I.lock : k) + '</span>';
+    // (each step's number once: in its circle, never again in its title; a lock for a step that can't open yet)
+    const num = (st, k) => '<span class="md-step-n' + (st === 'soon' ? ' is-soon' : '') + '">' + (st === 'done' ? I.check : st === 'locked' || st === 'closed' ? I.lock : k) + '</span>';
+    const btn = (st, href, label) => '<a class="md-btn ' + (st === 'next' ? 'is-gold' : st === 'done' ? 'is-soft' : 'is-plain') + '" href="' + esc(href) + '" data-out data-step-go>' + label + '</a>';
     const peek = e.peek.slice(0, page ? 4 : 3).map((src) => '<img src="' + esc(src) + '" alt="" width="200" height="200" loading="lazy" decoding="async">').join('');
-    const w1 = e.bars.words === 'done' ? 'Repasar' : e.bars.words === 'half' ? 'Seguir' : 'Empezar';
+    const w1 = e.bars.words === 'done' ? 'Repasar' : e.bars.words === 'half' ? 'Seguir marcando' : 'Marcar mis palabras';
+    // (review 2026-10-18: a locked step is a lock and one plain line, no button)
     const step1 = '<li class="md-step is-' + s1 + '" id="md-step-1" data-step="1">' + tag(s1) +
-      '<div class="md-step-row">' + num(s1, 1) + '<div class="md-step-txt"><h3 class="md-step-t">1 · Palabras <small>La Base</small></h3>' +
-        '<p class="md-step-l">' + (s1 === 'locked' ? 'Se abre con la clave de ' + esc(M.levelName) + '.' : e.sealed + ' de ' + e.count + ' marcadas') + '</p></div>' +
-        (s1 === 'locked' ? '<a class="md-btn is-gold" href="' + esc(M.key) + '">Escribir la clave</a>'
-          : '<a class="md-btn ' + (s1 === 'next' ? 'is-gold' : s1 === 'done' ? 'is-soft' : 'is-plain') + '" href="' + esc(baseHref(e.n)) + '" data-out data-step-go>' + w1 + '</a>') + '</div>' +
-      (peek && s1 !== 'locked' ? '<div class="md-peek" aria-hidden="true">' + peek + '</div>' : '') + '</li>';
+      '<div class="md-step-row">' + num(s1, 1) + '<div class="md-step-txt"><h3 class="md-step-t">Palabras <small>La Base</small></h3>' +
+        '<p class="md-step-l">' + (s1 === 'locked' ? 'Se abre con la clave de ' + esc(M.levelName) + '.' : e.sealed + ' de ' + e.count + ' marcadas') + '</p></div></div>' +
+      (s1 === 'locked' ? '' : (peek ? '<div class="md-peek" aria-hidden="true">' + peek + '</div>' : '') + btn(s1, baseHref(e.n), w1)) + '</li>';
     const pct = e.best == null ? 0 : Math.min(100, Math.round((e.best / M.goal) * 100));
-    const pinyin = e.n === 1 && M.extra && M.extra.pinyin && M.open
-      ? '<a class="md-also" href="' + esc(M.extra.pinyin.href) + '" data-out>También: Pinyin básico' + (M.extra.pinyin.best != null ? ' · ' + M.extra.pinyin.best + ' %' : '') + '</a>' : '';
     const step2 = '<li class="md-step is-' + s2 + '" id="md-step-2" data-step="2">' + tag(s2) +
-      '<div class="md-step-row"><img class="md-step-art" src="' + ART.power + '" alt="" width="200" height="220" loading="lazy" decoding="async">' +
-        '<div class="md-step-txt"><h3 class="md-step-t">2 · Práctica <small>El Entrenamiento</small></h3>' +
-          (s2 === 'locked' ? '<p class="md-step-l">Se abre con la clave de ' + esc(M.levelName) + '.</p>'
-            : s2 === 'closed' ? '<p class="md-step-l">Se abre cuando marques todas sus palabras.</p>'
-              : '<span class="md-meter"><i style="width:' + pct + '%"></i></span><p class="md-step-l">' + (e.best == null ? 'Meta: ' + M.goal + ' % en una ronda de 10' : 'Tu mejor ronda: ' + e.best + ' %<br>Meta: ' + M.goal + ' %') + '</p>') + '</div>' +
-        (s2 === 'locked' ? '' : s2 === 'closed' ? '<a class="md-btn is-plain" href="' + esc(baseHref(e.n)) + '" data-out>Marcar palabras</a>'
-          : '<a class="md-btn ' + (s2 === 'next' ? 'is-gold' : s2 === 'done' ? 'is-soft' : 'is-plain') + '" href="' + esc(e.train || M.route + '/entrenamiento') + '" data-out data-step-go>' + (e.bars.practice === 'done' ? 'Otra ronda' : 'Practicar aquí') + '</a>') + '</div>' +
-      pinyin +
-      (e.teacher.length ? '<div class="md-tp-box"><p class="md-tp-k"><img src="' + ART.ferHello + '" alt="" width="40" height="40" loading="lazy" decoding="async"><span>De tu profe</span></p>' +
-        '<ul class="md-tp-list">' + e.teacher.map(tpRow).join('') + '</ul></div>' : '') + '</li>';
-    const step3 = '<li class="md-step is-' + s3 + '" id="md-step-3" data-step="3">' + tag(s3) +
-      '<div class="md-step-row">' + num(s3 === 'soon' ? 'todo' : s3, 3) + '<div class="md-step-txt"><h3 class="md-step-t">3 · Tu tarea <small>Se manda por WhatsApp</small></h3></div>' +
+      '<div class="md-step-row">' + num(s2, 2) + '<div class="md-step-txt"><h3 class="md-step-t">Práctica <small>El Entrenamiento</small></h3>' +
+        (s2 === 'locked' ? '<p class="md-step-l">Se abre con la clave de ' + esc(M.levelName) + '.</p>'
+          : s2 === 'closed' ? '<p class="md-step-l">Se abre cuando marques todas sus palabras.</p>'
+            : '<span class="md-meter"><i style="width:' + pct + '%"></i></span><p class="md-step-l">' + (e.best == null ? 'Meta: ' + M.goal + ' % en una ronda de 10' : 'Tu mejor ronda: ' + e.best + ' %<br>Meta: ' + M.goal + ' %') + '</p>') + '</div></div>' +
+      (s2 === 'locked' || s2 === 'closed' ? '' : btn(s2, e.train || M.route + '/entrenamiento', e.bars.practice === 'done' ? 'Otra ronda' : 'Practicar aquí')) + '</li>';
+    // 3 · Tu tarea: none at all in a level with no homework audio (YCT 1); «sin tarea todavía» until the teacher sends it
+    const step3 = !M.anyHw ? '' : '<li class="md-step is-' + s3 + '" id="md-step-3" data-step="3">' + tag(s3) +
+      '<div class="md-step-row">' + num(s3, 3) + '<div class="md-step-txt"><h3 class="md-step-t">Tu tarea <small>' + (e.hws.length ? 'Mándala por WhatsApp' : 'Sin tarea todavía') + '</small></h3></div>' +
         '<span class="md-badge" data-left="' + e.n + '"' + (e.left && e.hws.length ? '' : ' hidden') + '>' + (e.left === 1 ? '1 por mandar' : e.left + ' por mandar') + '</span></div>' +
       (e.hws.length ? '<div class="md-say"><img src="' + ART.aileenTalk + '" alt="Aileen" width="312" height="480" loading="lazy" decoding="async">' +
-          '<p>«¡Dale! Escuchá el audio, grabá tu video y mandáselo a tu profe por WhatsApp. Después tocá <b>¡Ya la mandé!</b>»</p></div>' +
+          '<p data-aileen="' + e.n + '">' + aileenText(e) + '</p></div>' +
           '<div class="md-hw" data-hw-mount="' + e.n + '"></div>'
-        : '<p class="md-step-l md-soon">Tu profe te manda esta tarea cuando lleguen a esta experiencia en clase.</p>') + '</li>';
-    const party = e.done ? '<div class="md-party" data-party="' + e.n + '"><img src="' + ART.aileenWin + '" alt="" width="200" height="240" loading="lazy" decoding="async">' +
-      '<p>«¡Qué crack! Terminaste esta experiencia.»</p><img src="' + ART.dralingoWin + '" alt="" width="200" height="240" loading="lazy" decoding="async"></div>' : '';
+        : '<p class="md-step-l md-soon">Tu profe te la manda cuando tu clase llegue a esta experiencia.</p>') + '</li>';
+    // the teacher's work for this experience, after the steps (review 2026-10-18: never inside a locked card)
+    const prof = e.teacher.length ? '<section class="md-tp-box md-exp-profe" aria-label="Preguntas de tu profe"><p class="md-tp-k"><img src="' + ART.ferHello + '" alt="" width="40" height="40" loading="lazy" decoding="async"><span>Preguntas de tu profe</span>' +
+        (e.teacherNew ? '<span class="md-tp-chip is-new">' + (e.teacherNew === 1 ? '1 nueva' : e.teacherNew + ' nuevas') + '</span>' : '') + '</p>' +
+      '<ul class="md-tp-list">' + e.teacher.map(tpRow).join('') + '</ul></section>' : '';
+    const also = e.n === 1 && M.extra && M.extra.pinyin && M.open
+      ? '<a class="md-also" href="' + esc(M.extra.pinyin.href) + '" data-out>También: Pinyin básico' + (M.extra.pinyin.best != null ? ' · ' + M.extra.pinyin.best + ' %' : '') + '</a>' : '';
+    // the whole experience done (and nothing new from the teacher): Aileen and Dralingo celebrate
+    const party = e.done && !e.teacherNew && (e.bars.tarea === 'done' || !M.anyHw) ? '<div class="md-party" data-party="' + e.n + '"><img src="' + ART.aileenWin + '" alt="" width="200" height="240" loading="lazy" decoding="async">' +
+      '<p>«¡Terminaste esta experiencia! ¡Vamos por la siguiente!»</p><img src="' + ART.dralingoWin + '" alt="" width="200" height="240" loading="lazy" decoding="async"></div>' : '';
     const hero = '<header class="md-exp-hero"><img class="md-exp-bg" src="' + esc(e.scene) + '" alt="" width="480" height="270" decoding="async">' +
       '<span class="md-exp-shade" aria-hidden="true"></span>' +
       (page ? '<a class="md-back md-back-glass" href="#">' + I.back + '<span>La Ruta Dorada</span></a>' : '') +
@@ -451,11 +518,15 @@
       '<div class="md-exp-t"><p>Experiencia ' + e.n + '</p><h2 class="md-exp-h" id="md-exp-h" tabindex="-1">' + esc(e.name) + '</h2></div></header>';
     return '<section class="md-exp' + (page ? ' is-page' : ' is-aside') + (e.done ? ' is-done' : '') + '" aria-labelledby="md-exp-h">' + hero +
       '<div class="md-exp-body"><div class="md-exp-sum"><p id="md-exp-sum">' + esc(missingText(e)) + '</p>' + barsHtml(e.bars, 'x' + e.n) + '</div>' +
-      '<ol class="md-steps">' + step1 + step2 + step3 + '</ol>' + party +
+      '<ol class="md-steps">' + step1 + step2 + step3 + '</ol>' + prof + also + party +
       (page ? '<a class="md-back md-back-foot" href="#">' + I.back + '<span>Volver a La Ruta Dorada</span></a>' : '') + '</div></section>';
   }
 
-  // ── El Simulacro Dorado ──
+  // ── El Simulacro Dorado (review 2026-10-18: one clean list) ──
+  //   the state on top when it is news (✓ «Aprobado», or «¡Ya estás listo!» + «Avisar a mi profe»), «Tus simulacros»
+  //   (each class simulation: its latest try's % and its libro dorado), ONE folder «De tu profe · Practica el examen»
+  //   (El Entrenamiento's Simulacro del examen, the teacher's Simulacro rounds, HSK 1's reading tests), and the way it
+  //   opens («Se abre en clase…») under them, never above open cards
   function teacherMsg() {
     const s = H.state();
     return '¡Hola, profe! ' + (s.name ? 'Soy ' + s.name + '. ' : '') + 'Terminé El Entrenamiento de ' + M.levelName + '. ¡Ya puedo hacer El Simulacro Dorado!';
@@ -464,45 +535,59 @@
     const page = mode === 'page';
     const d = M.dorado;
     const s = H.state();
-    let state;
-    if (d.passed) state = '<div class="md-dor-state is-done"><span class="md-step-n">' + I.check + '</span><p>¡Aprobaste El Simulacro Dorado con ' + M.sim.percent + ' %!</p></div>';
+    let top = '';
+    if (d.passed) top = '<div class="md-dor-state is-done"><span class="md-step-n">' + I.check + '</span><div><p class="md-dor-big">Aprobado</p><p>¡Aprobaste El Simulacro Dorado con ' + M.sim.percent + ' %!</p></div></div>';
     else if (d.ready) {
-      state = '<div class="md-dor-state is-ready"><p class="md-dor-big">¡Ya estás listo para El Simulacro Dorado!</p>' +
+      top = '<div class="md-dor-state is-ready"><p class="md-dor-big">¡Ya estás listo para El Simulacro Dorado!</p>' +
         '<p>Avísale a tu profe: lo hacen en clase, con un PIN.</p>' +
-        '<div class="md-dor-acts"><a class="md-btn is-green" href="' + esc('https://wa.me/?text=' + encodeURIComponent(teacherMsg())) + '" target="_blank" rel="noopener">' + I.wa + '<span>Avisarle a mi profe</span></a>' +
+        '<div class="md-dor-acts"><a class="md-btn is-green" href="' + esc(waHref()) + '" target="_blank" rel="noopener">' + I.wa + '<span>Avisar a mi profe</span></a>' +
         '<button type="button" class="md-btn is-plain" data-act="copy-msg">' + I.copy + '<span>Copiar mensaje</span></button></div></div>';
-    } else {
-      const coins = M.exps.map((e) => '<li class="' + (e.bars.practice === 'done' ? 'is-done' : e.bars.practice === 'half' ? 'is-half' : '') + '" title="Experiencia ' + e.n + '">' + (e.bars.practice === 'done' ? I.check : e.n) + '</li>').join('');
-      state = '<div class="md-dor-state is-locked"><span class="md-step-n">' + I.lock + '</span><div><p>Se abre en clase con tu profe, cuando termines El Entrenamiento.</p>' +
-        '<p class="md-dor-count">' + d.practiced + ' de ' + M.exps.length + ' prácticas con ' + M.goal + ' %</p><ol class="md-coins" aria-hidden="true">' + coins + '</ol></div></div>';
     }
-    const books = M.books.length
-      ? '<ul class="md-books">' + M.books.map((b) => '<li><span class="md-book-n' + (b.passed ? ' is-done' : '') + '">' + (b.passed ? I.check : '') + 'Simulacro ' + b.n + ' · ' + b.percent + ' %</span>' +
-          '<a class="md-btn is-plain" href="' + esc(b.book) + '" data-out>' + I.book + '<span>Libro dorado' + (b.mistakes ? ' · ' + (b.mistakes === 1 ? '1 error' : b.mistakes + ' errores') : '') + '</span></a></li>').join('') + '</ul>'
-      : '<p class="md-quiet">Cuando hagas un simulacro en clase, aquí repasas tus errores en tu libro dorado.</p>';
+    // «Tus simulacros»: the latest try of each simulation taken (its % and its mistakes agree: the same try)
+    const books = M.books.length ? '<section class="md-dor-part"><h3 class="md-h3">Tus simulacros</h3><ul class="md-books">' + M.books.map((b) =>
+      '<li><span class="md-book-n' + (b.passed ? ' is-done' : '') + '">' + (b.passed ? I.check : '') + 'Simulacro ' + b.n + ' · ' + b.percent + ' %</span>' +
+        '<a class="md-btn is-plain" href="' + esc(b.book) + '" data-out>' + I.book + '<span>Libro dorado' + (b.mistakes > 0 ? ' · ' + (b.mistakes === 1 ? '1 error' : b.mistakes + ' errores') : '') + '</span></a></li>').join('') + '</ul></section>' : '';
+    // ONE folder: «De tu profe · Practica el examen»
     const ex = M.extra && M.extra.simulacro;
     const rounds = M.tareas.dorado;
-    const practice = (ex || rounds.length) ? '<section class="md-dor-part"><h3 class="md-h3">Practica el examen</h3>' +
-      (ex ? '<div class="md-dor-train">' + (ex.open ? '<a class="md-btn is-gold" href="' + esc(ex.href) + '" data-out>Simulacro del examen' + (ex.best != null ? ' · ' + ex.best + ' %' : '') + '</a>'
-        : '<p class="md-quiet">' + I.lock + ' El simulacro de práctica se abre cuando todas tus experiencias estén listas para practicar.</p>') + '</div>' : '') +
-      (rounds.length ? '<div class="md-tp-box"><p class="md-tp-k"><img src="' + ART.ferHello + '" alt="" width="40" height="40" loading="lazy" decoding="async"><span>De tu profe</span></p><ul class="md-tp-list">' + rounds.map(tpRow).join('') + '</ul></div>' : '') +
-      '</section>' : '';
     const reads = M.tareas.readings;
     const avail = reads.filter((x) => x.available || x.bestScore != null);
     const lockedN = reads.length - avail.length;
-    const readings = reads.length && (avail.length || s.level === 'hsk1') ? '<section class="md-dor-part"><h3 class="md-h3">Exámenes de lectura</h3>' +
-      (avail.length ? '<ul class="md-reads">' + avail.map((x) => '<li><span class="md-read-t"><b>' + esc(x.title) + '</b><small>' + (x.bestScore != null ? x.bestScore + ' / 100' : 'Disponible') + '</small></span>' +
+    const showReads = reads.length && (avail.length || s.level === 'hsk1');
+    let folder = '';
+    if (ex || rounds.length || showReads) {
+      const parts = [];
+      if (ex) parts.push('Simulacro del examen');
+      if (rounds.length) parts.push(rounds.length === 1 ? '1 ronda' : rounds.length + ' rondas');
+      if (avail.length) parts.push(avail.length === 1 ? '1 lectura' : avail.length + ' lecturas');
+      const newN = rounds.filter((x) => x.status === 'new').length + avail.filter((x) => x.bestScore == null).length;
+      const exRow = ex ? '<li class="md-tp is-' + (ex.best != null ? 'done' : 'new') + '"><span class="md-tp-t"><b>Simulacro del examen</b><small>' + (ex.open ? 'Preguntas como en el examen' + (ex.best != null ? ' · ' + ex.best + ' %' : '') : 'Se abre cuando todas tus experiencias estén listas para practicar') + '</small></span>' +
+        (ex.open ? '<span class="md-tp-acts"><a class="md-tp-go" href="' + esc(ex.href) + '" data-out>' + (ex.best != null ? 'Otra vez' : 'Hacer') + '</a></span>' : '<span class="md-tp-lock">' + I.lock + '</span>') + '</li>' : '';
+      const readRows = avail.map((x) => '<li class="md-tp is-' + (x.bestScore != null ? 'done' : 'new') + '"><span class="md-tp-t"><b>' + esc(x.title) + '</b><small>' + (x.bestScore != null ? 'Lectura · ' + x.bestScore + ' / 100' : 'Lectura') + '</small></span>' +
         '<span class="md-tp-acts"><button type="button" class="md-tp-go" data-act="reading" data-story="' + esc(x.storyId) + '">' + (x.bestScore != null ? 'Otra vez' : 'Leer') + '</button>' +
-        (x.bestScore != null ? '<button type="button" class="md-tp-rev" data-act="reading-review" data-story="' + esc(x.storyId) + '" data-title="' + esc(x.title) + '">Ver mis errores</button>' : '') + '</span></li>').join('') + '</ul>' : '') +
-      (lockedN ? '<p class="md-quiet">' + I.lock + ' ' + (lockedN === 1 ? '1 historia se abre' : lockedN + ' historias se abren') + ' cuando la lean en clase.</p>' : '') + '</section>' : '';
+        (x.bestScore != null ? '<button type="button" class="md-tp-rev" data-act="reading-review" data-story="' + esc(x.storyId) + '" data-title="' + esc(x.title) + '">Ver mis errores</button>' : '') + '</span></li>').join('');
+      folder = '<details class="md-folder"><summary><img src="' + ART.ferHello + '" alt="" width="40" height="40" loading="lazy" decoding="async">' +
+        '<span class="md-folder-t"><b>De tu profe · Practica el examen</b><small>' + esc(parts.join(' · ')) + '</small></span>' +
+        (newN ? '<span class="md-tp-chip is-new">' + (newN === 1 ? '1 nueva' : newN + ' nuevas') + '</span>' : '') + '</summary>' +
+        '<ul class="md-tp-list">' + exRow + rounds.map(tpRow).join('') + (showReads ? readRows : '') + '</ul>' +
+        (showReads && lockedN ? '<p class="md-quiet">' + I.lock + ' ' + (lockedN === 1 ? '1 historia se abre' : lockedN + ' historias se abren') + ' cuando la lean en clase.</p>' : '') + '</details>';
+    }
+    // how it opens, for a kid on the way: under the open cards, never above them
+    let wait = '';
+    if (!d.passed && !d.ready) {
+      const coins = M.exps.map((e) => '<li class="' + (e.bars.practice === 'done' ? 'is-done' : e.bars.practice === 'half' ? 'is-half' : '') + '" title="Experiencia ' + e.n + '">' + (e.bars.practice === 'done' ? I.check : e.n) + '</li>').join('');
+      wait = '<div class="md-dor-state is-locked"><span class="md-step-n">' + I.lock + '</span><div><p>Se abre en clase con tu profe, cuando termines El Entrenamiento.</p>' +
+        '<p class="md-dor-count">' + d.practiced + ' de ' + M.exps.length + ' prácticas con ' + M.goal + ' %</p><ol class="md-coins" aria-hidden="true">' + coins + '</ol>' +
+        (M.books.length ? '' : '<p class="md-dor-note">Cuando hagas un simulacro en clase, aquí repasas tus errores en tu libro dorado.</p>') + '</div></div>';
+    }
     const hero = '<header class="md-dor-hero"><img class="md-exp-bg" src="' + ART.dubaiS + '" srcset="' + ART.dubaiS + ' 480w, ' + ART.dubai + ' 1600w" sizes="(min-width: 1000px) 470px, 100vw" alt="" decoding="async">' +
       '<span class="md-exp-shade" aria-hidden="true"></span>' +
       (page ? '<a class="md-back md-back-glass" href="#">' + I.back + '<span>La Ruta Dorada</span></a>' : '') +
       '<img class="md-dor-star" src="' + ART.star + '" alt="" width="200" height="220" decoding="async">' +
       '<div class="md-exp-t"><p>Al final de tu ruta</p><h2 class="md-exp-h" id="md-dor-h" tabindex="-1">El Simulacro Dorado</h2><p class="md-dor-sub">En clase, con tu profe</p></div></header>';
-    return '<section class="md-exp md-dor' + (page ? ' is-page' : ' is-aside') + '" aria-labelledby="md-dor-h">' + hero + '<div class="md-exp-body">' + state +
-      '<section class="md-dor-part"><h3 class="md-h3">Tus simulacros en clase</h3>' + books + '</section>' + practice +
-      '<section class="md-dor-part"><h3 class="md-h3">Mis exámenes</h3><div data-exams-mount></div></section>' + readings +
+    const none = !top && !books && !folder;
+    return '<section class="md-exp md-dor' + (page ? ' is-page' : ' is-aside') + '" aria-labelledby="md-dor-h">' + hero + '<div class="md-exp-body">' +
+      top + (none ? wait : books + folder + wait) +
       (page ? '<a class="md-back md-back-foot" href="#">' + I.back + '<span>Volver a La Ruta Dorada</span></a>' : '') + '</div></section>';
   }
 
@@ -527,7 +612,7 @@
     const n = list.filter((m) => !m.readAt).length;
     const rows = list.map((m, i) => {
       const act = m.actionType === 'anim' ? '<button type="button" class="md-btn is-gold" data-act="anim" data-i="' + i + '">' + I.play + '<span>Verla otra vez</span></button>'
-        : m.actionUrl && /^\/(?!\/)/.test(m.actionUrl) ? '<a class="md-btn is-gold" href="' + esc(m.actionUrl) + '">' + (PIN_LINK.test(m.actionUrl) ? 'Entrar al juego con el PIN' : esc(m.actionLabel || 'Abrir')) + '</a>'
+        : m.actionUrl && /^\/(?![\/\\])/.test(m.actionUrl) ? '<a class="md-btn is-gold" href="' + esc(m.actionUrl) + '">' + (PIN_LINK.test(m.actionUrl) ? 'Entrar al juego con el PIN' : esc(m.actionLabel || 'Abrir')) + '</a>'
           : m.actionUrl && /^https:\/\//.test(m.actionUrl) ? '<a class="md-btn is-gold" href="' + esc(m.actionUrl) + '" target="_blank" rel="noopener">' + esc(m.actionLabel || 'Abrir') + '</a>' : '';
       return '<li class="md-msg' + (m.readAt ? '' : ' is-new') + '"><img src="' + ART.ferHello + '" alt="" width="44" height="44" loading="lazy" decoding="async">' +
         '<div class="md-msg-in"><p class="md-msg-h"><b>' + esc(m.fromName || 'Tu profe') + '</b><span>' + esc(whenOf(m.ts)) + '</span></p>' +
@@ -581,9 +666,10 @@
         '<button type="button" class="md-btn is-gold" data-act="retry">Volver a intentar</button></div>'
       : '<div class="md-wait"><img src="' + ART.hello + '" alt="" width="160" height="178"><p>Cargando tu Ruta Dorada…</p></div>';
   }
-  // no `ruta`: this phone has no session of this kid (an old class code typed for another class): the tareas still work
+  // no `ruta`: this phone has no session of this kid (an expired session, another class's code): the tareas, Mensajes,
+  // Mis oraciones and the exams still work (review 2026-10-18: the tabs and the dock stay)
   function noRutaHtml() {
-    return '<div class="md-wait"><img src="' + ART.hello + '" alt="" width="160" height="178"><p>Para ver tu Ruta Dorada, entra con tu código y la clave de tu nivel.</p>' +
+    return '<div class="md-wait"><img src="' + ART.hello + '" alt="" width="160" height="178"><p>Para ver tu Ruta Dorada, toca «Entrar de nuevo».</p>' +
       '<button type="button" class="md-btn is-gold" data-act="relogin">Entrar de nuevo</button></div>';
   }
 
@@ -600,6 +686,8 @@
     if (v.kind === 'oraciones') return sentHtml('aside');
     if (v.kind === 'desafio') return desafioHtml('aside');
     if (v.kind === 'dorado') return doradoHtml('aside');
+    // (the home on a laptop: «Hoy»'s place beside the path; El Simulacro Dorado when that is today's step)
+    if (v.kind === 'home' && M.hoy && M.hoy.dorado) return doradoHtml('aside');
     const e = expFor(v);
     return e ? expHtml(e, 'aside') : doradoHtml('aside');
   }
@@ -613,29 +701,51 @@
     const app = $('md-app');
     if (!H || !app) return;
     const s = H.state();
-    M = model(D, s, marksNow());
     park();
     stopCards();
     const W = wide();
     const scr = $('screen-list');
     let v = view;
-    if (v.kind === 'exp' && M.ruta && !M.exps.some((e) => e.n === v.n)) v = { kind: 'home' };
-    const out = buildHtml(v, W, s);
+    let out;
+    // (review 2026-10-18) whatever fails while drawing, the kid keeps a way out: the band (Mi perfil, Papás), «Volver a
+    // intentar» and «Salir», never an empty page
+    try {
+      M = model(D, s, marksNow());
+      if (v.kind === 'exp' && M.ruta && !M.exps.some((e) => e.n === v.n)) v = { kind: 'home' };
+      out = buildHtml(v, W, s);
+    } catch (err) {
+      console.error('[home] draw failed', err);
+      M = { ruta: false, levelName: s.levelName || '', exps: [], tareas: { byExp: {}, dorado: [], loose: [], readings: [] }, streak: { days: 0 } };
+      out = { html: bandHtml(s) + '<main class="md-main md-page">' + brokenHtml() + '</main>', tabs: false };
+      v = { kind: 'home' };
+    }
     app.innerHTML = out.html;
     if (scr) { scr.classList.toggle('is-wide', W); scr.classList.toggle('has-tabs', out.tabs); }
-    document.title = 'Mi Dralingo' + (M.levelName ? ' · ' + M.levelName : '');
-    mount(v);
+    // (the tab's title in the kid's language: hw-i18n.js translates the page, not the title)
+    const en = window.HwI18n && window.HwI18n.lang && window.HwI18n.lang() === 'en';
+    document.title = (en ? 'My Dralingo' : 'Mi Dralingo') + (M.levelName ? ' · ' + M.levelName : '');
+    try { mount(v); } catch (err) { console.error('[home] mount failed', err); }
+  }
+  function brokenHtml() {
+    return '<div class="md-wait"><img src="' + ART.hello + '" alt="" width="160" height="178"><p>Algo salió mal al dibujar tu inicio.</p>' +
+      '<button type="button" class="md-btn is-gold" data-act="retry">Volver a intentar</button>' +
+      '<a class="md-btn is-plain" href="#perfil">Mi perfil y «Salir»</a></div>';
   }
   // the screen for a view (W = a laptop): { html, tabs } (no DOM: scripts/test-home.js reads it for every made-up kid)
   function buildHtml(v, W, s) {
     let html = bandHtml(s);
     let tabs = false;
-    if (!D) html += '<main class="md-main md-page">' + loadingHtml() + '</main>';
-    else if (!M.ruta) html += '<main class="md-main md-page">' + noRutaHtml() + allTareasHtml() + '</main>';
-    else if (W) {
-      const selE = v.kind === 'exp' ? 'exp-' + v.n : v.kind === 'dorado' ? 'dorado' : v.kind === 'home' ? (expFor(v) ? 'exp-' + expFor(v).n : '') : '';
-      html += '<div class="md-grid"><div class="md-left">' + hoyHtml() + profeHtml() + pathHtml(selE) + dockHtml(v.kind) + '</div>' +
-        '<aside class="md-aside" id="md-aside" aria-label="Lo que elegiste">' + asideHtml(v) + '</aside></div>';
+    if (!D) return { html: nb(html + '<main class="md-main md-page">' + loadingHtml() + '</main>'), tabs };
+    const noRuta = !M.ruta;
+    if (noRuta && (v.kind === 'exp' || v.kind === 'dorado')) v = { kind: 'home' };
+    if (W) {
+      const selE = noRuta ? '' : v.kind === 'exp' ? 'exp-' + v.n : v.kind === 'dorado' ? 'dorado'
+        : v.kind === 'home' ? (M.hoy && M.hoy.dorado ? 'dorado' : expFor(v) ? 'exp-' + expFor(v).n : '') : '';
+      const left = noRuta ? noRutaHtml() + allTareasHtml() : hoyHtml() + stripHtml() + pathHtml(selE);
+      // (no route on this phone: the aside keeps the messages)
+      const aside = noRuta && v.kind === 'home' ? msgsHtml('aside') : asideHtml(v);
+      html += '<div class="md-grid"><div class="md-left">' + left + dockHtml(v.kind) + '</div>' +
+        '<aside class="md-aside" id="md-aside" aria-label="Lo que elegiste">' + aside + '</aside></div>';
     } else {
       // (an experience and El Simulacro Dorado are pages of their own: their picture goes edge to edge, no band)
       if (v.kind === 'exp') html = '<main class="md-main md-page is-flush">' + expHtml(expFor(v), 'page') + '</main>';
@@ -643,7 +753,10 @@
       else if (v.kind === 'mensajes') { html = msgsHtml('page'); tabs = true; }
       else if (v.kind === 'oraciones') { html = sentHtml('page'); tabs = true; }
       else if (v.kind === 'desafio') { html = desafioHtml('page'); tabs = true; }
-      else { html += '<main class="md-main md-page">' + hoyHtml() + profeHtml() + pathHtml('') + '</main>'; tabs = true; }
+      else {
+        html += '<main class="md-main md-page">' + (noRuta ? noRutaHtml() + allTareasHtml() : hoyHtml() + stripHtml() + pathHtml('')) + '</main>';
+        tabs = true;
+      }
       if (tabs) html += tabsHtml(v.kind === 'home' ? '' : v.kind);
     }
     return { html: nb(html), tabs };
@@ -674,7 +787,7 @@
     if (sm && $('md-sent')) { sm.appendChild($('md-sent')); if (Date.now() - sentAt > 30000) { sentAt = Date.now(); H.loadSentences(); } }
     const em = document.querySelector('#md-app [data-exams-mount]');
     if (em && $('hw-myexams-list')) { em.appendChild($('hw-myexams-list')); if (Date.now() - examsAt > 30000) { examsAt = Date.now(); H.loadMyExams(); } }
-    if (v.kind === 'mensajes') H.readAll();
+    if (v.kind === 'mensajes') { H.readAll(); inboxSig = sigOf(H.state().inbox, Number(H.state().unread) || 0); }
     // the whole experience done: Aileen and Dralingo pop in once per experience on this phone (the page's one moment)
     const party = document.querySelector('#md-app [data-party]');
     if (party && D && D.ruta) {
@@ -713,8 +826,11 @@
     });
     const ht = $('md-hoy-t');
     if (ht && M.hoy) ht.textContent = nb(M.hoy.text);
+    const hr = $('md-hoy-rem');
+    if (hr) { if (M.hoy && M.hoy.remind) hr.textContent = M.hoy.remind.text; else if (hr.parentNode) hr.parentNode.hidden = true; }
     const of = $('md-ruta-of');
-    if (of) of.textContent = M.doneN + ' de ' + M.exps.length + ' experiencias listas';
+    if (of) of.textContent = ofText();
+    M.exps.forEach((e) => { const p = document.querySelector('#md-app [data-aileen="' + e.n + '"]'); if (p) p.innerHTML = aileenText(e); });
     const sum = $('md-exp-sum');
     const box = document.querySelector('#md-app [data-hw-mount]');
     const e = box ? M.exps.find((x) => x.n === Number(box.getAttribute('data-hw-mount'))) : null;
@@ -760,9 +876,13 @@
     const h = M && M.hoy;
     if (!h) { location.hash = ''; return; }
     if (h.href) { leaving(h.href); location.href = h.href; return; }
+    if (h.wa) { setHash('dorado'); return; }
     if (h.dorado) { setHash('dorado'); return; }
-    if (h.exp) { focusStep = h.step || 0; setHash('exp-' + h.exp); return; }
+    if (h.exp && h.step) { focusStep = h.step; setHash('exp-' + h.exp); return; }
+    // («¡Vas muy bien!»: the path itself)
     setHash('');
+    const t = $('md-ruta-t');
+    if (t) { try { t.scrollIntoView({ block: 'start', behavior: calm() ? 'auto' : 'smooth' }); } catch (_) {} }
   }
   function setHash(h) {
     const want = h ? '#' + h : '';
@@ -801,6 +921,7 @@
     if (!t) return;
     const act = t.getAttribute('data-act');
     if (act === 'today') goToday();
+    else if (act === 'remind') { focusStep = 3; setHash('exp-' + Number(t.getAttribute('data-exp'))); }
     else if (act === 'papas') H.openParents();
     else if (act === 'retry') { failed = false; draw(); load(true); }
     else if (act === 'relogin') location.reload();
@@ -852,14 +973,19 @@
     draw();
     load(false);
   }
+  // the inbox as the page last drew it (review 2026-10-18: the 20-second poll redrew Mensajes every time)
+  let inboxSig = '';
+  const sigOf = (list, n) => (list || []).map((m) => m.id + ':' + (m.readAt ? 1 : 0)).join(',') + '|' + n;
   function changed(kind) {
     if (!H || H.screen() !== 'list') return;
     const n = Number(H.state().unread) || 0;
     document.querySelectorAll('#md-app [data-unread]').forEach((b) => { b.hidden = !n; b.textContent = n > 9 ? '9+' : String(n); });
-    if (kind === 'inbox' && view.kind !== 'mensajes') return;
-    const p = $('au-player');
-    if (p && !p.paused) { soft(); return; }   // (a homework audio playing is never cut by a redraw)
-    draw();
+    if (kind === 'inbox') {
+      if (view.kind !== 'mensajes') return;
+      const sig = sigOf(H.state().inbox, n);
+      if (sig === inboxSig) return;          // (nothing new: the list stays as it is)
+    }
+    redraw();
   }
   // (a login on this tab: another kid, or another level: nothing of the last one stays)
   function reset() { D = null; M = null; ctxR = null; loadedAt = 0; failed = false; loadSeq++; sentAt = 0; examsAt = 0; stopCards(); }

@@ -2573,6 +2573,23 @@ function _papasHwInfo() {
   if (Array.isArray(list)) _papasHw = m;
   return m;
 }
+// the simulation taken last (the latest try of each, golden books) → { n, percent, passed, at } | null: Papás, the kid's
+// home and La Ruta Dorada's module page read the same one («¡Aprobaste El Simulacro Dorado con P %!»)
+function _simsTaken(rec, lvl) {
+  const gb = Golden.ofLevel(lvl);
+  const out = [];
+  if (gb && rec) gb.sims.forEach((s) => {
+    const t = Golden.latest(rec, s.id);
+    if (!t) return;
+    const v = Golden.attemptView(t, s);
+    out.push({ n: s.n, percent: v.percent, passed: v.passed, at: v.ts, mistakes: Golden.mistakesOf(t), book: _goldenHref(lvl, s.n) });
+  });
+  return out;
+}
+function _lastSimOf(books) {
+  const last = (books || []).reduce((m, x) => (!m || x.at >= m.at ? x : m), null);
+  return last ? { n: last.n, percent: last.percent, passed: last.passed, at: last.at } : null;
+}
 function _papasRuta(rec, level) {
   const lvl = level.id;
   const slug = level.pack || lvl;
@@ -2585,15 +2602,8 @@ function _papasRuta(rec, level) {
   const info = _papasHwInfo();
   const ab = audioBaseFor(level);
   // the simulations of this level the kid took (the latest try of each), for «simulacro en clase» and its golden book
-  const gb = Golden.ofLevel(lvl);
-  const books = [];
-  if (gb) gb.sims.forEach((s) => {
-    const t = Golden.latest(rec, s.id);
-    if (!t) return;
-    const v = Golden.attemptView(t, s);
-    books.push({ n: s.n, percent: v.percent, passed: v.passed, at: v.ts, mistakes: Golden.mistakesOf(t), book: _goldenHref(lvl, s.n) });
-  });
-  const last = books.reduce((m, x) => (!m || x.at >= m.at ? x : m), null);
+  const books = _simsTaken(rec, lvl);
+  const last = _lastSimOf(books);
   const raw = {
     level: lvl, slug, name: level.name, who: _sealWho(rec.code),
     base: ab ? { href: ab.href, level: ab.level } : null,
@@ -2608,10 +2618,12 @@ function _papasRuta(rec, level) {
         best: w.practiced, open: !!w.train, train: k ? '/audios/' + slug + '/entrenamiento/' + k.key : null };
     }),
     hws: ids.map((id) => { const i = info.get(id) || {}; return { id, exp: i.exp || null, round: i.round || null, title: i.title || '', sent: !!(marks[id] && marks[id].s) }; }),
-    sim: last ? { n: last.n, percent: last.percent, passed: last.passed, at: last.at } : null,
+    sim: last,
     books: books.sort((x, y) => x.n - y.n),
   };
   raw.plan = PapasPlan.plan(raw);
+  // (the kid's home reuses what was just read: never sent, never in the JSON)
+  Object.defineProperty(raw, '_parts', { value: { st, tw, ids, info } });
   return raw;
 }
 // the questions to ask at home, by experience («Cómo ayudar en casa» picks this week's): each passed tarea's own
@@ -2648,11 +2660,8 @@ function _homeRuta(req, rec, level) {
   const lvl = level.id;
   const raw = _papasRuta(rec, level);
   const slug = raw.slug;
-  const st = RutaProgress.state(rec, lvl);
+  const { st, tw, ids, info } = raw._parts;
   const a = levelAccess(req, lvl);
-  const tw = Train.worldsOf(lvl) || [];
-  const info = _papasHwInfo();
-  const ids = _tareaIdsOf(lvl);
   const media = {};
   ids.forEach((id) => { const h = info.get(id); if (h) media[id] = { tracks: h.tracks || [], thumb: h.thumb || null, cover: h.cover || null }; });
   const extra = (kind) => {
@@ -2680,10 +2689,13 @@ app.get('/api/homework/home', (req, res) => {
   const rec = _hwKid(req, res, req.query && req.query.studentCode);
   if (!rec) return;
   try {
-    const level = Levels.info(rec.level);
+    // (review 2026-10-18: the level as the login payload reads it, LevelKeys.classLevel: a key account's own level)
+    const level = Levels.info(LevelKeys.classLevel(rec) || rec.level || Levels.DEFAULT);
     const me = _studentOf(req);
     let ruta = null;
     if (me && me.code === rec.code) {
+      // the phone's time zone, for «N días seguidos» on the kid's own calendar (only the kid's own session sets it)
+      if (req.query && req.query.tz) Students.setTz(rec.code, String(req.query.tz));
       try { ruta = _homeRuta(req, rec, level); } catch (e) { console.warn('[home] ruta failed:', e.message); }
     }
     res.json({ ok: true, level: level.id, slug: level.pack || level.id, levelName: level.name, family: level.family,
@@ -5163,7 +5175,7 @@ function _tareaIdsOf(lvl) {
 // experience (the house for the family, the school, the plane for the trip…), else the world's first picture on disk.
 // La Ruta Dorada's «Tus tareas» draws one folder per experience; a homework audio's `exp` is its experience number.
 const _EXP_PIC = { familia: ['jia', 'baba'], escuela: ['xuexiao', 'laoshi'], restaurante: ['fandian'], tienda: ['yifu', 'shangdian'], rutina: ['tianqi'],
-  salud: ['yiyuan', 'yisheng'], china: ['feiji'], magicas: ['xiexie'], mercado: ['shangdian'], tiempo: ['tianqi'], viajes: ['feiji'], casa: ['dianshi', 'zhuozi'],
+  salud: ['yisheng', 'wan'], china: ['feiji'], magicas: ['xiexie'], mercado: ['shangdian'], tiempo: ['tianqi'], viajes: ['feiji'], casa: ['dianshi', 'zhuozi'],
   personas: ['ren'], numeros: ['san'], espejo: ['bizi'], mascotas: ['mao', 'gou'], comida: ['mifan'] };
 const _rutaExpsCache = {};
 const _rutaExpFiles = Object.create(null);   // '<level>/<n>' → the picture's file (only what _rutaExps chose)
@@ -5737,10 +5749,18 @@ function _entradaIn(req, res, rec, level, dev) {
   else if (ap && !a.parked) _autoSetCookie(req, res, ap.rec, true);
   _autoSession(req, res, Students.get(rec.code));
   _kidSetCookie(req, res, rec, false);
+  _kidTz(req, rec);
+}
+// (review 2026-10-18) the phone's time zone from la entrada's POSTs, for the kid it just let in: «N días seguidos» on
+// their own calendar (core/student-records.js setTz: a known IANA zone, stored only when it changed)
+function _kidTz(req, rec) {
+  const tz = req.body && typeof req.body.tz === 'string' ? req.body.tz : '';
+  if (tz && rec && rec.code) Students.setTz(rec.code, tz);
 }
 // the same answer as /api/homework/enter, for the portal home (today's; part 3 replaces it). keyMode: the page sends no
 // class code (the session is the pass); a class account keeps its own class code as before
 function _entradaPayload(req, res, rec, o) {
+  _kidTz(req, rec);
   const level = LevelKeys.classLevel(rec) || Levels.DEFAULT;
   const info = Levels.info(level);
   const levelOpen = _openLevelOnDevice(req, res, rec, level);
@@ -6158,6 +6178,9 @@ function _rutaState(req) {
       // 🏆 2026-10-18: the logged-in kid's homework marks for this level's audios («Escuchada», «¡Ya la mandé!»), from
       // their account (any phone). The homework audios are open, so a locked module carries them too.
       tareas: rec ? _tareaMarks(rec, _tareaIdsOf(l.id)) : null,
+      // (review 2026-10-18) the logged-in kid's simulation taken last, for the bubble that says what «Hoy» says on their
+      // home (js/papas-plan.js today(): «¡Aprobaste El Simulacro Dorado con P %!»)
+      simLast: rec && a.ok && !teach ? _lastSimOf(_simsTaken(rec, l.id)) : null,
       // 🗂️ the module's experiences, the folders of «Tus tareas» (public: the curriculum's names and pack pictures, served
       // under neutral names by /ruta-exp/<level>/<n>.webp)
       exps: _rutaExps(l.id),
@@ -6171,7 +6194,9 @@ function _rutaState(req) {
   // who: the logged-in kid's opaque id (the same as /api/ruta/seals): the route trusts a phone's seal mirror only when
   // it holds this kid's account
   // tw: a teacher device's opaque person id (El Entrenamiento keeps a teacher's own rounds on the device under it)
-  return { ok: true, teacher, superAdmin, student: !!rec, who: rec ? _sealWho(rec.code) : null, tw: teacher ? _trainTeacherWho(req) : null,
+  // auto: an unclaimed automatic account still wearing its placeholder name (review 2026-10-18: /homework would greet it
+  // with «¿Quién eres?», so the module page never offers it «Mi Dralingo» as its way back)
+  return { ok: true, teacher, superAdmin, student: !!rec, auto: !!(rec && _autoUnclaimed(rec) && _autoNameless(rec)), who: rec ? _sealWho(rec.code) : null, tw: teacher ? _trainTeacherWho(req) : null,
     home: home ? (Levels.info(home).pack || home) : null, modules };
 }
 // 🗂️ an experience folder's picture by its number (review 2026-10-18: never the pack's pinyin file name); public like

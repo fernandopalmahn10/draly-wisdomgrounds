@@ -29,13 +29,18 @@
     jardin: 'escape/jardin/bg-s.webp', museo: 'escape/museo/bg-s.webp', mercado: 'escape/mercado/bg-s.webp',
     fuente: 'escape/fuente/bg-s.webp', muralla: 'escape/muralla/bg-s.webp', pista: 'escape/pista/bg-s.webp',
     shanghai: 'scenes/shanghai-s.webp', templo: 'scenes/templo-s.webp', luna: 'scenes/luna-s.webp', rio: 'scenes/rio-s.webp',
+    // (2026-10-18, made for the home on Higgsfield: Dubai's beach sports park for Deportes y Salud, an enchanted lantern
+    // garden for Palabras Mágicas II, a magic mirror in a Dubai palace courtyard for El Espejo Mágico, a giant abacus in a
+    // Chinese garden for Números)
+    deportes: 'scenes/deportes-s.webp', magia: 'scenes/magia-s.webp', espejo: 'scenes/espejo-s.webp', numeros: 'scenes/numeros-s.webp',
   };
+  // (review 2026-10-18: no trapdoor arena any more, templo / luna: their giant black pit read as a sinkhole)
   const SCENES = {
-    newhsk1: ['jardin', 'museo', 'mercado', 'fuente', 'shanghai', 'templo', 'muralla', 'luna'],
-    yct1: ['jardin', 'luna', 'rio', 'mercado', 'shanghai', 'museo'],        // familia · espejo mágico · mascotas · comida · números y tiempo · escuela
-    hsk1: ['jardin', 'museo', 'mercado', 'rio', 'pista', 'fuente', 'shanghai', 'templo'],   // … tiempo y clima · viajes · casa · personas · números
+    newhsk1: ['jardin', 'museo', 'mercado', 'fuente', 'shanghai', 'deportes', 'muralla', 'magia'],
+    yct1: ['jardin', 'espejo', 'rio', 'mercado', 'numeros', 'museo'],      // familia · espejo mágico · mascotas · comida · números y tiempo · escuela
+    hsk1: ['jardin', 'museo', 'mercado', 'rio', 'pista', 'fuente', 'shanghai', 'numeros'],   // … tiempo y clima · viajes · casa · personas · números
   };
-  const ROTA = ['jardin', 'museo', 'mercado', 'fuente', 'shanghai', 'templo', 'muralla', 'luna', 'rio', 'pista'];
+  const ROTA = ['jardin', 'museo', 'mercado', 'fuente', 'shanghai', 'muralla', 'rio', 'pista'];
   const sceneOf = (slug, n) => A + SC[(SCENES[slug] || [])[n - 1] || ROTA[(n - 1) % ROTA.length]];
 
   let D = null;        // the insights payload
@@ -308,7 +313,7 @@
     if (books.length) {
       h += '<h3 class="pp-h3">Sus errores, en el libro dorado</h3><div class="pp-books">' + books.map((b) => '<a class="pp-book" href="' + esc(b.book) + '">' +
         '<img src="' + A + 'dralingo/star-hold.webp" alt="" width="36" height="36"><span class="pp-book-t"><b>Simulacro ' + b.n + '</b><small>' +
-        esc(b.mistakes == null ? 'Ver el libro dorado' : b.mistakes === 0 ? 'Sin errores' : b.mistakes === 1 ? '1 error para repasar' : b.mistakes + ' errores para repasar') + '</small></span>' + CHEV + '</a>').join('') + '</div>';
+        esc(b.mistakes == null || (b.mistakes === 0 && !(b.percent >= 100)) ? 'Ver el libro dorado' : b.mistakes === 0 ? 'Sin errores' : b.mistakes === 1 ? '1 error para repasar' : b.mistakes + ' errores para repasar') + '</small></span>' + CHEV + '</a>').join('') + '</div>';
     }
     $('pp-examenes').innerHTML = h;
   }

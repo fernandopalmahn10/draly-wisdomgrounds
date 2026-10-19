@@ -141,10 +141,34 @@ body.md-in { height: auto; min-height: 100vh; min-height: 100dvh; }
   background: var(--md-paper); border-radius: 16px 16px 4px 16px; padding: 11px 13px; box-shadow: 0 8px 18px rgba(0, 0, 0, .28);
   font-size: 15px; font-weight: 800; line-height: 1.3; color: var(--md-ink);
 }
-#screen-list.md .md-hoy .md-go { margin-top: auto; font-size: 16px; min-height: 50px; padding: 0 18px; box-shadow: 0 5px 0 var(--md-oro); }
+#screen-list.md .md-hoy-acts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: auto; }
+#screen-list.md .md-hoy .md-go { font-size: 16px; min-height: 50px; padding: 0 18px; box-shadow: 0 5px 0 var(--md-oro); }
+/* the homework due outside today's step: one reminder line («Y tu tarea de esta semana: 1 por mandar») */
+#screen-list.md .md-hoy-rem {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 48px; padding: 6px 12px; border: 0; border-radius: 14px; cursor: pointer;
+  background: #fff3ef; color: var(--md-red); box-shadow: inset 0 0 0 2px var(--md-red); font: 800 14px/1.25 var(--md-body); text-align: left; text-decoration: none;
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+}
+#screen-list.md .md-hoy-rem svg { width: 16px; height: 16px; }
 #screen-list.md .md-hoy-dr { position: absolute; right: -14px; bottom: -8px; width: auto; height: 190px; pointer-events: none; z-index: 1; }
 
-/* ── «De tu profe»: the teacher's tareas (under «Hoy», in an experience, in El Simulacro Dorado) ── */
+/* ── «De tu profe» under «Hoy»: one line (review 2026-10-18: the path and the dock on the first screen) ── */
+#screen-list.md .md-strip { border-radius: 18px; background: var(--md-paper); box-shadow: inset 0 0 0 2px var(--md-line); }
+#screen-list.md section.md-strip, #screen-list.md .md-strip > summary { display: flex; align-items: center; gap: 10px; min-height: 58px; padding: 5px 8px; }
+#screen-list.md .md-strip > summary { cursor: pointer; list-style: none; -webkit-tap-highlight-color: transparent; }
+#screen-list.md .md-strip > summary::-webkit-details-marker { display: none; }
+#screen-list.md .md-strip-fer { width: 40px; height: 40px; flex: none; border-radius: 50%; object-fit: cover; object-position: top; background: var(--md-sand); }
+#screen-list.md .md-strip-t { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; line-height: 1.2; }
+#screen-list.md .md-strip-t b { font-size: 12px; font-weight: 800; color: var(--md-oro-ink); }
+#screen-list.md .md-strip-t span { font-size: 15px; font-weight: 800; color: var(--md-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#screen-list.md .md-strip .md-tp-chip, #screen-list.md .md-strip .md-tp-go { flex: none; }
+#screen-list.md .md-strip-more {
+  display: inline-flex; align-items: center; min-height: 48px; padding: 0 14px; flex: none; border-radius: 12px;
+  background: var(--md-paper); color: var(--md-rojo); box-shadow: inset 0 0 0 2px var(--md-oro-line); font-size: 15px; font-weight: 800;
+}
+#screen-list.md .md-strip > .md-tp-list { padding: 2px 8px 10px; }
+@media (max-width: 380px) { #screen-list.md section.md-strip .md-tp-chip { display: none; } }
+/* ── the teacher's tareas (in an experience, in El Simulacro Dorado, with no route) ── */
 #screen-list.md .md-profe { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 10px; align-items: start; padding: 12px; border-radius: 20px; background: var(--md-paper); box-shadow: inset 0 0 0 2px var(--md-line); }
 #screen-list.md .md-profe-fer { width: 52px; height: auto; }
 #screen-list.md .md-profe-in { display: grid; gap: 8px; min-width: 0; }
@@ -177,6 +201,10 @@ body.md-in { height: auto; min-height: 100vh; min-height: 100dvh; }
 #screen-list.md .md-tp-box .md-tp.is-done { background: var(--md-green-pale); }
 #screen-list.md .md-tp-k { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 800; color: var(--md-oro-ink); }
 #screen-list.md .md-tp-k img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; object-position: top; background: var(--md-sand); }
+#screen-list.md .md-tp-k .md-tp-chip { margin-left: auto; }
+#screen-list.md .md-tp-lock { grid-area: chip; color: var(--md-soft); }
+#screen-list.md .md-tp-lock svg { width: 18px; height: 18px; }
+#screen-list.md a.md-tp-go { display: inline-flex; align-items: center; text-decoration: none; }
 
 /* ── La Ruta Dorada: the phone's zig-zag ── */
 #screen-list.md .md-ruta { display: flex; flex-direction: column; gap: 14px; }
@@ -217,6 +245,11 @@ body.md-in { height: auto; min-height: 100vh; min-height: 100dvh; }
   background: var(--md-green); color: #fff; box-shadow: 0 0 0 2px var(--md-paper);
 }
 #screen-list.md .md-node-ok svg { width: 17px; height: 17px; }
+#screen-list.md .md-node-pass {
+  position: absolute; right: 8px; top: 8px; display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px 3px 7px; border-radius: 999px;
+  background: var(--md-green); color: #fff; font-size: 12px; font-weight: 900; box-shadow: 0 0 0 2px var(--md-paper);
+}
+#screen-list.md .md-node-pass svg { width: 13px; height: 13px; }
 #screen-list.md .md-node-name { padding: 4px 2px 0 70px; font-size: 14px; font-weight: 800; line-height: 1.2; }
 #screen-list.md .md-node .md-bars { padding-left: 70px; }
 #screen-list.md .md-bars { display: flex; gap: 4px; }
@@ -231,15 +264,15 @@ body.md-in { height: auto; min-height: 100vh; min-height: 100dvh; }
 #screen-list.md .md-gold.is-today .md-node-scene { box-shadow: 0 0 0 4px var(--md-oro-claro), 0 0 0 10px rgba(232, 200, 120, .45), 0 8px 18px rgba(90, 16, 16, .15); }
 #screen-list.md .md-gold.is-done .md-node-scene { box-shadow: 0 0 0 4px var(--md-green), 0 8px 18px rgba(90, 16, 16, .15); }
 #screen-list.md .md-gold-star { position: absolute; left: 50%; bottom: -16px; width: 94px; height: auto; transform: translateX(-50%); }
+#screen-list.md .md-gold-cap { display: flex; flex-direction: column; align-items: center; align-self: stretch; text-align: center; }
 #screen-list.md .md-gold-name { padding: 12px 0 0; font: 800 20px/1.1 var(--md-head); color: var(--md-oro-ink); text-align: center; }
 #screen-list.md .md-gold-sub { font-size: 13px; font-weight: 700; color: var(--md-soft); text-align: center; }
 #screen-list.md .md-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; padding: 0 4px; font-size: 12px; font-weight: 700; color: var(--md-soft); }
 #screen-list.md .md-legend span { display: inline-flex; align-items: center; gap: 5px; }
 #screen-list.md .md-legend i { display: inline-block; width: 16px; height: 6px; border-radius: 999px; background: var(--md-green); }
+#screen-list.md .md-legend i.is-na { background: repeating-linear-gradient(90deg, var(--md-soft) 0 4px, transparent 4px 7px); }
 #screen-list.md .md-ruta-foot { display: flex; flex-direction: column; align-items: center; gap: 6px; }
 #screen-list.md .md-ruta-foot .md-legend { align-self: stretch; }
-#screen-list.md .md-ruta-all { align-self: center; display: inline-flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 12px; color: var(--md-rojo); font-size: 14px; font-weight: 800; text-decoration: underline; text-underline-offset: 3px; }
-#screen-list.md .md-ruta-all svg { width: 18px; height: 18px; }
 
 /* ── the phone's tabs: La Ruta · Mensajes · Oraciones · Desafío ── */
 #screen-list.md .md-tabs {
@@ -257,7 +290,8 @@ body.md-in { height: auto; min-height: 100vh; min-height: 100dvh; }
   background: var(--md-red); color: #fff; font-size: 12px; font-weight: 900;
 }
 #screen-list.md .md-tab .md-count { position: absolute; top: 2px; left: calc(50% + 6px); }
-#screen-list.md .md-soon-chip { position: absolute; top: 2px; left: calc(50% + 4px); padding: 1px 6px; border-radius: 999px; background: var(--md-soft); color: #fff; font-size: 10px; font-weight: 900; }
+/* («pronto» beside the Desafío's star, never over it) */
+#screen-list.md .md-soon-chip { position: absolute; top: -9px; left: 50%; transform: translateX(-50%); padding: 1px 6px; border-radius: 999px; background: var(--md-soft); color: #fff; font-size: 10px; font-weight: 900; line-height: 1.3; white-space: nowrap; }
 
 /* ── an experience: 1 Palabras → 2 Práctica → 3 Tu tarea (its own page on a phone, beside the path on a laptop) ── */
 #screen-list.md .md-exp { display: flex; flex-direction: column; }
@@ -279,7 +313,11 @@ body.md-in { height: auto; min-height: 100vh; min-height: 100dvh; }
 #screen-list.md .md-step { position: relative; display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: 20px; background: var(--md-paper); box-shadow: inset 0 0 0 2px var(--md-line); scroll-margin: 90px; }
 #screen-list.md .md-step.is-done { background: var(--md-green-pale); box-shadow: inset 0 0 0 2px var(--md-green); }
 #screen-list.md .md-step.is-next { margin-top: 6px; padding-top: 22px; background: var(--md-glow); box-shadow: 0 0 0 4px var(--md-oro-claro), 0 12px 24px rgba(90, 16, 16, .15); }
-#screen-list.md .md-step.is-locked, #screen-list.md .md-step.is-closed { background: #f4eee2; }
+#screen-list.md .md-step.is-locked, #screen-list.md .md-step.is-closed, #screen-list.md .md-step.is-soon { background: #f4eee2; }
+#screen-list.md .md-step.is-locked .md-step-n, #screen-list.md .md-step.is-closed .md-step-n { background: var(--md-line); color: var(--md-soft); }
+#screen-list.md .md-step-n.is-soon { background: transparent; color: var(--md-soft); box-shadow: inset 0 0 0 2px var(--md-line); }
+/* each step's action: its own full-width line under its words (review 2026-10-18: never squeezed beside them) */
+#screen-list.md .md-step > .md-btn { width: 100%; }
 #screen-list.md .md-step-tag { position: absolute; top: -13px; left: 16px; padding: 4px 12px; border-radius: 999px; background: var(--md-red); color: #fff; font-size: 13px; font-weight: 900; }
 #screen-list.md .md-step-row { display: flex; align-items: center; gap: 12px; }
 #screen-list.md .md-step-n {
@@ -295,13 +333,7 @@ body.md-in { height: auto; min-height: 100vh; min-height: 100dvh; }
 #screen-list.md .md-step-t small { display: block; font-size: 12px; font-weight: 700; color: var(--md-soft); }
 #screen-list.md .md-step-l { font-size: 13px; font-weight: 700; color: var(--md-ink-2); }
 #screen-list.md .md-step.is-done .md-step-l { color: var(--md-green); }
-/* a narrow phone (360 px): the step's button gets its own full-width line instead of squeezing the words */
-@media (max-width: 389px) {
-  #screen-list.md .md-step-row { flex-wrap: wrap; }
-  #screen-list.md .md-step-row:has(> .md-btn) > .md-step-txt { flex: 1 1 150px; }
-  #screen-list.md .md-step-row > .md-btn { flex: 1 1 100%; }
-  #screen-list.md .md-step-art { width: 48px; height: 48px; }
-}
+
 #screen-list.md .md-soon { color: var(--md-soft); font-size: 14px; }
 #screen-list.md .md-meter { display: block; height: 9px; border-radius: 999px; background: var(--md-wash); overflow: hidden; }
 #screen-list.md .md-meter i { display: block; height: 100%; border-radius: 999px; background: var(--md-oro); }
@@ -382,35 +414,25 @@ body.md-in { height: auto; min-height: 100vh; min-height: 100dvh; }
 #screen-list.md .md-read-t { display: flex; flex-direction: column; min-width: 0; }
 #screen-list.md .md-read-t b { font-weight: 800; }
 #screen-list.md .md-read-t small { font-size: 13px; font-weight: 700; color: var(--md-soft); }
-#screen-list.md .md-dor-train { display: flex; }
+#screen-list.md .md-dor-note { margin-top: 8px !important; font-size: 13px; font-weight: 700; color: var(--md-soft); }
+#screen-list.md .md-dor-state.is-done .md-dor-big { color: var(--md-green); }
+/* ONE folder: «De tu profe · Practica el examen» */
+#screen-list.md .md-folder { border-radius: 18px; background: var(--md-warm); box-shadow: inset 0 0 0 2px var(--md-line); }
+#screen-list.md .md-folder > summary { display: flex; align-items: center; gap: 10px; min-height: 60px; padding: 6px 12px 6px 8px; cursor: pointer; list-style: none; -webkit-tap-highlight-color: transparent; }
+#screen-list.md .md-folder > summary::-webkit-details-marker { display: none; }
+#screen-list.md .md-folder > summary::after { content: ''; width: 10px; height: 10px; flex: none; margin-left: 4px; border-right: 3px solid var(--md-rojo); border-bottom: 3px solid var(--md-rojo); transform: rotate(45deg) translateY(-3px); transition: transform .18s var(--md-ease); }
+#screen-list.md .md-folder[open] > summary::after { transform: rotate(-135deg) translateY(-1px); }
+#screen-list.md .md-folder > summary img { width: 40px; height: 40px; flex: none; border-radius: 50%; object-fit: cover; object-position: top; background: var(--md-sand); }
+#screen-list.md .md-folder-t { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
+#screen-list.md .md-folder-t b { font-size: 15px; font-weight: 900; color: var(--md-rojo); }
+#screen-list.md .md-folder-t small { font-size: 13px; font-weight: 700; color: var(--md-soft); }
+#screen-list.md .md-folder > .md-tp-list { padding: 0 10px 10px; }
+#screen-list.md .md-folder .md-tp { background: var(--md-paper); }
+#screen-list.md .md-folder .md-tp.is-done { background: var(--md-green-pale); }
+#screen-list.md .md-folder > .md-quiet { padding: 0 14px 12px; }
 
-/* «Mis exámenes» (homework.js's list, drawn in the design's look; no hanzi on a kid's page: pinyin and Spanish only) */
-#screen-list.md .md-exams { display: grid; gap: 10px; }
-#screen-list.md .md-exams .hw-empty { padding: 4px 2px; background: none; border: 0; box-shadow: none; color: var(--md-soft); font-size: 14px; font-weight: 700; text-align: left; }
-#screen-list.md .md-exams .hw-myexams-attempt { padding: 12px; border-radius: 16px; border: 0; background: var(--md-paper); box-shadow: inset 0 0 0 2px var(--md-line); color: var(--md-ink); margin: 0; }
-#screen-list.md .md-exams .hw-myexams-attempt.is-passed { box-shadow: inset 0 0 0 2px var(--md-green); }
-#screen-list.md .md-exams .hw-myexams-attempt-title { color: var(--md-ink); font-weight: 900; font-size: 15px; }
-#screen-list.md .md-exams .hw-myexams-attempt-pct { color: var(--md-green); font-weight: 900; }
-#screen-list.md .md-exams .hw-myexams-attempt.is-low .hw-myexams-attempt-pct { color: var(--md-rojo); }
-#screen-list.md .md-exams .hw-myexams-attempt-meta { display: flex; flex-wrap: wrap; gap: 4px 12px; color: var(--md-soft); font-size: 13px; font-weight: 700; }
-#screen-list.md .md-exams .hw-myexams-attempt-wrong { color: var(--md-rojo); }
-#screen-list.md .md-exams .hw-myexams-attempt-wrong.is-stale { color: var(--md-soft); }
-#screen-list.md .md-exams .hw-myexams-attempt-hint { display: flex; align-items: center; min-height: 48px; color: var(--md-rojo); font-size: 14px; font-weight: 800; }
-#screen-list.md .md-exams .hw-myexams-attempt-detail { display: grid; gap: 10px; margin-top: 6px; background: none; border: 0; padding: 0; }
-#screen-list.md .md-exams .hw-myexams-attempt-detail.hidden { display: none; }
-#screen-list.md .md-exams :is(.hw-myexams-detail-head, .hw-myexams-perfect) { color: var(--md-ink-2); font-weight: 800; font-size: 14px; }
-#screen-list.md .md-exams .hw-myexams-wrong-row { display: grid; gap: 8px; padding: 10px; border-radius: 12px; background: var(--md-warm); border: 0; color: var(--md-ink); }
-#screen-list.md .md-exams .hw-myexams-wrong-q { color: var(--md-rojo); font-weight: 900; }
-#screen-list.md .md-exams .hw-myexams-ctx { display: grid; gap: 6px; color: var(--md-ink-2); }
-#screen-list.md .md-exams .hw-myexams-ctx-hanzi { display: none; }
-#screen-list.md .md-exams .hw-myexams-ctx-img { max-width: 100%; max-height: 160px; width: auto; border-radius: 10px; }
-#screen-list.md .md-exams .hw-myexams-replay { justify-self: start; min-height: 48px; padding: 0 14px; border: 0; border-radius: 12px; background: var(--md-oro-claro); color: var(--md-rojo); font: 800 14px/1 var(--md-body); cursor: pointer; }
-#screen-list.md .md-exams .hw-myexams-wrong-d { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-#screen-list.md .md-exams .hw-myexams-pick { display: grid; gap: 4px; padding: 8px; border-radius: 10px; background: var(--md-paper); color: var(--md-ink); border: 0; }
-#screen-list.md .md-exams .hw-myexams-pick.is-picked { box-shadow: inset 0 0 0 2px #e8b4b0; }
-#screen-list.md .md-exams .hw-myexams-pick.is-correct { box-shadow: inset 0 0 0 2px var(--md-green); }
-#screen-list.md .md-exams .hw-myexams-pick-tag { font-size: 12px; font-weight: 800; color: var(--md-soft); }
-#screen-list.md .md-exams .hw-myexams-pick img { max-width: 100%; height: auto; border-radius: 8px; }
+/* («Mis exámenes» is no longer drawn on the home since the review of 2026-10-18: El Simulacro Dorado lists «Tus simulacros»
+   with their libro dorado; homework.js keeps the list parked, hidden) */
 
 /* ── Mensajes · Mis oraciones · Desafío del día ── */
 #screen-list.md .md-view { display: flex; flex-direction: column; min-height: 100%; }
@@ -513,9 +535,13 @@ body.md-in { height: auto; min-height: 100vh; min-height: 100dvh; }
     border-radius: 26px; background: var(--md-paper); box-shadow: inset 0 0 0 2px var(--md-line);
   }
   /* «Hoy» across the top */
-  #screen-list.md .md-hoy { min-height: 0; height: clamp(140px, 22vh, 180px); border-radius: 26px; }
+  /* (its height follows its words: one or two lines and the buttons; the bubble already says «¡Hoy toca la Experiencia N!»,
+     so the small kicker steps aside and the path's two rows and the dock fit the first screen at 1366 × 768) */
+  #screen-list.md .md-hoy { display: flex; align-items: center; min-height: clamp(124px, 17vh, 160px); height: auto; border-radius: 26px; }
+  #screen-list.md .md-hoy-k { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  #screen-list.md .md-hoy-acts { margin-top: 0; }
   #screen-list.md .md-hoy-shade { background: linear-gradient(90deg, rgba(20, 10, 40, .86) 0%, rgba(20, 10, 40, .5) 52%, rgba(20, 10, 40, .05) 82%); }
-  #screen-list.md .md-hoy-in { min-height: 0; height: 100%; width: auto; max-width: calc(100% - 230px); padding: clamp(12px, 2.2vh, 20px) 24px; gap: clamp(6px, 1.2vh, 11px); justify-content: center; }
+  #screen-list.md .md-hoy-in { min-height: 0; height: auto; width: auto; max-width: calc(100% - 230px); padding: clamp(12px, 2.2vh, 20px) 24px; gap: clamp(6px, 1.2vh, 11px); justify-content: center; }
   #screen-list.md .md-hoy-t { font-size: clamp(16px, 2.2vh, 18px); padding: 10px 16px; border-radius: 18px; }
   #screen-list.md .md-hoy .md-go { margin-top: 0; min-height: 48px; }
   #screen-list.md .md-hoy-dr { right: 22px; bottom: -12px; height: calc(100% + 30px); max-height: 210px; }
@@ -526,7 +552,7 @@ body.md-in { height: auto; min-height: 100vh; min-height: 100dvh; }
   #screen-list.md .md-node { width: auto; transform: none; gap: 5px; padding: 6px 6px 8px; border-radius: 18px; }
   #screen-list.md .md-node.is-sel { background: #fbf3dc; box-shadow: inset 0 0 0 2px var(--md-oro-line); }
   @media (hover: hover) and (pointer: fine) { #screen-list.md .md-node:hover { background: var(--md-warm); } #screen-list.md .md-node.is-sel:hover { background: #fbf3dc; } }
-  #screen-list.md .md-node-scene { height: clamp(56px, 10vh, 92px); border-radius: 16px; box-shadow: none; }
+  #screen-list.md .md-node-scene { height: clamp(56px, 8.5vh, 88px); border-radius: 16px; box-shadow: none; }
   #screen-list.md .md-node.is-done .md-node-scene { box-shadow: 0 0 0 3px var(--md-green); }
   #screen-list.md .md-node.is-today .md-node-scene { box-shadow: 0 0 0 3px var(--md-oro-claro), 0 0 0 8px rgba(232, 200, 120, .45); }
   #screen-list.md .md-node-pic { left: 6px; bottom: -10px; width: 44px; height: 44px; box-shadow: 0 0 0 3px var(--md-paper), 0 4px 10px rgba(0, 0, 0, .2); }
@@ -539,13 +565,12 @@ body.md-in { height: auto; min-height: 100vh; min-height: 100dvh; }
   #screen-list.md .md-node .md-bars i { width: 22px; height: 6px; }
   #screen-list.md .md-gold-li { padding-top: 0; }
   #screen-list.md .md-gold { width: auto; }
-  #screen-list.md .md-gold .md-node-scene { height: clamp(56px, 10vh, 92px); box-shadow: 0 0 0 3px var(--md-oro-claro); }
+  #screen-list.md .md-gold .md-node-scene { height: clamp(56px, 8.5vh, 88px); box-shadow: 0 0 0 3px var(--md-oro-claro); }
   #screen-list.md .md-gold-star { width: 64px; bottom: -12px; }
-  #screen-list.md .md-gold-name { padding-top: 10px; font: 900 13px/1.2 var(--md-body); }
+  #screen-list.md .md-gold-name { padding: 10px 2px 0; min-height: 0; font: 900 13px/1.2 var(--md-body); }
   #screen-list.md .md-gold-sub { font-size: 12px; }
   #screen-list.md .md-ruta-t { font-size: 28px; }
   #screen-list.md .md-ruta-foot { flex-direction: row; align-items: center; justify-content: space-between; gap: 4px 16px; }
-  #screen-list.md .md-ruta-all { font-size: 13px; padding: 0 4px; }
   /* the dock */
   #screen-list.md .md-dock { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
   #screen-list.md .md-tile {
@@ -574,7 +599,7 @@ body.md-in { height: auto; min-height: 100vh; min-height: 100dvh; }
   #screen-list.md .md-exp.is-aside .md-steps { gap: 10px; }
   #screen-list.md .md-exp.is-aside .md-step { padding: 10px 12px; border-radius: 18px; }
   #screen-list.md .md-exp.is-aside .md-step.is-next { padding-top: 18px; }
-  #screen-list.md .md-exp.is-aside .md-step-art { width: 44px; height: 44px; }
+
   #screen-list.md .md-exp.is-aside .md-step-t { font-size: 16px; }
   #screen-list.md .md-exp.is-aside .md-peek { padding-left: 48px; }
   #screen-list.md .md-exp.is-aside .md-peek img { width: 40px; height: 40px; border-radius: 11px; }
@@ -587,7 +612,7 @@ body.md-in { height: auto; min-height: 100vh; min-height: 100dvh; }
   #screen-list.md .md-band-in { height: 58px; }
   #screen-list.md .md-grid { padding-top: 12px; gap: 16px; }
   #screen-list.md .md-left { gap: 10px; }
-  #screen-list.md .md-hoy { height: 132px; }
+  #screen-list.md .md-hoy { min-height: 120px; }
   #screen-list.md .md-hoy-dr { max-height: 170px; }
   #screen-list.md .md-ruta { padding-top: 8px; }
   #screen-list.md .md-ruta-t { font-size: 24px; }
@@ -645,6 +670,7 @@ body.md-in { height: auto; min-height: 100vh; min-height: 100dvh; }
 #screen-settings .md-pf-save:disabled { opacity: .6; }
 #screen-settings .md-pf-msg { margin: 0; min-height: 1.2em; font-size: 14px; font-weight: 800; color: var(--md-green); }
 #screen-settings .md-pf-help { margin: 0; font-size: 14px; font-weight: 700; line-height: 1.4; color: var(--md-ink-2); }
+#screen-settings .md-pf-link { display: inline-flex; align-items: center; min-height: 48px; color: var(--md-rojo); font-size: 15px; font-weight: 800; text-decoration: underline; text-underline-offset: 3px; }
 #screen-settings .md-pf-switch { position: relative; width: 48px; height: 28px; flex: none; margin-left: auto; border-radius: 999px; background: #d9cdb2; transition: background .18s var(--md-ease); }
 #screen-settings .md-pf-switch i { position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; transition: left .18s var(--md-ease); }
 #screen-settings [aria-checked="true"] .md-pf-switch { background: var(--md-green); }

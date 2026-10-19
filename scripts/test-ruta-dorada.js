@@ -160,10 +160,11 @@ async function run() {
   }
   ok(/<b>La Ruta Dorada<\/b>/.test(visible('public/index.html')), 'the home card says «La Ruta Dorada»');
   // (2026-10-18, «Mi Dralingo» part 3: the /homework home IS the kid's La Ruta Dorada, a path of the level's experiences;
-  // each opens its world of La Base and of El Entrenamiento, and «Ver toda La Ruta Dorada» the module path)
-  ok(/Ver toda La Ruta Dorada de/.test(visible('public/js/mi-dralingo.js')) && /M\.route\) \+ '\?from=homework"/.test(visible('public/js/mi-dralingo.js')) &&
-    /'\?from=homework#mundo-' \+ n/.test(visible('public/js/mi-dralingo.js')),
-    'the /homework home is the kid\'s La Ruta Dorada (its experiences open La Base and El Entrenamiento; «Ver toda La Ruta Dorada» the module path)');
+  // each opens its world of La Base and of El Entrenamiento; since the review of 2026-10-18 every level's module page is
+  // in Mi perfil, «Ver todos los niveles de La Ruta Dorada», the home itself being the route)
+  ok(/'\?from=homework#mundo-' \+ n/.test(visible('public/js/mi-dralingo.js')) && /M\.route \+ '\/entrenamiento'/.test(visible('public/js/mi-dralingo.js')) &&
+    /class="md-pf-link" href="\/audios"/.test(visible('public/homework.html')),
+    'the /homework home is the kid\'s La Ruta Dorada (its experiences open La Base and El Entrenamiento; every level from Mi perfil)');
   ok(/"La Ruta Dorada"/.test(visible('public/manifest.webmanifest')), 'the app shortcut is «La Ruta Dorada»');
   // /homework.html?next=…: back to La Ruta Dorada after the login, never anywhere else (the check homework.js runs)
   const cond = (fs.readFileSync(path.join(ROOT, 'public/js/homework.js'), 'utf8').match(/if \((.+)\) hwNext = n;/) || [])[1];

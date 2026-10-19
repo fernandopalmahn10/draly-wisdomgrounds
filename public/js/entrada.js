@@ -34,7 +34,11 @@
     del(k) { try { localStorage.removeItem(k); } catch (_) {} },
   };
   const calm = () => !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
-  const post = (url, body) => fetch(url, { method: 'POST', credentials: 'same-origin', cache: 'no-store', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) })
+  // (review 2026-10-18) every POST carries the phone's time zone: the server keeps it on the kid it lets in, so «N días
+  // seguidos» counts the kid's own days (server.js _kidTz), never UTC
+  let TZ = '';
+  try { TZ = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (_) { TZ = ''; }
+  const post = (url, body) => fetch(url, { method: 'POST', credentials: 'same-origin', cache: 'no-store', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.assign(TZ ? { tz: TZ } : {}, body || {})) })
     .then((r) => r.json().catch(() => null).then((d) => ({ status: r.status, d })), () => ({ status: 0, d: null }));
   const getJ = (url) => fetch(url, { credentials: 'same-origin', cache: 'no-store' })
     .then((r) => r.json().catch(() => null).then((d) => ({ status: r.status, d })), () => ({ status: 0, d: null }));

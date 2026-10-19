@@ -820,8 +820,9 @@
       // an animation from the teacher plays again over the page (it used to open the bare picture file)
       const actionHtml = m.actionType === 'anim'
         ? '<button type="button" class="btn btn-jade hw-inbox-action hw-inbox-replay">▶️ Verla otra vez</button>'
-        : m.actionUrl
-          ? `<a class="btn btn-jade hw-inbox-action" href="${escapeHtml(m.actionUrl)}">${escapeHtml(m.actionLabel || 'Abrir')}</a>`
+        // (review 2026-10-18: a page of this site or an https:// page only; never javascript:, //host or /\host)
+        : m.actionUrl && (/^\/(?![\/\\])/.test(m.actionUrl) || /^https:\/\//i.test(m.actionUrl))
+          ? `<a class="btn btn-jade hw-inbox-action" href="${escapeHtml(m.actionUrl)}"${/^https:/i.test(m.actionUrl) ? ' target="_blank" rel="noopener"' : ''}>${escapeHtml(m.actionLabel || 'Abrir')}</a>`
           : '';
       row.innerHTML = `
         <div class="hw-inbox-msg-head">
@@ -4860,6 +4861,9 @@
       if (el) el.classList.toggle('hidden', n !== name);
     });
     if (window.HwPortal) window.HwPortal.screen(name);   // the alive hero runs only while the home is on screen
+    // (review 2026-10-18: the entry screen back = nobody's home on screen: the floating 🌐 pill and the page's own scroll
+    // box come back, css/mi-dralingo.css body.md-in)
+    if (name === 'entry' || name === 'avatar') document.body.classList.remove('md-in');
   }
   function escapeHtml(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));

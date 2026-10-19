@@ -79,7 +79,7 @@
       'Ayúdale a mandar su tarea: graben juntos su video y mándenlo a la profe por WhatsApp.': 'Help them send their homework: record their video together and send it to the teacher on WhatsApp.',
       '¡Terminó El Entrenamiento! Avísale a la profe: ya puede hacer El Simulacro Dorado en clase.': 'They finished the Training! Tell the teacher: they can now take the Golden Practice Exam in class.',
       '¡Va muy bien! Sigan así: 5 minutos al día en casa hacen la diferencia.': 'It\'s going very well! Keep it up: 5 minutes a day at home make the difference.',
-      'Ver la tarea': 'See the homework', 'Ver su libro dorado': 'See their golden book', 'Practicar ahora': 'Practise now', 'Marcar palabras': 'Mark words', 'Avisar a la profe': 'Tell the teacher',
+      'Ver la tarea': 'See the homework', 'Ver su libro dorado': 'See their golden book', 'Practicar ahora': 'Practice now', 'Marcar palabras': 'Mark words', 'Avisar a la profe': 'Tell the teacher',
       'Copiar mensaje': 'Copy message', '¡Mensaje copiado!': 'Message copied!',
       'palabras que ya sabe': 'words they know', 'experiencias completas': 'experiences complete', 'mandadas': 'sent',
       'tareas por WhatsApp': 'homework on WhatsApp', 'Falta 1 de esta semana': '1 left this week', 'Al día': 'Up to date', 'Pronto': 'Soon',
@@ -121,7 +121,7 @@
     PATTERNS.push({ re: /^Ayúdale a mandar la tarea de la Experiencia (\d+), (.+): graben juntos su video y mándenlo a la profe por WhatsApp\.$/,
       en: function (_, n, x) { return 'Help them send the homework of Experience ' + n + ', ' + nm(x) + ': record their video together and send it to the teacher on WhatsApp.'; } });
     PATTERNS.push({ re: /^Ayúdale a practicar la Experiencia (\d+)(?:, (.+?),)? hasta llegar al (\d+) %: (?:todavía no la practica|hoy va en (\d+) %)\.$/,
-      en: function (_, n, x, g, b) { return 'Help them practise Experience ' + n + (x ? ', ' + nm(x) + ',' : '') + ' until they reach ' + g + ' %: ' + (b ? 'today they are at ' + b + ' %.' : 'they haven\'t practised it yet.'); } });
+      en: function (_, n, x, g, b) { return 'Help them practice Experience ' + n + (x ? ', ' + nm(x) + ',' : '') + ' until they reach ' + g + ' %: ' + (b ? 'today they are at ' + b + ' %.' : 'they haven\'t practiced it yet.'); } });
     PATTERNS.push({ re: /^Ayúdale a marcar las palabras que ya sabe de la Experiencia (\d+)(?:, (.+))?: le faltan? (\d+)\.$/,
       en: function (_, n, x, k) { return 'Help them mark the words they already know in Experience ' + n + (x ? ', ' + nm(x) : '') + ': ' + k + ' to go.'; } });
     PATTERNS.push({ re: /^¡Va muy bien! Aprobó El Simulacro Dorado con (\d+) %\. Pídele que te cuente cómo le fue\.$/,
@@ -209,19 +209,20 @@
       'Tu profe te manda la tarea en clase.': 'Your teacher gives you the homework in class.', '1 · Palabras': '1 · Words', 'La Base': 'The Base',
       'Repasar': 'Review', 'Empezar': 'Start', '2 · Práctica': '2 · Practice', 'El Entrenamiento': 'The Training',
       'Se abre cuando marques todas sus palabras.': 'It opens when you mark all its words.', 'Marcar palabras': 'Mark words', 'Otra ronda': 'Another round',
-      'Practicar aquí': 'Practise here', 'También: Pinyin básico': 'Also: Basic pinyin', '3 · Tu tarea': '3 · Your homework', 'Se manda por WhatsApp': 'It goes by WhatsApp',
+      'Practicar aquí': 'Practice here', 'También: Pinyin básico': 'Also: Basic pinyin', '3 · Tu tarea': '3 · Your homework', 'Se manda por WhatsApp': 'Send it on WhatsApp',
       '«¡Dale! Escuchá el audio, grabá tu video y mandáselo a tu profe por WhatsApp. Después tocá': '«Go! Listen to the audio, record your video and send it to your teacher on WhatsApp. Then tap',
       '¡Ya la mandé!': 'I sent it!', '»': '»', 'Aileen': 'Aileen', 'Hamdan': 'Hamdan',
       'Tu profe te manda esta tarea cuando lleguen a esta experiencia en clase.': 'Your teacher sends this homework when your class reaches this experience.',
       '«¡Qué crack! Terminaste esta experiencia.»': '«You\'re a star! You finished this experience.»', 'Volver a La Ruta Dorada': 'Back to the Golden Route',
+      '«¡Terminaste esta experiencia! ¡Vamos por la siguiente!»': '«You finished this experience! On to the next one!»',
       'Escuchada': 'Listened', 'Mandada': 'Sent', 'Escuchar': 'Listen', 'Pausa': 'Pause', '¿Fue sin querer?': 'By mistake?', 'Deshacer': 'Undo',
       'Las palabras': 'The words', 'Escucha, lee, repite': 'Listen, read, repeat', 'Tu video': 'Your video',
       '¡Ya estás listo para El Simulacro Dorado!': 'You\'re ready for the Golden Practice Exam!', 'Avísale a tu profe: lo hacen en clase, con un PIN.': 'Tell your teacher: you take it in class, with a PIN.',
       'Avisarle a mi profe': 'Tell my teacher', 'Copiar mensaje': 'Copy message', '¡Mensaje copiado!': 'Message copied!',
       'Se abre en clase con tu profe, cuando termines El Entrenamiento.': 'It opens in class with your teacher, when you finish the Training.',
       'Libro dorado': 'Golden book', 'Cuando hagas un simulacro en clase, aquí repasas tus errores en tu libro dorado.': 'When you take a practice exam in class, you review your mistakes here in your golden book.',
-      'Practica el examen': 'Practise the exam', 'Simulacro del examen': 'Exam practice',
-      'El simulacro de práctica se abre cuando todas tus experiencias estén listas para practicar.': 'The practice exam opens when all your experiences are ready to practise.',
+      'Practica el examen': 'Practice the exam', 'Simulacro del examen': 'Exam practice',
+      'El simulacro de práctica se abre cuando todas tus experiencias estén listas para practicar.': 'The practice exam opens when all your experiences are ready to practice.',
       'Mis exámenes': 'My exams', 'Exámenes de lectura': 'Reading tests', 'Disponible': 'Available', 'Leer': 'Read', 'Al final de tu ruta': 'At the end of your route',
       'Tus simulacros en clase': 'Your practice exams in class', 'Mensajes': 'Messages', 'Volver': 'Back', 'Todo leído': 'All read', '1 mensaje nuevo': '1 new message',
       'Verla otra vez': 'Watch it again', 'Entrar al juego con el PIN': 'Join the game with the PIN', 'Para toda la clase': 'For the whole class',
@@ -249,12 +250,41 @@
       'Mi Familia': 'My Family', 'El Espejo Mágico': 'The Magic Mirror', 'Mis Mascotas': 'My Pets', 'La Comida': 'The Food', 'Números y Tiempo': 'Numbers and Time',
       'La Escuela y los Saludos': 'School and Greetings', 'Personas': 'People', 'Números': 'Numbers', 'Pinyin básico': 'Basic pinyin',
       'Oraciones del restaurante': 'Restaurant sentences',
+      // (review 2026-10-18: «Hoy» says what its button does, the ladder, the Simulacro page as one list, the strip)
+      'Marcar mis palabras': 'Mark my words', 'Mandar mi tarea': 'Send my homework', 'Avisar a mi profe': 'Tell my teacher',
+      'Ver mi libro dorado': 'See my golden book', 'Ver mi Ruta': 'See my Route', 'Seguir marcando': 'Keep marking',
+      '¡Vas muy bien! Repasa cuando quieras.': 'You\'re doing great! Review whenever you like.',
+      'Y tienes 1 tarea por mandar.': 'And you have 1 homework to send.', '¡Hiciste todas sus tareas!': 'You did all their homework!',
+      '1 nueva': '1 new', 'Ver': 'See', 'sin tarea todavía': 'no homework yet', 'Aprobado': 'Passed', 'Avisa a tu profe': 'Tell your teacher',
+      'El Simulacro Dorado: aprobado': 'The Golden Practice Exam: passed', 'El Simulacro Dorado: avisa a tu profe': 'The Golden Practice Exam: tell your teacher',
+      'Palabras': 'Words', 'Práctica': 'Practice', 'Tu tarea': 'Your homework', 'Mándala por WhatsApp': 'Send it on WhatsApp', 'Sin tarea todavía': 'No homework yet',
+      'Palabras y práctica listas. Tu tarea llega cuando tu clase llegue a esta experiencia.': 'Words and practice done. Your homework comes when your class reaches this experience.',
+      'Tu profe te la manda cuando tu clase llegue a esta experiencia.': 'Your teacher sends it when your class reaches this experience.',
+      'Preguntas de tu profe': 'Questions from your teacher', 'Preguntas del simulacro': 'Practice exam questions', 'Palabras y Audio': 'Words and audio',
+      'Lectura Profunda': 'Deep reading',
+      '«¡Qué crack! Tu profe ya tiene tus videos.»': '«You\'re a star! Your teacher has your videos.»',
+      'Tus simulacros': 'Your practice exams', 'De tu profe · Practica el examen': 'From your teacher · Practice the exam',
+      'Preguntas como en el examen': 'Questions like in the exam', 'Se abre cuando todas tus experiencias estén listas para practicar': 'It opens when all your experiences are ready to practice',
+      '1 lectura': '1 reading', 'Lectura': 'Reading',
+      'Para ver tu Ruta Dorada, toca «Entrar de nuevo».': 'To see your Golden Route, tap «Sign in again».',
+      'Algo salió mal al dibujar tu inicio.': 'Something went wrong drawing your home.', 'Mi perfil y «Salir»': 'My profile and «Log out»',
+      'Para las familias que leen en inglés': 'For families who read in English', 'Ver todos los niveles de La Ruta Dorada': 'See every level of the Golden Route',
     };
     for (var k in M) if (DICT.map[k] === undefined) DICT.map[k] = M[k];
     var nm = function (s) { return DICT.map[s] !== undefined ? DICT.map[s] : s; };
     var HOY = '¡Hoy toca la Experiencia (\\d+)!';
-    PATTERNS.push({ re: new RegExp('^' + HOY + ' Manda tu tarea de (.+)\\.$'), en: function (_, n, x) { return 'Today: Experience ' + n + '! Send your homework of ' + nm(x) + '.'; } });
-    PATTERNS.push({ re: new RegExp('^' + HOY + ' Practica (.+) hasta llegar al (\\d+) %\\.$'), en: function (_, n, x, g) { return 'Today: Experience ' + n + '! Practise ' + nm(x) + ' until you reach ' + g + ' %.'; } });
+    PATTERNS.push({ re: new RegExp('^' + HOY + ' Manda tu tarea de (.+)\\.$'), en: function (_, n, x) { return 'Today: Experience ' + n + '! Send your homework for ' + nm(x) + '.'; } });
+    PATTERNS.push({ re: new RegExp('^' + HOY + ' Practica (.+) hasta llegar al (\\d+) %\\.$'), en: function (_, n, x, g) { return 'Today: Experience ' + n + '! Practice ' + nm(x) + ' until you reach ' + g + ' %.'; } });
+    PATTERNS.push({ re: /^Y tu tarea de esta semana: (\d+) por mandar\.$/, en: 'And this week\'s homework: $1 to send.' });
+    PATTERNS.push({ re: /^Y tienes (\d+) tareas por mandar\.$/, en: 'And you have $1 homework tasks to send.' });
+    PATTERNS.push({ re: /^(\d+) tareas nuevas$/, en: '$1 new homework tasks' });
+    PATTERNS.push({ re: /^(\d+) nuevas$/, en: '$1 new' });
+    PATTERNS.push({ re: /^(\d+) de (\d+) listas$/, en: '$1 of $2 done' });
+    PATTERNS.push({ re: /^Hiciste los (\d+) pasos\. Tu profe te dejó (\d+) más\.$/, en: 'You did the $1 steps. Your teacher left you $2 more.' });
+    PATTERNS.push({ re: /^Tarea (\d+)$/, en: 'Homework $1' });
+    PATTERNS.push({ re: /^(\d+) lecturas$/, en: '$1 readings' });
+    PATTERNS.push({ re: /^Lectura · (\d+) \/ 100$/, en: 'Reading · $1 / 100' });
+    PATTERNS.push({ re: /^Preguntas como en el examen · (\d+) %$/, en: 'Questions like in the exam · $1 %' });
     PATTERNS.push({ re: new RegExp('^' + HOY + ' Empieza por marcar sus palabras\\.$'), en: 'Today: Experience $1! Start by marking its words.' });
     PATTERNS.push({ re: new RegExp('^' + HOY + ' Marca sus palabras: te falta 1\\.$'), en: 'Today: Experience $1! Mark its words: 1 to go.' });
     PATTERNS.push({ re: new RegExp('^' + HOY + ' Marca sus palabras: te faltan (\\d+)\\.$'), en: 'Today: Experience $1! Mark its words: $2 to go.' });

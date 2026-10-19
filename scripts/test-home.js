@@ -2,8 +2,9 @@
 // test-home.js — «Mi Dralingo» part 3 (2026-10-18): the kid's home on /homework (public/js/mi-dralingo.js, his approved
 // design .claude/handoff/kidhome-design). Its OWN server (port 4490, never 3000), a temporary data folder with MADE-UP kids
 // (codes made up here, never printed), never data/, never the live site.
-//   1 · «Hoy» = js/papas-plan.js today(): the same decision as Papás' «Lo más importante» (each focus → its experience,
-//       its step, its words), and the server's plan is the page's plan
+//   1 · «Hoy» = js/papas-plan.js today() (review 2026-10-18): the kid's ladder in the current experience (1 Palabras →
+//       2 Práctica → 3 Tu tarea, its button named for what it does), a homework due as one reminder line; Papás keeps
+//       homework first from the SAME plan; the server's plan is the page's plan; La Ruta Dorada's module page says the same
 //   2 · GET /api/homework/home: the homework doors (an unknown code and «not yours» the same 403), `ruta` only for the
 //       kid's own session, never cached, no code and no hanzi inside, the experiences per level (8 · 8 · 6) with their
 //       world, a folder picture and word pictures under neutral addresses (served), each homework's tracks, the streak
@@ -46,29 +47,33 @@ const range = (a, b) => Array.from({ length: b - a + 1 }, (_, i) => a + i);
 const HW = (s3, s1) => [{ id: 'x-e03-r1', exp: 3, round: 1, title: 'Tres', sent: !!s3 }, { id: 'x-e01-r1', exp: 1, round: 1, title: 'Uno', sent: !!s1 }];
 const raw = (o) => Object.assign({ pct: 70, words: 40, seals: [], worlds: [W(1), W(2), W(3), W(4)], hws: HW(false, false), sim: null }, o);
 function todayTests() {
-  section('«Hoy» = the same decision as Papás («Lo más importante»), in the kid\'s words');
+  section('«Hoy» = the kid\'s ladder (review 2026-10-18): the current experience, 1 Palabras → 2 Práctica → 3 Tu tarea; Papás keeps homework first');
   const T = (r) => { const p = Plan.plan(r); return { p, t: Plan.today(p) }; };
   let { p, t } = T(raw({}));
-  ok(p.focus.kind === 'tarea' && t.kind === 'tarea' && t.exp === 3 && t.step === 3 && t.id === 'x-e03-r1' && !t.dorado, 'a homework to send: today = its experience (3), step 3 «Tu tarea»');
-  ok(t.text === '¡Hoy toca la Experiencia 3! Manda tu tarea de Mundo 3.', '… «' + t.text + '»');
+  ok(p.focus.kind === 'tarea' && p.focus.exp === 3, 'Papás («Lo más importante», the parents): the homework to send comes first');
+  ok(t.kind === 'words' && t.exp === 1 && t.step === 1 && !t.dorado && t.go === 'Marcar mis palabras', 'the kid: experience 1, words untouched → step 1 «Marcar mis palabras» (a homework due is never the start step)');
+  ok(t.text === '¡Hoy toca la Experiencia 1! Empieza por marcar sus palabras.', '… «' + t.text + '»');
+  ok(t.remind && t.remind.left === 2 && t.remind.exp === 3 && t.remind.id === 'x-e03-r1' && t.remind.text === 'Y tienes 2 tareas por mandar.', '… the homework due rides along: «' + (t.remind && t.remind.text) + '» (opens the newest, experience 3)');
   ({ p, t } = T(raw({ hws: HW(true, true), seals: range(1, 10), worlds: [W(1, 55), W(2), W(3), W(4)] })));
-  ok(p.focus.kind === 'practice' && t.kind === 'practice' && t.exp === 1 && t.step === 2, 'practice below the goal: step 2 «Práctica» of that experience');
+  ok(p.focus.kind === 'practice' && t.kind === 'practice' && t.exp === 1 && t.step === 2 && t.go === 'Practicar aquí' && !t.remind, 'words done, practice below the goal: step 2 «Practicar aquí», nothing due');
   ok(t.text === '¡Hoy toca la Experiencia 1! Practica Mundo 1 hasta llegar al 70 %.', '… «' + t.text + '»');
-  ({ p, t } = T(raw({ hws: HW(true, true) })));
-  ok(t.kind === 'words' && t.exp === 1 && t.step === 1 && t.text === '¡Hoy toca la Experiencia 1! Empieza por marcar sus palabras.', 'nothing marked yet: «Empieza por marcar sus palabras.»');
   ({ p, t } = T(raw({ hws: HW(true, true), seals: range(1, 6) })));
   ok(t.kind === 'words' && t.text === '¡Hoy toca la Experiencia 1! Marca sus palabras: te faltan 4.', 'some marked: «te faltan 4»');
   ({ p, t } = T(raw({ hws: HW(true, true), seals: range(1, 9) })));
   ok(t.text === '¡Hoy toca la Experiencia 1! Marca sus palabras: te falta 1.', 'one left: «te falta 1» (singular)');
+  ({ p, t } = T(raw({ hws: HW(false, false), seals: range(1, 10), worlds: [W(1, 80), W(2), W(3), W(4)] })));
+  ok(t.kind === 'tarea' && t.exp === 1 && t.step === 3 && t.id === 'x-e01-r1' && t.go === 'Mandar mi tarea' && t.text === '¡Hoy toca la Experiencia 1! Manda tu tarea de Mundo 1.',
+    'words and practice done: step 3 «Mandar mi tarea» of the same experience');
+  ok(t.remind && t.remind.exp === 3 && t.remind.left === 1 && t.remind.text === 'Y tu tarea de esta semana: 1 por mandar.', '… and this week\'s homework (experience 3) as the reminder: «' + (t.remind && t.remind.text) + '»');
   const all = range(1, 40), best = [W(1, 80), W(2, 90), W(3, 75), W(4, 100)];
   ({ p, t } = T(raw({ hws: HW(true, true), seals: all, worlds: best })));
-  ok(p.focus.kind === 'teacher' && t.dorado && t.exp === null && /^¡Terminaste El Entrenamiento! Avísale a tu profe/.test(t.text), 'El Entrenamiento done: El Simulacro Dorado, «Avísale a tu profe»');
+  ok(p.focus.kind === 'teacher' && t.kind === 'teacher' && t.dorado && t.exp === null && t.go === 'Avisar a mi profe' && /^¡Terminaste El Entrenamiento! Avísale a tu profe/.test(t.text), 'everything done: El Simulacro Dorado, «Avisar a mi profe»');
   ({ p, t } = T(raw({ hws: HW(true, true), seals: all, worlds: best, sim: { n: 2, percent: 85, passed: true, at: 1 } })));
-  ok(p.focus.kind === 'fine' && t.dorado && t.text === '¡Aprobaste El Simulacro Dorado con 85 %! Repasa tu libro dorado.', 'a simulation passed: its golden book');
+  ok(p.focus.kind === 'fine' && t.dorado && t.go === 'Ver mi libro dorado' && t.text === '¡Aprobaste El Simulacro Dorado con 85 %! Repasa tu libro dorado.', 'a simulation passed: «Ver mi libro dorado»');
   ({ p, t } = T(raw({ worlds: [], hws: [], words: 0 })));
-  ok(t.kind === 'fine' && !t.dorado && t.exp === null, 'a level with no experiences yet: a calm line');
+  ok(t.kind === 'fine' && !t.dorado && t.exp === null && !t.remind, 'a level with no experiences yet: a calm line');
   ({ p, t } = T(raw({ hws: [{ id: 'z-r1', exp: null, round: 1, title: 'Suelta', sent: false }] })));
-  ok(t.kind === 'tarea' && t.exp === null && t.id === 'z-r1' && t.text === '¡Hoy toca mandar tu tarea!', 'a homework of no experience: «¡Hoy toca mandar tu tarea!» (it opens the homework itself)');
+  ok(t.kind === 'words' && t.remind && t.remind.exp === null && t.remind.id === 'z-r1' && t.remind.text === 'Y tienes 1 tarea por mandar.', 'a homework of no experience: the reminder opens the homework itself');
 }
 
 // ── the page's code in a sandbox (no browser): js/papas-plan.js + js/papas.js + js/mi-dralingo.js ─────────────────
@@ -142,7 +147,16 @@ const KIDS = {
     tareas: { [OLDHW[OLDHW.length - 1].id]: { h: NOW - DAY, s: NOW - DAY } }, extra: { testResults: [{ storyId: 'pinpin', score: 60, total: 100, ts: NOW - DAY }] } },
   GAPK: { level: 'hsk2', name: 'Pablo Prueba', avatar: 'oryx', extra: { streak: 9, dayDate: utcDay(NOW - 3 * DAY) } },
   OTHR: { level: 'hsk2', name: 'Clara Prueba', avatar: 'oryx', ruta: { s: '1-50', at: NOW - DAY, p: { 1: 99 } } },
+  // (review 2026-10-18) kids far from UTC who studied «yesterday» on their own calendar: a step today keeps the streak.
+  // Mexico City (UTC-6, a kid studying in the evening), and the two ends of the world: at any hour one of them is on a
+  // different date than UTC, so a UTC count fails here every time
+  TZMX: { level: 'hsk2', name: 'Ana Prueba', avatar: 'aileen', tz: 'America/Mexico_City', ruta: { s: '1-5', at: NOW - DAY } },
+  TZKI: { level: 'hsk2', name: 'Leo Prueba', avatar: 'adric', tz: 'Pacific/Kiritimati', ruta: { s: '1-5', at: NOW - DAY } },
+  TZPP: { level: 'hsk2', name: 'Mia Prueba', avatar: 'camel', tz: 'Pacific/Pago_Pago', ruta: { s: '1-5', at: NOW - DAY } },
 };
+const localDay = (tz, t) => new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(t));
+const localYesterday = (tz) => { const d = new Date(localDay(tz, NOW) + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() - 1); return d.toISOString().slice(0, 10); };
+['TZMX', 'TZKI', 'TZPP'].forEach((k) => { KIDS[k].extra = { streak: 3, dayDate: localYesterday(KIDS[k].tz) }; });
 const SEEDED = {};
 Object.entries(KIDS).forEach(([k, v]) => {
   v.code = madeUpCode();
@@ -298,38 +312,98 @@ async function serverTests() {
     'HSK 1: Pinyin básico open (60 %), the exam\'s practice world closed until every world is open');
   ok(dN('DONE').extra.simulacro.open === true && dN('DONE').dorado.open, '… open once every world is (El Simulacro Dorado earned)');
 
-  section('«Hoy» on the home = «Lo más importante» on Papás, for every made-up kid');
+  section('«Hoy» on the home: the kid\'s ladder, from the SAME plan as Papás (homework first for the parents)');
+  const escH = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  const nbsp = (h) => h.replace(/ /g, ' ');
   for (const k of ['NEWK', 'HALF', 'PRAC', 'WORD', 'DONE', 'GOLD', 'YCTK', 'OLDK']) {
     const d = R[k].json;
     const ins = await get('/api/homework/insights/' + KIDS[k].code + '?accessCode=' + CLASS[KIDS[k].level], as(phones[k]));
     const pp = ins.json && ins.json.ruta && ins.json.ruta.plan;
     const m = H.model(d, ST[k], null);
     const t = Plan.today(Plan.plan(d.ruta));
+    const bare = (o) => Object.assign({}, o, { href: undefined, wa: undefined });
     ok(pp && same(pp.focus, d.ruta.plan.focus), k + ': the home\'s plan and Papás\' plan say the same («' + (pp && pp.focus.kind) + '»)');
-    ok(m.hoy && same(Object.assign({}, m.hoy, { href: undefined }), Object.assign({}, t, { href: undefined })), k + ': the home\'s «Hoy» is today() of that plan');
+    ok(m.hoy && same(bare(m.hoy), bare(t)), k + ': the home\'s «Hoy» is today() of that plan («' + t.kind + '»)');
     const html = H.htmlFor(d, ST[k], '', false);
-    const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-    ok(html.replace(/ /g, ' ').includes(esc(t.text)), k + ': the phone shows «' + t.text + '»');
+    ok(nbsp(html).includes(escH(t.text)), k + ': the phone shows «' + t.text + '»');
+    ok(html.includes('<span>' + escH(t.go) + '</span>'), k + ': its button says what it does («' + t.go + '»)');
+    ok(!t.remind || (nbsp(html).includes(escH(t.remind.text)) && (t.remind.exp ? html.includes('data-act="remind" data-exp="' + t.remind.exp + '"') : true)),
+      k + ': a homework due rides along as one line' + (t.remind ? ' («' + t.remind.text + '»)' : ' (none)'));
     ok(!/\d %/.test(html), k + ': «N %» never splits over two lines (a no-break space)');
-    ok(t.dorado ? /md-gold is-today/.test(html) : t.exp ? html.includes('class="md-node is-today') && new RegExp('href="#exp-' + t.exp + '"[^>]*data-node').test(html.slice(html.indexOf('md-node is-today') - 200)) : true,
-      k + ': the path glows «¡Empieza aquí!» on ' + (t.dorado ? 'El Simulacro Dorado' : 'Experiencia ' + t.exp));
-    if (t.exp) {
+    const glow = t.kind === 'teacher' ? /md-gold is-today/.test(html) && /Avisa a tu profe/.test(html)
+      : t.dorado ? /md-gold is-done/.test(html) && /Aprobado/.test(html) && !/md-gold is-today/.test(html)
+        : t.exp ? html.includes('class="md-node is-today') && new RegExp('href="#exp-' + t.exp + '"[^>]*data-node').test(html.slice(html.indexOf('md-node is-today') - 200)) : true;
+    ok(glow, k + ': the path shows it on ' + (t.kind === 'teacher' ? 'El Simulacro Dorado («Avisa a tu profe»)' : t.dorado ? 'El Simulacro Dorado (✓ «Aprobado», never «¡Empieza aquí!»)' : 'Experiencia ' + t.exp));
+    if (t.exp && t.step) {
       const page = H.htmlFor(d, ST[k], '#exp-' + t.exp, false);
       ok(new RegExp('class="md-step is-next" id="md-step-' + t.step + '"').test(page), k + ': its experience opens with step ' + t.step + ' glowing «¡Empieza aquí!»');
     }
   }
   let m = H.model(R.NEWK.json, ST.NEWK, null);
-  ok(m.hoy.kind === 'tarea' && m.hoy.exp === NEWHW[0].exp && m.hoy.step === 3, 'new kid: the newest homework\'s experience, step 3');
+  ok(R.NEWK.json.ruta.plan.focus.kind === 'tarea' && m.hoy.kind === 'words' && m.hoy.exp === 1 && m.hoy.step === 1 && m.hoy.remind && m.hoy.remind.exp === NEWHW[0].exp,
+    'new kid: Papás says «the homework first»; the kid starts at experience 1, step 1, the homework as the reminder line');
   m = H.model(R.PRAC.json, ST.PRAC, null);
-  ok(m.hoy.kind === 'practice' && m.hoy.exp === 3 && m.hoy.step === 2, 'homework all sent: practise experience 3 (step 2)');
+  ok(m.hoy.kind === 'practice' && m.hoy.exp === 3 && m.hoy.step === 2 && m.hoy.go === 'Practicar aquí', 'homework all sent: practice experience 3 (step 2, «Practicar aquí»)');
   m = H.model(R.DONE.json, ST.DONE, null);
-  ok(m.hoy.dorado && m.dorado.ready && m.doneN === 8, 'all done: El Simulacro Dorado, «Avisarle a mi profe» ready');
+  ok(m.hoy.kind === 'teacher' && m.hoy.wa && m.dorado.ready && m.dorado.tell && m.doneN === 8, 'all done: «Avisar a mi profe» (WhatsApp), El Simulacro Dorado ready');
+  ok(/class="md-go is-wa" href="https:\/\/wa\.me\/\?text=/.test(H.htmlFor(R.DONE.json, ST.DONE, '', false)), '… «Hoy»\'s button opens the WhatsApp message itself');
   const dorHtml = H.htmlFor(R.DONE.json, ST.DONE, '#dorado', false);
   ok(/https:\/\/wa\.me\/\?text=/.test(dorHtml) && /Valentina Prueba/.test(decodeURIComponent((dorHtml.match(/wa\.me\/\?text=([^"]+)/) || [])[1] || '')) && /data-act="copy-msg"/.test(dorHtml),
     '… El Simulacro Dorado: the WhatsApp message with the kid\'s name, and «Copiar mensaje»');
   ok(!/yct-sim\.html|hsk-sim\.html|\/sim-media\//.test(dorHtml) && /En clase, con tu profe/.test(dorHtml), '… class mode: no simulation starts from the kid\'s phone');
   m = H.model(R.GOLD.json, ST.GOLD, null);
   ok(m.dorado.passed && /\/audios\/newhsk1\/libro\/2/.test(H.htmlFor(R.GOLD.json, ST.GOLD, '#dorado', true)), 'a simulation passed in class: its golden book on El Simulacro Dorado');
+  ok(m.hoy.go === 'Ver mi libro dorado' && /\/audios\/newhsk1\/libro\/2/.test(m.hoy.href || ''), '… «Hoy»: «Ver mi libro dorado» opens that book');
+
+  section('El Simulacro Dorado: one clean list (review 2026-10-18)');
+  const gDor = H.htmlFor(R.GOLD.json, ST.GOLD, '#dorado', false);
+  ok(/md-dor-state is-done/.test(gDor) && /Aprobado/.test(gDor) && /Tus simulacros/.test(gDor) && (gDor.match(/class="md-book-n/g) || []).length === 1,
+    'passed: ✓ «Aprobado» on top, «Tus simulacros» lists each simulation taken (its latest try)');
+  ok(!/Sin errores/.test(gDor), '… never «¡Sin errores!» beside a %');
+  for (const k of ['NEWK', 'OLDK', 'YCTK', 'GOLD', 'DONE']) {
+    const dd = H.htmlFor(R[k].json, ST[k], '#dorado', false) + H.htmlFor(R[k].json, ST[k], '#dorado', true);
+    ok(!/Mis exámenes|data-exams-mount/.test(dd), k + ': no second «Mis exámenes» block');
+    ok(!/Simulación|maestra/.test(dd) && !/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(dd), k + ': «Simulacro», «tu profe», no emoji');
+  }
+  const nDor = H.htmlFor(R.NEWK.json, ST.NEWK, '#dorado', false);
+  ok((nDor.match(/<details class="md-folder"/g) || []).length === 1 && /De tu profe · Practica el examen/.test(nDor) &&
+    ST.NEWK.assignments.every((a) => nDor.includes('data-assignment-id="' + a.id + '"')), 'New HSK 1: its Simulacro rounds in ONE folder «De tu profe · Practica el examen»');
+  ok(nDor.indexOf('Se abre en clase') > nDor.indexOf('md-folder'), '… «Se abre en clase…» under the open cards, never above them');
+  const oDor0 = H.htmlFor(R.OLDK.json, ST.OLDK, '#dorado', false);
+  const fOld = oDor0.slice(oDor0.indexOf('<details class="md-folder"'), oDor0.indexOf('</details>', oDor0.indexOf('<details class="md-folder"')));
+  ok(/data-act="reading" data-story="pinpin"/.test(fOld), 'HSK 1: its «Exámenes de lectura» in that same folder');
+
+  section('an experience: one ladder, the teacher\'s work after it, done states that agree');
+  const nE1 = H.htmlFor(R.NEWK.json, ST.NEWK, '#exp-1', false);
+  const li2 = nE1.slice(nE1.indexOf('id="md-step-2"'), nE1.indexOf('</li>', nE1.indexOf('id="md-step-2"')));
+  ok(/md-step is-closed/.test(nE1) && !/class="md-btn/.test(li2) && /Se abre cuando marques todas sus palabras/.test(li2), 'a locked step: a lock and one plain line, no button');
+  ok(!/class="md-step-t">\d · /.test(nE1) && (nE1.match(/class="md-step-n/g) || []).length === 3, 'each step\'s number once (its circle; never «1 · Palabras» too)');
+  const y2 = H.htmlFor(R.YCTK.json, ST.YCTK, '#exp-2', false);
+  ok(!/id="md-step-3"/.test(y2) && (y2.match(/class="md-step-n/g) || []).length === 2, 'YCT 1 (no homework audio): no step 3');
+  ok(y2.indexOf('md-exp-profe') > y2.indexOf('</ol>') && /Preguntas de tu profe/.test(y2), '… the teacher\'s rounds after the steps («Preguntas de tu profe»), never inside a locked card');
+  const o1 = H.htmlFor(R.OLDK.json, ST.OLDK, '#exp-1', false);
+  ok(/Tu profe te dejó \d+ más/.test(o1) && !/data-party/.test(o1) && !/¡Experiencia lista!/.test(o1), 'HSK 1 experience 1 (3 steps done, new teacher work listed): «Tu profe te dejó N más», no celebration');
+  ok(!/\bTier\b|\bEXP\s?\d/.test(o1) && /Preguntas del simulacro · /.test(o1), '… words a parent reads: «Preguntas del simulacro», never «Tier 1» or «EXP1»');
+  const h1 = H.htmlFor(R.HALF.json, ST.HALF, '#exp-1', false);
+  ok(/¡Qué crack! Tu profe ya tiene tus videos/.test(h1), 'every homework of the experience sent: Aileen «¡Qué crack! Tu profe ya tiene tus videos»');
+  const h5 = H.htmlFor(R.HALF.json, ST.HALF, '#exp-5', false);
+  ok(/md-step-n is-soon/.test(h5) && /Sin tarea todavía/.test(h5), 'no homework yet: step 3 «Sin tarea todavía» (dotted), never under a green ✓ without saying so');
+  const hHome = H.htmlFor(R.HALF.json, ST.HALF, '', false);
+  ok(/<i class="is-na"><\/i>sin tarea todavía/.test(hHome) && /\d+ de \d+ listas/.test(hHome), 'the path: the dotted bar explained («sin tarea todavía»), a short count («N de M listas»)');
+  ok(!/md-ruta-all|Ver toda La Ruta Dorada/.test(hHome + H.htmlFor(R.HALF.json, ST.HALF, '', true)), 'no «Ver toda La Ruta Dorada» (the home IS the route)');
+  const strip = hHome.slice(hHome.indexOf('class="md-strip"') - 10, hHome.indexOf('</section>', hHome.indexOf('class="md-strip"')));
+  ok(/md-strip/.test(hHome) && strip.includes('data-assignment-id="' + CUSTOM_ID + '"') && hHome.indexOf('md-strip') < hHome.indexOf('md-ruta'), '«De tu profe»: one line right under «Hoy», its «Hacer» there');
+  const deep = JSON.parse(JSON.stringify(ST.OLDK));
+  deep.assignments = deep.assignments.concat([{ id: 'x-exp12', title: 'EXP12 · Otra cosa', expLabel: 'exp12', type: 'sentence-building', itemCount: 3 }]);
+  const tDeep = H.mapTareas(R.OLDK.json, deep);
+  ok(tDeep.loose.some((x) => x.id === 'x-exp12') && !tDeep.byExp[12], 'an «EXP12» above the level\'s 8 experiences: «De tu profe» under «Hoy», never a bucket nobody draws');
+
+  section('no route on this phone (an expired session, another class code): the tabs and the dock stay');
+  const noR = Object.assign({}, R.HALF.json, { ruta: null });
+  const nrPhone = H.htmlFor(noR, ST.HALF, '', false), nrWide = H.htmlFor(noR, ST.HALF, '', true);
+  ok(/class="md-tabs"/.test(nrPhone) && /Toca «Entrar de nuevo»|toca «Entrar de nuevo»/.test(nrPhone) && !/clave de tu nivel/.test(nrPhone), 'a phone: «Toca «Entrar de nuevo»», the tabs');
+  ok(/class="md-dock"/.test(nrWide) && /md-msgs/.test(nrWide), 'a laptop: the dock, and the messages beside');
+  ok(/class="md-tabs"/.test(H.htmlFor(noR, ST.HALF, '#mensajes', false)) && /md-msgs/.test(H.htmlFor(noR, ST.HALF, '#mensajes', false)), '… Mensajes still opens');
   // the bars: words / practice / homework of the halfway kid
   m = H.model(R.HALF.json, ST.HALF, null);
   const e1 = m.exps[0], e3 = m.exps[2];
@@ -339,6 +413,18 @@ async function serverTests() {
   const yPath = H.htmlFor(R.YCTK.json, ST.YCTK, '', false);
   const yOl = yPath.slice(yPath.indexOf('<ol class="md-path"'), yPath.indexOf('</ol>', yPath.indexOf('<ol class="md-path"')));
   ok((yOl.match(/<i class="is-/g) || []).length === 6 * 2, 'YCT 1 (no homework audio yet): two bars per experience');
+
+  section('«N días seguidos» on the kid\'s own calendar (the phone\'s time zone, review 2026-10-18)');
+  for (const k of ['TZMX', 'TZKI', 'TZPP']) {
+    const kid = KIDS[k];
+    const h0 = await get('/api/homework/home?accessCode=&studentCode=' + kid.code + '&tz=' + encodeURIComponent(kid.tz), as(phones[k]));
+    ok(h0.json && same(h0.json.streak, { days: 3, today: false }), k + ' (' + kid.tz + '): yesterday on their own calendar = «3 días seguidos» (got ' + JSON.stringify(h0.json && h0.json.streak) + ')');
+    await post('/api/ruta/seals', { level: 'hsk2', add: [9] }, as(phones[k]));
+    ok(same((await home(phones[k], kid)).json.streak, { days: 4, today: true }), k + ': a step today keeps the streak: 4');
+  }
+  ok((await get('/api/homework/home?accessCode=&studentCode=' + KIDS.TZMX.code + '&tz=Mars%2FBase', as(phones.TZMX))).status === 200, 'an unknown time zone is ignored (no harm)');
+  const dl = await post('/api/homework/daily/complete', { accessCode: CLASS.hsk2, studentCode: KIDS.PRAC.code, date: '2099-01-01', correct: 3 }, as(phones.PRAC));
+  ok(dl.json && dl.json.ok === false && dl.json.reason === 'baddate', 'the daily: a phone date far from the server\'s is refused («baddate»)');
 
   section('«N días seguidos»: a real step counts once a day, a missed day starts again');
   ok(same(R.HALF.json.streak, { days: 4, today: false }), 'yesterday was day 4: «4 días seguidos» (not today yet)');
@@ -413,13 +499,13 @@ async function serverTests() {
   const DOORS = [
     ['hero + HUD (XP, swords, streak)', /md-streak/.test(js) && /días seguidos/.test(js) && !/id="hw-hud"/.test(html), 'the band keeps «N días seguidos»; XP / swords stay on the account (/api/homework/daily)'],
     ['🔑 code pill', !/'hw-pin-stack'/.test(hw.replace(/getElementById\('hw-pin-stack'\)/g, '')) && /id="hw-settings-code"/.test(perfil), 'Mi perfil: the code + «Copiar mi código»'],
-    ['▶ Siguiente', /class="md-hoy"/.test(hNEW) && /data-act="today"/.test(hNEW) && /window\.DralyHome\.next/.test(hw), '«Hoy» + «Empezar aquí»; a round\'s «▶ Siguiente» = the next tarea of its experience'],
-    ['«La Ruta Dorada de X» card', /class="md-path"/.test(hNEW) && /class="md-ruta-all" href="\/audios\/newhsk1\?from=homework"/.test(hNEW), 'the home IS the route; «Ver toda La Ruta Dorada» opens the module page'],
+    ['▶ Siguiente', /class="md-hoy"/.test(hNEW) && /data-act="today"/.test(hNEW) && /window\.DralyHome\.next/.test(hw), '«Hoy» and its button («Marcar mis palabras», «Practicar aquí»…); a round\'s «▶ Siguiente» = the next tarea of its experience'],
+    ['«La Ruta Dorada de X» card', /class="md-path"/.test(hNEW) && /class="md-pf-link" href="\/audios"/.test(perfil), 'the home IS the route; every level of La Ruta Dorada from Mi perfil («Ver todos los niveles»)'],
     ['«Hacer mis tareas» (both doors)', /data-hw-mount/.test(H.htmlFor(R.HALF.json, ST.HALF, '#exp-3', false)) && /Ruta\.hwCards/.test(js), 'each experience\'s «3 · Tu tarea» (js/ruta.js cards and marks)'],
     ['dock: Desafíos', /href="#desafio"/.test(hNEW) && /href="#desafio"/.test(hWIDE) && /openDaily: \(\) => openDaily\(\)/.test(hw), 'the Desafío tab («Muy pronto»; the old daily code behind DESAFIO_LIVE)'],
     ['dock: Mensajes', /href="#mensajes"/.test(hNEW) && /href="#mensajes"/.test(hWIDE), 'the Mensajes tab / tile'],
     ['dock: Mis oraciones', /href="#oraciones"/.test(hNEW) && /id="hw-sentences-list"/.test(list) && /loadSentences: \(\) => loadMySentences\(\)/.test(hw), 'the Oraciones tab (Mías / De tu profe)'],
-    ['dock: Mis exámenes', /data-exams-mount/.test(H.htmlFor(R.HALF.json, ST.HALF, '#dorado', false)) && /id="hw-myexams-list"/.test(list), 'El Simulacro Dorado: «Mis exámenes»'],
+    ['dock: Mis exámenes', /Tus simulacros/.test(js) && /class="md-books"/.test(H.htmlFor(R.GOLD.json, ST.GOLD, '#dorado', false)), 'El Simulacro Dorado: «Tus simulacros», each with its % and its libro dorado (one list)'],
     ['pill: Papás', /data-act="papas"/.test(hNEW) && /openParents: \(\) => openParentView\(\)/.test(hw), 'the band\'s «Papás»'],
     ['pill: Ajustes', /href="#perfil"/.test(hNEW) && /openPerfil: \(\) => openSettings\(\)/.test(hw), 'Mi perfil (the band, the avatar)'],
     ['pill: Instalar app', /data-pwa-install/.test(perfil), 'Mi perfil: «Instalar la app de Dralingo»'],
@@ -427,7 +513,7 @@ async function serverTests() {
     ['tabs Pendientes / Completadas / Tu Maestro', !/hw-tab-pending|hw-tab-done|hw-tab-custom/.test(html + hw) && /md-tp-chip is-done/.test(js), 'each tarea in its experience, done = green ✓; custom tareas: «De tu profe» under «Hoy»'],
     ['folder cards (YCT 1 rounds, New HSK 1 Simulacro rounds, HSK 1 EXP tareas)', /mapTareas/.test(js), 'the experiences\' «De tu profe» and El Simulacro Dorado (checked above, per level)'],
     ['«Exámenes de lectura» + «Ver mis errores»', /data-act="reading-review"/.test(oDor) && /data-act="review"/.test(js), 'El Simulacro Dorado; «Ver mis errores» on every tarea tried'],
-    ['HSK 1 «Entrenamiento de Simulación» tiers', /data-act="trainer"/.test(js) && /openTrainer: \(tier, exp\) => openTrainer\(tier, exp\)/.test(hw), 'cards in their experience'],
+    ['HSK 1 «Entrenamiento de Simulación» tiers', /data-act="trainer"/.test(js) && /openTrainer: \(tier, exp\) => openTrainer\(tier, exp\)/.test(hw), '«Preguntas del simulacro» cards in their experience'],
     ['🌐 English pill', /id="md-pf-en"/.test(perfil) && /window\.HwI18n = /.test(read('public/js/hw-i18n.js')) && /body\.md-in #hw-lang-toggle \{ display: none !important; \}/.test(css), 'Mi perfil\'s «English» switch (the floating pill steps aside on the home)'],
     ['«Borrar puntajes»', /id="hw-settings-reset-list"/.test(perfil) && /confirm\(`¿Borrar tus puntajes/.test(hw), 'Mi perfil, behind its confirm'],
     ['«Abrir otro nivel»', /id="hw-settings-level-key"/.test(perfil) && /id="hw-settings-level-btn"/.test(perfil), 'Mi perfil (POST /api/entrada/nivel, js/entrada.js)'],
@@ -483,7 +569,7 @@ async function serverTests() {
   ok(/<code class="md-pf-codev" id="hw-settings-code"/.test(perfil) && (html.match(/id="hw-settings-code"/g) || []).length === 1, 'the page holds the code in Mi perfil only');
   ok(!/\bChinese\b/.test(js + list + perfil), 'never «Chinese»');
   ok(!HANZI.test(js) && !HANZI.test(list) && !HANZI.test(perfil), 'no hanzi in the home\'s code and markup');
-  ok(/\.md-exams \.hw-myexams-ctx-hanzi \{ display: none; \}/.test(css) && /\.wu-pk-hanzi \{ display: none !important; \}/.test(css), 'Mis exámenes and the word card show no hanzi on the home');
+  ok(/\.wu-pk-hanzi \{ display: none !important; \}/.test(css), 'the word card shows no hanzi on the home');
   ok((css.match(/min-height: 48px/g) || []).length >= 20 && !/min-height: (?:[1-3]\d|4[0-7])px/.test(css), 'tap targets 48 px (no smaller tap height in the home\'s styles)');
   ok(/@media \(prefers-reduced-motion: reduce\)/.test(css), 'reduced motion: nothing moves');
   ok((js.match(/fetchpriority="high"/g) || []).length >= 2 && /loading="lazy"/.test(js), 'pictures lazy, except «Hoy»');
@@ -495,7 +581,7 @@ async function serverTests() {
   ['YCTK', 'NEWK', 'OLDK'].forEach((k) => {
     R[k].json.ruta.hws.forEach((h) => content.add(h.title));
     ST[k].assignments.forEach((a) => { content.add(a.title); content.add(a.title.replace(/^.+? · /, '')); content.add(a.subtitle); });
-    if (ST[k].trainer) ST[k].trainer.tiers.forEach((tier) => content.add('Entrenamiento de Simulación · ' + tier.title));
+
   });
   ST.OLDK.readings.forEach((x) => content.add(x.title));
   const texts = (h) => h.replace(/<script[\s\S]*?<\/script>/g, '').split(/<[^>]+>/).map((x) => x.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").trim()).filter(Boolean)
@@ -513,7 +599,10 @@ async function serverTests() {
     views.forEach((v) => [false, true].forEach((w) => texts(H.htmlFor(d, ST[k], v, w)).forEach(check)));
   });
   texts((list + perfil).replace(/<!--[\s\S]*?-->/g, '')).forEach(check);
-  ['Cargando tu Ruta Dorada…', 'No se pudo cargar tu Ruta Dorada. Revisa tu internet.', 'Volver a intentar', 'Para ver tu Ruta Dorada, entra con tu código y la clave de tu nivel.',
+  ['Cargando tu Ruta Dorada…', 'No se pudo cargar tu Ruta Dorada. Revisa tu internet.', 'Volver a intentar', 'Para ver tu Ruta Dorada, toca «Entrar de nuevo».',
+    'Algo salió mal al dibujar tu inicio.', 'Mi perfil y «Salir»', 'Tarea 2', 'Y tu tarea de esta semana: 1 por mandar.', 'Y tienes 1 tarea por mandar.', 'Y tienes 3 tareas por mandar.',
+    '3 tareas nuevas', '1 nueva', '2 nuevas', '2 de 8 listas', 'Hiciste los 3 pasos. Tu profe te dejó 2 más.', 'Hiciste los 2 pasos. Tu profe te dejó 1 más.',
+    'Lectura · 60 / 100', '2 lecturas', 'Preguntas como en el examen · 80 %', '¡Vas muy bien! Repasa cuando quieras.', 'Ver mi Ruta',
     'Entrar de nuevo', '¡Mensaje copiado!', 'Copiar mensaje', 'Pausa', 'Escuchada', 'Mandada', 'Nueva', 'Escuchar', 'Otra vez', '¿Fue sin querer?', 'Deshacer', 'Tarea · Ronda 2',
     'Audio 1 de 3 · Las palabras', '1 día seguido', '7 días seguidos', '1 mensaje nuevo', '3 mensajes nuevos', 'Todo leído', 'Entrar al juego con el PIN', 'Verla otra vez',
     'Escribe la clave de New HSK 1 para abrir tu Ruta Dorada.', 'Escribir la clave', 'Se abre con la clave de YCT 1.', '¡Vas muy bien! Sigue con la Experiencia 2.',
@@ -522,7 +611,28 @@ async function serverTests() {
   ok(!settled.size, 'English settles: a translated line translated again stays the same (no endless re-translation)' + (settled.size ? ': ' + [...settled].slice(0, 6).join(' | ') : ''));
   ok(/if \(out !== null && out !== v\) el\.setAttribute/.test(read('public/js/hw-i18n.js')), 'hw-i18n.js writes an attribute only when it changes (alt="Aileen" stays «Aileen» in English: writing it again looped forever and froze the laptop home)');
   ok(!missing.size, 'English for every phrase' +(missing.size ? ': missing ' + [...missing].slice(0, 40).map((m) => '«' + m + '»').join(', ') : ''));
-  ok(en('¡Hoy toca la Experiencia 3! Practica El Restaurante Chino hasta llegar al 70 %.') === 'Today: Experience 3! Practise The Chinese Restaurant until you reach 70 %.', '… the experience\'s name is translated inside «Hoy»');
+  ok(en('¡Hoy toca la Experiencia 3! Practica El Restaurante Chino hasta llegar al 70 %.') === 'Today: Experience 3! Practice The Chinese Restaurant until you reach 70 %.', '… the experience\'s name is translated inside «Hoy»');
+  ok(en('¡Hoy toca la Experiencia 3! Manda tu tarea de El Restaurante Chino.') === 'Today: Experience 3! Send your homework for The Chinese Restaurant.' && en('Mándala por WhatsApp') === 'Send it on WhatsApp' && en('Practicar aquí') === 'Practice here',
+    '… «Send your homework for…», «Send it on WhatsApp», «Practice» (one spelling)');
+  ok(!/Practise|practise/.test(read('public/js/hw-i18n.js')), '… never «Practise» next to «Practice»');
+
+  section('the review\'s code fixes (2026-10-18)');
+  const T2 = { headers: { 'CF-Connecting-IP': '198.51.100.251', 'X-Admin-Pw': encodeURIComponent(SEED) } };
+  const msg = async (u) => (((await post('/api/admin/student/' + KIDS.OTHR.code + '/message', { text: 'Hola', actionType: 'link', actionUrl: u, actionLabel: 'Abrir' }, T2)).json || {}).message || {}).actionUrl;
+  ok((await msg('/?pin=123')) === '/?pin=123' && (await msg('https://example.com/x')) === 'https://example.com/x', 'a message\'s link: a page of this site or https:// is kept');
+  ok((await msg('javascript:alert(1)')) === null && (await msg('//example.com')) === null && (await msg('/\\example.com')) === null && (await msg('http://example.com')) === null,
+    '… javascript:, //host, /\\host and http:// are dropped when the teacher sends it');
+  ok(/\/\^\\\/\(\?!\[\\\/\\\\\]\)\//.test(js) && /\/\^\\\/\(\?!\[\\\/\\\\\]\)\//.test(hw), '… and both pages (the home\'s Mensajes, Papás\' message sheet) show only those links');
+  ok(/function redraw\(\)/.test(js) && /p && !p\.paused && cards\) \{ soft\(\); return; \}/.test(js) && /redraw\(\);\n?\s*\}\);/.test(js.replace(/\r/g, '')), 'a fresh answer never cuts a homework audio that is playing (load → redraw → soft)');
+  ok(/const sig = sigOf\(H\.state\(\)\.inbox, n\);/.test(js) && /if \(sig === inboxSig\) return;/.test(js), 'the 20-second inbox poll redraws Mensajes only when something changed');
+  ok(/function brokenHtml\(\)/.test(js) && /catch \(err\) \{\s*console\.error\('\[home\] draw failed'/.test(js), 'a failure while drawing keeps the band, Mi perfil, «Volver a intentar»');
+  ok(/My Dralingo/.test(js), 'the tab\'s title in English mode: «My Dralingo»');
+  ok(/if \(name === 'entry' \|\| name === 'avatar'\) document\.body\.classList\.remove\('md-in'\)/.test(hw), 'the entry screen back: body.md-in comes off');
+  ok(/Levels\.info\(LevelKeys\.classLevel\(rec\) \|\| rec\.level \|\| Levels\.DEFAULT\)/.test(read('server.js')), '/api/homework/home reads the level like the login (LevelKeys.classLevel)');
+  ok(/auto: !!\(rec && _autoUnclaimed\(rec\) && _autoNameless\(rec\)\)/.test(read('server.js')) && /!ctx\.ruta\.auto\)/.test(read('public/js/ruta.js')),
+    'the module page: no «Mi Dralingo» way back for an unclaimed nameless automatic account');
+  ok(/function kidToday\(/.test(read('public/js/ruta.js')) && /else if \(T\) say = T\.text;/.test(read('public/js/ruta.js')) && /simLast: /.test(read('server.js')),
+    'the module page\'s bubble = today() (the same words as «Hoy»)');
 }
 
 function pageTests() {
@@ -536,6 +646,9 @@ function pageTests() {
   const ent = read('public/js/entrada.js');
   ok(/draly_home_in/.test(ent) && /backHome\(\)/.test(ent), 'back from a trip (La Base, El Entrenamiento…) in the same tab: straight into the home, no second «¡Hola de nuevo!»');
   ok(/draly_home_from/.test(read('public/js/entrenamiento.js')) && /draly_home_from/.test(read('public/js/libro.js')) && /draly_home_from/.test(read('public/js/audios.js')), '… El Entrenamiento, the golden book and a homework page opened from the home go back to it');
+  const au = read('public/audios.html');
+  ok(au.indexOf('/js/papas-plan.js') > 0 && au.indexOf('/js/papas-plan.js') < au.indexOf('/js/ruta.js'), 'the module page loads js/papas-plan.js before js/ruta.js (its bubble = today())');
+  ok(/tz: TZ/.test(ent) && /&tz=/.test(read('public/js/mi-dralingo.js')), 'la entrada\'s POSTs and the home\'s load carry the phone\'s time zone');
 }
 
 (async () => {

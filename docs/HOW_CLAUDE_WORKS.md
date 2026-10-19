@@ -474,38 +474,59 @@ homework and the teacher's tareas are one story (`public/js/mi-dralingo.js` + `c
   an El Entrenamiento round, a homework mark, a tarea handed in, the daily challenge) on the kid's own calendar (their
   phone's time zone); a day missed starts again; a page view never counts (`core/student-records.js` `_studyDay`,
   `streakOf`). The XP and swords are no longer shown on the home; they stay on the account.
-- **«Hoy»**: the experience's scene, Dralingo pointing and ONE direct line from `js/papas-plan.js` `today()`, the SAME
-  decision as Papás' «Lo más importante esta semana» (a homework to send → practice to 70 % → words to mark → «Avísale a tu
-  profe» → «¡Vas muy bien!»), e.g. «¡Hoy toca la Experiencia 3! Practica El Restaurante Chino hasta llegar al 70 %.». The
-  big «Empezar aquí» opens that experience with the step to do glowing «¡Empieza aquí!». A level this phone can't open
-  yet asks for its key first. Under it, **«De tu profe»**: your custom tareas for that kid (no experience), done ones
-  folded under «✓ N hechas».
+- **«Hoy»**: the experience's scene, Dralingo pointing and ONE direct line from `js/papas-plan.js` `today()`. Since the
+  review of 18 October 2026 it follows the kid's ladder: the current experience (the first one not done) and, inside it,
+  1 Palabras → 2 Práctica → 3 Tu tarea, e.g. «¡Hoy toca la Experiencia 3! Practica El Restaurante Chino hasta llegar al
+  70 %.». A homework due elsewhere never jumps the ladder: it rides along as one reminder line («Y tu tarea de esta
+  semana: 1 por mandar.», a tap opens it) and the red «N por mandar» badges. Papás reads the SAME plan in a parent's order
+  (`focus`: homework to send first), and La Ruta Dorada's module page (`/audios/<level>`, js/ruta.js) says the same as
+  «Hoy» in its bubble. The button says what it does: «Marcar mis palabras», «Practicar aquí», «Mandar mi tarea», «Avisar a
+  mi profe» (the WhatsApp message), «Ver mi libro dorado». A level this phone can't open yet asks for its key first.
+  Right under it, **«De tu profe»** in one line: your custom tareas for that kid (no experience), «Hacer» right there,
+  «Ver» when there are several.
 - **La Ruta Dorada as a path**: one scene card per experience (8 for New HSK 1 and HSK 1, 6 for YCT 1: the same scenes
-  as Papás), its number, its word sticker and three little bars (palabras · práctica · tarea mandada; green done, gold
-  started, grey to do; an experience whose homework hasn't come yet shows the third one dotted («pronto»), YCT 1 only two). Done =
-  green ✓, today's glows gold with «¡Empieza aquí!», later ones are calm. It ends at **El Simulacro Dorado** («En clase,
-  con tu profe»). «Ver toda La Ruta Dorada de <nivel>» opens the module page. A laptop (1000 px or more) shows the path
-  as a grid with the chosen experience beside it; a phone shows a zig-zag, and a card opens the experience's own page.
+  as Papás; none of them shows the trapdoor arenas' black pit), its number, its word sticker and three little bars
+  (palabras · práctica · tarea mandada; green done, gold started, grey to do; an experience whose homework hasn't come
+  yet shows the third one dotted, «sin tarea todavía» in the legend; YCT 1 only two) and «N de M listas». Done = green ✓,
+  today's glows gold with «¡Empieza aquí!», later ones are calm. It ends at **El Simulacro Dorado** («En clase, con tu
+  profe»; ✓ «Aprobado» once passed, «Avisa a tu profe» when ready). The module page of every level is in Mi perfil («Ver
+  todos los niveles de La Ruta Dorada»). A laptop (1000 px or more) shows the path as a grid with the chosen experience
+  beside it, «Hoy», the path's two rows and the dock on the first screen at 1366×768; a phone shows a zig-zag, and a card
+  opens the experience's own page.
 - **An experience** (#exp-N): **1 Palabras** (its world of La Base: «31 de 31 marcadas», a few word pictures, the button
-  to La Base at that world) → **2 Práctica** (its world of El Entrenamiento: best % against the goal, «Practicar aquí»;
-  closed until its words are marked; experience 1 of HSK 1 also links Pinyin básico) with **«De tu profe»**: your tareas
-  of THAT experience (YCT 1's game rounds of its world, HSK 1's EXP sentence tarea and its «Entrenamiento de Simulación»
-  tiers), each with «Nueva» / its % / ✓ and «Ver mis errores» → **3 Tu tarea** (its homework audios with «Escuchar»,
-  «¡Ya la mandé!», «Deshacer»: the SAME cards and marks as La Ruta Dorada's «Tus tareas», `js/ruta.js` `Ruta.hwCards`;
-  Aileen says it in voseo). The whole experience done: Aileen and Dralingo celebrate («¡Qué crack!»), once per phone.
-- **El Simulacro Dorado** (#dorado): class mode: locked («Se abre en clase con tu profe, cuando termines El
-  Entrenamiento», one coin per experience) until El Entrenamiento is done, then «¡Ya estás listo!» + «Avisarle a mi
-  profe» (WhatsApp, no number) and «Copiar mensaje». It also holds the simulations taken in class with their «Libro
-  dorado», «Practica el examen» (the exam's rounds: YCT 1's and New HSK 1's «Simulacro» homework + El Entrenamiento's
-  Simulacro del examen), «Mis exámenes» and «Exámenes de lectura» with «Ver mis errores».
+  to La Base at that world) → **2 Práctica** (its world of El Entrenamiento: best % against the goal, «Practicar aquí»)
+  → **3 Tu tarea** (its homework audios with «Escuchar», «¡Ya la mandé!», «Deshacer»: the SAME cards and marks as La Ruta
+  Dorada's «Tus tareas», `js/ruta.js` `Ruta.hwCards`; Aileen says it in voseo, and «¡Qué crack! Tu profe ya tiene tus
+  videos» once every one is sent; «Sin tarea todavía» until the teacher sends it; no step 3 at all in a level with no
+  homework audio, YCT 1). Each number once, in its circle; each step's button on its own full-width line; a step that
+  can't open yet is a lock and one plain line, no button. After the steps, **«Preguntas de tu profe»**: your tareas of
+  THAT experience (YCT 1's game rounds of its world, HSK 1's sentence tarea and its «Preguntas del simulacro»), each with
+  «Nueva» / its % / ✓ and «Ver mis errores» (never «Tier 1» or «EXP1»; homework rounds read «Tarea 1», «Tarea 2»).
+  Everything done and nothing new from you: Aileen and Dralingo celebrate («¡Qué crack!»), once per phone; with new work
+  from you it says «Hiciste los 3 pasos. Tu profe te dejó N más.» instead.
+- **El Simulacro Dorado** (#dorado), one clean list: ✓ «Aprobado» on top once passed, or «¡Ya estás listo!» + «Avisar a
+  mi profe» (WhatsApp, no number) and «Copiar mensaje» once El Entrenamiento is done; **«Tus simulacros»** (each
+  simulation taken in class: its latest try's % and its «Libro dorado» with that try's mistakes); ONE folder **«De tu
+  profe · Practica el examen»** (El Entrenamiento's Simulacro del examen, the teacher's Simulacro rounds of YCT 1 and New
+  HSK 1, HSK 1's reading tests with «Ver mis errores»); and how it opens («Se abre en clase con tu profe, cuando termines
+  El Entrenamiento», one coin per experience) under the open cards, never above them. «Mis exámenes» is no longer a
+  second list there (the golden books hold the mistakes).
 - **Tabs at the bottom on a phone** (La Ruta · Mensajes · Oraciones · Desafío), **a dock on a laptop**: **Mensajes** (your
   messages in the design's look; a live game's link says «Entrar al juego con el PIN»; opening it marks them read),
   **Mis oraciones** (Mías / De tu profe, listen, tap a word, edit a copy, delete: the same code, simple until you redesign
   it), **Desafío del día** («Muy pronto: los juegos de la clase llegan a tu casa», the pin games' art and Hamdan; the old
   daily challenge is kept behind `DESAFIO_LIVE = false` in mi-dralingo.js for when the pin games become daily challenges).
 - **Mi perfil** (#perfil, it replaces Ajustes; the code lives HERE only): the code + «Copiar mi código», «Cambiar mi nombre»,
-  «Cambiar mi avatar», «Abrir otro nivel» (the new key), «English» (the 🌐 switch; the floating pill no longer covers the
-  phone's tabs), «Instalar la app de Dralingo», «Borrar mis puntajes» (asks first), «Salir» (asks first).
+  «Cambiar mi avatar», «Abrir otro nivel» (the new key, and «Ver todos los niveles de La Ruta Dorada»), «English» (the 🌐
+  switch for families who read English; the floating pill no longer covers the phone's tabs), «Instalar la app de
+  Dralingo», «Borrar mis puntajes» (asks first), «Salir» (asks first).
+- **Sturdy** (the code review of 18 October 2026): «N días seguidos» counts on the kid's own calendar (the phone's time zone
+  comes with the home's load and la entrada's POSTs; `Students.setTz`, only for the kid's own session); the daily refuses a
+  phone date more than a day from the server's; a fresh answer never cuts a homework audio that is playing; the
+  20-second inbox poll redraws Mensajes only when something changed; a failure while drawing keeps the band, Mi perfil,
+  «Volver a intentar»; no route on the phone (an expired session) keeps the tabs and the dock («Toca «Entrar de
+  nuevo»»); a message's link is a page of this site or https:// only (checked when the teacher sends it and on both
+  pages); the module page offers «Mi Dralingo» as its way back only to a kid whose /homework opens their home.
 - **Gone** (duplicates): the hero + HUD, «▶ Siguiente» (now «Hoy»; a round's own «▶ Siguiente» = the next tarea of its
   experience), the «La Ruta Dorada de <nivel>» card and both «Hacer mis tareas» doors (the home IS the route; homework
   lives in each experience), the 🔑 code pill (Mi perfil), the Pendientes / Completadas / Tu Maestro tabs and the folders.

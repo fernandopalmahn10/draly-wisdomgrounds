@@ -660,6 +660,12 @@ function setDisplayName(code, displayName) {
 //   - actionType 'broadcast-warmup' is a special live-session invite
 //
 // Capped at 50 per student so the JSON doesn't grow unbounded.
+// a message's button link (review 2026-10-18): a page of this site («/…», never «//host» or «/\host») or an https:// page;
+// anything else (javascript:, data:, another scheme) is dropped when the teacher sends it, so no kid's phone ever holds it
+function safeActionUrl(u) {
+  const s = typeof u === 'string' ? u.trim().slice(0, 500) : '';
+  return s && (/^\/(?![\/\\])/.test(s) || /^https:\/\/[^\s]+$/i.test(s)) ? s : null;
+}
 function sendMessage(code, payload) {
   const rec = get(code);
   if (!rec) return null;
@@ -670,7 +676,7 @@ function sendMessage(code, payload) {
     fromName:     String(payload.fromName || 'Maestro/a'),
     text:         String(payload.text || '').slice(0, 500),
     actionType:   payload.actionType || null,
-    actionUrl:    payload.actionUrl || null,
+    actionUrl:    safeActionUrl(payload.actionUrl),
     actionLabel:  payload.actionLabel || null,
     ts:           Date.now(),
     readAt:       null,
@@ -771,7 +777,7 @@ function broadcastToClassroom(classroomCode, payload) {
         fromName:     String(payload.fromName || 'Maestro/a'),
         text:         String(payload.text || '').slice(0, 500),
         actionType:   payload.actionType || null,
-        actionUrl:    payload.actionUrl || null,
+        actionUrl:    safeActionUrl(payload.actionUrl),
         actionLabel:  payload.actionLabel || null,
         ts:           Date.now(),
         readAt:       null,
@@ -1024,6 +1030,28 @@ function _bumpDay(rec, day) {
   return true;
 }
 const _studyDay = (rec) => _bumpDay(rec, _localDay(rec));
+// the kid's phone time zone (review 2026-10-18: a kid who came in through la entrada or an automatic account never
+// passed the old login's setMeta, so their days were counted in UTC: a kid in Mexico studying at 7 pm lost the streak).
+// An IANA name the server's Intl knows («America/Mexico_City»), else nothing. setTz stores it only when it changed and
+// never touches lastSeen (a page view is not activity: the archive's 30 days).
+function tzOk(tz) {
+  if (typeof tz !== 'string' || !tz || tz.length > 64 || !/^[A-Za-z0-9_+\-/]+$/.test(tz)) return false;
+  try { new Intl.DateTimeFormat('en-CA', { timeZone: tz }); return true; } catch (_) { return false; }
+}
+function setTz(code, tz) {
+  const rec = get(code);
+  if (!rec || !tzOk(tz) || rec.tz === tz) return false;
+  rec.tz = tz;
+  scheduleSave();
+  return true;
+}
+// a phone's «today» for the daily challenge: within one day of the server's UTC day (every zone on Earth is), else refused
+function dayNearNow(day) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(day || ''))) return false;
+  const at = Date.parse(day + 'T00:00:00Z');
+  const now = Date.parse(new Date().toISOString().slice(0, 10) + 'T00:00:00Z');
+  return Number.isFinite(at) && Math.abs(at - now) <= 86400000;
+}
 // what the home shows: { days, today } (days = 0 once a day was missed: a broken streak never shows its old number)
 function streakOf(recOrCode) {
   const rec = typeof recOrCode === 'string' ? get(recOrCode) : recOrCode;
@@ -1040,7 +1068,9 @@ function streakOf(recOrCode) {
 function awardDaily(code, localDate, correct) {
   const rec = get(code);
   if (!rec) return { ok: false, reason: 'nocode' };
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(localDate || ''))) {
+  // (review 2026-10-18: a phone's date more than a day from the server's is refused, before DESAFIO_LIVE ever turns on:
+  // a date far ahead would freeze the streak, a date far back would never count)
+  if (!dayNearNow(localDate)) {
     return { ok: false, reason: 'baddate' };
   }
   if (rec.dailyDate === localDate) {
@@ -1309,6 +1339,8 @@ module.exports = {
   getProgress,
   awardDaily,
   streakOf,
+  setTz,
+  tzOk,
   normalizeCode,
   listAll,
   logTestResult,
