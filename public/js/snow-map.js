@@ -271,11 +271,22 @@
     return out.reverse();
   }
 
+  // 🪙 2026-10-19 El Zoco de Dralingo: a skin the kid unlocked (the server lets one into a room only when the kid's
+  // account owns it) is their character too. The list is public/js/saga.js ZOCO (the page's window.Saga; the server's
+  // require). Every game's skinFor answers through here or through HalconBoard.skinFor.
+  let SagaRef = null;
+  function zocoSkin(id) {
+    if (!SagaRef) {
+      if (typeof window !== 'undefined' && window.Saga) SagaRef = window.Saga;
+      else if (typeof module === 'object' && module.exports && typeof require === 'function') { try { SagaRef = require('./saga'); } catch (_) { SagaRef = null; } }
+    }
+    return SagaRef && SagaRef.zoco ? SagaRef.zoco(id) : null;
+  }
   // the saga avatar a kid walks as: their lobby pick, or (old animal emoji / nothing) one picked from their name
   function skinFor(avatar, name) {
     if (typeof avatar === 'string') {
       if (EMOJI[avatar]) return EMOJI[avatar];
-      if (SKINS.includes(avatar)) return avatar;
+      if (SKINS.includes(avatar) || zocoSkin(avatar)) return avatar;
     }
     const s = String(name || '').toLowerCase();
     let h = 7;

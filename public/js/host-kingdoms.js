@@ -152,7 +152,7 @@
       list.forEach(([id, p]) => {
         const chip = document.createElement('button');
         chip.className = 'kd-chip';
-        chip.textContent = (p.avatar ? p.avatar + ' ' : '') + p.name;
+        chip.textContent = ((window.Saga && Saga.emojiOf ? Saga.emojiOf(p.avatar) : (p.avatar || '')) + ' ' + p.name).trim();
         chip.title = 'Cambiar de reino';
         chip.addEventListener('click', () => { socket.emit('host:swap-team', { pin, playerId: id }); MochiSounds.swap && MochiSounds.swap(); });
         box.appendChild(chip);
@@ -541,7 +541,7 @@
       const name = document.createElement('span');
       const dot = document.createElement('i');
       dot.className = 'kd-dot ' + p.team;
-      name.append(dot, document.createTextNode((p.avatar ? p.avatar + ' ' : '') + p.name));
+      name.append(dot, document.createTextNode(((window.Saga && Saga.emojiOf ? Saga.emojiOf(p.avatar) : (p.avatar || '')) + ' ' + p.name).trim()));
       const sc = document.createElement('span');
       sc.textContent = p.score === 1 ? '1 punto' : `${p.score} puntos`;
       row.append(rank, name, sc);

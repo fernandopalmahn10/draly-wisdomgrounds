@@ -33,7 +33,7 @@
   const frame = (c, f) => A + 'fly-' + (c == null || c < 0 ? 'blue' : (C.COLORS[c] || C.COLORS[1]).id) + '-' + f + '.webp';
   const art = (skin, pose) => (HB() ? HB().art(skin, pose || 'idle') : '/assets/dralingo/hello.webp');
   const skinFor = (avatar, name) => (HB() ? HB().skinFor(avatar, name) : 'dralingo');
-  const isAnimal = (skin) => ['camel', 'plane', 'falcon', 'oryx'].includes(skin);
+  const isAnimal = (skin) => (HB() && HB().isAnimal ? HB().isAnimal(skin) : ['camel', 'plane', 'falcon', 'oryx'].includes(skin));
   const lmArt = (id) => LM + id + '.webp';
   const ns = 'http://www.w3.org/2000/svg';
   const fmt = (n) => Math.round(Number(n) || 0).toLocaleString('es-ES');

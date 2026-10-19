@@ -1,0 +1,41 @@
+/* zoco-coins.css · the «+N monedas» moment of El Zoco de Dralingo (js/zoco-coins.js): a small gold pill at the top edge,
+   nothing to tap, gone by itself. The platform palette (Rojo Imperial, Oro, Crema), Baloo 2 + Noto Sans. */
+.zc-pop {
+  position: fixed; top: calc(10px + env(safe-area-inset-top, 0px)); left: 50%; z-index: 9800;
+  display: flex; align-items: center; gap: 10px; max-width: calc(100vw - 32px); padding: 8px 18px 8px 10px;
+  border-radius: 999px; background: #fffdf8; color: #5a1010;
+  box-shadow: 0 4px 0 #b88b2c, 0 10px 26px rgba(28, 26, 23, .25);
+  font-family: 'Noto Sans', system-ui, sans-serif; pointer-events: none;
+  opacity: 0; transform: translate(-50%, -140%);
+  transition: transform .45s cubic-bezier(.23, 1, .32, 1), opacity .22s ease;
+}
+.zc-pop.is-on { opacity: 1; transform: translate(-50%, 0); }
+.zc-pop.is-back { box-shadow: 0 4px 0 #e2d4b4, 0 10px 26px rgba(28, 26, 23, .18); color: #4a3f36; }
+.zc-pop svg { flex: none; }
+.zc-pop span { display: flex; flex-direction: column; line-height: 1.1; min-width: 0; }
+.zc-pop b { font: 800 18px/1.05 'Baloo 2', 'Noto Sans', sans-serif; white-space: nowrap; }
+.zc-pop small { font: 700 12px/1.25 'Noto Sans', system-ui, sans-serif; color: #85631d; }
+.zc-pop.is-back small { color: #6b5d4f; }
+@media (prefers-reduced-motion: reduce) {
+  .zc-pop { transform: translate(-50%, 0); transition: opacity .2s ease; }
+}
+/* the coins fly out of a coins pill on screen (the home's band, the Zoco's purse): «+N» rises from it and fades */
+.zc-float {
+  position: fixed; z-index: 9800; display: flex; align-items: center; gap: 4px; padding: 4px 10px 4px 4px; border-radius: 999px;
+  background: #fffdf8; color: #5a1010; box-shadow: 0 3px 0 #b88b2c, 0 8px 18px rgba(28, 26, 23, .22); pointer-events: none;
+  transform: translate(-50%, 0); animation: zc-rise 1.5s cubic-bezier(.23, 1, .32, 1) both;
+}
+.zc-float svg { width: 22px; height: 22px; flex: none; }
+.zc-float b { font: 800 18px/1 'Baloo 2', 'Noto Sans', sans-serif; }
+.zc-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.zc-bump { animation: zc-bump .5s cubic-bezier(.23, 1, .32, 1); }
+@keyframes zc-rise { 0% { opacity: 0; transform: translate(-50%, -6px) scale(.7); } 18% { opacity: 1; transform: translate(-50%, 4px) scale(1.08); }
+  70% { opacity: 1; transform: translate(-50%, 10px) scale(1); } 100% { opacity: 0; transform: translate(-50%, 22px) scale(.96); } }
+@keyframes zc-bump { 0% { transform: scale(1); } 35% { transform: scale(1.14); } 100% { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .zc-float { animation: zc-fade 1.8s linear both; }
+  .zc-bump { animation: none; }
+  @keyframes zc-fade { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
+}
+/* (emil pass: the pill leaves faster than it came) */
+.zc-pop:not(.is-on) { transition-duration: .2s, .16s; }

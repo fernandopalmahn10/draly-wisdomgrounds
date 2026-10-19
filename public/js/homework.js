@@ -52,12 +52,14 @@
   if (window.Saga) {
     window.Saga.AVATARS.forEach((x) => { AVATAR_LABELS[x.id] = x.label; });
     Object.keys(window.Saga.LEGACY_AVATARS).forEach((old) => { AVATAR_LABELS[old] = AVATAR_LABELS[window.Saga.LEGACY_AVATARS[old]]; });
+    // (🪙 2026-10-19 El Zoco de Dralingo: a skin the kid unlocked is their avatar too: its own name and head picture)
+    (window.Saga.ZOCO || []).forEach((x) => { AVATAR_LABELS[x.id] = x.label; });
   }
   function avatarSrc(name) {
     return (window.Saga && window.Saga.avatarUrl(name)) || '/assets/avatars/' + encodeURIComponent(name) + '.svg?v=20260528b';
   }
   function isSvgAvatar(v) {
-    return typeof v === 'string' && /^[a-z0-9]+$/.test(v) && AVATAR_LABELS[v];
+    return typeof v === 'string' && /^[a-z0-9-]+$/.test(v) && AVATAR_LABELS[v];
   }
   // Drop avatar visuals into a host element. Accepts either an SVG name
   // ('mochi') or a legacy emoji string ('🧒🏼'). For SVGs we use <img>.
@@ -2825,12 +2827,13 @@
     if (ic) renderAvatarInto(ic, avatar);
     $('hw-settings-name-input').value = realName();
     $('hw-settings-name-msg').textContent = '';
-    $('hw-settings-avatar-msg').textContent = '';
+    if ($('hw-settings-avatar-msg')) $('hw-settings-avatar-msg').textContent = '';
     $('hw-settings-reset-msg').textContent = '';
-    // Build the change-avatar grid
+    // Build the change-avatar grid (🪙 2026-10-19: Mi perfil's row opens «Elige tu personaje», js/mi-dralingo.js #personaje;
+    // the old grid is built only where a page still has it)
     const grid = $('hw-settings-avatar-grid');
-    grid.innerHTML = '';
-    avatarOptions.forEach((name) => {
+    if (grid) grid.innerHTML = '';
+    if (grid) avatarOptions.forEach((name) => {
       const opt = buildAvatarOption(name, (picked) => {
         $('hw-settings-avatar-msg').textContent = 'Guardando…';
         saveAvatar(picked).then((ok) => {
@@ -3005,7 +3008,7 @@
   // prominent so it looks great shared on WhatsApp / stories.
   function openReportCardWindow(d) {
     // saga or SVG; absolute, because the report card opens as a blob: document where /assets/… cannot resolve
-    const avatarUrl = (typeof d.avatar === 'string' && /^[a-z0-9]+$/.test(d.avatar)) ? location.origin + avatarSrc(d.avatar) : '';
+    const avatarUrl = (typeof d.avatar === 'string' && /^[a-z0-9-]+$/.test(d.avatar)) ? location.origin + avatarSrc(d.avatar) : '';
     const notesHtml = (d.notes || []).length
       ? d.notes.map((n) => `<li>${escapeHtml(n.text)}</li>`).join('')
       : '<li>¡Sigue practicando en voz alta cada día! 🌱</li>';
@@ -3586,6 +3589,17 @@
     screen: () => ['list', 'settings', 'assignment', 'results', 'parents', 'reading', 'daily', 'avatar', 'entry']
       .find((n) => { const el = $('screen-' + n); return el && !el.classList.contains('hidden'); }) || '',
     avatar: (el, v) => renderAvatarInto(el, v),
+    // (🪙 2026-10-19) «Elige tu personaje» saved a new avatar on the account: this page draws it from now on, and the
+    // phone's class games play it too (dralyAvatar: a skin's id, a saga avatar's emoji; the room checks a skin is theirs)
+    setAvatar: (v) => {
+      avatar = v;
+      try {
+        const S = window.Saga;
+        const z = S && S.zoco ? S.zoco(v) : null;
+        const a = !z && S && S.avatar ? S.avatar(v) : null;
+        if (z) localStorage.setItem('dralyAvatar', v); else if (a && a.emoji) localStorage.setItem('dralyAvatar', a.emoji);
+      } catch (_) { /* private mode */ }
+    },
   };
   function renderList() {
     if (window.DralyHome) window.DralyHome.render(HOME);

@@ -115,7 +115,10 @@
       .then(({ status, d }) => {
         delete syncing[slug];
         const now = readM(slug);
-        if (d && d.ok) { now.proofs = {}; now.best = {}; now.who = d.who || who; writeM(slug, now); return { sent: d.merged || 0, best: d.best || null }; }
+        if (d && d.ok) {
+          if (d.coins && window.DralyCoins) window.DralyCoins.pop(d.coins);   // 🪙 this phone's rounds from before the login
+          now.proofs = {}; now.best = {}; now.who = d.who || who; writeM(slug, now); return { sent: d.merged || 0, best: d.best || null };
+        }
         if (status === 409 && d && d.who) { now.who = mine; writeM(slug, now); }   // the server knows better: settle at the next look
         return { sent: 0 };
       });
@@ -744,7 +747,11 @@
     const send = (tries) => post('/api/ruta/train/finish', { round: P.R.round }).then(({ status, d }) => {
       // the result is recorded even when the kid already left (back during a slow «Ver mis estrellas»): only the
       // star screen needs the round on screen
-      if (d && d.ok) { P.finished = true; recordResult(P, d); if (play === P) endCard(d); return; }
+      if (d && d.ok) {
+        P.finished = true; recordResult(P, d); if (play === P) endCard(d);
+        if (d.coins && window.DralyCoins) window.DralyCoins.pop(d.coins, { delay: 1600 });   // 🪙 +20 the goal reached (El Zoco)
+        return;
+      }
       if (play !== P) return;
       if (status === 410 || status === 403) { P.finished = true; gone(); return; }
       if (tries < 2) { later(() => send(tries + 1), 1000 * (tries + 1)); return; }

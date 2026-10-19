@@ -11,7 +11,8 @@
   const INK = '#1d2440';
   const SAFE = '#2fbf71', SAFE_DEEP = '#178a4c', ROBO = '#3fd6e0', ROBO_DEEP = '#1b8fa3', GOLD = '#ffd23f', DANGER = '#f0443a';
   const M = () => window.EscapeMap;
-  const SKIN_URL = (k) => '/assets/saga/avatars/' + k + '.webp';
+  // (🪙 2026-10-19: a skin of El Zoco runs as its own head picture and full body, public/js/saga.js)
+  const SKIN_URL = (k) => (window.Saga && window.Saga.zoco && window.Saga.zoco(k) ? window.Saga.skinHead(k) : '/assets/saga/avatars/' + k + '.webp');
   // a kid's FULL-BODY character (never a bust in the play area): pose 'idle' | 'ok' (cheering: a turbo) | 'no' (dizzy);
   // js/halcon-board.js holds the cast's full-body poses and the animals' stills (loaded on both pages)
   const BODY_URL = (k, pose) => (window.HalconBoard ? window.HalconBoard.art(k || 'dralingo', pose || 'idle') : SKIN_URL(k || 'dralingo'));

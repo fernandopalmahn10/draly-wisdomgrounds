@@ -259,7 +259,8 @@
     entries.forEach(([id, p]) => {
       const chip = document.createElement('span');
       chip.className = 'rd-active-roster-chip';
-      const avatar = p.avatar ? `<span class="rd-active-roster-avatar">${p.avatar}</span>` : '';
+      const avTx = (window.Saga && Saga.emojiOf ? Saga.emojiOf(p.avatar) : (p.avatar || ''));
+      const avatar = avTx ? `<span class="rd-active-roster-avatar">${escapeHtml(avTx)}</span>` : '';
       chip.innerHTML = avatar + escapeHtml(p.name || 'Anon');
       wrap.appendChild(chip);
     });
@@ -371,7 +372,7 @@
                         '💪 ¡A repasar!';
       row.innerHTML = `
         <span class="rd-test-rank">${medal}</span>
-        <span class="rd-test-rname">${escapeHtml(r.avatar || '')} ${escapeHtml(r.name)} ${r.code ? `<small>(${r.code})</small>` : ''}</span>
+        <span class="rd-test-rname">${escapeHtml((window.Saga && Saga.emojiOf ? Saga.emojiOf(r.avatar) : (r.avatar || '')))} ${escapeHtml(r.name)} ${r.code ? `<small>(${r.code})</small>` : ''}</span>
         <span class="rd-test-rscore">${r.score} <small>pts</small></span>
         <span class="rd-test-rcorrect">${r.correctCount}/${r.total} <small>(${pct}%)</small></span>
         <span class="rd-test-rcert">${certBadge}</span>`;
@@ -746,7 +747,7 @@
     Object.entries(playersMap || {}).forEach(([id, p]) => {
       const chip = document.createElement('div');
       chip.className = 'player-chip';
-      chip.innerHTML = `${p.avatar ? `<span class="chip-avatar">${p.avatar}</span>` : ''}<span>${escapeHtml(p.name)}</span>`;
+      chip.innerHTML = `${(window.Saga && Saga.emojiOf ? Saga.emojiOf(p.avatar) : (p.avatar || '')) ? `<span class="chip-avatar">${escapeHtml((window.Saga && Saga.emojiOf ? Saga.emojiOf(p.avatar) : (p.avatar || '')))}</span>` : ''}<span>${escapeHtml(p.name)}</span>`;
       red.appendChild(chip);
     });
   }

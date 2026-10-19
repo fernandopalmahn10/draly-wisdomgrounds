@@ -333,6 +333,96 @@
     } });
   })();
 
+  // 🪙 2026-10-19 · El Zoco de Dralingo (js/mi-dralingo.js #zoco · #zoco-<id> · #monedas · #tuyo-<id> · #personaje, the
+  // band's coins pill, js/zoco-coins.js «+N monedas»). Kept apart so other changes to the big line merge cleanly. Every
+  // English line here is a settled one: translated again it stays the same (none of them is a key of this dictionary).
+  (function () {
+    var M = {
+      'El Zoco de Dralingo': 'Dralingo\'s Souq', 'El Zoco': 'The Souq', 'Personajes nuevos': 'New characters', 'Personajes nuevos para ti': 'New characters for you',
+      'Personajes nuevos para ti. Gana monedas con tus pasos de cada día.': 'New characters for you. Earn coins with your steps every day.',
+      'Nuevo en el Zoco': 'New in the Souq', 'En el Zoco': 'In the Souq', 'Tuyo': 'Yours', '¡Ya te alcanza!': 'You have enough!',
+      '¿Cómo gano monedas?': 'How do I earn coins?', 'Con tus palabras, prácticas y tareas': 'With your words, practices and homework',
+      'Volver al Zoco': 'Back to the Souq', '¡Ya es tuyo!': 'It\'s yours!', 'Usarlo': 'Use it', 'Usarlo ahora': 'Use it now',
+      'Lo estás usando en tu perfil y en los juegos': 'You\'re using it in your profile and in the games',
+      '¡Sí, desbloquear!': 'Yes, unlock it!', 'No, todavía no': 'Not yet', 'Gana las monedas que te faltan': 'Earn the coins you still need',
+      'Cada paso de verdad te da monedas. Nunca se compran con dinero.': 'Every real step gives you coins. They are never bought with money.',
+      'Marca una palabra': 'Mark a word', 'En La Base de tu experiencia': 'In the Base of your experience',
+      'Supera una práctica': 'Pass a practice', 'En El Entrenamiento, al llegar a la meta': 'In the Training, when you reach the goal',
+      'Manda tu tarea': 'Send your homework', 'Toca «¡Ya la mandé!» con tu video': 'Tap «I sent it!» with your video',
+      'Juega en clase': 'Play in class', 'Cada partida con el PIN de tu profe': 'Every game with your teacher\'s PIN',
+      'Gana estrellas en el juego': 'Win stars in the game', 'En la ceremonia del final': 'In the closing ceremony',
+      'Racha de 7 días': '7-day streak', 'Un paso cada día, siete días seguidos': 'One step a day, seven days in a row',
+      'Desafío del día: muy pronto también da monedas': 'Daily challenge: soon it gives coins too', '¡A ganar monedas!': 'Let\'s earn coins!',
+      '¡Nuevo personaje!': 'New character!', 'Ver mis personajes': 'See my characters', 'Elige tu personaje': 'Choose your character',
+      'Ahora juegas con': 'Now you play as', 'En tu perfil y en los juegos': 'In your profile and in the games', 'Tus personajes': 'Your characters',
+      'En tu perfil y en los juegos de la clase': 'In your profile and in the class games',
+      'Abriendo el Zoco…': 'Opening the Souq…', 'Para entrar al Zoco, entra con tu código.': 'To enter the Souq, sign in with your code.',
+      'No se pudo abrir el Zoco. Revisa tu internet.': 'The Souq could not open. Check your internet.',
+      'Ese personaje no está en el Zoco.': 'That character is not in the Souq.', 'Ver los personajes': 'See the characters',
+      '¡Un regalo de bienvenida!': 'A welcome gift!', 'Dralingo · forma especial': 'Dralingo · special form', 'La pandilla · nuevo look': 'The gang · new look',
+      'Mascota': 'Pet', 'La pandilla': 'The gang', 'Mascotas': 'Pets',
+      'Ese personaje todavía no es tuyo.': 'That character is not yours yet.', 'Te faltan monedas.': 'You need more coins.',
+      'No se pudo cambiar. Revisa tu internet y vuelve a intentarlo.': 'It could not change. Check your internet and try again.',
+      'No se pudo desbloquear. Revisa tu internet y vuelve a intentarlo.': 'It could not unlock. Check your internet and try again.',
+      'Entra de nuevo con tu código para usar el Zoco.': 'Sign in again with your code to use the Souq.',
+      'para el Zoco de Dralingo': 'for Dralingo\'s Souq', 'volvieron al deshacer': 'went back with the undo', 'monedas': 'coins', 'moneda': 'coin',
+      'Desde hoy puedes jugar con él en tu clase y verlo en tu perfil.': 'From today you can play as him in class and see him in your profile.',
+      'Desde hoy puedes jugar con ella en tu clase y verla en tu perfil.': 'From today you can play as her in class and see her in your profile.',
+      'Ya juegas con él en tu clase y aparece en tu perfil.': 'You already play as him in class and he shows in your profile.',
+      'Ya juegas con ella en tu clase y aparece en tu perfil.': 'You already play as her in class and she shows in your profile.',
+      // the characters (core/zoco.js CATALOG, public/js/saga.js ZOCO)
+      'Dralingo Sheikh · ghutra roja': 'Dralingo Sheikh · red ghutra', 'Dralingo de paseo': 'Dralingo out for a walk',
+      'Dralingo de paseo · ghutra roja': 'Dralingo out for a walk · red ghutra', 'Dralingo clásico': 'Classic Dralingo',
+      'Bebé Dralingo Emperador': 'Baby Emperor Dralingo', 'Bebé Dralingo con kufiya': 'Baby Dralingo with keffiyeh',
+      'Dralingo Emperador': 'Emperor Dralingo', 'Dralingo Emperador Sabio': 'Wise Emperor Dralingo', 'Dralingo Emperador Qin': 'Qin Emperor Dralingo',
+      'Dralingo Fuego Azul': 'Blue Fire Dralingo', 'Aileen artes marciales': 'Martial arts Aileen', 'Profe Fer de traje': 'Profe Fer in a suit',
+      'Hamdan con kandura': 'Hamdan in his kandura', 'Latifa con abaya': 'Latifa in her abaya', 'Adric de negro': 'Adric in black',
+      'Adrian con chaqueta': 'Adrian in his jacket', 'El perro de Adric': 'Adric\'s dog',
+      'La poni unicornio de Aileen': 'Aileen\'s unicorn pony',
+      'La corona de los emperadores de la Gran Muralla. Úsalo en tu perfil y en los juegos de la clase.': 'The crown of the emperors of the Great Wall. Use it in your profile and in the class games.',
+      'Su superpoder: un fuego azul que nunca quema. Ilumina las palabras y le da fuerza a tus amigos.': 'His superpower: a blue fire that never burns. It lights up words and gives your friends strength.',
+      'Dralingo cuando ya es muy sabio: barba blanca larga y la calma de los grandes maestros.': 'Dralingo when he is very wise: a long white beard and the calm of the great masters.',
+      'Gorro de emperador y túnica blanca, listo para recorrer la Ciudad Prohibida.': 'An emperor\'s hat and a white robe, ready to explore the Forbidden City.',
+      'Dralingo con su kandura blanca y su ghutra, sentado tranquilo, como en casa en Dubái.': 'Dralingo in his white kandura and ghutra, sitting calmly, at home in Dubai.',
+      'El mismo Dralingo Sheikh, con la ghutra de cuadros rojos y blancos.': 'The same Dralingo Sheikh, with the red-and-white checked ghutra.',
+      'Dralingo sale de paseo por Dubái con su bastón. ¡Yalla, amigos!': 'Dralingo goes for a walk around Dubai with his cane. Yalla, friends!',
+      'De paseo con su bastón y la ghutra roja.': 'Out for a walk with his cane and the red ghutra.',
+      'El dragón azul de siempre, con las alas abiertas y la ghutra roja.': 'The blue dragon as always, wings open and the red ghutra on.',
+      'Dralingo de bebé, con un gorro de emperador rojo. ¡Pequeño pero valiente!': 'Baby Dralingo in a red emperor\'s hat. Small but brave!',
+      'Dralingo de bebé, con su kufiya roja y blanca.': 'Baby Dralingo in his red-and-white keffiyeh.',
+      'Tu profe con su traje azul de gala. ¡Atención, equipo!': 'Your teacher in his smart blue suit. Attention, team!',
+      'El capitán de la pandilla, con su kandura y su ghutra. ¡Bienvenidos a Dubái!': 'The captain of the gang, in his kandura and ghutra. Welcome to Dubai!',
+      'La estratega de la pandilla: siempre tiene un plan.': 'The strategist of the gang: she always has a plan.',
+      'Aileen con su traje blanco de artes marciales. ¡Dale, vos podés!': 'Aileen in her white martial arts suit. Go on, you can do it!',
+      'El rastreador de la pandilla, con su chaqueta negra y azul. Mira… escucha.': 'The tracker of the gang, in his black-and-blue jacket. Look… listen.',
+      'El explorador de la pandilla, siempre buscando la próxima X del mapa. ¡A la aventura!': 'The explorer of the gang, always looking for the next X on the map. Off on an adventure!',
+      'El perro de Adric sigue cualquier pista.': 'Adric\'s dog follows any trail.', 'La poni unicornio de Aileen.': 'Aileen\'s unicorn pony.',
+      'Un panda de China, amigo de toda la pandilla.': 'A panda from China, friend of the whole gang.',
+    };
+    for (var k in M) if (DICT.map[k] === undefined) DICT.map[k] = M[k];
+    DICT.map['Otra cuenta entró en este teléfono. Toca «Entrar de nuevo».'] = 'Another account signed in on this phone. Tap «Sign in again».';
+    PATTERNS.push({ re: /^Una tarea se deshizo después de gastar sus monedas: tus próximas (\d+) monedas? la pagan\.$/, en: 'A homework was undone after its coins were spent: your next $1 coins pay it back.' });
+    PATTERNS.push({ re: /^1 forma$/, en: '1 form' });
+    PATTERNS.push({ re: /^(\d+) formas$/, en: '$1 forms' });
+    PATTERNS.push({ re: /^1 personaje$/, en: '1 character' });
+    PATTERNS.push({ re: /^(\d+) personajes$/, en: '$1 characters' });
+    PATTERNS.push({ re: /^1 amigo$/, en: '1 friend' });
+    PATTERNS.push({ re: /^(\d+) amigos$/, en: '$1 friends' });
+    PATTERNS.push({ re: /^Tienes (-?\d+) de (\d+)$/, en: 'You have $1 of $2' });
+    PATTERNS.push({ re: /^Te faltan (\d+)$/, en: 'You need $1 more' });
+    PATTERNS.push({ re: /^Te faltan (\d+) monedas\.$/, en: 'You need $1 more coins.' });
+    PATTERNS.push({ re: /^Desbloquear por (\d+)$/, en: 'Unlock for $1' });
+    PATTERNS.push({ re: /^Te quedan (-?\d+) monedas? después\.$/, en: 'You will have $1 coins left.' });
+    PATTERNS.push({ re: /^Tienes (-?\d+) monedas? · El Zoco de Dralingo$/, en: 'You have $1 coins · Dralingo\'s Souq' });
+    PATTERNS.push({ re: /^\+(\d+) c\/u$/, en: '+$1 each' });
+    PATTERNS.push({ re: /^\+(\d+) monedas?$/, en: '+$1 coins' });
+    PATTERNS.push({ re: /^−(\d+) monedas?$/, en: '−$1 coins' });
+    PATTERNS.push({ re: /^(\d+) monedas? para personajes nuevos$/, en: '$1 coins for new characters' });
+    PATTERNS.push({ re: /^Dralingo te dio (\d+) monedas? por todo lo que ya hiciste\.$/, en: 'Dralingo gave you $1 coins for everything you already did.' });
+    PATTERNS.push({ re: /^Tienes (\d+) monedas? esperando: llegan mañana\. Cada día pagan hasta (\d+) palabras y (\d+) tareas\.$/,
+      en: 'You have $1 coins waiting: they arrive tomorrow. Each day pays up to $2 words and $3 homework tasks.' });
+  })();
+
   // Quick reject: nothing to translate unless the text has latin
   // letters (hanzi-only, pinyin-only-with-tones still passes but
   // simply won't match the dictionary).

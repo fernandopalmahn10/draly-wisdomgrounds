@@ -326,6 +326,7 @@
         if (resp.ok) {
           myPlayerId = resp.playerId; // new socket id after reconnect
           team = resp.team;
+          zocoFromJoin(resp);         // (🪙 the character the room gave this kid, the skins they own)
           // (2026-10-19) the room may play this phone under another name («Fernando 2»: its name is playing on another
           // device right now): keep it, so the next reconnect finds this phone's own slot
           if (resp.name && resp.name !== myName) { myName = resp.name; if ($('lobby-name')) $('lobby-name').textContent = myName; keepName(); }
@@ -434,6 +435,7 @@
       }
       pin = p;
       team = resp.team;
+      zocoFromJoin(resp);            // (🪙 the character the room gave this kid, the skins they own)
       myName = resp.name || name;    // (2026-10-19: «Fernando 2» when «Fernando» is playing on another device right now)
       if (myName !== name) keepName();
       elsewhere = false;
@@ -525,9 +527,52 @@
     try { return localStorage.getItem('dralyHwAccessCode') || ''; } catch (_) { return ''; }
   }
   function getMyAvatar() {
-    const v = localStorage.getItem('dralyAvatar');
+    let v = null;
+    try { v = localStorage.getItem('dralyAvatar'); } catch (_) { v = null; }
+    if (v && window.Saga && window.Saga.zoco && window.Saga.zoco(v)) return v;   // 🪙 a skin of El Zoco (the room checks it is theirs)
     return AVATAR_CHOICES.includes(v) ? v : (AVATAR_CHOICES[0] || '🐉');   // an old animal emoji → Dralingo
   }
+  // the avatar as text (headers, the lobby mascot): a skin prints its character's emoji, never its id
+  const avText = (v) => (window.Saga && window.Saga.emojiOf ? window.Saga.emojiOf(v) : (v || ''));
+  // 🪙 2026-10-19 El Zoco de Dralingo: the room answers the character it gave this kid (a skin only when the account this
+  // phone proved owns it; the account's skin wins) and the skins the kid owns. The phone keeps the room's verdict when a
+  // skin is involved (a skin the room refused becomes its character's emoji), and the lobby's picker shows the skins first.
+  let mySkins = [];
+  function zocoFromJoin(resp) {
+    if (!resp || !window.Saga || !window.Saga.zoco) return;
+    mySkins = Array.isArray(resp.skins) ? resp.skins.filter((id) => window.Saga.zoco(id)).slice(0, 40) : [];
+    const a = typeof resp.avatar === 'string' ? resp.avatar : '';
+    let cur = '';
+    try { cur = localStorage.getItem('dralyAvatar') || ''; } catch (_) {}
+    if (a && a !== cur && (window.Saga.zoco(a) || window.Saga.zoco(cur))) {
+      try { localStorage.setItem('dralyAvatar', a); } catch (_) {}
+    }
+  }
+  // the coins this game paid (server: zoco:coins, after the ceremony is sent): a small gold pill at the top edge, a few
+  // seconds after the end so it never covers the reveal; nothing to tap, gone by itself
+  let coinTimer = null;
+  socket.on('zoco:coins', (d) => {
+    const n = d && Number(d.got);
+    if (!n || n < 0) return;
+    clearTimeout(coinTimer);
+    coinTimer = setTimeout(() => {
+      let el = document.getElementById('zoco-coins-pop');
+      if (!el) {
+        el = document.createElement('div');
+        el.id = 'zoco-coins-pop';
+        el.className = 'zoco-pop';
+        el.setAttribute('role', 'status');
+        document.body.appendChild(el);
+      }
+      el.innerHTML = '<svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true"><circle cx="16" cy="16" r="14" fill="#e8c878" stroke="#b88b2c" stroke-width="2.5"/><circle cx="16" cy="16" r="9" fill="none" stroke="#b88b2c" stroke-width="1.8"/></svg>'
+        + '<span><b>+' + n + ' monedas</b><small>para el Zoco de Dralingo</small></span>';
+      el.classList.remove('is-on');
+      void el.offsetWidth;
+      el.classList.add('is-on');
+      try { const s = new Audio('/assets/sixseven/coins.mp3'); s.volume = 0.6; const pr = s.play(); if (pr && pr.catch) pr.catch(() => {}); } catch (_) { /* no sound: the pill still shows */ }
+      setTimeout(() => { if (el) el.classList.remove('is-on'); }, 4200);
+    }, 6500);
+  });
   function setMyAvatar(a) {
     try { localStorage.setItem('dralyAvatar', a); } catch (_) {}
     if (pin) {
@@ -548,7 +593,7 @@
   // Pushes the new avatar into every spot on the page that shows the player's
   // own avatar (header tags, name labels, lobby mascot).
   function refreshAvatarHeaders() {
-    const av = (typeof getMyAvatar === 'function') ? getMyAvatar() : '🐱';
+    const av = (typeof getMyAvatar === 'function') ? avText(getMyAvatar()) : '🐱';
     const nameWithAv = av ? `${av} ${myName || ''}`.trim() : (myName || '');
     if ($('player-name-tag')) $('player-name-tag').textContent = nameWithAv;
     if ($('mash-name-tag'))   $('mash-name-tag').textContent   = nameWithAv;
@@ -560,10 +605,12 @@
     if (!grid) return;
     const current = getMyAvatar();
     grid.innerHTML = '';
-    AVATAR_CHOICES.forEach((a) => {
+    // (🪙 2026-10-19: the skins of El Zoco this kid owns come first, from the room's answer: zocoFromJoin)
+    mySkins.concat(AVATAR_CHOICES).forEach((a) => {
       const cell = document.createElement('div');
-      cell.className = 'avatar-cell avatar-cell-saga' + (a === current ? ' selected' : '');
-      const sv = SAGA_AV.find((x) => x.emoji === a);
+      const skin = window.Saga && window.Saga.zoco ? window.Saga.zoco(a) : null;
+      cell.className = 'avatar-cell avatar-cell-saga' + (skin ? ' avatar-cell-zoco' : '') + (a === current ? ' selected' : '');
+      const sv = skin ? { url: window.Saga.skinHead(a), label: skin.label } : SAGA_AV.find((x) => x.emoji === a);
       if (sv) { const im = document.createElement('img'); im.src = sv.url; im.alt = sv.label; im.draggable = false; cell.appendChild(im); }
       else cell.textContent = a;
       cell.addEventListener('pointerdown', (e) => {
@@ -809,7 +856,7 @@
     }
     // Show team mascot + the player's chosen avatar side by side
     if ($('lobby-mascot')) {
-      const av = getMyAvatar();
+      const av = avText(getMyAvatar());
       $('lobby-mascot').innerHTML = av ? `${av}<span style="margin:0 6px; opacity:0.5;">·</span>${teamMascot}` : teamMascot;
     }
     if ($('lobby-team-name')) {
@@ -820,7 +867,7 @@
     if ($('player-header')) $('player-header').className = `player-header ${team}`;
     if ($('mash-header')) $('mash-header').className = `player-header ${team}`;
     // Avatar+name on every gameplay header so the kid always sees themselves
-    const av = getMyAvatar();
+    const av = avText(getMyAvatar());
     const nameWithAv = av ? `${av} ${myName}` : myName;
     if ($('player-name-tag')) $('player-name-tag').textContent = nameWithAv;
     if ($('mash-name-tag')) $('mash-name-tag').textContent = nameWithAv;
@@ -1960,7 +2007,7 @@
     card.className = 'wu-judge-card';
     card.setAttribute('data-name', h.name);
     card.innerHTML = `
-      <span class="wu-judge-who">${h.avatar || '🙋'} ${escapeHtmlP(h.name)}</span>
+      <span class="wu-judge-who">${escapeHtmlP((window.Saga && Saga.emojiOf ? Saga.emojiOf(h.avatar) : (h.avatar || '')) || '🙋')} ${escapeHtmlP(h.name)}</span>
       <span class="wu-judge-q">¿Puede ser asistente?</span>
       <span class="wu-judge-actions">
         <button class="wu-judge-yes" type="button">✅ Sí</button>

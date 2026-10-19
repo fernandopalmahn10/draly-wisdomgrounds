@@ -28,8 +28,12 @@
   let revealHold = false;         // test hook: screenshots hold the reveal before the verdict
   const boards = new Set();
   const reduced = () => !!(root.matchMedia && root.matchMedia('(prefers-reduced-motion: reduce)').matches);
-  const skinOk = (s) => (SKINS.includes(s) ? s : 'dralingo');
-  const isAnimal = (s) => ANIMALS.includes(s);
+  // 🪙 2026-10-19 El Zoco de Dralingo: a skin the kid unlocked is their character in every game (public/js/saga.js ZOCO:
+  // one full-body picture, drawn for every pose; the team colour stays on the outline and the disc). The server lets a
+  // skin into a room only when the kid's account owns it.
+  const Z = (s) => (root.Saga && root.Saga.zoco ? root.Saga.zoco(s) : null);
+  const skinOk = (s) => (SKINS.includes(s) || Z(s) ? s : 'dralingo');
+  const isAnimal = (s) => ANIMALS.includes(s) || !!(Z(s) && Z(s).animal);
   // the character a kid plays as, exactly like the server (public/js/snow-map.js skinFor): their lobby pick (old
   // emoji included) or one picked from their name
   const EMOJI = {
@@ -40,7 +44,7 @@
   function skinFor(avatar, name) {
     if (typeof avatar === 'string') {
       if (EMOJI[avatar]) return EMOJI[avatar];
-      if (SKINS.includes(avatar)) return avatar;
+      if (SKINS.includes(avatar) || Z(avatar)) return avatar;
     }
     const s = String(name || '').toLowerCase();
     let h = 7;
@@ -49,6 +53,7 @@
   }
   function art(skin, pose, animated) {
     skin = skinOk(skin);
+    if (Z(skin)) return root.Saga.skinBody(skin);    // (a skin of El Zoco: its one full-body picture for every pose)
     if (animated && pose === 'win' && WIN_ANIM[skin]) return WIN_ANIM[skin];
     if (pose === '67') {             // the «6-7» (palms up, one high, one low): 6-7 Swing's crews (art batch 2026-10-17)
       if (SIX7[skin]) return SIX7[skin];
@@ -57,7 +62,7 @@
     if (isAnimal(skin)) return '/assets/saga/anim/' + skin + '-still.webp';
     return '/assets/halcon/cast/' + skin + '-' + (POSE_FILE[pose] || 'ready') + '.webp';
   }
-  const head = (skin) => '/assets/saga/avatars/' + skinOk(skin) + '.webp';
+  const head = (skin) => (Z(skin) ? root.Saga.skinHead(skin) : '/assets/saga/avatars/' + skinOk(skin) + '.webp');
   const pre = {};
   function preload(skins) {
     (skins || []).forEach((s) => ['idle', 'ok', 'no'].forEach((p) => {

@@ -23,6 +23,7 @@ const LevelKeys = require('./core/level-keys'); // 🔑 a key per level opens La
 const RutaProgress = require('./core/ruta-progress'); // 🏆 La Ruta Dorada: seals on the kid's record + the unlock engine (2026-10-16)
 const Train = require('./core/entrenamiento');        // 🎯 El Entrenamiento: practice world by world, graded here (phase 4, 2026-10-16)
 const Golden = require('./core/golden');             // 📖 El libro dorado: the golden book on the web (phase 5, 2026-10-16)
+const Zoco = require('./core/zoco');                 // 🪙 El Zoco de Dralingo: coins from real steps + the characters shop (2026-10-19)
 const SentenceCategories = require('./core/sentence-categories');
 const Assignments = require('./core/assignments');
 const Teachers = require('./core/teachers');
@@ -2844,14 +2845,20 @@ app.get('/api/homework/home', (req, res) => {
     // (review 2026-10-18: the level as the login payload reads it, LevelKeys.classLevel: a key account's own level)
     const level = Levels.info(LevelKeys.classLevel(rec) || rec.level || Levels.DEFAULT);
     const me = _studentOf(req);
-    let ruta = null;
+    let ruta = null, zoco = null;
     if (me && me.code === rec.code) {
       // the phone's time zone, for «N días seguidos» on the kid's own calendar (only the kid's own session sets it)
       if (req.query && req.query.tz) Students.setTz(rec.code, String(req.query.tz));
       try { ruta = _homeRuta(req, rec, level); } catch (e) { console.warn('[home] ruta failed:', e.message); }
+      // 🪙 2026-10-19 El Zoco: the coins pill of the band and what came in since this phone last looked (`zs`); the
+      // purse opens here at the first visit (the welcome grant), a new day pays what a cap left waiting
+      try {
+        Students.updateZoco(rec.code, (r) => { Zoco.ensure(r, _zocoEnv()); return Zoco.settle(r); });
+        zoco = Object.assign(Zoco.brief(Students.get(rec.code), Number(req.query && req.query.zs) || 0), { now: Date.now() });
+      } catch (e) { console.warn('[home] zoco failed:', e.message); }
     }
     res.json({ ok: true, level: level.id, slug: level.pack || level.id, levelName: level.name, family: level.family,
-      streak: Students.streakOf(rec), ruta });
+      streak: Students.streakOf(rec), ruta, zoco });
   } catch (e) {
     console.error('[home] failed:', e.message);
     res.status(500).json({ ok: false, error: 'No se pudo cargar tu inicio. Vuelve a intentarlo.' });
@@ -5654,6 +5661,10 @@ app.post('/api/ruta/me/name', (req, res) => {
 // its exam tries + homework rounds moved over (L3); nothing else of either account changes → the counts that moved
 function _autoMerge(from, to) {
   const out = { seals: 0, worlds: 0, heard: 0, sent: 0, tries: 0, homework: 0 };
+  // 🪙 2026-10-19 El Zoco: the automatic account's coins and characters join the real account FIRST, and everything it
+  // did counts as done there (the seals, practices and homework moving in below never pay a second time)
+  try { Students.updateZoco(to.code, (t) => { const z = Zoco.merge(from, t, _zocoEnv()); out.coins = z.c; out.skins = z.own; return true; }); }
+  catch (e) { console.warn('[zoco] merge failed:', e.message); }
   const ruta = from.ruta && typeof from.ruta === 'object' && !Array.isArray(from.ruta) ? from.ruta : {};
   Object.keys(ruta).forEach((lvl) => {
     if (!Levels.normalize(lvl)) return;
@@ -6372,6 +6383,97 @@ app.get('/api/ruta-dorada', (req, res) => {
     res.status(500).json({ ok: false, error: 'No se pudo cargar La Ruta Dorada.' });
   }
 });
+// ── 🪙 El Zoco de Dralingo (2026-10-19, his OK: "Okay I approve the design of the Souq") ───────────────────────────
+// Coins come only from real steps, judged here on the kid's OWN record (core/zoco.js: the amounts, the daily caps, the
+// one-time welcome grant), never from a number a phone sends, never bought with money. Who earns: the account this
+// request proves is the kid's (their /homework session for La Base, El Entrenamiento and the homework marks; a PIN join
+// that _joinOwns proved for a class game). Who spends and equips: only that kid's session (never a code in the body).
+//   GET  /api/zoco?since=<ms>        → { ok, student: false } | { ok, student: true, who, coins, own, equipped, items,
+//                                       cats, ways, news (moves since `since`), caps, waiting, settled? }
+//   POST /api/zoco/buy   { id, who } → { ok, coins, own, item } | 402 not enough coins · 404 not on sale · 409 owned
+//   POST /api/zoco/equip { id, who } → { ok, avatar } (a free saga avatar, or a skin the kid owns)
+// Steps pay inside their own endpoints (/api/ruta/seals, /api/ruta/tareas, /api/ruta/train/finish + scores, every pin
+// game's end through _zocoGameEnd), each answer carrying `coins: { got, c, items }` for the «+N monedas» moment.
+const _zocoEnv = () => ({ goal: RutaProgress.getSettings().doradoPct });
+// the kid's purse opened BEFORE a step changes the record (what was done before El Zoco never pays coin by coin)
+function _zocoOpen(code) {
+  try { return Students.updateZoco(code, (rec) => { Zoco.ensure(rec, _zocoEnv()); return true; }); }
+  catch (e) { console.warn('[zoco] open failed:', e.message); return null; }
+}
+// a step's coins (+ a 7-day streak the step may have completed): fn(rec) → { got, items }. A step never fails because
+// of the coins: any trouble here is logged and the step answers as always.
+function _zocoPay(code, fn) {
+  try {
+    return Students.updateZoco(code, (rec) => {
+      Zoco.ensure(rec, _zocoEnv());
+      const r = fn(rec) || { got: 0, items: [] };
+      const s = Zoco.settleStreak(rec);
+      return { got: r.got + s.got, items: r.items.concat(s.items), c: rec.zoco.c };
+    });
+  } catch (e) { console.warn('[zoco] pay failed:', e.message); return null; }
+}
+const _zocoOut = (r) => (r && r.got ? { got: r.got, c: r.c, items: r.items, at: Date.now() } : undefined);
+// the homework that pays: the kid's own level's homework audios (another level's homework only plays)
+const _zocoHwIds = (rec) => _tareaIdsOf(LevelKeys.classLevel(rec) || rec.level || Levels.DEFAULT);
+// rate: a read per address (a school Wi-Fi is never slowed), a buy / equip per kid
+const _zocoHits = new Map();
+function _zocoRate(key, win, max) {
+  const now = Date.now();
+  const arr = (_zocoHits.get(key) || []).filter((t) => now - t < win);
+  if (arr.length >= max) { _zocoHits.set(key, arr); return false; }
+  arr.push(now);
+  _zocoHits.set(key, arr);
+  return true;
+}
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of _zocoHits) if (!v.length || now - v[v.length - 1] > 10 * 60 * 1000) _zocoHits.delete(k);
+  if (_zocoHits.size > 50000) _zocoHits.clear();
+}, 60 * 1000).unref();
+// the logged-in kid of a shop write: same site, their session, their own phone's mirror (`who`), within the rate
+function _zocoKid(req, res) {
+  res.set('Cache-Control', 'private, no-store');
+  if (!_autoSameSite(req)) { res.status(403).json({ ok: false, why: 'site' }); return null; }
+  const rec = _studentOf(req);
+  if (!rec) { res.status(403).json({ ok: false, student: false, error: 'Entra con tu código para usar el Zoco.' }); return null; }
+  if (!_zocoRate('k:' + rec.code, 60 * 1000, 30)) { res.status(429).set('Retry-After', '20').json({ ok: false, error: 'Espera un momento.' }); return null; }
+  const b = req.body && typeof req.body === 'object' ? req.body : {};
+  const who = _sealWho(rec.code);
+  if (b.who != null && String(b.who) !== who) { res.status(409).json({ ok: false, who, error: 'Otra cuenta entró en este teléfono.' }); return null; }
+  return rec;
+}
+app.get('/api/zoco', (req, res) => {
+  res.set('Cache-Control', 'private, no-store');
+  if (!_zocoRate('i:' + _clientIp(req), 5 * 60 * 1000, 4000)) return res.status(429).set('Retry-After', '30').json({ ok: false, error: 'Espera un momento.' });
+  const me = _studentOf(req);
+  if (!me) return res.json({ ok: true, student: false });
+  try {
+    const settled = Students.updateZoco(me.code, (rec) => { Zoco.ensure(rec, _zocoEnv()); return Zoco.settle(rec); });
+    const rec = Students.get(me.code);
+    res.json(Object.assign({ ok: true, student: true, who: _sealWho(rec.code), now: Date.now() }, Zoco.view(rec, { since: Number((req.query || {}).since) || 0 }),
+      _zocoOut(settled) ? { settled: _zocoOut(settled) } : {}));
+  } catch (e) {
+    console.error('[zoco] read failed:', e.message);
+    res.status(500).json({ ok: false, error: 'No se pudo abrir el Zoco. Vuelve a intentarlo.' });
+  }
+});
+app.post('/api/zoco/buy', (req, res) => {
+  const rec = _zocoKid(req, res);
+  if (!rec) return;
+  const id = String(((req.body || {}).id) || '').slice(0, 60);
+  const out = Students.updateZoco(rec.code, (r) => { Zoco.ensure(r, _zocoEnv()); return Zoco.buy(r, id); });
+  if (!out || !out.ok) return res.status((out && out.status) || 400).json(Object.assign({ ok: false }, out || {}, { status: undefined }));
+  const after = Students.get(rec.code);
+  console.log('[zoco] a character was bought (' + id + ')');   // (never a student code in the log)
+  res.json({ ok: true, coins: out.c, own: after.zoco.own.slice(), item: out.item });
+});
+app.post('/api/zoco/equip', (req, res) => {
+  const rec = _zocoKid(req, res);
+  if (!rec) return;
+  const id = String(((req.body || {}).id) || '').slice(0, 60);
+  if (!Students.setAvatar(rec.code, id)) return res.status(403).json({ ok: false, why: 'owned', error: 'Ese personaje todavía no es tuyo.' });
+  res.json({ ok: true, avatar: id });
+});
 // ── 🏆 La Ruta Dorada, phase 3 (2026-10-16): a logged-in kid's «¡Me la sé!» seals live on their record ──────────────
 // GET  /api/ruta/seals?level=yct1           → { ok, student: false } (a key on this phone, nobody logged in: the seals
 //                                              stay on the phone, as before) | { ok, student: true, who, seals: [n…] }
@@ -6423,9 +6525,11 @@ app.post('/api/ruta/seals', (req, res) => {
   if (!_sealRateOk(req, rec.code)) return res.status(429).set('Retry-After', '20').json({ ok: false, error: 'Espera un momento: tus sellos se guardan enseguida.' });
   const who = _sealWho(rec.code);
   if (b.who != null && String(b.who) !== who) return res.status(409).json({ ok: false, who, error: 'Otra cuenta entró en este teléfono.' });
+  _zocoOpen(rec.code);                                   // 🪙 (before the step: what was sealed before El Zoco never pays)
   const out = RutaProgress.applySeals(rec.code, lvl, b.add, b.remove);
   if (!out.ok) return res.status(out.status || 400).json({ ok: false, error: out.error });
-  res.json({ ok: true, who, seals: out.seals });
+  const coins = _zocoPay(rec.code, (r) => Zoco.settleSeals(r, lvl));
+  res.json(Object.assign({ ok: true, who, seals: out.seals }, _zocoOut(coins) ? { coins: _zocoOut(coins) } : {}));
 });
 // ── 🏆 La Ruta Dorada redesign (2026-10-18): the homework done marks live on the kid's ACCOUNT ─────────────────────
 // (his worry: a kid changes or loses the phone)
@@ -6486,15 +6590,20 @@ app.post('/api/ruta/tareas', (req, res) => {
   if (lists.sent.some((id) => lists.unsent.includes(id))) return res.status(400).json({ ok: false, error: 'Una tarea no puede estar mandada y no mandada a la vez.' });
   const now = Date.now();
   const any = lists.heard.length + lists.sent.length + lists.unsent.length > 0;
+  let coins = null;
   if (any) {
+    _zocoOpen(rec.code);                                 // 🪙 (before the step: a homework sent before El Zoco never pays)
     Students.updateTareas(rec.code, (all) => {
       const at = (id) => (Object.prototype.hasOwnProperty.call(all, id) && all[id] && typeof all[id] === 'object' ? all[id] : (all[id] = {}));
       lists.heard.forEach((id) => { const e = at(id); if (!e.h) e.h = now; });
       lists.sent.forEach((id) => { const e = at(id); if (!e.h) e.h = now; if (!e.s) e.s = now; });   // sent = heard too
       lists.unsent.forEach((id) => { const e = at(id); delete e.s; });
     }, { activity: true });
+    // 🪙 +50 a homework of the kid's own level marked «¡Ya la mandé!», «Deshacer» takes them back (core/zoco.js)
+    if (lists.sent.length || lists.unsent.length) coins = _zocoPay(rec.code, (r) => Zoco.settleHw(r, _zocoHwIds(r)));
+    else coins = _zocoPay(rec.code, () => ({ got: 0, items: [] }));
   }
-  res.json(Object.assign({ ok: true, who, marks: _tareaMarks(Students.get(rec.code)) }, unknown.length ? { unknown } : {}));
+  res.json(Object.assign({ ok: true, who, marks: _tareaMarks(Students.get(rec.code)) }, unknown.length ? { unknown } : {}, _zocoOut(coins) ? { coins: _zocoOut(coins) } : {}));
 });
 // ── 🎯 El Entrenamiento (phase 4, 2026-10-16): quick rounds graded here (core/entrenamiento.js) ─────────────────────
 // GET  /api/ruta/train?level=yct1&s=1-17,20            → the level's practice worlds for this visitor: open or not (the
@@ -6610,9 +6719,13 @@ app.post('/api/ruta/train/finish', (req, res) => {
   const b = req.body || {};
   const d = _trainRoundDoor(req, res, b.round);
   if (!d) return;
-  const out = Train.finish(String(b.round), _trainWho(req, res, d.a), d.a, _trainRec(d.a));
+  const rec = _trainRec(d.a);
+  if (rec) _zocoOpen(rec.code);                          // 🪙 (before the step: a world at its goal before El Zoco never pays)
+  const out = Train.finish(String(b.round), _trainWho(req, res, d.a), d.a, rec);
   if (!out.ok) return res.status(out.status || 400).json(out);
-  res.json(out);
+  // 🪙 +20 the first time a world reaches its goal (core/zoco.js; a replayed round pays nothing more)
+  const coins = rec && out.saved ? _zocoOut(_zocoPay(rec.code, (r) => Zoco.settleTrain(r, d.lvl, RutaProgress.getSettings().doradoPct))) : undefined;
+  res.json(coins ? Object.assign({}, out, { coins }) : out);
 });
 app.get('/api/ruta/train/voice/:round/:i/:part', (req, res) => {
   const d = _trainRoundDoor(req, res, req.params.round);
@@ -6658,9 +6771,12 @@ app.post('/api/ruta/train/scores', (req, res) => {
   if (!_trainRate('s:' + rec.code, 60 * 1000, 30)) return res.status(429).set('Retry-After', '20').json({ ok: false, error: 'Espera un momento.' });
   const who = _sealWho(rec.code);
   if (b.who != null && String(b.who) !== who) return res.status(409).json({ ok: false, who, error: 'Otra cuenta entró en este teléfono.' });
+  _zocoOpen(rec.code);                                   // 🪙 (before the step)
   const out = Train.mergeProofs(rec.code, d.lvl, b.proofs, _trainWho(req, res, d.a));
   if (!out.ok) return res.status(out.status || 400).json(out);
-  res.json({ ok: true, who, merged: out.merged, best: Train.bestOf(Students.get(rec.code), d.lvl) });
+  // 🪙 this phone's own rounds from before the login (signed proofs, each joins one account only) pay like a round now
+  const coins = out.merged ? _zocoOut(_zocoPay(rec.code, (r) => Zoco.settleTrain(r, d.lvl, RutaProgress.getSettings().doradoPct))) : undefined;
+  res.json(Object.assign({ ok: true, who, merged: out.merged, best: Train.bestOf(Students.get(rec.code), d.lvl) }, coins ? { coins } : {}));
 });
 // ── 📖 El libro dorado (phase 5, 2026-10-16): the golden book on the web (core/golden.js) ──────────────────────────
 // GET /api/golden/<level>/<n>[?de=<teacher link>] → simulation n's book for THIS visitor, or why not (never cached)
@@ -7471,6 +7587,7 @@ function mnFinish(pin, g) {
     const one = end.forPlayer(pid);
     if (one) io.to(pid).emit('game-end', one);
   });
+  _zocoGameEnd(pin, g, end);   // 🪙 El Zoco: +10 a game played for real, +5 a bonus star (after the ceremony is sent)
 }
 
 // === 🐉 VUELO DEL DRAGÓN v2 (gameType 'dragon-eye') — «La Carrera del Cielo de Dubái», a Mario Party sky race ===
@@ -7768,6 +7885,7 @@ function drFinish(pin, g) {
     const one = end.forPlayer(pid);
     if (one) io.to(pid).emit('game-end', one);
   });
+  _zocoGameEnd(pin, g, end);   // 🪙 El Zoco: +10 a game played for real, +5 a bonus star (after the ceremony is sent)
 }
 
 // === 🏰 REINOS DE COLORES (gameType 'kingdoms') — hex territory game, Kahoot «Color Kingdoms» style ===
@@ -8966,6 +9084,7 @@ function hcAnswer(pin, g, pid, pos) {
   const r = Halcon.answer(h, p, pos, now);
   io.to(pid).emit('hc:mine', { round: h.round, status: r.status, pos: r.look ? r.look.pos : -1 });
   if (r.status !== 'ok') return;
+  p.hcLooks = (Number(p.hcLooks) || 0) + 1;   // 🪙 (El Zoco: «played for real» = rounds this kid looked)
   // the board's other phones and the projector only learn that this kid is READY, never the window (the reveal shows it)
   const ev = { round: h.round, id: p.hcSeat, board: p.hcBoard };
   hcBoardPids(g, p.hcBoard).forEach((id) => { if (id !== pid) io.to(id).emit('hc:ready', ev); });
@@ -9059,6 +9178,7 @@ function hcFinish(pin, g) {
     const one = end.forPlayer(pid);
     if (one) io.to(pid).emit('game-end', one);
   });
+  _zocoGameEnd(pin, g, end);   // 🪙 El Zoco: +10 a game played for real, +5 a bonus star (after the ceremony is sent)
 }
 // The game-end payloads (the projector's, and each phone's own: its board + its place). Built again on demand, so a
 // projector or a phone that drops around the end still gets its finale after reconnecting (reclaim / resync).
@@ -9308,6 +9428,7 @@ function mmFinish(pin, g) {
     const one = end.forPlayer(pid);
     if (one) io.to(pid).emit('game-end', one);
   });
+  _zocoGameEnd(pin, g, end);   // 🪙 El Zoco: +10 a game played for real, +5 a bonus star (after the ceremony is sent)
 }
 
 // === 🐯 PIÑATA TIGRE v2 (gameType 'pinata') — «La Fiesta de las Piñatas», team hits + a server-judged timing meter ===
@@ -9541,6 +9662,7 @@ function pnFinish(pin, g) {
     const one = end.forPlayer(pid);
     if (one) io.to(pid).emit('game-end', one);
   });
+  _zocoGameEnd(pin, g, end);   // 🪙 El Zoco: +10 a game played for real, +5 a bonus star (after the ceremony is sent)
 }
 
 // === 🤙 6-7 SWING v2 (gameType 'sixseven') — «La Balanza de Oro», sums whose answer is always 6 or 7 ===
@@ -9812,6 +9934,7 @@ function ssFinish(pin, g) {
     const one = end.forPlayer(pid);
     if (one) io.to(pid).emit('game-end', one);
   });
+  _zocoGameEnd(pin, g, end);   // 🪙 El Zoco: +10 a game played for real, +5 a bonus star (after the ceremony is sent)
 }
 
 // === 🚀 LA GRAN FUGA DE DUBÁI (gameType 'escape') — Kahoot «Robot Run» style co-op chase, Dralingo episode ===
@@ -10365,6 +10488,7 @@ function finFinish(pin, g) {
     if (p.disconnected) return;
     io.to(pid).emit('game-end', end.forPlayer(pid) || end.guest());
   });
+  _zocoGameEnd(pin, g, end);   // 🪙 El Zoco: +10 a game played for real, +5 a bonus star (after the ceremony is sent)
 }
 // the last 30 s of a round (all four games): one check every 0.5 s; +30 s can switch it off again
 setInterval(() => {
@@ -10383,6 +10507,55 @@ setInterval(() => {
   });
 }, 500);
 
+// ── 🪙 El Zoco de Dralingo in the pin games (2026-10-19) ────────────────────────────────────────────────────────────
+// The character a kid plays a pin game as: a skin of El Zoco only when the account this phone PROVED (_joinOwns, never
+// a typed classmate's code) owns it; the account's equipped skin wins over the phone's lobby pick (a skin is the kid's
+// character everywhere); anything else as before (the phone's emoji or saga id, 8 characters). A skin the account does
+// not own becomes its base character's emoji.
+// (security review 2026-10-19: the 8-character cut is checked too: «adric-3dX» cut to «adric-3d» is a skin)
+function _gameAvatar(sent, rec, proven) {
+  const mine = (id) => !!(proven && rec && Students.ownsSkin(rec, id));
+  const s = typeof sent === 'string' ? sent : '';
+  const skin = Saga.zoco(s) ? s : Saga.zoco(s.slice(0, 8)) ? s.slice(0, 8) : null;
+  if (skin) {
+    if (mine(skin)) return skin;
+    if (proven && rec && typeof rec.avatar === 'string' && mine(rec.avatar)) return rec.avatar;
+    return Saga.emojiOf(skin);
+  }
+  if (proven && rec && typeof rec.avatar === 'string' && mine(rec.avatar)) return rec.avatar;
+  return s ? s.slice(0, 8) : '';
+}
+// The class games that pay (every pin game; never the warm-up, reading or exam rooms: those are class tools)
+const ZOCO_GAMES = ['kingdoms', 'paint', 'snow', 'escape', 'trapdoor', 'halcon', 'mochi-mash', 'pinata', 'sixseven', 'monopoly', 'dragon-eye'];
+// A pin game's round ended (each game's finisher, right after it built its end payloads): every kid whose account the
+// phone proved and who played for real (Zoco.GAME_MIN answers) gets +10 and +5 per bonus star of the ceremony, once per
+// round (the room's id + the round's start), within the day's caps. The phone hears it as `zoco:coins` (a small «+N
+// monedas» moment after its own card, never over the ceremony). `end.forPlayer(pid).me` = the kid's card: `answered`
+// (Ojos de Halcón: the rounds it looked), `stars` = its bonus stars (Monopolio and the Carrera: `bonus`; their `stars`
+// are the game's own score).
+function _zocoGameEnd(pin, g, end) {
+  try {
+    if (!g || !end || typeof end.forPlayer !== 'function' || !ZOCO_GAMES.includes(g.gameType)) return;
+    const gid = (g.zid || pin) + ':' + (g.startedAt || 0);
+    if (!g.zocoPaid) g.zocoPaid = {};
+    if (g.zocoPaid.gid !== gid) g.zocoPaid = { gid, by: {} };
+    Object.entries(g.players).forEach(([pid, p]) => {
+      // (one kid's trouble never stops the others' coins)
+      try {
+        if (!p || !p.zocoOk || !p.studentCode || p.zocoCode !== p.studentCode || g.zocoPaid.by[p.studentCode]) return;
+        const one = end.forPlayer(pid);
+        const me = one && one.me;
+        if (!me || me.guest) return;
+        const answered = g.gameType === 'halcon' ? (Number(p.hcLooks) || 0) : (Number(me.answered) || 0);
+        const st = g.gameType === 'monopoly' || g.gameType === 'dragon-eye' ? me.bonus : me.stars;
+        const stars = Array.isArray(st) ? st.length : 0;
+        g.zocoPaid.by[p.studentCode] = true;
+        const got = Students.updateZoco(p.studentCode, (rec) => { Zoco.ensure(rec, _zocoEnv()); return Zoco.gameEnd(rec, gid, { answered, stars }); });
+        if (got && got.got && !p.disconnected) io.to(pid).emit('zoco:coins', { got: got.got, c: got.c, items: got.items, game: g.gameType, at: Date.now() });
+      } catch (e) { console.warn('[zoco] a kid\'s game coins failed:', e.message); }
+    });
+  } catch (e) { console.warn('[zoco] game end failed:', e.message); }
+}
 function endGame(pin, force) {
   const g = games[pin];
   if (!g) return;
@@ -10603,7 +10776,8 @@ io.on('connection', (socket) => {
       questions: [],
       players: {},
       teamScores: { red: 0, gold: 0 },
-      feed: []
+      feed: [],
+      zid: _emCrypto.randomBytes(6).toString('hex'),   // 🪙 this room's own id (PINs come back): a round's coins pay once
     };
     // 6-7 Swing v2 — the sums are generated (core/sixseven.js, dealt by ssTick). No question pack: a single stub keeps
     // questionsLoaded > 0 for the start button; the teacher picks the round style in the lobby (host:ss-style).
@@ -11000,6 +11174,7 @@ io.on('connection', (socket) => {
       g.teamScores = { red: 0, gold: 0 };
       Object.values(g.players).forEach((p) => {
         p.score = 0;
+        p.hcLooks = 0;                     // (🪙 El Zoco: this round's looks)
         p.queueIdx = 0;
         p.mashUntil = 0;
         p.recentTaps = [];
@@ -11368,8 +11543,7 @@ io.on('connection', (socket) => {
         }
         if (elsewhereId === oldId) _tellElsewhere(oldId, pin);
       }
-      // Refresh avatar on rejoin so kids can change it across rounds
-      if (avatar && typeof avatar === 'string') player.avatar = String(avatar).slice(0, 8);
+      // Refresh avatar on rejoin so kids can change it across rounds (set below, once the account is known: _gameAvatar)
       g.feed.push({ type: 'rejoin', name: cleanName, team: player.team, t: Date.now() });
     } else {
       // New player — pick smaller team (Mochi Mash: fewer CONNECTED kids, a tie goes to the team that is behind)
@@ -11379,7 +11553,7 @@ io.on('connection', (socket) => {
       player = {
         name: cleanName,
         team,
-        avatar: (avatar && typeof avatar === 'string') ? String(avatar).slice(0, 8) : '',
+        avatar: '',               // (set below, once the account is known: _gameAvatar)
         score: 0,
         queueIdx: 0,
         mashUntil: 0,
@@ -11410,6 +11584,13 @@ io.on('connection', (socket) => {
     _entradaPinTag(socket, g, studentRec);   // 🆕 2026-10-18 (la entrada): a key account joins its teacher's class here
     player.studentCode = studentRec.code;
     player.guestLink = guestLink;   // the phone keeps its own saved code (player.js never overwrites it with this one)
+    // 🪙 2026-10-19 El Zoco: the character this kid plays as (a skin only when the account this phone PROVED owns it).
+    // A slot pays its game only to the account it was made for (security review: someone typing a dropped kid's name
+    // takes the slot back, but never its coins)
+    if (!isRejoin || !player.zocoCode) player.zocoCode = studentRec.code;
+    player.zocoOk = proven && !guestLink && player.zocoCode === studentRec.code;
+    const nextAv = _gameAvatar(avatar, studentRec, player.zocoOk);
+    if (nextAv || !isRejoin) player.avatar = nextAv;
     if (g.gameType === 'monopoly') mnEnsureId(g, player);     // the projector knows every kid (k + character) from the lobby
     if (g.gameType === 'dragon-eye') drEnsureId(g, player);
     if (g.gameType === 'mochi-mash') mmEnsureId(g, player);   // the projector knows every kid (k + character) from the lobby
@@ -11431,6 +11612,10 @@ io.on('connection', (socket) => {
       gameState: g.state,
       studentCode: player.studentCode,
       guest: !!player.guestLink,
+      // 🪙 2026-10-19: the character the room uses for this kid, and the skins of El Zoco this kid owns (the lobby's
+      // picker shows them first), only to the phone that proved the account
+      avatar: player.avatar,
+      skins: player.zocoOk && studentRec.zoco && Array.isArray(studentRec.zoco.own) ? studentRec.zoco.own.filter((id) => Saga.zoco(id)) : [],
       // 🔒 2026-10-15: an exam room's pass (this kid is now on the teacher's roster): the room's sim loads with it
       roomPass: g.gameType === 'hsksim' && g.hsk && g.hsk.simId ? SimLock.roomPass(String(pin), g.hsk.simId, (HSK_ROOMS.get(String(pin)) || {}).createdAt) : undefined,
     });
@@ -12213,7 +12398,14 @@ io.on('connection', (socket) => {
     const p = g.players[socket.id];
     if (!p) return;
     if (typeof avatar !== 'string') return;
-    p.avatar = String(avatar).slice(0, 8);
+    // 🪙 2026-10-19: a skin of El Zoco only when the account this phone proved owns it (else nothing changes); the
+    // 8-character cut is checked too (security review: «adric-3dX» cut to «adric-3d»)
+    const skin = Saga.zoco(avatar) ? avatar : Saga.zoco(avatar.slice(0, 8)) ? avatar.slice(0, 8) : null;
+    if (skin) {
+      const acct = p.zocoOk && p.studentCode ? Students.peek(p.studentCode) : null;
+      if (!acct || !Students.ownsSkin(acct.rec, skin)) return;
+      p.avatar = skin;
+    } else p.avatar = String(avatar).slice(0, 8);
     broadcast(pin);
   });
 

@@ -161,7 +161,7 @@
       list.forEach(([id, p]) => {
         const chip = document.createElement('button');
         chip.className = 'kd-chip';
-        chip.textContent = (p.avatar ? p.avatar + ' ' : '') + p.name;
+        chip.textContent = ((window.Saga && Saga.emojiOf ? Saga.emojiOf(p.avatar) : (p.avatar || '')) + ' ' + p.name).trim();
         chip.addEventListener('click', () => socket.emit('host:swap-team', { pin, playerId: id }));
         box.appendChild(chip);
       });

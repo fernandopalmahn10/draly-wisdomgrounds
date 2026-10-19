@@ -7,7 +7,8 @@
   const INK = '#1d2440';
   const SUN = '#ffb020', SUN_DEEP = '#e07a00', ICE = '#4cc3ff', ICE_DEEP = '#1d6fa8';
   const Q = ['#f0443a', '#2f7bea', '#f5b301', '#26a65b'];         // station quadrants = the answer-tile colours
-  const SKIN_URL = (k) => '/assets/saga/avatars/' + k + '.webp';
+  // (🪙 2026-10-19: a skin of El Zoco walks as its own head picture, public/js/saga.js)
+  const SKIN_URL = (k) => (window.Saga && window.Saga.zoco && window.Saga.zoco(k) ? window.Saga.skinHead(k) : '/assets/saga/avatars/' + k + '.webp');
   const LM_URL = (k) => '/assets/kingdoms/landmarks/big/' + k + '.webp';
   const IMG = {};            // url → Image
   const FROST = {};          // skin → frosted canvas

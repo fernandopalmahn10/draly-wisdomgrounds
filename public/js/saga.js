@@ -50,6 +50,38 @@
     { id: 'falcon', emoji: '🦅', label: '🦅 Halcón', url: AV + 'falcon.webp' },
     { id: 'oryx', emoji: '🦌', label: '🦌 Órix', url: AV + 'oryx.webp' },
   ];
+  // 🆕 2026-10-19 · El Zoco de Dralingo (his OK: "Okay I approve the design of the Souq"): the characters a kid unlocks
+  // with coins, renders of his own 3D models (assets-library/originals-renders/2026-10-19). A skin is the kid's
+  // character everywhere: every page draws it through avatarUrl / skinHead / skinBody below, and every game through
+  // HalconBoard / SnowMap (which ask this list). `base` = the saga character it is a form of (a page or game that has no
+  // place for the skin shows the base); `animal` = no human poses. The shop (prices, held ones, who may buy, the coins)
+  // is core/zoco.js; this list only says how to draw them. A new character: its renders in /assets/zoco/full + avatar,
+  // a row here, a row in core/zoco.js (the test checks both lists agree).
+  // ar = the full picture's width / height, hx = where the face is across it (0 left … 1 right): a page places a
+  // character by its face (the shop's spotlight); the round head pictures are cut around the face the same way.
+  const ZOCO = [
+    { id: 'dralingo-sheikh', base: 'dralingo', label: 'Dralingo Sheikh', ar: 1.46, hx: 0.375 },
+    { id: 'dralingo-sheikh-roja', base: 'dralingo', label: 'Dralingo Sheikh · ghutra roja', ar: 1.46, hx: 0.375 },
+    { id: 'dralingo-sheikh-paseo', base: 'dralingo', label: 'Dralingo de paseo', ar: 1.33, hx: 0.36 },
+    { id: 'dralingo-sheikh-paseo-roja', base: 'dralingo', label: 'Dralingo de paseo · ghutra roja', ar: 1.33, hx: 0.36 },
+    { id: 'dralingo-clasico', base: 'dralingo', label: 'Dralingo clásico', ar: 1.46, hx: 0.365 },
+    { id: 'bebe-dralingo-emperador', base: 'dralingo', label: 'Bebé Dralingo Emperador', ar: 0.86, hx: 0.5 },
+    { id: 'bebe-dralingo-kufiya', base: 'dralingo', label: 'Bebé Dralingo con kufiya', ar: 1.08, hx: 0.49 },
+    { id: 'dralingo-emperador', base: 'dralingo', label: 'Dralingo Emperador', ar: 1.14, hx: 0.33 },
+    { id: 'dralingo-emperador-barba', base: 'dralingo', label: 'Dralingo Emperador Sabio', ar: 1.14, hx: 0.33 },
+    { id: 'dralingo-emperador-qin', base: 'dralingo', label: 'Dralingo Emperador Qin', ar: 1.22, hx: 0.335 },
+    { id: 'dralingo-fuego-azul', base: 'dralingo', label: 'Dralingo Fuego Azul', ar: 1.57, hx: 0.44 },
+    { id: 'profe-fer', base: 'fer', label: 'Profe Fer de traje', ar: 0.45, hx: 0.49 },
+    { id: 'hamdan-3d', base: 'hamdan', label: 'Hamdan con kandura', ar: 0.38, hx: 0.47 },
+    { id: 'latifa-3d', base: 'latifa', label: 'Latifa con abaya' },
+    { id: 'aileen-3d', base: 'aileen', label: 'Aileen artes marciales', ar: 0.55, hx: 0.52 },
+    { id: 'adric-3d', base: 'adric', label: 'Adric de negro', ar: 0.41, hx: 0.5 },
+    { id: 'adrian-3d', base: 'adrian', label: 'Adrian con chaqueta', ar: 0.45, hx: 0.52 },
+    { id: 'perro-de-adric', base: 'adric', label: 'El perro de Adric', animal: true, emoji: '🐕' },
+    { id: 'poni-de-aileen', base: 'aileen', label: 'La poni unicornio de Aileen', animal: true, emoji: '🦄' },
+    { id: 'panda-3d', base: 'dralingo', label: 'Panda', animal: true, emoji: '🐼' },
+  ];
+  const ZB = '/assets/zoco/';
   // a kid who had picked a brand avatar now shows one of the saga (server migrates the record once, pages map too)
   const LEGACY_AVATARS = {
     gojo: 'adric', yugi: 'adrian', yuji: 'hamdan', shelly: 'aileen', fnaf: 'camel', dandy: 'oryx', hanzo: 'hamdan',
@@ -60,18 +92,47 @@
   // own-key lookups only: an id like '__proto__' or 'constructor' must never pass a whitelist (server uses these)
   const own = (obj, k) => (typeof k === 'string' && Object.prototype.hasOwnProperty.call(obj, k) ? obj[k] : null);
   const byId = (list) => { const m = Object.create(null); list.forEach((x) => { m[x.id] = x; }); return m; };
-  const ANIM = byId(ANIMS), BURST = byId(BURSTS), AVATAR = byId(AVATARS);
+  const ANIM = byId(ANIMS), BURST = byId(BURSTS), AVATAR = byId(AVATARS), SKIN = byId(ZOCO);
   const legacyAvatar = (id) => own(LEGACY_AVATARS, id);
+  const zoco = (id) => own(SKIN, id);
   return {
-    ANIMS, BURSTS, AVATARS, LEGACY_AVATARS,
+    ANIMS, BURSTS, AVATARS, LEGACY_AVATARS, ZOCO,
     anim: (id) => own(ANIM, id),
     byEmoji: (e) => AVATARS.find((a) => a.emoji === e) || null,
     burst: (id) => own(BURST, id),
     legacyAvatar,
     avatar: (id) => own(AVATAR, legacyAvatar(id) || id),
+    // 🆕 2026-10-19 El Zoco: a skin of the shop by its id (null for anything else)
+    zoco,
+    // the saga character a skin is a form of ('dralingo-fuego-azul' → 'dralingo'); any other value as it is
+    skinBase: (id) => { const z = zoco(id); return z ? z.base : id; },
+    // the round head picture (256 × 256) of a saga avatar or a skin; null for anything else
+    skinHead: (id) => { const z = zoco(id); if (z) return ZB + 'avatar/' + z.id + '.webp'; const a = own(AVATAR, legacyAvatar(id) || id); return a ? a.url : null; },
+    // a skin's full-body picture (480 px tall, transparent; one pose: games draw it for every pose); null for the rest
+    skinBody: (id) => { const z = zoco(id); return z ? ZB + 'full/' + z.id + '.webp' : null; },
+    // a character's name for a «Vas a jugar como …» line: a skin's own name, a saga avatar's name (no emoji in front)
+    labelOf(id) {
+      const z = zoco(id);
+      if (z) return z.label;
+      const a = own(AVATAR, legacyAvatar(id) || id);
+      return a ? a.label.replace(/^[^A-Za-zÁÉÍÓÚÑáéíóúñ]+/, '').trim() : '';
+    },
+    // what a text-only list prints for a kid's avatar (a projector's lobby chips): the emoji of the saga character (a
+    // skin: its base's, or its own for a pet), an emoji as it is; '' for anything else (never an id as text)
+    emojiOf(v) {
+      if (typeof v !== 'string' || !v) return '';
+      const z = zoco(v);
+      if (z) { if (z.emoji) return z.emoji; const b = own(AVATAR, z.base); return b ? b.emoji : ''; }
+      const a = own(AVATAR, legacyAvatar(v) || v);
+      if (a) return a.emoji;
+      return /^[a-z0-9-]+$/.test(v) ? '' : v.slice(0, 8);
+    },
     // any stored avatar name → its saga picture; null for emoji / unknown values. 2026-10-12 (his ask: only our roster):
     // the old generic DiceBear names (mochi, robo, alien…) also show a saga avatar, the same one every time for a name.
+    // (2026-10-19: a skin of El Zoco → its own head picture)
     avatarUrl(name) {
+      const z = zoco(name);
+      if (z) return ZB + 'avatar/' + z.id + '.webp';
       const a = own(AVATAR, legacyAvatar(name) || name);
       if (a) return a.url;
       if (typeof name !== 'string' || !/^[a-z0-9]+$/.test(name)) return null;

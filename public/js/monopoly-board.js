@@ -35,7 +35,7 @@
   const NEUTRAL = { id: 'gold', name: 'Oro', c: '#ffc93c', d: '#c98a26', s: '#fff3c4' };
   const colorOf = (c) => (c == null || c < 0 ? NEUTRAL : MAP.COLORS[c] || MAP.COLORS[0]);
   const art = (skin, pose) => (HB() ? HB().art(skin, pose || 'idle') : '/assets/dralingo/hello.webp');
-  const isAnimal = (skin) => !!(HB() && HB().skinOk && ['camel', 'plane', 'falcon', 'oryx'].includes(skin));
+  const isAnimal = (skin) => !!(HB() && (HB().isAnimal ? HB().isAnimal(skin) : ['camel', 'plane', 'falcon', 'oryx'].includes(skin)));
   const skinFor = (avatar, name) => (HB() ? HB().skinFor(avatar, name) : 'dralingo');
   const lmArt = (id) => LM + id + '.webp';
   const sleep = (ms) => new Promise((r) => setTimeout(r, Math.max(0, ms)));

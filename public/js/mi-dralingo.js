@@ -99,6 +99,10 @@
     copy: svg('<rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>'),
     wa: '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 2.2a9.7 9.7 0 0 0-8.4 14.6L2.3 21.7l5-1.3A9.7 9.7 0 1 0 12 2.2zm0 17.7a8 8 0 0 1-4.1-1.1l-.3-.2-3 .8.8-2.9-.2-.3A8 8 0 1 1 12 19.9zm4.4-6c-.2-.1-1.4-.7-1.7-.8-.2-.1-.4-.1-.5.1l-.8.9c-.1.2-.3.2-.5.1a6.5 6.5 0 0 1-3.2-2.8c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.7-1.8c-.2-.5-.4-.4-.5-.4h-.5a.9.9 0 0 0-.7.3 2.8 2.8 0 0 0-.9 2.1 4.9 4.9 0 0 0 1 2.6 11.2 11.2 0 0 0 4.3 3.8c1.6.7 2.2.7 3 .6a2.6 2.6 0 0 0 1.7-1.2 2.1 2.1 0 0 0 .2-1.2c-.1-.1-.2-.2-.4-.3z"/></svg>',
     book: svg('<path d="M2.5 5.2c2.9-1.2 6-1 8.8.9v13.4c-2.8-1.8-5.9-2-8.8-.9zM21.5 5.2c-2.9-1.2-6-1-8.8.9v13.4c2.8-1.8 5.9-2 8.8-.9z"/>', ' fill="currentColor"'),
+    // 🪙 El Zoco's coin (the design's: gold with a star; the small one without)
+    coin: '<svg class="md-coin" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><circle cx="16" cy="16" r="14" fill="#e8c878" stroke="#b88b2c" stroke-width="2.5"/><circle cx="16" cy="16" r="9" fill="none" stroke="#b88b2c" stroke-width="1.8"/><path d="M16 10.5l1.7 3.5 3.8.5-2.8 2.6.7 3.8L16 19l-3.4 1.9.7-3.8-2.8-2.6 3.8-.5z" fill="#b88b2c"/></svg>',
+    coinS: '<svg class="md-coin" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><circle cx="16" cy="16" r="14" fill="#e8c878" stroke="#b88b2c" stroke-width="2.5"/><circle cx="16" cy="16" r="9" fill="none" stroke="#b88b2c" stroke-width="1.8"/></svg>',
+    fwd: svg('<path d="M9 6l6 6-6 6"/>'),
   };
 
   let H = null;          // homework.js's hooks (HOME): the kid, their tareas, the players
@@ -278,8 +282,10 @@
     // (review 2026-10-18: the phone's time zone: «N días seguidos» on the kid's own calendar, never UTC)
     let tz = '';
     try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (_) { tz = ''; }
+    // (🪙 zs: what this phone already showed of El Zoco's coins, by the server's clock: the newer ones pop once)
+    const zs = seenAt() || (Date.now() - 10 * 60000);
     const url = '/api/homework/home?accessCode=' + encodeURIComponent(s.accessCode || '') + '&studentCode=' + encodeURIComponent(s.code) +
-      (tz ? '&tz=' + encodeURIComponent(tz) : '');
+      (tz ? '&tz=' + encodeURIComponent(tz) : '') + '&zs=' + zs;
     return fetch(url, { credentials: 'same-origin', cache: 'no-store' })
       .then((r) => r.json().catch(() => null), () => null)
       .then((d) => {
@@ -290,6 +296,8 @@
           loadedAt = Date.now();
           ctxR = ctxOf(d);
           failed = false;
+          // 🪙 the coins pill follows the server; coins that came in since this phone last looked pop once
+          if (d.zoco) { if (Z && Z.student && zFor === s.code) Z.coins = d.zoco.coins; newsMoment(d.zoco.news, d.zoco.now); }
         } else failed = !D;
         if (H && H.screen() === 'list') redraw();
       });
@@ -310,8 +318,14 @@
     let m = /^exp-(\d{1,2})$/.exec(h);
     if (m) return { kind: 'exp', n: Number(m[1]) };
     if (['dorado', 'mensajes', 'oraciones', 'desafio', 'perfil'].indexOf(h) >= 0) return { kind: h };
+    // 🪙 El Zoco de Dralingo (2026-10-19): the shop, a character, «¿Cómo gano monedas?», «¡Ya es tuyo!», «Elige tu personaje»
+    if (h === 'zoco' || h === 'monedas' || h === 'personaje') return { kind: h };
+    m = /^(zoco|tuyo)-([a-z0-9-]{2,40})$/.exec(h);
+    if (m) return { kind: m[1] === 'zoco' ? 'item' : 'tuyo', id: m[2] };
     return { kind: 'home' };
   }
+  const ZOCO_VIEWS = ['zoco', 'item', 'monedas', 'tuyo', 'personaje'];
+  const isZoco = (v) => ZOCO_VIEWS.indexOf(v && v.kind) >= 0;
   const daysText = (n) => (n === 1 ? '1 día seguido' : n + ' días seguidos');
   // «85 %» never splits over two lines (a no-break space; hw-i18n.js reads it as a space)
   const nb = (x) => String(x).replace(/(\d) %/g, '$1 %');
@@ -329,14 +343,18 @@
   function bandHtml(s) {
     const st = M && M.streak && M.streak.days > 0 ? M.streak : null;
     const lvl = (M && M.levelName) || s.levelName || '';
+    // 🪙 the coins pill (El Zoco de Dralingo): a real pill beside Papás where the band has room, and in the small line
+    // under «¡Hola!» on a narrow phone (one of the two shows, by the CSS); both open the Zoco
+    const c = coinsNow();
+    const pill = (cls) => (c == null ? '' : '<a class="' + cls + '" href="#zoco" aria-label="' + esc(coinsSay(c)) + '">' + I.coin + '<b data-coins>' + c + '</b></a>');
     return '<header class="md-band"><div class="md-band-in">' +
       '<a class="md-av" href="#perfil" aria-label="Mi perfil"><img src="' + esc(s.avatarUrl) + '" alt="" width="46" height="46" decoding="async"></a>' +
       '<div class="md-hi"><p class="md-hi-t">' + (s.name ? esc('¡Hola, ' + s.name + '!') : '¡Hola!') + '</p>' +
         '<p class="md-hi-s">' + (st ? '<span class="md-streak' + (st.today ? ' is-today' : '') + '">' + I.fire + '<span>' + daysText(st.days) + '</span></span>' : '') +
-          '<span class="md-lvl">' + esc(lvl) + '</span>' +
+          '<span class="md-lvl">' + esc(lvl) + '</span>' + pill('md-coins-mini') +
           (s.name ? '' : '<a class="md-askname" href="#perfil" data-ask-name>¿Cómo te llamas?</a>') + '</p></div>' +
       '<p class="md-brand" aria-hidden="true">Mi Dralingo</p>' +
-      '<div class="md-band-acts"><button type="button" class="md-papas" data-act="papas">' + I.family + '<span>Papás</span></button>' +
+      '<div class="md-band-acts">' + pill('md-coins') + '<button type="button" class="md-papas" data-act="papas">' + I.family + '<span>Papás</span></button>' +
         '<a class="md-perfil" href="#perfil" aria-label="Mi perfil">' + I.user + '<span class="md-perfil-t">Mi perfil</span></a></div>' +
       '</div></header>';
   }
@@ -651,7 +669,8 @@
     return '<nav class="md-dock" aria-label="Más cosas">' +
       tile('mensajes', ART.ferHello, 'Mensajes', 'De tu profe', '<span class="md-count" data-unread' + (n ? '' : ' hidden') + '>' + (n > 9 ? '9+' : n) + '</span>') +
       tile('oraciones', ART.aileenHello, 'Mis oraciones', 'Tuyas y de tu profe') +
-      tile('desafio', ART.dragon, 'Desafío del día', 'Muy pronto: los juegos de la clase', '<span class="md-tile-lock">' + I.lock + '</span>') + '</nav>';
+      tile('desafio', ART.dragon, 'Desafío del día', 'Muy pronto: los juegos de la clase', '<span class="md-tile-lock">' + I.lock + '</span>') +
+      (coinsNow() == null ? '' : tile('zoco', ZOCO_ART.tile, 'El Zoco', 'Personajes nuevos', '<span class="md-tile-coins">' + I.coinS + '<b data-coins>' + coinsNow() + '</b></span>')) + '</nav>';
   }
   function tabsHtml(sel) {
     const n = Number(H.state().unread) || 0;
@@ -671,6 +690,328 @@
   function noRutaHtml() {
     return '<div class="md-wait"><img src="' + ART.hello + '" alt="" width="160" height="178"><p>Para ver tu Ruta Dorada, toca «Entrar de nuevo».</p>' +
       '<button type="button" class="md-btn is-gold" data-act="relogin">Entrar de nuevo</button></div>';
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // 🪙 El Zoco de Dralingo (2026-10-19, his OK: "Okay I approve the design of the Souq"; boards Main, Detalle, Monedas,
+  // Nuevo, Avatar): kids unlock new characters with coins they earn with real steps
+  // ═══════════════════════════════════════════════════════════════════
+  //   #zoco        the shop: the purse, one character in the spotlight (a different locked one each visit), the
+  //                sections (Dralingo · La pandilla · Mascotas), «¿Cómo gano monedas?»
+  //   #zoco-<id>   a character: its picture big on the Dubai sky, what it is, «Tienes X de P» and the bar, «Desbloquear
+  //                por P» (two taps: «¡Sí, desbloquear!»), or «Gana las monedas que te faltan»; once theirs, «Usarlo»
+  //   #monedas     «¿Cómo gano monedas?»: the six ways (the server's table, core/zoco.js WAYS: one source with the pay)
+  //   #tuyo-<id>   «¡Ya es tuyo!» right after a purchase: «Usarlo ahora» (their character from now on) · «Volver al Zoco»
+  //   #personaje   «Elige tu personaje» (Mi perfil's row): «Ahora juegas con», «Tus personajes» (the saga's free ones +
+  //                the skins they own), «En el Zoco» (the rest, each to its page)
+  // Data: GET /api/zoco (the server judges every coin; this page never adds one), POST /api/zoco/buy and /equip. The
+  // band's pill reads the home's answer (D.zoco) until the shop answered. Coins that came in since this phone last looked
+  // (by the server's clock: js/zoco-coins.js draly_zoco_seen) pop once («+N monedas»). Pages: full pages on a phone and a
+  // laptop (no band, no tabs), each with its «Volver».
+  const ZOCO_ART = {
+    tile: A + 'zoco/avatar/dralingo-emperador-qin.webp', bg: A + 'paint/dubai/bg.webp', bgS: A + 'scenes/dubai-s.webp',
+    point: A + 'dralingo/point.webp', win: A + 'dralingo/victory.webp', hello: A + 'dralingo/hello.webp',
+  };
+  // the characters a «¡Ya es tuyo!» line calls «ella»
+  const ZOCO_SHE = ['latifa-3d', 'aileen-3d', 'poni-de-aileen'];
+  let Z = null, zAt = 0, zBusy = null, zFail = false, zFor = '', zHero = null, zConfirm = '', zMsg = null, zGift = false;
+  const codeNow = () => (H && H.state().code) || '';
+  // the coins on screen: the shop's answer, else the home's (null = no session of this kid on this phone: no pill)
+  function coinsNow() {
+    const c = Z && Z.student && zFor === codeNow() ? Z.coins : D && D.zoco && typeof D.zoco.coins === 'number' ? D.zoco.coins : null;
+    return c == null ? null : Math.max(0, c);   // (a debt shows as 0: «¿Cómo gano monedas?» explains it)
+  }
+  const debtNow = () => (Z && Z.student && zFor === codeNow() && Z.coins < 0 ? -Z.coins : 0);
+  const coinsSay = (c) => (c === 1 ? 'Tienes 1 moneda · El Zoco de Dralingo' : 'Tienes ' + c + ' monedas · El Zoco de Dralingo');
+  const coinsWord = (n) => (Math.abs(n) === 1 ? n + ' moneda' : n + ' monedas');
+  const seenAt = () => (window.DralyCoins ? window.DralyCoins.lastSeen() : 0);
+  // the moves since this phone last looked (the server's news, its clock): one «+N monedas» moment, then remembered
+  function newsMoment(list, now) {
+    const got = (Array.isArray(list) ? list : []).filter((e) => e && Number(e.n) > 0 && Number(e.at) > seenAt()).reduce((a, e) => a + Number(e.n), 0);
+    if (window.DralyCoins) {
+      if (got > 0) window.DralyCoins.pop({ got, c: coinsNow(), at: now }, { delay: 900 });
+      else window.DralyCoins.seen(now);
+    }
+  }
+  function zocoLoad(force) {
+    const code = codeNow();
+    if (!code) return Promise.resolve(null);
+    if (!force && Z && zFor === code && Date.now() - zAt < 15000) return Promise.resolve(Z);
+    if (zBusy) return zBusy;
+    const since = seenAt() || (Date.now() - 10 * 60000);
+    zBusy = fetch('/api/zoco?since=' + since, { credentials: 'same-origin', cache: 'no-store' })
+      .then((r) => r.json().catch(() => null), () => null)
+      .then((d) => {
+        zBusy = null;
+        // (the shop's answer must be this page's kid: a sibling who logged in on another tab answers with another `who`)
+        const homeWho = D && D.ruta && D.ruta.who;
+        if (d && d.ok && d.student && homeWho && d.who && d.who !== homeWho) d = { ok: true, student: false, other: true };
+        if (d && d.ok && code === codeNow()) {
+          if (!Z || zFor !== code) { zHero = null; zGift = false; }
+          Z = d; zFor = code; zAt = Date.now(); zFail = false;
+          // (the welcome gift's card: this visit, once per account on this phone)
+          const gk = 'draly_zoco_welcome_' + (d.who || '');
+          if (d.student && d.welcome > 0 && !ls.get(gk)) { zGift = true; ls.set(gk, '1'); }
+          if (d.student) newsMoment(d.news, d.now);
+        } else if (code === codeNow()) zFail = true;
+        if (H && H.screen() === 'list' && isZoco(view)) draw(); else paintCoins();
+        return Z;
+      });
+    return zBusy;
+  }
+  // the number on every coins pill on screen (a step paid on this page: js/zoco-coins.js `draly:coins`)
+  function paintCoins() {
+    const c = coinsNow();
+    if (c == null) return;
+    document.querySelectorAll('#md-app [data-coins]').forEach((b) => { b.textContent = String(c); });
+    document.querySelectorAll('#md-app .md-coins, #md-app .md-coins-mini').forEach((a) => a.setAttribute('aria-label', coinsSay(c)));
+  }
+  document.addEventListener('draly:coins', (e) => {
+    const c = e && e.detail && Number(e.detail.c);
+    if (!Number.isFinite(c)) return;
+    if (D && D.zoco) D.zoco.coins = c;
+    if (Z && Z.student) Z.coins = c;
+    paintCoins();
+  });
+  function zPost(path, body) {
+    return fetch(path, { method: 'POST', credentials: 'same-origin', cache: 'no-store', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(Object.assign({ who: (Z && Z.who) || null }, body)) })
+      .then((r) => r.json().catch(() => ({})).then((d) => Object.assign({ status: r.status }, d || {})), () => ({ ok: false, status: 0 }));
+  }
+  const zItem = (id) => (Z && Array.isArray(Z.items) ? Z.items.find((x) => x.id === id) : null) || null;
+  const zCat = (id) => (Z && Array.isArray(Z.cats) ? Z.cats.find((c) => c.id === id) : null) || { title: '', tag: '' };
+  const equipped = () => (H ? H.state().avatar : null) || (Z && Z.equipped) || null;
+  // the spotlight of the shop: a character the kid doesn't have yet (a different one each visit), else one they have
+  function heroOf() {
+    const list = (Z && Z.items) || [];
+    if (zHero && list.some((x) => x.id === zHero)) return zItem(zHero);
+    const locked = list.filter((x) => !x.owned);
+    const pool = locked.length ? locked : list;
+    if (!pool.length) return null;
+    const firstTime = !ls.get('draly_zoco_hero');
+    const pick = firstTime ? (pool.find((x) => x.hero) || pool[0]) : pool[Math.floor(Math.random() * pool.length)];
+    ls.set('draly_zoco_hero', '1');
+    zHero = pick.id;
+    return pick;
+  }
+  function purseHtml(cls) {
+    const c = coinsNow();
+    return '<a class="zc-purse' + (cls ? ' ' + cls : '') + '" href="#monedas" aria-label="' + esc(coinsSay(c == null ? 0 : c)) + '">' + I.coin + '<b data-coins>' + (c == null ? 0 : c) + '</b></a>';
+  }
+  const backHtml = (href, label, cls) => '<a class="zc-back' + (cls ? ' ' + cls : '') + '" href="' + href + '">' + I.back + '<span>' + esc(label) + '</span></a>';
+  const lockSvg = (cls) => '<span class="' + cls + '">' + I.lock + '</span>';
+  // a picture of a character: its full-body render, alt = its name (the cards' pictures load lazily: 16 on a page)
+  const pic = (x, cls, lazy, alt) => '<img class="' + cls + '" src="' + esc(x.full) + '" alt="' + esc(alt == null ? x.name : alt) + '"' + (lazy ? ' loading="lazy"' : '') + ' decoding="async">';
+  function cardHtml(x, c) {
+    const ready = !x.owned && c >= x.price;
+    return '<a class="zc-card' + (x.owned ? ' is-owned' : ready ? ' is-ready' : '') + '" href="#zoco-' + esc(x.id) + '">' +
+      '<span class="zc-card-art">' + pic(x, 'zc-card-img', true) + (x.owned ? '' : lockSvg('zc-lock' + (ready ? ' is-ready' : ''))) + '</span>' +
+      '<span class="zc-card-name">' + esc(x.name) + '</span>' +
+      (x.owned ? '<span class="zc-own">' + I.check + '<span>Tuyo</span></span>'
+        : '<span class="zc-price">' + I.coinS + '<b>' + x.price + '</b>' + (ready ? '<span class="zc-ready">¡Ya te alcanza!</span>' : '') + '</span>') + '</a>';
+  }
+  function zocoWaitHtml(kind) {
+    const no = Z && !Z.student;
+    const msg = no && Z.other ? 'Otra cuenta entró en este teléfono. Toca «Entrar de nuevo».' : no ? 'Para entrar al Zoco, entra con tu código.'
+      : zFail ? 'No se pudo abrir el Zoco. Revisa tu internet.' : 'Abriendo el Zoco…';
+    return '<section class="zc zc-wait-page"><header class="zc-head"><div class="zc-head-row">' + backHtml(kind === 'personaje' ? '#perfil' : '#', kind === 'personaje' ? 'Mi perfil' : 'Volver') + '</div>' +
+      '<h1 class="zc-h1" tabindex="-1">El Zoco de Dralingo</h1></header>' +
+      '<div class="zc-body"><div class="md-wait"><img src="' + ZOCO_ART.hello + '" alt="" width="160" height="178"><p>' + esc(msg) + '</p>' +
+      (no ? '<button type="button" class="md-btn is-gold" data-act="relogin">Entrar de nuevo</button>'
+        : zFail ? '<button type="button" class="md-btn is-gold" data-act="zoco-retry">Volver a intentar</button>' : '') + '</div></div></section>';
+  }
+  // ── #zoco: the shop ──
+  function zocoMainHtml() {
+    const c = coinsNow() || 0;
+    const items = Z.items || [];
+    const h = heroOf();
+    // the spotlight places the character by its face (saga.js ar / hx), so the title never sits on it
+    const hz = h && window.Saga && window.Saga.zoco ? window.Saga.zoco(h.id) : null;
+    const hv = ' style="--ar:' + (Number(hz && hz.ar) || 1) + ';--hx:' + (Number(hz && hz.hx) || 0.5) + '"';
+    const heroCard = h ? '<a class="zc-hero" href="#zoco-' + esc(h.id) + '"' + hv + '>' +
+      '<picture><source media="(min-width: 700px)" srcset="' + ZOCO_ART.bg + '"><img class="zc-hero-bg" src="' + ZOCO_ART.bgS + '" alt="" decoding="async" fetchpriority="high"></picture>' +
+      pic(h, 'zc-hero-img', false) +
+      '<span class="zc-badge">' + (Z.fresh ? 'Nuevo en el Zoco' : h.owned ? 'Tuyo' : 'En el Zoco') + '</span>' +
+      '<span class="zc-hero-t"><span class="zc-hero-name">' + esc(h.name) + '</span>' +
+        (h.owned ? '<span class="zc-hero-chip is-owned">' + I.check + '<span>Tuyo</span></span>'
+          : '<span class="zc-hero-chip">' + I.coinS + '<b>' + h.price + '</b>' + I.lock + '</span>') + '</span></a>' : '';
+    const welcome = zGift ? '<div class="zc-gift" role="status"><img src="' + ZOCO_ART.win + '" alt="" width="64" height="70" loading="lazy">' +
+      '<p><b>¡Un regalo de bienvenida!</b><span>' + esc('Dralingo te dio ' + coinsWord(Z.welcome) + ' por todo lo que ya hiciste.') + '</span></p></div>' : '';
+    const secs = (Z.cats || []).map((cat) => {
+      const list = items.filter((x) => x.cat === cat.id);
+      if (!list.length) return '';
+      return '<section class="zc-sec" aria-labelledby="zc-sec-' + esc(cat.id) + '"><div class="zc-sec-head"><h2 class="zc-h2" id="zc-sec-' + esc(cat.id) + '">' + esc(cat.title) + '</h2>' +
+        '<span class="zc-count">' + esc(list.length + ' ' + (list.length === 1 ? cat.one : cat.many)) + '</span></div>' +
+        '<div class="zc-grid">' + list.map((x) => cardHtml(x, c)).join('') + '</div></section>';
+    }).join('');
+    const earn = '<a class="zc-earn" href="#monedas"><img src="' + ZOCO_ART.win + '" alt="" width="64" height="70" loading="lazy">' +
+      '<span class="zc-earn-t"><b>¿Cómo gano monedas?</b><span>Con tus palabras, prácticas y tareas</span></span>' + I.fwd + '</a>';
+    return '<section class="zc zc-main" aria-labelledby="zc-h">' +
+      '<header class="zc-head"><div class="zc-head-row">' + backHtml('#', 'Volver') + purseHtml() + '</div>' +
+        '<h1 class="zc-h1" id="zc-h" tabindex="-1">El Zoco de Dralingo</h1>' +
+        '<p class="zc-sub">Personajes nuevos para ti. Gana monedas con tus pasos de cada día.</p></header>' +
+      '<div class="zc-body">' + welcome + heroCard + secs + earn + '</div></section>';
+  }
+  // ── #zoco-<id>: a character ──
+  function zocoItemHtml(id) {
+    const x = zItem(id);
+    if (!x) {
+      return '<section class="zc zc-wait-page"><header class="zc-head"><div class="zc-head-row">' + backHtml('#zoco', 'Volver al Zoco') + '</div>' +
+        '<h1 class="zc-h1" tabindex="-1">El Zoco de Dralingo</h1></header><div class="zc-body"><div class="md-wait"><img src="' + ZOCO_ART.hello + '" alt="" width="160" height="178">' +
+        '<p>Ese personaje no está en el Zoco.</p><a class="md-btn is-gold" href="#zoco">Ver los personajes</a></div></div></section>';
+    }
+    const c = coinsNow() || 0;
+    const cat = zCat(x.cat);
+    const pct = Math.max(0, Math.min(100, Math.round((Math.max(0, c) / x.price) * 100)));
+    const ready = !x.owned && c >= x.price;
+    const using = x.owned && equipped() === x.id;
+    let acts;
+    if (x.owned) {
+      acts = '<p class="zc-mine">' + I.check + '<span>¡Ya es tuyo!</span></p>' +
+        (using ? '<p class="zc-using">' + I.check + '<span>Lo estás usando en tu perfil y en los juegos</span></p>'
+          : '<button type="button" class="zc-btn is-gold" data-act="zoco-use" data-id="' + esc(x.id) + '">Usarlo</button>') +
+        '<a class="zc-btn is-plain" href="#zoco">Volver al Zoco</a>';
+    } else {
+      const meter = '<div class="zc-meter-box"><div class="zc-meter-row"><span>' + esc('Tienes ' + Math.max(0, c) + ' de ' + x.price) + '</span>' +
+        '<span class="' + (ready ? 'zc-meter-ok' : 'zc-meter-left') + '">' + esc(ready ? '¡Ya te alcanza!' : 'Te faltan ' + (x.price - Math.max(0, c))) + '</span></div>' +
+        '<div class="zc-meter" role="img" aria-label="' + pct + ' por ciento"><i style="width:' + pct + '%"></i></div></div>';
+      const sure = zConfirm === x.id && ready;
+      acts = meter + (ready
+        ? (sure
+          ? '<p class="zc-sure">' + esc('Te quedan ' + coinsWord(c - x.price) + ' después.') + '</p>' +
+            '<button type="button" class="zc-btn is-gold" data-act="zoco-buy" data-id="' + esc(x.id) + '">¡Sí, desbloquear!</button>' +
+            '<button type="button" class="zc-btn is-plain" data-act="zoco-nobuy">No, todavía no</button>'
+          : '<button type="button" class="zc-btn is-gold" data-act="zoco-sure" data-id="' + esc(x.id) + '">' + I.lock + '<span>' + esc('Desbloquear por ' + x.price) + '</span></button>')
+        : '<button type="button" class="zc-btn is-off" disabled>' + I.lock + '<span>' + esc('Desbloquear por ' + x.price) + '</span></button>' +
+          '<a class="zc-btn is-rojo" href="#monedas">Gana las monedas que te faltan</a>');
+    }
+    return '<section class="zc zc-item" aria-labelledby="zc-h">' +
+      '<div class="zc-stage"><picture><source media="(min-width: 700px)" srcset="' + ZOCO_ART.bg + '"><img class="zc-stage-bg" src="' + ZOCO_ART.bgS + '" alt="" decoding="async"></picture>' +
+        '<i class="zc-shadow" aria-hidden="true"></i>' + pic(x, 'zc-stage-img', false) +
+        '<div class="zc-stage-top">' + backHtml('#zoco', 'Volver al Zoco') + purseHtml('is-small') + '</div></div>' +
+      '<div class="zc-sheet"><div class="zc-sheet-t"><span class="zc-tag">' + esc(cat.tag) + '</span>' +
+        '<h1 class="zc-h1 is-dark" id="zc-h" tabindex="-1">' + esc(x.name) + '</h1><p class="zc-blurb">' + esc(x.blurb) + '</p></div>' +
+        acts + '<p class="zc-msg" id="zc-msg" aria-live="polite">' + esc(zMsg || '') + '</p></div></section>';
+  }
+  // ── #monedas: «¿Cómo gano monedas?» ──
+  function zocoCoinsHtml() {
+    const ways = (Z.ways || []).map((w) => '<li class="zc-way"><span class="zc-way-n">' + esc(w.n) + '</span>' +
+      '<span class="zc-way-t"><b>' + esc(w.what) + '</b><span>' + esc(w.where) + '</span></span>' +
+      '<span class="zc-way-c">' + I.coinS + '<b>' + esc('+' + w.coins + (w.each ? ' c/u' : '')) + '</b></span></li>').join('');
+    const wait = Z.waiting > 0 ? '<p class="zc-note">' + I.coinS + '<span>' + esc('Tienes ' + coinsWord(Z.waiting) + ' esperando: llegan mañana. Cada día pagan hasta ' + (Z.caps.seal / 2) + ' palabras y ' + (Z.caps.hw / 50) + ' tareas.') + '</span></p>' : '';
+    return '<section class="zc zc-coins" aria-labelledby="zc-h">' +
+      '<header class="zc-head zc-head-art">' + backHtml('#zoco', 'Volver al Zoco') +
+        '<div class="zc-head-split"><div class="zc-head-t"><h1 class="zc-h1" id="zc-h" tabindex="-1">¿Cómo gano monedas?</h1>' +
+          '<p class="zc-sub">Cada paso de verdad te da monedas. Nunca se compran con dinero.</p></div>' +
+          '<img class="zc-head-img" src="' + ZOCO_ART.point + '" alt="" width="118" height="171" decoding="async"></div></header>' +
+      '<div class="zc-body">' + (debtNow() ? '<p class="zc-note">' + I.coinS + '<span>' + esc('Una tarea se deshizo después de gastar sus monedas: tus próximas ' + coinsWord(debtNow()) + ' la pagan.') + '</span></p>' : '') +
+        '<ol class="zc-ways">' + ways + '</ol>' + wait +
+        '<p class="zc-soon">' + I.lock + '<span>Desafío del día: muy pronto también da monedas</span></p>' +
+        '<button type="button" class="zc-btn is-rojo zc-cta" data-act="today">¡A ganar monedas!</button></div></section>';
+  }
+  // ── #tuyo-<id>: «¡Ya es tuyo!» ──
+  function zocoNewHtml(id) {
+    const x = zItem(id);
+    if (!x || !x.owned) return zocoItemHtml(id);
+    const she = ZOCO_SHE.indexOf(x.id) >= 0;
+    const using = equipped() === x.id;
+    return '<section class="zc zc-new" aria-labelledby="zc-h">' +
+      '<svg class="zc-rays" viewBox="0 0 390 420" aria-hidden="true" focusable="false"><g fill="#b88b2c" opacity=".35">' +
+        '<path d="M195 210 L170 0 L220 0 Z"/><path d="M195 210 L330 20 L370 60 Z"/><path d="M195 210 L390 170 L390 230 Z"/>' +
+        '<path d="M195 210 L370 380 L320 410 Z"/><path d="M195 210 L60 410 L20 380 Z"/><path d="M195 210 L0 230 L0 170 Z"/><path d="M195 210 L20 60 L60 20 Z"/></g>' +
+        '<circle cx="195" cy="210" r="120" fill="#e8c878" opacity=".25"/></svg>' +
+      '<span class="zc-new-chip">¡Nuevo personaje!</span>' +
+      '<h1 class="zc-new-h" id="zc-h" tabindex="-1">¡Ya es tuyo!</h1>' + pic(x, 'zc-new-img', false) +
+      '<p class="zc-new-name">' + esc(x.name) + '</p>' +
+      '<p class="zc-new-sub">' + esc(using ? 'Ya juegas con ' + (she ? 'ella' : 'él') + ' en tu clase y aparece en tu perfil.' : 'Desde hoy puedes jugar con ' + (she ? 'ella' : 'él') + ' en tu clase y verl' + (she ? 'a' : 'o') + ' en tu perfil.') + '</p>' +
+      '<div class="zc-new-acts">' + (using ? '<a class="zc-btn is-gold" href="#personaje">Ver mis personajes</a>'
+        : '<button type="button" class="zc-btn is-gold" data-act="zoco-use-now" data-id="' + esc(x.id) + '">Usarlo ahora</button>') +
+        '<a class="zc-new-back" href="#zoco">Volver al Zoco</a></div>' +
+      '<p class="zc-msg is-light" id="zc-msg" aria-live="polite">' + esc(zMsg || '') + '</p></section>';
+  }
+  // ── #personaje: «Elige tu personaje» (Mi perfil) ──
+  function zocoPickHtml() {
+    const S = window.Saga;
+    const cur = equipped();
+    const mine = (Z.items || []).filter((x) => x.owned);
+    const free = S && Array.isArray(S.AVATARS) ? S.AVATARS : [];
+    const curSkin = mine.find((x) => x.id === cur);
+    const curFree = !curSkin && S ? (S.avatar(cur) || S.avatar('dralingo')) : null;
+    const curName = curSkin ? curSkin.name : curFree ? S.labelOf(curFree.id) : 'Dralingo';
+    const curImg = curSkin ? '<img class="zc-now-img is-body" src="' + esc(curSkin.full) + '" alt="' + esc(curName) + '">'
+      : '<img class="zc-now-img" src="' + esc(curFree ? curFree.url : ZOCO_ART.hello) + '" alt="' + esc(curName) + '">';
+    const tile = (id, img, name, body) => '<button type="button" class="zc-pick' + (cur === id ? ' is-on' : '') + '" data-act="zoco-pick" data-id="' + esc(id) + '" aria-pressed="' + (cur === id) + '">' +
+      '<img class="' + (body ? 'is-body' : 'is-head') + '" src="' + esc(img) + '" alt="" loading="lazy" decoding="async"><span>' + esc(name) + '</span></button>';
+    // (every character you have is a round head, like the free ones: one look for the whole list)
+    const owned = mine.slice().reverse().map((x) => tile(x.id, x.head || x.full, x.name, !x.head)).join('') +
+      free.map((a) => tile(a.id, a.url, S.labelOf(a.id), false)).join('');
+    const locked = (Z.items || []).filter((x) => !x.owned).map((x) => '<a class="zc-pick is-locked" href="#zoco-' + esc(x.id) + '">' +
+      '<img class="is-body" src="' + esc(x.full) + '" alt="" loading="lazy" decoding="async"><span>' + esc(x.name) + '</span>' +
+      '<span class="zc-pick-price">' + I.lock + '<b>' + x.price + '</b></span></a>').join('');
+    return '<section class="zc zc-pickpage" aria-labelledby="zc-h">' +
+      '<header class="zc-pick-head">' + backHtml('#perfil', 'Mi perfil', 'is-sand') + '<h1 class="zc-h1 is-dark" id="zc-h" tabindex="-1">Elige tu personaje</h1></header>' +
+      '<div class="zc-now"><div class="zc-now-art">' + curImg + '</div><div class="zc-now-t"><span>Ahora juegas con</span><b>' + esc(curName) + '</b>' +
+        '<span class="zc-now-ok">' + I.check + '<span>En tu perfil y en los juegos</span></span></div></div>' +
+      '<div class="zc-body"><h2 class="zc-h2 is-small">Tus personajes</h2><div class="zc-grid3">' + owned + '</div>' +
+        (locked ? '<h2 class="zc-h2 is-small">En el Zoco</h2><div class="zc-grid3">' + locked + '</div>' : '') +
+        '<p class="zc-msg" id="zc-msg" aria-live="polite">' + esc(zMsg || '') + '</p>' +
+        '<a class="zc-earn is-slim" href="#zoco">' + I.coin + '<span class="zc-earn-t"><b>El Zoco de Dralingo</b><span>' + esc(coinsWord(coinsNow() || 0) + ' para personajes nuevos') + '</span></span>' + I.fwd + '</a></div></section>';
+  }
+  // the phone home's door to the Zoco, after the path (a laptop has its tile in the dock): a character's picture, the coins
+  const DOOR_PICS = ['dralingo-emperador-qin', 'dralingo-fuego-azul', 'dralingo-sheikh-paseo', 'bebe-dralingo-kufiya', 'dralingo-emperador-barba'];
+  let doorPic = null;
+  function zocoDoorHtml() {
+    const c = coinsNow();
+    if (c == null) return '';
+    if (!doorPic) doorPic = DOOR_PICS[Math.floor(Math.random() * DOOR_PICS.length)];
+    return '<a class="md-zoco" href="#zoco"><img src="' + A + 'zoco/full/' + doorPic + '.webp" alt="" width="96" height="80" loading="lazy" decoding="async">' +
+      '<span class="md-zoco-t"><b>El Zoco de Dralingo</b><small>Personajes nuevos para ti</small></span>' +
+      '<span class="md-zoco-c">' + I.coinS + '<b data-coins>' + c + '</b></span>' + I.fwd + '</a>';
+  }
+  function zocoHtml(v) {
+    if (!Z || zFor !== codeNow() || !Z.student) return zocoWaitHtml(v.kind);
+    if (v.kind === 'item') return zocoItemHtml(v.id);
+    if (v.kind === 'monedas') return zocoCoinsHtml();
+    if (v.kind === 'tuyo') return zocoNewHtml(v.id);
+    if (v.kind === 'personaje') return zocoPickHtml();
+    return zocoMainHtml();
+  }
+  // the buttons
+  function zSay(text) { zMsg = text || null; const m = $('zc-msg'); if (m) m.textContent = text || ''; }
+  function zocoBuy(id, btn) {
+    if (btn) btn.disabled = true;
+    zSay('');
+    zPost('/api/zoco/buy', { id }).then((r) => {
+      zConfirm = '';
+      if (r && r.ok) {
+        if (Z) { Z.coins = r.coins; Z.own = r.own || Z.own; (Z.items || []).forEach((x) => { if ((r.own || []).indexOf(x.id) >= 0) x.owned = true; }); }
+        if (D && D.zoco) D.zoco.coins = r.coins;
+        zAt = 0;
+        if (!calm()) { try { const s = new Audio('/assets/mochi/star.mp3'); s.volume = 0.6; const p = s.play(); if (p && p.catch) p.catch(() => {}); } catch (_) {} }
+        setHash('tuyo-' + id);
+        return;
+      }
+      if (btn) btn.disabled = false;
+      if (r && r.status === 409 && r.why !== 'owned') { zocoLoad(true); return; }   // (another phone of this kid: settle again)
+      if (r && r.why === 'owned') { zocoLoad(true).then(() => setHash('tuyo-' + id)); return; }
+      zSay(r && r.why === 'coins' ? (r.error || 'Te faltan monedas.') : r && r.status === 403 ? 'Entra de nuevo con tu código para usar el Zoco.' : 'No se pudo desbloquear. Revisa tu internet y vuelve a intentarlo.');
+      if (r && r.why === 'coins') zocoLoad(true);
+    });
+  }
+  function zocoUse(id, btn, then) {
+    if (btn) btn.disabled = true;
+    zSay('');
+    zPost('/api/zoco/equip', { id }).then((r) => {
+      if (btn) btn.disabled = false;
+      if (r && r.ok) {
+        if (H && H.setAvatar) H.setAvatar(id);
+        if (Z) Z.equipped = id;
+        zMsg = null;
+        if (then) setHash(then); else draw();
+        return;
+      }
+      zSay(r && r.status === 403 && r.why === 'owned' ? 'Ese personaje todavía no es tuyo.' : 'No se pudo cambiar. Revisa tu internet y vuelve a intentarlo.');
+    });
   }
 
   // ── drawing ──
@@ -733,6 +1074,8 @@
   }
   // the screen for a view (W = a laptop): { html, tabs } (no DOM: scripts/test-home.js reads it for every made-up kid)
   function buildHtml(v, W, s) {
+    // 🪙 El Zoco's pages: full pages on a phone and a laptop (their own header and «Volver», no band, no tabs)
+    if (isZoco(v)) return { html: nb('<main class="md-main md-page is-flush md-zc">' + zocoHtml(v) + '</main>'), tabs: false };
     let html = bandHtml(s);
     let tabs = false;
     if (!D) return { html: nb(html + '<main class="md-main md-page">' + loadingHtml() + '</main>'), tabs };
@@ -754,7 +1097,7 @@
       else if (v.kind === 'oraciones') { html = sentHtml('page'); tabs = true; }
       else if (v.kind === 'desafio') { html = desafioHtml('page'); tabs = true; }
       else {
-        html += '<main class="md-main md-page">' + (noRuta ? noRutaHtml() + allTareasHtml() : hoyHtml() + stripHtml() + pathHtml('')) + '</main>';
+        html += '<main class="md-main md-page">' + (noRuta ? noRutaHtml() + allTareasHtml() : hoyHtml() + stripHtml() + pathHtml('') + zocoDoorHtml()) + '</main>';
         tabs = true;
       }
       if (tabs) html += tabsHtml(v.kind === 'home' ? '' : v.kind);
@@ -863,8 +1206,10 @@
     if (view.kind === 'desafio' && DESAFIO_LIVE && H.state().daily) { stopCards(); H.openDaily(); return; }
     if (H.screen() !== 'list') H.showList();
     const step = focusStep;                          // («Empezar aquí»: the step scrolls into view instead of the top)
-    if (!wide() && !step) toTop();
+    if ((!wide() || isZoco(view)) && !step) toTop();   // (🪙 El Zoco's pages are full pages on a laptop too)
+    if (isZoco(view)) { zMsg = null; if (!(view.kind === 'item' && zConfirm === view.id)) zConfirm = ''; }
     draw();
+    if (isZoco(view)) zocoLoad(false);
     if (fromTap && !step) {
       const h = document.querySelector(wide() ? '#md-aside h2, #md-aside h1' : '#md-app h1, #md-app h2');
       if (h && (view.kind !== 'home' || !wide())) { if (!h.hasAttribute('tabindex')) h.tabIndex = -1; try { h.focus({ preventScroll: true }); } catch (_) {} }
@@ -931,6 +1276,14 @@
     else if (act === 'reading-review') H.reviewReading(t.getAttribute('data-story'), t.getAttribute('data-title'));
     else if (act === 'copy-msg') copyMsg(t);
     else if (act === 'anim') { const m = (H.state().inbox || [])[Number(t.getAttribute('data-i'))]; if (m) H.replayAnim(m); }
+    // 🪙 El Zoco: «Desbloquear» asks once more («¡Sí, desbloquear!»), then buys; «Usarlo» makes it their character
+    else if (act === 'zoco-sure') { zConfirm = t.getAttribute('data-id') || ''; draw(); const b = document.querySelector('#md-app [data-act="zoco-buy"]'); if (b) { try { b.focus({ preventScroll: true }); } catch (_) {} } }
+    else if (act === 'zoco-nobuy') { zConfirm = ''; draw(); }
+    else if (act === 'zoco-buy') zocoBuy(t.getAttribute('data-id'), t);
+    else if (act === 'zoco-use') zocoUse(t.getAttribute('data-id'), t, null);
+    else if (act === 'zoco-use-now') zocoUse(t.getAttribute('data-id'), t, 'personaje');
+    else if (act === 'zoco-pick') { if (t.getAttribute('aria-pressed') !== 'true') zocoUse(t.getAttribute('data-id'), t, null); }
+    else if (act === 'zoco-retry') { zFail = false; draw(); zocoLoad(true); }
   });
   // Mi perfil's own buttons (homework.html #screen-settings): «Volver» = the home; the English switch (hw-i18n.js)
   document.addEventListener('click', (e) => {
@@ -972,6 +1325,7 @@
     if (view.kind === 'perfil') { setTimeout(() => { if (H.screen() === 'list') route(false); }, 0); view = { kind: 'home' }; }
     draw();
     load(false);
+    if (isZoco(view)) zocoLoad(false);   // (🪙 a page opened on El Zoco's address: its data)
   }
   // the inbox as the page last drew it (review 2026-10-18: the 20-second poll redrew Mensajes every time)
   let inboxSig = '';
@@ -988,7 +1342,10 @@
     redraw();
   }
   // (a login on this tab: another kid, or another level: nothing of the last one stays)
-  function reset() { D = null; M = null; ctxR = null; loadedAt = 0; failed = false; loadSeq++; sentAt = 0; examsAt = 0; stopCards(); }
+  function reset() {
+    D = null; M = null; ctxR = null; loadedAt = 0; failed = false; loadSeq++; sentAt = 0; examsAt = 0; stopCards();
+    Z = null; zFor = ''; zAt = 0; zHero = null; zConfirm = ''; zMsg = null; zFail = false; zGift = false;   // (🪙 nothing of the last kid's purse stays)
+  }
   // «▶ Siguiente» after a round: the next tarea not done of the same experience (or of El Simulacro Dorado's rounds,
   // or «De tu profe»), the one that just ended left out
   function next(exclude) {

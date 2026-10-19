@@ -517,7 +517,9 @@ async function serverTests() {
     ['🌐 English pill', /id="md-pf-en"/.test(perfil) && /window\.HwI18n = /.test(read('public/js/hw-i18n.js')) && /body\.md-in #hw-lang-toggle \{ display: none !important; \}/.test(css), 'Mi perfil\'s «English» switch (the floating pill steps aside on the home)'],
     ['«Borrar puntajes»', /id="hw-settings-reset-list"/.test(perfil) && /confirm\(`¿Borrar tus puntajes/.test(hw), 'Mi perfil, behind its confirm'],
     ['«Abrir otro nivel»', /id="hw-settings-level-key"/.test(perfil) && /id="hw-settings-level-btn"/.test(perfil), 'Mi perfil (POST /api/entrada/nivel, js/entrada.js)'],
-    ['«Cambiar mi nombre» / «Cambiar mi avatar»', /id="hw-settings-name-input"/.test(perfil) && /id="hw-settings-avatar-grid"/.test(perfil), 'Mi perfil'],
+    // (2026-10-19, El Zoco de Dralingo: «Cambiar mi avatar» became Mi perfil's row «Elige tu personaje», js/mi-dralingo.js
+    // #personaje: the free saga avatars + the skins the kid owns, his approved board «Avatar»)
+    ['«Cambiar mi nombre» / «Cambiar mi avatar»', /id="hw-settings-name-input"/.test(perfil) && /href="#personaje"/.test(perfil) && /function zocoPickHtml\(/.test(js) && /data-act="zoco-pick"/.test(js), 'Mi perfil («Elige tu personaje»)'],
     ['«¿Cómo te llamas?» on the home', /md-askname/.test(js), 'the band\'s link to Mi perfil\'s name'],
     ['the welcome moment', /HwPortal\.welcome/.test(hw) && /ptWelcome\(\);/.test(hw), 'js/portal.js after the entrance, once per visit'],
     ['the inbox toast', /window\.DralyHome\.go\('mensajes'\)/.test(hw), 'a tap opens Mensajes'],

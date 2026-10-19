@@ -408,9 +408,9 @@
         + '</ol>';
       head.after(box);
     }
-    const S = window.Saga, a = S && S.avatar ? S.avatar(skin) : null;
+    const S = window.Saga;
     $('hc-you-img').src = H.art(skin, 'idle');
-    $('hc-you-name').textContent = a ? a.label.replace(/^[^A-Za-zÁÉÍÓÚÑáéíóúñ]+/, '').trim() : skin;
+    $('hc-you-name').textContent = (S && S.labelOf && S.labelOf(skin)) || 'Dralingo';   // (🪙 a skin: its own name)
     $('hc-how-look').src = H.art(skin, 'idle');
     $('hc-how-win').src = H.art(skin, 'ok');
   }

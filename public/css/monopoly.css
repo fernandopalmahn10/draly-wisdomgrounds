@@ -47,6 +47,7 @@
 .mnf { --pc: #e0463c; --pd: #a8261e; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; }
 .mnf-ring { position: absolute; left: 50%; bottom: 0; width: 78%; height: 14%; max-height: 22px; transform: translate(-50%, 35%); border-radius: 50%;
   background: radial-gradient(closest-side, var(--pc) 55%, var(--pd)); border: 3px solid var(--mn-ink); box-shadow: 0 3px 0 rgba(29, 36, 64, .35); }
+.mnf:not(.mnb-piece) .mnf-img[src*="/zoco/full/dralingo-"] { max-width: 165% !important; }   /* 🪙 a winged Dralingo skin stands as tall as the others (a board piece is already drawn by its height) */
 .mnf-img { position: relative; height: 100%; width: auto; max-width: 100%; object-fit: contain; object-position: 50% 100%; pointer-events: none; user-select: none;
   -webkit-user-drag: none; filter: drop-shadow(2px 0 0 var(--pc)) drop-shadow(-2px 0 0 var(--pc)) drop-shadow(0 2px 0 var(--pc)) drop-shadow(0 -2px 0 var(--pc));
   transform-origin: 50% 100%; }

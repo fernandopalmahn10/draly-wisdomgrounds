@@ -86,7 +86,7 @@
     let v = '';
     try { v = localStorage.getItem('dralyAvatar') || ''; } catch (_) {}
     const list = (window.Saga && window.Saga.AVATARS) || [];
-    return list.some((a) => a.emoji === v) ? v : ((list[0] && list[0].emoji) || '🐉');    // player.js getMyAvatar()
+    return list.some((a) => a.emoji === v) || (window.Saga && window.Saga.zoco && window.Saga.zoco(v)) ? v : ((list[0] && list[0].emoji) || '🐉');    // player.js getMyAvatar() (🪙 a skin stays)
   };
   const myName = () => ($('lobby-name') && $('lobby-name').textContent) || '';
   // the phone's clock for the chase: a teacher's pause holds it at the moment it began (the server does the same), so a
@@ -1188,8 +1188,7 @@
     if (!head) { if (box) box.remove(); return; }       // the skin passes the lobby header only while playing escape
     setOn(true);
     const sk = M.skinFor(localAvatar(), myName());
-    const saga = window.Saga && window.Saga.avatar ? window.Saga.avatar(sk) : null;
-    const label = saga ? saga.label.replace(/^[^A-Za-zÁÉÍÓÚÑáéíóúñ]+/, '').trim() : sk;
+    const label = (window.Saga && window.Saga.labelOf && window.Saga.labelOf(sk)) || 'Dralingo';   // (🪙 a skin: its own name)
     if (!box) {
       box = document.createElement('div');
       box.className = 'kdp-how es-how';

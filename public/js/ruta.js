@@ -399,6 +399,7 @@
         const drop = () => { Object.keys(carried).forEach((id) => { if (JSON.stringify(n.pend[id]) === JSON.stringify(carried[id])) delete n.pend[id]; }); };
         if (d && d.ok && isObj(d.marks)) {
           tSync.tries = 0;
+          if (d.coins && window.DralyCoins) window.DralyCoins.pop(d.coins);   // 🪙 +50 «¡Ya la mandé!», «Deshacer» takes them back
           drop();
           if (d.who && n.who === d.who) { n.marks = d.marks; tLearn(d.marks); tSync.savedAt = Date.now(); }
           tWrite(n);

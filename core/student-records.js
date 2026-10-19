@@ -647,6 +647,17 @@ function updateTareas(code, mutate, opts) {
   scheduleSave();
   return rec;
 }
+// 🆕 2026-10-19 (El Zoco de Dralingo) — the kid's coins and characters: rec.zoco, shaped and judged ONLY by core/zoco.js.
+// This finds the record (an archived kid comes back), hands it to `mutate` (core/zoco.js functions), saves, and returns
+// what mutate returned (null when there is no such kid). Never activity on its own (buying is not studying).
+function updateZoco(code, mutate) {
+  const rec = get(code);
+  if (!rec || typeof mutate !== 'function') return null;
+  const before = JSON.stringify(rec.zoco || null);
+  const out = mutate(rec);
+  if (JSON.stringify(rec.zoco || null) !== before) scheduleSave();   // (a home view that changed nothing writes nothing)
+  return out === undefined ? true : out;
+}
 // 🆕 2026-06-21 (Fernando) — teacher-managed classroom. Sets the student's
 // classroomId (a classrooms.js id, or '' to unassign). Unlike setClassroomCode
 // this is NEVER touched by login, so the teacher's filing sticks.
@@ -674,10 +685,13 @@ function setClassroomId(code, classroomId) {
 // avatars of public/js/saga.js. Kids who had a brand or generic avatar keep their stored value; every page shows
 // a saga picture for it (Saga.avatarUrl).
 const AVATAR_OPTIONS = Saga.AVATARS.map((a) => a.id);
+// 🆕 2026-10-19 (El Zoco de Dralingo): a skin of the shop is accepted only when THIS kid bought it (rec.zoco.own,
+// written only by core/zoco.js buy); the saga avatars stay free for everyone
+const ownsSkin = (rec, id) => !!(Saga.zoco(id) && rec && rec.zoco && Array.isArray(rec.zoco.own) && rec.zoco.own.includes(id));
 function setAvatar(code, avatar) {
   const rec = get(code);
   if (!rec) return false;
-  if (!AVATAR_OPTIONS.includes(avatar)) return false;
+  if (!AVATAR_OPTIONS.includes(avatar) && !ownsSkin(rec, avatar)) return false;
   rec.avatar = avatar;
   rec.lastSeen = Date.now();
   scheduleSave();
@@ -1405,6 +1419,8 @@ module.exports = {
   setLevelAccess,
   updateRuta,
   updateTareas,
+  updateZoco,      // 🆕 2026-10-19 El Zoco de Dralingo (core/zoco.js)
+  ownsSkin,
   resetAssignmentSubmissions,
   sendMessage,
   getInbox,

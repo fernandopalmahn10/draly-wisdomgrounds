@@ -1605,7 +1605,7 @@
     Object.entries(playersMap || {}).forEach(([id, p]) => {
       const chip = document.createElement('div');
       chip.className = 'player-chip';
-      chip.innerHTML = `${p.avatar ? `<span class="chip-avatar">${p.avatar}</span>` : ''}<span>${escapeHtml(p.name)}</span>`;
+      chip.innerHTML = `${(window.Saga && Saga.emojiOf ? Saga.emojiOf(p.avatar) : (p.avatar || '')) ? `<span class="chip-avatar">${escapeHtml((window.Saga && Saga.emojiOf ? Saga.emojiOf(p.avatar) : (p.avatar || '')))}</span>` : ''}<span>${escapeHtml(p.name)}</span>`;
       red.appendChild(chip);
     });
   }
@@ -1864,7 +1864,7 @@
       const row = document.createElement('div');
       row.className = 'wu-roster-row' + (isDelegate ? ' is-delegate' : '') + (isJudge ? ' is-judge' : '') + (isPaused ? ' is-paused' : '');
       row.innerHTML = `
-        <span class="wu-roster-avatar">${p.avatar || '🎓'}</span>
+        <span class="wu-roster-avatar">${escapeHtml((window.Saga && Saga.emojiOf ? Saga.emojiOf(p.avatar) : (p.avatar || '')) || '🎓')}</span>
         <span class="wu-roster-name">${escapeHtml(p.name)}${isJudge ? ' <span class="wu-judge-tag">⚖️ juez</span>' : ''}${isPaused ? ' <span class="wu-paused-tag">⏸ pausado</span>' : ''}</span>
         <button class="wu-roster-btn ${isDelegate ? 'revoke' : 'grant'}" type="button">
           ${isDelegate ? '🚫 Quitar' : '👑 Asistente'}
@@ -2445,7 +2445,7 @@
     const row = document.createElement('div');
     row.className = 'wu-activity-row ' + (a.action === 'save' ? 'is-save' : a.action === 'clear' ? 'is-clear' : a.action === 'remove' ? 'is-remove' : 'is-add');
     row.innerHTML = `
-      <span class="wu-activity-who">${a.avatar || '🎓'} ${escapeHtml(a.name || 'Asistente')}</span>
+      <span class="wu-activity-who">${escapeHtml((window.Saga && Saga.emojiOf ? Saga.emojiOf(a.avatar) : (a.avatar || '')) || '🎓')} ${escapeHtml(a.name || 'Asistente')}</span>
       <span class="wu-activity-verb">${verb}</span>
       <span class="wu-activity-word">${escapeHtml(wordLabel)}</span>
       <span class="wu-activity-time">${time}</span>`;
@@ -2469,7 +2469,7 @@
       row.className = 'wu-activity-row is-hand';
       const time = new Date(h.t || Date.now()).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
       row.innerHTML = `
-        <span class="wu-activity-who">${h.avatar || '🙋'} ${escapeHtml(h.name)}</span>
+        <span class="wu-activity-who">${escapeHtml((window.Saga && Saga.emojiOf ? Saga.emojiOf(h.avatar) : (h.avatar || '')) || '🙋')} ${escapeHtml(h.name)}</span>
         <span class="wu-activity-verb">✋ quiere ser asistente</span>
         <span class="wu-activity-time">${time}</span>`;
       feed.insertBefore(row, feed.firstChild);

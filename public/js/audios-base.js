@@ -122,6 +122,7 @@
         if (d && d.ok && Array.isArray(d.seals)) {
           s.tries = 0;
           s.sent = true;
+          if (d.coins && window.DralyCoins) window.DralyCoins.pop(d.coins);   // 🪙 +2 a word marked the first time (El Zoco)
           Object.keys(sent).forEach((k) => { if (p[k] === sent[k]) delete p[k]; });   // a newer tap on the same word stays
           const before = ints(o.seals);
           o.pend = p;

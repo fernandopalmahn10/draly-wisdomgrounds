@@ -34,6 +34,7 @@
 .dsk { --pc: #ffc93c; --pd: #c98a26; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; }
 .dsk-ring { position: absolute; left: 50%; bottom: 0; width: 78%; height: 14%; max-height: 22px; transform: translate(-50%, 35%); border-radius: 50%;
   background: radial-gradient(closest-side, var(--pc) 55%, var(--pd)); border: 3px solid var(--dr-ink); }
+.dsk-img[src*="/zoco/full/dralingo-"] { max-width: 165%; }   /* 🪙 a winged Dralingo skin stands as tall as the others */
 .dsk-img { position: relative; height: 100%; width: auto; max-width: 100%; object-fit: contain; object-position: 50% 100%; pointer-events: none; user-select: none;
   -webkit-user-drag: none; filter: drop-shadow(2px 0 0 var(--pc)) drop-shadow(-2px 0 0 var(--pc)) drop-shadow(0 -2px 0 var(--pc)); }
 .dsk.animal .dsk-img { height: 76%; }

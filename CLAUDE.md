@@ -598,6 +598,23 @@ the checklist for any new game mode.
     re-translated forever and froze the laptop's browser).
   - `node scripts/test-home.js` must pass.
 
+### El Zoco de Dralingo: the characters shop (his OK 2026-10-19: "Okay I approve the design of the Souq")
+- **What it is** (his idea 2026-10-19: "more avatars, more characters in different forms, better skins… a marketplace…
+  they should be locked"): kids unlock new characters and skins with coins they earn. Approved design (5 phone boards:
+  the Zoco, a locked character, «¿Cómo gano monedas?», «¡Ya es tuyo!», Mi perfil «Elige tu personaje»):
+  https://claude.ai/artifact/Tfi3racK5kFX72yempjpzT. Build it as drawn; it lives inside the kid's home «Mi Dralingo».
+- **Coins come only from real steps, judged by the server, never bought with money** (the design says so to kids). The
+  approved amounts: +2 a word marked in La Base (first time only), +20 a practice of El Entrenamiento that reaches its
+  goal, +50 a homework marked «¡Ya la mandé!» (once per homework; «Deshacer» takes them back), +10 a class PIN game
+  played for real, +5 per star of the game's ceremony, +30 a 7-day streak. Nothing a kid can farm by repeating a tap.
+- **The characters** are his own 3D models rendered on this laptop (`assets-library/originals-renders/2026-10-19/`,
+  `roster.json`): the 22 he saw in green, minus anything he hasn't cleared. Kept OUT until he says so: the six orange
+  ones (Come-palabras, Camello, Monje John, Chica Kung Fu, Señor de lentes, Guardián maya) and the two Baby Dralingos in
+  the storybook look (cone hat + robe: the brand rule keeps one area's look out of another). Prices 150-400.
+- **A skin is the kid's character everywhere**: Mi perfil, the home, every pin game on the phone and the projector, the
+  ceremonies; the server only accepts an avatar the kid owns (the base saga avatars stay free for everyone).
+- Kid-safe pictures, Spanish UI, no hanzi; every screen with its «Volver»; works on phones and laptops.
+
 ## Levels: YCT mode everywhere (his direction 2026-10-12)
 - "The whole platform has to have YCT mode": every place that checks, picks or shows a student's level reads
   `core/levels.js` (yct1 · hsk2 = New HSK 1, its stored id · hsk1 = Old HSK 1). Never hardcode `'hsk1'`/`'hsk2'`

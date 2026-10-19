@@ -53,7 +53,7 @@
     let v = '';
     try { v = localStorage.getItem('dralyAvatar') || ''; } catch (_) {}
     const list = (window.Saga && window.Saga.AVATARS) || [];
-    if (!list.some((a) => a.emoji === v)) v = (list[0] && list[0].emoji) || '🐉';
+    if (!list.some((a) => a.emoji === v) && !(window.Saga && window.Saga.zoco && window.Saga.zoco(v))) v = (list[0] && list[0].emoji) || '🐉';   // (🪙 a skin of El Zoco stays)
     return B() ? B().skinFor(v, myName()) : 'dralingo';
   }
   const seatName = (k) => (seats[k] ? (k === meK ? 'Tú' : seats[k].name) : '');

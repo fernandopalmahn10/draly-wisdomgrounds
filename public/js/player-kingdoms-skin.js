@@ -261,8 +261,7 @@
     try { av = localStorage.getItem('dralyAvatar') || ''; } catch (_) {}
     const name = ($('lobby-name') && $('lobby-name').textContent) || '';
     const skin = M ? M.skinFor(av, name) : 'dralingo';
-    const saga = window.Saga && window.Saga.avatar ? window.Saga.avatar(skin) : null;
-    const label = saga ? saga.label.replace(/^[^A-Za-zÁÉÍÓÚÑáéíóúñ]+/, '').trim() : skin;
+    const label = (window.Saga && window.Saga.labelOf && window.Saga.labelOf(skin)) || 'Dralingo';   // (🪙 a skin: its own name)
     if (!card) {
       card = document.createElement('div');
       card.className = 'kdp-how sn-how';
@@ -275,8 +274,9 @@
         + '</ol>';
       head.after(card);
     }
-    $('sn-you-img').src = '/assets/saga/avatars/' + skin + '.webp';
-    $('sn-how-frost').src = '/assets/saga/avatars/' + skin + '.webp';
+    const headUrl = (window.SnowRender && window.SnowRender.SKIN_URL) ? window.SnowRender.SKIN_URL(skin) : '/assets/saga/avatars/' + skin + '.webp';
+    $('sn-you-img').src = headUrl;
+    $('sn-how-frost').src = headUrl;
     $('sn-you-name').textContent = label;
   }
   function howDecor() {

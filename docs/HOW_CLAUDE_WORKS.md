@@ -541,6 +541,30 @@ kid's own session, the experiences per level and their pictures, the streak, the
 level, every old door, the Desafío flag, Mi perfil's actions, no code outside Mi perfil, every phrase in English, and English that settles: `hw-i18n.js` rewrites a text or an attribute only when its English
 is different, since a name that stays the same, alt="Aileen", looped forever and froze the laptop home in the first shots).
 
+**🪙 El Zoco de Dralingo: the characters shop (19 October 2026, your OK: "Okay I approve the design of the Souq"; spec
+`docs/specs/zoco.md`).** Kids unlock new characters (his own 3D models, rendered on this laptop) with coins they earn with
+real steps. The server judges every coin on the kid's own record (`core/zoco.js`); the phone never says how many it has,
+and coins are never bought with money.
+- **Earning:** +2 a word marked in La Base (first time only), +20 a practice of El Entrenamiento that reaches its goal
+  (once per world), +50 a homework marked «¡Ya la mandé!» (once; «Deshacer» takes the 50 back), +10 a class PIN game
+  played for real (3 answers or more), +5 per bonus star of its ceremony, +30 each 7 days in a row. Daily caps: 50 words
+  and 3 homeworks pay a day (the rest waits and comes the next days), 6 games and 8 bonus stars a day. What a kid did
+  before El Zoco never pays coin by coin: a one-time welcome grant instead (half pay, at most 150).
+- **The shop** lives in «Mi Dralingo»: the coins pill in the band (and a door after the path on a phone, a tile in the
+  dock on a laptop) → `#zoco` (the shop), `#zoco-<id>` (a character: «Desbloquear por N» asks once more), `#monedas`
+  («¿Cómo gano monedas?»), `#tuyo-<id>` («¡Ya es tuyo!» → «Usarlo ahora»), and Mi perfil's «Elige tu personaje»
+  (`#personaje`). «+N monedas» pops at the top edge where coins come in (La Base, El Entrenamiento, the homework cards,
+  after a class game's ceremony, and on the home for what came in elsewhere).
+- **A skin is the kid's character everywhere:** the avatar in Mi perfil, the home, Papás, every pin game on the phone and
+  the projector (full body in the games, the head in round avatars), the ceremonies. The server accepts a skin only when
+  the kid owns it (homework avatar, «Usarlo», a PIN join proven by the phone, the lobby swap); the 11 saga avatars stay
+  free. Held back until you confirm where the model came from: the dog, the pony, the panda and «Latifa con abaya» (their
+  pictures are not published either; to sell one, delete its `hold` in `core/zoco.js` and copy its two renders into
+  `public/assets/zoco`). Left out: the two Baby Dralingos in the storybook outfit and the six flagged renders.
+- **Never twice:** an automatic account's «Pasar mi progreso» brings only work that is new to the real account; a
+  phone that changes its time zone never resets the daily caps; a dropped kid's game slot never pays whoever takes it.
+Tests: `node scripts/test-zoco.js` (port 4580).
+
 ### 2.4 Parent control
 
 Parents open their child's progress with the same codes. A privacy guard makes sure a code only

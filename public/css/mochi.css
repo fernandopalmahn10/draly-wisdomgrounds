@@ -48,6 +48,17 @@
   filter: drop-shadow(2px 0 0 var(--tc)) drop-shadow(-2px 0 0 var(--tc)) drop-shadow(0 2px 0 var(--tc)) drop-shadow(0 -2px 0 var(--tc))
     drop-shadow(0 5px 3px rgba(29, 36, 64, .3)); transform-origin: 50% 100%; }
 .mmk.animal .mmk-img { height: 70%; }
+/* 🪙 El Zoco (2026-10-19): a winged Dralingo skin is wide (its wings), so a narrow box shrank it to half the others'
+   height; it may spread past its box and stands as tall as everyone (here, every pin game's ceremony and the lobby cards) */
+.mmk-img[src*="/zoco/full/dralingo-"] { max-width: 165%; }
+:is(.mm-you, .pt-you, .ssh-you):has(.mmk-img[src*="/zoco/full/dralingo-"]) { grid-template-columns: 116px 76px 1fr; }
+:is(.mm-you, .pt-you, .ssh-you) .mmk-img[src*="/zoco/full/dralingo-"] { max-width: 100%; }
+.mm-you:has(.mmk-img[src*="/zoco/full/dralingo-"]) .mm-you-dragon, .pt-you:has(.mmk-img[src*="/zoco/full/dralingo-"]) .pt-you-tiger { height: 76px; }
+:is(.mmc-top, .pf-card-top, .ptk-top, .ssk-top) { margin-bottom: 14px; }   /* (the name tag hangs below the figure: room before the title) */
+/*   the kid's own card at the end: a winged skin gets the wider half (inside the screen, never cut at its edge) */
+:is(.mmc-top, .pf-card-top, .ptk-top, .ssk-top):has(.mmk-img[src*="/zoco/full/dralingo-"]) .mmk { width: 60%; max-width: 250px; }
+:is(.mmc-top, .pf-card-top, .ptk-top, .ssk-top) .mmk-img[src*="/zoco/full/dralingo-"] { max-width: 100%; }
+:is(.mmc-top, .pf-card-top, .ptk-top, .ssk-top):has(.mmk-img[src*="/zoco/full/dralingo-"]) :is(.mmc-dragon, .pf-card-art, .ptk-tiger, .ssk-pile) { max-width: 36%; }
 .mmk-tag { position: absolute; left: 50%; bottom: -4px; transform: translate(-50%, 50%); z-index: 2; display: flex; align-items: center;
   gap: 4px; max-width: 150%; padding: 1px 9px; border-radius: 999px; background: var(--mm-ink); color: #fff;
   font: 800 .78rem/1.4 'Nunito', sans-serif; white-space: nowrap; box-shadow: 0 2px 0 rgba(29, 36, 64, .4); }
