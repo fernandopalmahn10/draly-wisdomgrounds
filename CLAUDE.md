@@ -90,6 +90,10 @@ the checklist for any new game mode.
 - **Boot-time migrations only fill what is missing** (load() in core/*.js runs on every deploy and Render wake-up):
   never force a value a teacher can change in /maestro. 2026-10-12 the review caught two that reset code levels on
   every boot (1002, Ms Han) the day levels became editable. Use "if missing" or a one-shot flag on the record.
+- **A test reads today's content from where it lives** (the audio catalog, saga.js `ZOCO_ART`, core/levels.js), never
+  a copy of it: which homework is «this week», which picture a character has, which levels exist. 2026-10-19/20 two
+  tests failed on new content, not on a bug (test-papas had experience 3 written in as «this week»; test-zoco had the
+  old render paths before the glossy `-g` pictures). A content change must never need a test edit.
 - **Deleting a CSS/JS file?** First list every class/selector it defines and grep the remaining pages for them; shared
   rules hide in game files (2026-10-10: the avatar picker, timer pulse and music chip lived in zombie/triage/color-clash
   css and broke every lobby). Bot playtests can't see styling: also screenshot a lobby + question screen.
@@ -171,9 +175,11 @@ the checklist for any new game mode.
   kept at Cloudflare 2 h (a picture replaced under the SAME name shows up within 2 h: give new art a new name or
   `?v=`). **Cloudflare and the phones keep the platform's own files** (2026-10-20, his «fully scalable»): server.js
   `_staticCache` gives files of public/assets, js and css asked for with exactly a `?v=` that our pages name
-  (`core/asset-refs.js`, read at boot) a year, immutable; a file with no query gets phones 10 min and Cloudflare 1 day
-  (`Cloudflare-CDN-Cache-Control`); any other query stays as before; HTML, sw.js, the manifest and everything outside
-  public/ are never kept. **A changed script, style, picture or sound gets a new `?v=` in every page that asks for it**
+  (`core/asset-refs.js`, read at boot) a year, immutable; a file with no query `max-age=600`; any other query stays as
+  before; HTML, sw.js, the manifest and everything outside public/ are never kept. Measured live 2026-10-20: Render's
+  own Cloudflare in front of the server eats `Cloudflare-CDN-Cache-Control`, so our zone keeps a no-query file only
+  10 min (a Cloudflare cache rule would make it a day: his OK), and the zone's Browser Cache TTL (4 h) raises
+  css/js below 4 h to 4 h in phones (as before this change); `/assets/*` keeps the origin's header (2 h edge rule). **A changed script, style, picture or sound gets a new `?v=` in every page that asks for it**
   (a forgotten bump now sticks a year in phones): `node scripts/test-cache-versions.js` fails a deploy that forgets.
   Homework audio carries `?v=<hash>` from audios-build.js. Rate limit: 400 `/api/` requests per 10 s per connection (a whole class shares one school IP: never lower
   it below class size × requests per page). API token in `~/.dralingo/cloudflare-token.txt` (zone dralingo.app only;
@@ -804,6 +810,11 @@ the checklist for any new game mode.
   once and reuse it for every test family and level. Old CSV exporters (`scripts/export-sim1-blooket.js`) stay as extras.
 - This is a large, multi-feature codebase: before adding a mode, read `docs/GAME_MODES.md` and reuse existing room/PIN/
   heartbeat plumbing instead of building parallel systems.
+- **The teacher's clock: «+30 s» AND «−30 s» in every pin game, today's and every future one** (his ask 2026-10-20:
+  "every pin game here in the future also… you can also subtract 30 seconds"). Both sit together on the projector next
+  to «⏸ Pausa»; «−30 s» never ends a round by itself (it stops at a few seconds left and is greyed out there or once
+  «¡FINAL!» is on), and landing inside the last 30 s starts that game's last-30-s moment as if the clock got there.
+  Games that count in rounds (Las Trampillas, Ojos de Halcón) take away rounds the same way «+30 s» adds them.
 - **Game roster (his decision 2026-10-10):** Reinos de Colores (new, `kingdoms`), Dragones Pintores (new 2026-10-11,
   `paint`), Batalla de Nieve en Ski Dubái (new 2026-10-12, `snow`), La Gran Fuga de Dubái
   (new 2026-10-13, `escape`), «Ojos de Halcón» (new 2026-10-13, `halcon`: Super Mario Party «Looking for Love» played
@@ -813,7 +824,9 @@ the checklist for any new game mode.
   (remade 2026-10-14 as «La Terraza del Mochi», Fuego vs Mar feed their Dragoncitos, Mario Party ceremony; Panda vs Kitsune
   retired), Dàfùwēng · Monopolio Chino, 6-7 Swing (remade 2026-10-15 as «La Balanza de Oro»: rapid-fire sums that are always
   6 or 7, digits or pinyin, two giant buttons «6 · liu» / «7 · qi», Fuego vs Mar fill a golden balance, Dralingo does the 6-7;
-  the blocky meme figure retired), Vuelo del Dragón, Piñata Tigre (remade 2026-10-15 as «La Fiesta de las
+  the blocky meme figure retired; its stars are Dralingo's friends «Liu» the 6 and «Qi» the 7, his pick 2026-10-20
+  «same style, our own» = blue, blocky, brick-built number buddies with big goofy eyes that a kid reads as «¡el 67!»,
+  drawn as OUR design, never a copy of the Roblox «Steal a Brainrot» 67 figure), Vuelo del Dragón, Piñata Tigre (remade 2026-10-15 as «La Fiesta de las
   Piñatas»: Fuego vs Mar break a ladder of tiger piñatas, every right answer a hit with a server-judged timing meter;
   Bastón vs Arco retired) (plus the class tools Warm-up, Lectura, HSK/YCT rooms); 11 older games were retired to free room.
   The 5 kept games each get a full overhaul ("second run"); new games replace the retired ones. Quality over quantity:
