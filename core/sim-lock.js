@@ -19,8 +19,9 @@
 //   · The room pass: joining a teacher's exam room (socket player:join) gives the phone one; the room's sim loads only
 //     with it, so a PIN guessed from outside opens nothing. The submit ticket in each payload hands an exam in even
 //     after the room closed (a student's ticket carries their own code: their grade, their record).
-//   · The signing key: env SIM_LOCK_SECRET, else data/sim-lock.key (made once on the data disk, so links and sessions
-//     survive a restart or a deploy), else a random key for this run.
+//   · The signing key: env SIM_LOCK_SECRET, else env SIM_LOCK_KEY_HEX (the data disk's key as 64 hex, so it survives a
+//     lost disk; 2026-10-20), else data/sim-lock.key (made once on the data disk, so links and sessions survive a
+//     restart or a deploy), else a random key for this run.
 // =========================================================================
 'use strict';
 const fs = require('fs');
@@ -42,6 +43,10 @@ const MISSING = '/sim-media/missing';      // a referenced file that is not on d
 function loadKey() {
   const env = process.env.SIM_LOCK_SECRET;
   if (env && env.length >= 32) return Buffer.from(env, 'utf8');
+  // 2026-10-20 (scale): the SAME key as data/sim-lock.key, kept in Render's settings (64 hex = the file's text) so it
+  // survives a lost data disk without travelling in every weekly backup; phones signed with the file stay signed in
+  const hexEnv = String(process.env.SIM_LOCK_KEY_HEX || '').trim();
+  if (/^[a-f0-9]{64}$/i.test(hexEnv)) return Buffer.from(hexEnv, 'hex');
   const file = path.join(process.env.DRALY_DATA_DIR || path.join(ROOT, 'data'), 'sim-lock.key');   // tests: their own folder
   try {
     const hex = fs.readFileSync(file, 'utf8').trim();

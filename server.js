@@ -24,6 +24,7 @@ const RutaProgress = require('./core/ruta-progress'); // 🏆 La Ruta Dorada: se
 const Train = require('./core/entrenamiento');        // 🎯 El Entrenamiento: practice world by world, graded here (phase 4, 2026-10-16)
 const Golden = require('./core/golden');             // 📖 El libro dorado: the golden book on the web (phase 5, 2026-10-16)
 const Zoco = require('./core/zoco');                 // 🪙 El Zoco de Dralingo: coins from real steps + the characters shop (2026-10-19)
+const UsagePeaks = require('./core/usage-peaks');    // 📈 the most classes at the same time, per day (2026-10-20, scale)
 const SentenceCategories = require('./core/sentence-categories');
 const Assignments = require('./core/assignments');
 const Teachers = require('./core/teachers');
@@ -273,7 +274,42 @@ app.get('/base-media/:base/*', (req, res) => _baseMediaFile(req, res));
 // the latest markup (otherwise stale cached HTML keeps referencing old
 // rewards.js / player.js versions and users see "nothing changed" after a
 // deploy). Versioned CSS/JS via ?v=... are still cached aggressively.
-app.use(express.static(path.join(__dirname, 'public'), {
+// 🆕 2026-10-20 (scale) — Cloudflare serves the platform's own files, so 30 phones in a class stop downloading the same
+// pictures, sounds and music from the one Render server (_staticCache below), for files of public/assets, js and css:
+//   · asked for with EXACTLY `?v=<a version today's pages ask for>` → a year, immutable (a new ?v= is a new file).
+//     Only versions found in our pages and code at boot (core/asset-refs.js): a guessed future ?v= (they are dates)
+//     must never get today's file stored for a year (review 2026-10-20);
+//   · asked for with no query at all → phones 10 min (Cache-Control), Cloudflare 1 day + stale-while-revalidate
+//     (Cloudflare-CDN-Cache-Control, which only Cloudflare reads: a phone never shows a day-old picture). A re-made
+//     picture under the same name shows within a day: give changed art a new name or ?v=;
+//   · any other query (?t=…, an unknown ?v=, several) → as before (public, max-age=0).
+// HTML pages, sw.js, the manifest and everything outside public/ (/api, /base-media, sims, golden book, study PDFs, key
+// screens) are untouched. `node scripts/test-cache-versions.js` fails a deploy whose changed file kept its old ?v= (or
+// a changed script asked for without one): a forgotten bump would otherwise stick for a year.
+const AssetRefs = require('./core/asset-refs');
+const _STATIC_LONG = 'public, max-age=31536000, immutable';
+const _STATIC_SHORT = 'public, max-age=600';
+const _STATIC_SHORT_CDN = 'public, max-age=86400, stale-while-revalidate=86400';
+const _PUBLIC_DIR = path.join(__dirname, 'public');
+let _knownV = new Map();   // '/js/x.js' → Set of the ?v= today's pages ask for (~50 ms at boot)
+try { _knownV = AssetRefs.knownVersions(__dirname); } catch (e) { console.warn('[cache] versions not read (no year-long caching):', e.message); }
+function _staticCache(res, filePath) {
+  const rel = path.relative(_PUBLIC_DIR, filePath).split(path.sep).join('/');
+  const top = rel.split('/')[0];
+  if (top !== 'assets' && top !== 'js' && top !== 'css') return;   // sw.js, the manifest, root files: as before
+  const url = String((res.req && (res.req.originalUrl || res.req.url)) || '');
+  const qi = url.indexOf('?');
+  const q = qi < 0 ? '' : url.slice(qi + 1);
+  if (!q) {
+    res.setHeader('Cache-Control', _STATIC_SHORT);
+    res.setHeader('Cloudflare-CDN-Cache-Control', _STATIC_SHORT_CDN);
+    return;
+  }
+  const m = /^v=([A-Za-z0-9._-]{1,64})$/.exec(q);
+  const known = m && _knownV.get('/' + rel);
+  if (known && known.has(m[1])) res.setHeader('Cache-Control', _STATIC_LONG);
+}
+app.use(express.static(_PUBLIC_DIR, {
   setHeaders: (res, filePath) => {
     if (filePath.endsWith('.html')) {
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -288,7 +324,9 @@ app.use(express.static(path.join(__dirname, 'public'), {
       // a 90MB-per-30-kids hit into 0 bytes after day 1. The asset
       // filenames are stable (CR7 TRANSPARENT.gif, etc.) so immutable
       // is honest; if you ever swap an asset, rename it.
-      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      res.setHeader('Cache-Control', _STATIC_LONG);
+    } else {
+      _staticCache(res, filePath);
     }
   },
 }));
@@ -361,12 +399,29 @@ app.get('/api/_diag', (req, res) => {
   out.rooms = Object.keys(games || {}).length;
   // 2026-10-17: rooms with someone in them right now (a connected projector or a connected kid). `rooms` also counts
   // rooms kept up to an hour after their projector left (so a teacher can come back): the deploy guard reads this one.
-  try {
-    out.liveRooms = Object.values(games).filter((g) => (g.hostId && io.sockets.sockets.get(g.hostId)) ||
-      Object.values(g.players || {}).some((p) => p && !p.disconnected)).length;
-  } catch (_) { out.liveRooms = out.rooms; }
+  try { out.liveRooms = _liveRoomStats().rooms; } catch (_) { out.liveRooms = out.rooms; }
+  // 2026-10-20 (scale): the most live rooms, classes (rooms with 5+ kids) and kids connected at the same time over the
+  // last 30 days, numbers only (core/usage-peaks.js; `days` = how many of those days the server sampled).
+  // scripts/health-check.js reads it.
+  try { out.peak30 = UsagePeaks.peak(30); } catch (_) { /* no peaks yet */ }
+  res.set('Cache-Control', 'no-store');
   res.json(out);
 });
+// Right now: live rooms (a connected projector or at least one connected kid), classes (live rooms with 5+ kids
+// connected: core/usage-peaks.js CLASS_KIDS) and the kids connected in them.
+function _liveRoomStats() {
+  let rooms = 0, classes = 0, players = 0;
+  for (const g of Object.values(games)) {
+    if (!g) continue;
+    const kids = Object.values(g.players || {}).filter((p) => p && !p.disconnected).length;
+    if ((g.hostId && io.sockets.sockets.get(g.hostId)) || kids) { rooms++; players += kids; if (kids >= UsagePeaks.CLASS_KIDS) classes++; }
+  }
+  return { rooms, classes, players };
+}
+// 2026-10-20 (scale): every 30 s, today's peak of classes at once and kids connected (written at most every 2 min)
+setInterval(() => {
+  try { UsagePeaks.note(_liveRoomStats()); } catch (e) { console.warn('[usage-peaks] sample failed:', e.message); }
+}, Math.max(200, Number(process.env.DRALY_PEAKS_SAMPLE_MS) || 30 * 1000)).unref();
 
 // === /api/admin/disk-status — Render persistent-disk verification ===
 // Hit this from any browser with ?pw=<your admin password>. Tells you:
@@ -386,8 +441,55 @@ app.get('/api/_diag', (req, res) => {
 // Why JSON not tar: keeps it dependency-free + works from any browser
 // (no shell). Bundles every *.json under data/ plus a manifest. PII
 // stays admin-gated; never cached.
+// 🆕 2026-10-20 (scale, his OK: "back it up weekly without pressing anything") — a second door for the laptop's weekly
+// script (tools/backup/pull-backup.js, Sunday 7:00): the header X-Backup-Token, compared in constant time with the env
+// var BACKUP_TOKEN (unset, empty or shorter than 32 characters = this door is OFF and the header means nothing). It
+// opens THIS endpoint only (no other route reads that header), a wrong key answers exactly like a wrong teacher code
+// and counts in the same turnstile (10 per address in 10 min), 6 pulls a day at most, and the log says «backup pulled
+// by the weekly key» with the address (never the key). The file holds every kid, teacher code and level key: the key
+// is as precious as the super admin's code.
+// The bundle (format 2): every data/*.json read in one go (one moment: an account moving to the archive is never in
+// neither), then streamed with the guides and sets read in small pieces (a disk full of guides never fills the
+// server's 512 MB; one backup at a time):
+//   { _meta, files: { "<name>.json": <its JSON> } (as before), raw: { "<name>.json": "<base64>" } (a .json that does not
+//     parse, e.g. a «.unreadable-<time>.json» copy the server parked), guides: { "<file>.pdf": "<base64>" } (data/guides/, the
+//     teacher guide PDFs), sets: { "<file>": "<base64>" } (data/sets/, uploaded question sets), keys: { "sim-lock.key":
+//     "<text>" } (ONLY in the super admin's own download: the key that signs every remembered phone, level key and
+//     teacher device never changes, so one copy is enough, best in Render's env SIM_LOCK_KEY_HEX; a weekly file that
+//     leaks must not let anyone sign devices), _end: { ok, errors } }  — how to restore: docs/BACKUP.md.
+const _BACKUP_TOKEN = String(process.env.BACKUP_TOKEN || '').trim();
+const _BACKUP_TOKEN_ON = _BACKUP_TOKEN.length >= 32;
+if (process.env.BACKUP_TOKEN && !_BACKUP_TOKEN_ON) console.warn('[backup] BACKUP_TOKEN is shorter than 32 characters: the weekly key is OFF');
+const _BACKUP_PER_DAY = 6;
+const _backupPulls = [];   // when the weekly key pulled (last 24 h)
+let _backupSince = 0;      // one backup at a time (each holds a few MB; three at once must never squeeze the server)
+const _backupBusy_ = () => _backupSince && Date.now() - _backupSince < 15 * 60e3;   // a stalled download frees it after 15 min
+const _sha256 = (s) => require('crypto').createHash('sha256').update(String(s), 'utf8').digest();
+function _backupTokenOk(given) {
+  const g = String(given == null ? '' : given).trim();
+  return _BACKUP_TOKEN_ON && !!g && require('crypto').timingSafeEqual(_sha256(g), _sha256(_BACKUP_TOKEN));
+}
 app.get('/api/admin/backup', (req, res) => {
-  const fs = require('fs');
+  res.set({ 'Cache-Control': 'no-store', 'Cloudflare-CDN-Cache-Control': 'no-store' });
+  if (req.method !== 'GET') return res.status(405).set('Allow', 'GET').end();   // (a HEAD would read every file for nothing)
+  if (_BACKUP_TOKEN_ON && req.headers['x-backup-token'] !== undefined) {
+    const ip = _clientIp(req);
+    if (_adminFailCount(ip) >= 10) return res.status(429).json({ ok: false, error: 'demasiados intentos, espera unos minutos' });
+    if (!_backupTokenOk(req.headers['x-backup-token'])) {
+      _adminNoteFail(ip);
+      return res.status(401).json({ ok: false, error: 'wrong password' });   // the same answer as a wrong teacher code
+    }
+    if (_backupBusy_()) return res.status(429).json({ ok: false, error: 'ya se está haciendo un respaldo, prueba en un minuto' });
+    const now = Date.now();
+    while (_backupPulls.length && now - _backupPulls[0] > 86400e3) _backupPulls.shift();
+    if (_backupPulls.length >= _BACKUP_PER_DAY) {
+      console.warn('[backup] the weekly key asked again: ' + _BACKUP_PER_DAY + ' backups in 24 h already, refused (from ' + ip + ')');
+      return res.status(429).json({ ok: false, error: 'ya hubo ' + _BACKUP_PER_DAY + ' respaldos hoy, espera a mañana' });
+    }
+    _backupPulls.push(now);
+    console.log('[backup] backup pulled by the weekly key (from ' + ip + ')');
+    return _sendBackup(req, res, 'weekly key', false);
+  }
   const session = _adminAuth(req, res);
   if (!session) return;
   // Only the super-admin can pull a full-platform backup (it contains
@@ -395,27 +497,112 @@ app.get('/api/admin/backup', (req, res) => {
   if (!(session.isSuperAdmin)) {
     return res.status(403).json({ ok: false, error: 'solo super-admin puede descargar el respaldo completo' });
   }
-  const DATA_DIR = path.join(__dirname, 'data');
-  const bundle = { _meta: { generatedAt: new Date().toISOString(), commit: process.env.RENDER_GIT_COMMIT || 'local' }, files: {} };
-  try {
-    const entries = fs.readdirSync(DATA_DIR, { withFileTypes: true });
-    entries.forEach((e) => {
-      if (!e.isFile() || !e.name.endsWith('.json')) return;   // JSON data files only
-      try {
-        bundle.files[e.name] = JSON.parse(fs.readFileSync(path.join(DATA_DIR, e.name), 'utf8'));
-      } catch (err) {
-        bundle.files[e.name] = { _readError: err.message };
-      }
-    });
-  } catch (err) {
+  if (_backupBusy_()) return res.status(429).json({ ok: false, error: 'ya se está haciendo un respaldo, prueba en un minuto' });
+  console.log('[backup] backup pulled by the super admin');
+  return _sendBackup(req, res, 'super admin', true);
+});
+async function _sendBackup(req, res, by, withKeys) {
+  const fs = require('fs'), fsp = fs.promises;
+  const DATA_DIR = process.env.DRALY_DATA_DIR || path.join(__dirname, 'data');
+  const filesIn = (dir, test) => {
+    try { return fs.readdirSync(dir, { withFileTypes: true }).filter((e) => e.isFile() && test(e.name)).map((e) => e.name).sort(); } catch (_) { return []; }
+  };
+  // one moment: the lists and every JSON file, read back to back with nothing else running in between
+  let top;
+  try { top = fs.readdirSync(DATA_DIR, { withFileTypes: true }); } catch (err) {
     return res.status(500).json({ ok: false, error: 'no se pudo leer data/: ' + err.message });
   }
+  const errors = [];
+  // whole, valid JSON goes in `files` as it is; a .json that does not parse goes in `raw` as its bytes (base64), so it
+  // can still be restored: a copy the server parked on purpose («<name>.unreadable-<time>.json», kept for recovery) is
+  // no error; any other broken file is (PARTIAL on the laptop)
+  const rawFiles = [];
+  const jsonFiles = [];
+  top.filter((e) => e.isFile() && e.name.endsWith('.json')).map((e) => e.name).sort().forEach((n) => {   // as before
+    let buf;
+    try { buf = fs.readFileSync(path.join(DATA_DIR, n)); } catch (_) { errors.push(n); return; }
+    try {
+      const text = buf.toString('utf8').trim();
+      JSON.parse(text);
+      jsonFiles.push([n, text]);
+    } catch (_) {
+      rawFiles.push([n, buf.toString('base64')]);
+      if (!/\.unreadable-\d+\.json$/.test(n)) errors.push(n + ' (not valid JSON: kept in raw)');
+    }
+  });
+  const guideNames = filesIn(path.join(DATA_DIR, 'guides'), (n) => !n.startsWith('.'));
+  const setNames = filesIn(path.join(DATA_DIR, 'sets'), (n) => /\.(csv|xlsx|xls)$/i.test(n));
+  let keyText = null;
+  if (withKeys) { try { keyText = fs.readFileSync(path.join(DATA_DIR, 'sim-lock.key'), 'utf8').trim() || null; } catch (_) { /* none on this disk */ } }
+  const mine = _backupSince = Date.now();
   const stamp = new Date().toISOString().slice(0, 10);
-  res.setHeader('Content-Type', 'application/json');
+  res.status(200);
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.setHeader('Content-Disposition', 'attachment; filename="draly-backup-' + stamp + '.json"');
-  res.setHeader('Cache-Control', 'no-store');
-  res.send(JSON.stringify(bundle, null, 2));
-});
+  let gone = false;
+  res.on('close', () => { gone = true; });
+  // write and wait while the connection is full; a closed connection never leaves this waiting
+  const put = (s) => new Promise((ok) => {
+    if (gone || res.destroyed || res.writableEnded) { gone = true; return ok(); }
+    if (res.write(s)) return ok();
+    const done = () => { res.off('drain', done); res.off('close', done); ok(); };
+    res.on('drain', done);
+    res.on('close', done);
+  });
+  // one file as base64, read 192 KB at a time (a multiple of 3 bytes: the pieces join into one base64 string)
+  // → 'ok' | 'cut' (written, but the read failed half way) | 'gone' (deleted a moment ago) | 'unreadable' (nothing written)
+  const putFile = async (file, prefix) => {
+    let fh;
+    try { fh = await fsp.open(file, 'r'); } catch (e) { return e.code === 'ENOENT' ? 'gone' : 'unreadable'; }
+    try {
+      await put(prefix + '"');
+      const buf = Buffer.alloc(3 * 65536);
+      let rest = Buffer.alloc(0);
+      for (;;) {
+        if (gone) break;
+        const { bytesRead } = await fh.read(buf, 0, buf.length, null);
+        if (!bytesRead) break;
+        const chunk = Buffer.concat([rest, buf.subarray(0, bytesRead)]);
+        const cut = chunk.length - (chunk.length % 3);
+        rest = Buffer.from(chunk.subarray(cut));
+        await put(chunk.subarray(0, cut).toString('base64'));
+      }
+      await put(rest.toString('base64') + '"');
+      return 'ok';
+    } catch (e) {
+      await put('"');                             // the string closes; the file is listed as cut in _end
+      return 'cut';
+    } finally { try { await fh.close(); } catch (_) {} }
+  };
+  const meta = { generatedAt: new Date().toISOString(), commit: process.env.RENDER_GIT_COMMIT || 'local', format: 2, by,
+    counts: { files: jsonFiles.length, raw: rawFiles.length, guides: guideNames.length, sets: setNames.length, keys: keyText ? 1 : 0 } };
+  try {
+    await put('{"_meta":' + JSON.stringify(meta) + ',\n"files":{');
+    for (let i = 0; i < jsonFiles.length && !gone; i++) await put((i ? ',\n' : '\n') + JSON.stringify(jsonFiles[i][0]) + ':' + jsonFiles[i][1]);
+    await put('},\n"raw":{');
+    for (let i = 0; i < rawFiles.length && !gone; i++) await put((i ? ',\n' : '\n') + JSON.stringify(rawFiles[i][0]) + ':"' + rawFiles[i][1] + '"');
+    jsonFiles.length = 0; rawFiles.length = 0;    // (let the texts go before the long part)
+    for (const [key, names] of [['guides', guideNames], ['sets', setNames]]) {
+      await put('},\n' + JSON.stringify(key) + ':{');
+      let first = true;
+      for (const n of names) {
+        if (gone) break;
+        const r = await putFile(path.join(DATA_DIR, key, n), (first ? '\n' : ',\n') + JSON.stringify(n) + ':');
+        if (r === 'gone') continue;               // deleted by a teacher a moment ago: simply not in this backup
+        if (r === 'ok' || r === 'cut') first = false;
+        if (r !== 'ok') errors.push(key + '/' + n + (r === 'cut' ? ' (cut)' : ''));
+      }
+    }
+    await put('},\n"keys":{' + (keyText ? '"sim-lock.key":' + JSON.stringify(keyText) : ''));
+    await put('},\n"_end":' + JSON.stringify({ ok: !errors.length, errors }) + '}\n');
+    if (!gone) res.end();
+  } catch (err) {
+    console.warn('[backup] the backup stream stopped:', err.message);
+    try { res.destroy(err); } catch (_) {}
+  } finally {
+    if (_backupSince === mine) _backupSince = 0;
+  }
+}
 
 // 🔒 2026-06-21 (Security Phase 1) — shared admin-auth hardening helpers.
 //   • _adminPw: read the admin secret from the X-Admin-Password HEADER first

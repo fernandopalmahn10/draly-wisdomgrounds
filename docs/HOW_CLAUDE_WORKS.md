@@ -766,6 +766,16 @@ A separate Emirati Arabic (Khaleeji) track:
 - **Monthly health check:** on the 1st of each month a scheduled Claude task runs `scripts/health-check.js` (Render
   memory, processor, downloads, disk; the student file; media size; page weight) and tells you if a limit is crossed
   and what to do (bigger server, database, lighter pictures). Reports in `reports/platform-health/`.
+  Since 2026-10-20 it also says «Most classes at the same time (30 days)»: the server counts its busiest moment every
+  day; 3 classes at once is the warning, 5 the red line for today's server (the next size holds about 10).
+- **Cloudflare keeps the platform's files (since 2026-10-20):** pictures, sounds, music, scripts and styles are kept
+  by the phones (10 minutes; a year when the page asks for a numbered version) and by Cloudflare near the kids (up to
+  a day), so 30 phones in a class no longer each download them from our one server. A picture re-made under the same name shows within a day: new art
+  gets a new name. Pages, homework, keys and the locked exam and La Base files are never kept.
+- **Weekly backup (since 2026-10-20):** every Sunday at 7:00 (or when the laptop is next on) the laptop downloads
+  everything the platform knows (kids, progress, teachers, keys, guide PDFs) into `DralingoBackups\platform\`,
+  keeps 12 weeks plus one a month for a year, and writes one line in `backup-log.txt` (SUSPECT if accounts suddenly
+  dropped). Never OneDrive: it has the kids' names. How to restore: `docs/BACKUP.md`.
 
 ---
 

@@ -256,17 +256,19 @@ async function build(id) {
       clips.push(pcm);
       const clipName = tr.code + '-' + (n + 1) + '.mp3';
       encode(Buffer.concat([silence(0.15), pcm, silence(0.25)]), path.join(dir, clipName));
-      const row = { py: it.py, es: it.es, clip: web + clipName };
+      // ?v=<content hash> (2026-10-20, scale): a re-made homework under the same id reaches phones at once; the
+      // server keeps a catalog-named version a year (server.js _staticCache), never a day-old copy
+      const row = { py: it.py, es: it.es, clip: web + clipName + '?v=' + stamp(path.join(dir, clipName)) };
       if (it.who) row.who = it.who;
       items.push(row);
       process.stdout.write('.');
     }
     const s = shape(tr.kind, clips);
     encode(s.pcm, path.join(dir, tr.code + '.mp3'));
-    tracks.push({ code: tr.code, kind: tr.kind, src: web + tr.code + '.mp3', dur: r2(dur(s.pcm)), parts: s.parts, segs: s.segs, items });
+    tracks.push({ code: tr.code, kind: tr.kind, src: web + tr.code + '.mp3?v=' + stamp(path.join(dir, tr.code + '.mp3')), dur: r2(dur(s.pcm)), parts: s.parts, segs: s.segs, items });
     console.log(' ' + r2(dur(s.pcm)) + ' s');
   }
-  const cover = fs.existsSync(path.join(dir, 'cover.jpg')) ? web + 'cover.jpg' : null;
+  const cover = fs.existsSync(path.join(dir, 'cover.jpg')) ? web + 'cover.jpg?v=' + stamp(path.join(dir, 'cover.jpg')) : null;
   return {
     id, level: src.level, levelName: levelName(src.level), exp: src.exp, round: src.round,
     title: src.title, tagline: src.tagline, cover, tracks,
@@ -296,7 +298,7 @@ async function build(id) {
       if (!fs.existsSync(small) || fs.statSync(small).mtimeMs < fs.statSync(cover).mtimeMs) {
         execFileSync(FFMPEG, ['-v', 'error', '-y', '-i', cover, '-vf', 'scale=360:-2', '-c:v', 'libwebp', '-quality', '78', small]);
       }
-      h.thumb = '/assets/audios/' + h.id + '/cover-s.webp';
+      h.thumb = '/assets/audios/' + h.id + '/cover-s.webp?v=' + stamp(small);   // (versioned like the cover, 2026-10-20)
     }
   });
   const homeworks = all.filter((h) => h.kind !== 'base').sort((a, b) =>
