@@ -58,3 +58,6 @@ public/assets/JohnMonkglbforTextures.glb
 
 # Homework audio gateway: raw voice clips cached by scripts/audios-build.js (rebuildable, not served)
 content/audios/.cache/
+# 🧊 El Zoco in 3D (2026-10-20): his original 3D characters made web-sized (tools/blender/zoco_web_glb.py). They go online
+# only with his «sube»: until then they stay local (copies of assets-library/zoco-3d/<day>/ for testing). NEVER commit.
+public/assets/zoco/3d/

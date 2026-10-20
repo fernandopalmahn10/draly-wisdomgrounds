@@ -834,7 +834,10 @@
     // lite one» rule is for class games. With no loop, or once a loop failed, the still keeps the CSS idle)
     const saveData = !!(typeof navigator !== 'undefined' && navigator.connection && navigator.connection.saveData);
     const big = kind === 'page' || kind === 'new';
-    const want = an && !calm() ? (kind === 'now' || (smallScreen() && !(big && !saveData)) ? an.lite : (an.full || an.lite)) : '';
+    // (🧊 a character's page in real 3D: its still waits on the pedestal until the model is there, no ~1 MB loop
+    // downloaded for nothing; if the 3D fails, the page draws again with the loop)
+    const in3d = kind === 'page' && !x.free && !!want3d(x.id);
+    const want = an && !calm() && !in3d ? (kind === 'now' || (smallScreen() && !(big && !saveData)) ? an.lite : (an.full || an.lite)) : '';
     const loop = want && !zLoopsBad.has(want) ? want : '';
     const ready = !!loop && zLoops.has(loop);
     const src = an ? (ready ? loop : an.still) : x.free ? x.url : x.full;
@@ -868,6 +871,112 @@
       setTimeout(() => { if (img.isConnected) a.src = src; }, document.readyState === 'complete' ? 400 : 1200);
     });
   }
+  // ── 🧊 The character in real 3D (2026-10-20, his words: "it looked like a display in 3D… each character… you can touch
+  // it and move it. I always loved that"; his pick «Real 3D, try 3 first»). On a character's page (#zoco-<id>) of a
+  // character listed in saga.js ZOCO_3D, its picture shows first; then js/zoco3d/stage.js (three.js from the CDN, only
+  // here) puts HIS original 3D model on the same pedestal: drag to turn it, pinch or the wheel to zoom, tap it → it hops,
+  // untouched it breathes and looks around. A locked character turns too (a window into what you can win).
+  // Who never tries (saga.js skin3dBlock): reduced motion, Save-Data, a phone with < 2 GB, no hardware WebGL 2 (three.js
+  // needs WebGL 2; a software one would only heat the phone), a model that already failed on this page (missing on the
+  // server, the CDN out of reach for 15 s, a second lost context…): they keep the picture and its idle loop.
+  // The model is fetched FIRST (a missing one costs one quick 404, never three.js); every load has its own ticket, so a
+  // load the kid walked away from stops at its next step and never touches the next character's. One model at a time,
+  // the same canvas carried over a redraw of the page, everything disposed when the kid leaves it. The first lost
+  // context (the phone took its graphics back while WhatsApp was open) tries again once the page is visible.
+  const Z3D = { ctl: null, busy: '', seq: 0, bad: new Set(), lost: Object.create(null), gl: null };
+  const Z3D_JS = '/js/zoco3d/stage.js?v=20261020z3d1';
+  const Z3D_WAIT = 15000;
+  // (tests in a browser without a graphics card: draly_zoco3d_sw = 1 lets a software WebGL draw)
+  const z3dSoft = () => ls.get('draly_zoco3d_sw') === '1';
+  function canWebGL() {
+    if (Z3D.gl != null) return Z3D.gl;
+    try {
+      const c = document.createElement('canvas');
+      const g = c.getContext('webgl2', { failIfMajorPerformanceCaveat: !z3dSoft() });
+      Z3D.gl = !!g;
+      const lose = g && g.getExtension('WEBGL_lose_context');
+      if (lose) lose.loseContext();
+    } catch (_) { Z3D.gl = false; }
+    return Z3D.gl;
+  }
+  function want3d(id) {
+    const S = window.Saga;
+    const m = S && S.skin3d ? S.skin3d(id) : null;
+    if (!m || !S.skin3dBlock) return null;
+    const nav = typeof navigator !== 'undefined' ? navigator : {};
+    const env = { reduced: calm(), saveData: !!(nav.connection && nav.connection.saveData), webgl: true, memory: nav.deviceMemory, failed: Z3D.bad.has(m.id) };
+    if (S.skin3dBlock(env)) return null;
+    // (the graphics probe last: a phone already ruled out never opens a context for it)
+    return S.skin3dBlock(Object.assign(env, { webgl: canWebGL() })) ? null : m;
+  }
+  const stage3d = (id) => (view && view.kind === 'item' && view.id === id ? document.querySelector('#md-app .zc-item .zc-stage') : null);
+  // leave the 3D: the model on screen is disposed, a load still on its way is cancelled (unless it is keepId's)
+  function zoco3dLeave(keepId) {
+    if (Z3D.ctl) { try { Z3D.ctl.dispose(); } catch (_) {} Z3D.ctl = null; }
+    if (Z3D.busy && Z3D.busy !== keepId) { Z3D.seq += 1; Z3D.busy = ''; }
+  }
+  // a model that failed: never again on this page, except a first lost context (tried again once the page is visible)
+  function zoco3dFailed(id, why) {
+    if (why === 'context' && !Z3D.lost[id]) Z3D.lost[id] = 1; else Z3D.bad.add(id);
+    console.warn('[zoco3d] the picture stays:', why);
+    const again = () => { if (stage3d(id) && H && H.screen() === 'list') draw(); };   // (its idle loop, or a fresh try)
+    if (typeof document !== 'undefined' && document.hidden) {
+      const f = () => { if (!document.hidden) { document.removeEventListener('visibilitychange', f); again(); } };
+      document.addEventListener('visibilitychange', f);
+    } else again();
+  }
+  function zoco3d(v) {
+    const id = v && v.kind === 'item' ? v.id : '';
+    const m = id ? want3d(id) : null;
+    const st = m ? stage3d(id) : null;
+    if (Z3D.ctl && (Z3D.ctl.id !== id || !st)) zoco3dLeave(st ? id : '');
+    if (!st) { if (Z3D.busy) zoco3dLeave(''); return; }
+    if (Z3D.ctl) { Z3D.ctl.attach(st); return; }      // (a redraw: the same model moves into the new stage)
+    if (Z3D.busy === id) return;                     // (still loading: it lands on the stage of that moment)
+    const tok = ++Z3D.seq;
+    Z3D.busy = id;
+    const mine = () => Z3D.seq === tok && !!stage3d(id);
+    const x = zItem(id);
+    const ac = typeof AbortController === 'function' ? new AbortController() : null;
+    let settled = false;
+    const end = (why) => {                           // a load that did not end on screen
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      if (ac) { try { ac.abort(); } catch (_) {} }
+      const current = Z3D.seq === tok;
+      if (current) { Z3D.busy = ''; if (why === 'timeout') Z3D.seq += 1; }   // (a late model then disposes itself)
+      if (why === 'cancelled' || !current) return;                          // (the kid left: not the model's fault)
+      zoco3dFailed(id, why);
+    };
+    const timer = setTimeout(() => end('timeout'), Z3D_WAIT);
+    fetch(m.glb, { credentials: 'same-origin', signal: ac ? ac.signal : undefined })
+      .then((r) => { if (!r.ok) throw new Error('model ' + r.status); return r.arrayBuffer(); })
+      .then((buf) => {
+        if (!mine()) throw new Error('cancelled');
+        return import(Z3D_JS).then((mod) => {
+          if (!mine()) throw new Error('cancelled');
+          return mod.mount(stage3d(id), {
+            id, buf, alive: mine, where: () => stage3d(id), software: z3dSoft(), name: x ? x.name : '',
+            look: { coat: m.coat, rough: m.rough, yaw: m.yaw },
+            words: { spin: 'Gíralo con el dedo', drag: 'Arrástralo para girarlo', tap: '¡Tócalo!',
+              label: 'Personaje en 3D: gíralo con el dedo o con las flechas y tócalo para que salte' },
+            onFail: (why) => { if (Z3D.ctl && Z3D.ctl.id === id) Z3D.ctl = null; zoco3dFailed(id, why); },
+          });
+        });
+      })
+      .then((ctl) => {
+        const st2 = stage3d(id);
+        if (settled || !mine() || !st2) { ctl.dispose(); end('cancelled'); return; }
+        settled = true;
+        clearTimeout(timer);
+        Z3D.busy = '';
+        if (Z3D.ctl && Z3D.ctl !== ctl) zoco3dLeave(id);
+        Z3D.ctl = ctl;
+        ctl.attach(st2);
+      }, (err) => end(err && err.name === 'AbortError' ? 'cancelled' : err && err.message ? err.message : 'load'));
+  }
+  window.addEventListener('pagehide', () => zoco3dLeave(''));
   function cardHtml(x, c) {
     const ready = !x.owned && c >= x.price;
     return '<a class="zc-card' + (x.owned ? ' is-owned' : ready ? ' is-ready' : '') + '" href="#zoco-' + esc(x.id) + '">' +
@@ -1187,6 +1296,7 @@
   // after a draw: the homework cards (js/ruta.js), Mis oraciones, Mis exámenes, the moment of a finished experience
   function mount(v) {
     if (isZoco(v)) zocoAlive();   // (🪙 a character waiting on its pedestal: its idle loop over the still)
+    try { zoco3d(v); } catch (err) { console.error('[home] zoco3d', err); }   // (🧊 or the character in real 3D)
     const box = document.querySelector('#md-app [data-hw-mount]');
     const e = box ? M.exps.find((x) => x.n === Number(box.getAttribute('data-hw-mount'))) : null;
     const m = modOf();
@@ -1255,6 +1365,7 @@
   function toTop() { try { window.scrollTo(0, 0); document.body.scrollTop = 0; } catch (_) {} }
   function route(fromTap) {
     view = parse(location.hash);
+    if (!(view.kind === 'item' && Z3D.ctl && Z3D.ctl.id === view.id)) zoco3dLeave(view.kind === 'item' ? view.id : '');   // (🧊 left the character's page)
     if (!H || !H.state().code) return;
     if (view.kind === 'perfil') {
       stopCards();
@@ -1433,5 +1544,5 @@
     }
     setHash(where);
   }
-  window.DralyHome = { render, changed, reset, next, go, model, mapTareas, parse, htmlFor, DESAFIO_LIVE, get view() { return view; } };
+  window.DralyHome = { render, changed, reset, next, go, model, mapTareas, parse, htmlFor, want3d, DESAFIO_LIVE, get view() { return view; } };
 })();

@@ -139,6 +139,18 @@
     "panda-3d": {"still":"/assets/zoco/anim/panda-3d-still.webp?v=19ef5195","full":"/assets/zoco/anim/panda-3d.webp?v=0afe3b5f","lite":"/assets/zoco/anim/panda-3d-lite.webp?v=b9e6306d","ar":0.58}
   };
   // </zoco-art>
+  // 🧊 2026-10-20 · El Zoco in real 3D (his words: "it looked like a display in 3D… each character… you can touch it and
+  // move it… Like if you were interacting in the 3D world"; his pick «Real 3D, try 3 first»): the characters whose page
+  // (#zoco-<id>) puts HIS original 3D model on the pedestal (js/zoco3d/stage.js: turn it with a finger, zoom, tap → it
+  // hops). The models come from his files through tools/blender/zoco_web_glb.py (root repo, assets-library/zoco-3d/) and
+  // go online only with his «sube»: a model missing on the server leaves the picture and its loop (one quick 404).
+  //   glb   its file (?v= = the file's own hash: a new model is a new name for Cloudflare and the phones)
+  //   coat  the clear coat of the glossy look (0…1) · rough  its roughness range [lo, hi] · yaw  how it faces at rest
+  const ZOCO_3D = {
+    'dralingo-sheikh': { glb: '/assets/zoco/3d/dralingo-sheikh.glb?v=39a89dc5', coat: 0.25, rough: [0.3, 0.5] },
+    'hamdan-3d': { glb: '/assets/zoco/3d/hamdan-3d.glb?v=70348a31', coat: 0.1, rough: [0.38, 0.65] },
+    'panda-3d': { glb: '/assets/zoco/3d/panda-3d.glb?v=4d1d9777', coat: 0.15, rough: [0.38, 0.65] },
+  };
   // a kid who had picked a brand avatar now shows one of the saga (server migrates the record once, pages map too)
   const LEGACY_AVATARS = {
     gojo: 'adric', yugi: 'adrian', yuji: 'hamdan', shelly: 'aileen', fnaf: 'camel', dandy: 'oryx', hanzo: 'hamdan',
@@ -166,7 +178,7 @@
     return { ar, hx, fx: fx == null ? hx : clamp(fx, 0, 1) };
   };
   return {
-    ANIMS, BURSTS, AVATARS, LEGACY_AVATARS, ZOCO, ZOCO_ART, ZOCO_ANIM,
+    ANIMS, BURSTS, AVATARS, LEGACY_AVATARS, ZOCO, ZOCO_ART, ZOCO_ANIM, ZOCO_3D,
     anim: (id) => own(ANIM, id),
     byEmoji: (e) => AVATARS.find((a) => a.emoji === e) || null,
     burst: (id) => own(BURST, id),
@@ -191,6 +203,30 @@
     },
     // 🆕 2026-10-20 how a skin's full-body picture (skinBody) stands: { ar, hx, fx }; null for the rest
     skinLook: (id) => { const z = zoco(id); return z ? lookOf(z, zArt(z.id)) : null; },
+    // 🧊 2026-10-20 a skin's real 3D model (ZOCO_3D): { id, glb, coat, rough: [lo, hi], yaw } or null (only a skin listed
+    // there, with a file of /assets/zoco/3d/; a hand-edited map never yields a value out of range)
+    skin3d: (id) => {
+      const z = zoco(id);
+      const m = z ? own(ZOCO_3D, z.id) : null;
+      if (!m || typeof m.glb !== 'string' || !/^\/assets\/zoco\/3d\/[a-z0-9-]+\.glb(\?v=[A-Za-z0-9_-]{1,40})?$/.test(m.glb)) return null;
+      const r = Array.isArray(m.rough) ? m.rough : [];
+      const lo = clamp(num(r[0]) == null ? 0.3 : num(r[0]), 0, 1);
+      const hi = clamp(num(r[1]) == null ? Math.max(lo, 0.6) : num(r[1]), lo, 1);
+      return { id: z.id, glb: m.glb, coat: clamp(num(m.coat) == null ? 0.2 : num(m.coat), 0, 1), rough: [lo, hi],
+        yaw: clamp(num(m.yaw) || 0, -Math.PI, Math.PI) };
+    },
+    // 🧊 why a phone does NOT get the 3D character (null = it may try; the page keeps the picture and its loop otherwise):
+    // env = { reduced (prefers-reduced-motion), saveData, webgl (the phone can draw 3D), memory (navigator.deviceMemory,
+    // GB), failed (this model already failed on this page) }
+    skin3dBlock(env) {
+      const e = env || {};
+      if (e.reduced) return 'reduced';
+      if (e.saveData) return 'save-data';
+      if (!e.webgl) return 'webgl';
+      if (e.memory != null && Number(e.memory) > 0 && Number(e.memory) < 2) return 'memory';
+      if (e.failed) return 'failed';
+      return null;
+    },
     // a character's name for a «Vas a jugar como …» line: a skin's own name, a saga avatar's name (no emoji in front)
     labelOf(id) {
       const z = zoco(id);

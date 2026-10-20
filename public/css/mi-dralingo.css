@@ -848,6 +848,37 @@ body.md-in { height: auto; min-height: 100vh; min-height: 100dvh; overflow: visi
   #screen-list.md .zc-pod .zc-sheen, #screen-list.md .zc-pod .zc-ped-top::after { display: none; }
   #screen-list.md .zc-pod.is-new .zc-fig-img { animation: zc-fade .2s ease-out both !important; }
 }
+/* ── 🧊 the character in real 3D (2026-10-20, js/zoco3d/stage.js): a transparent canvas over the whole stage, the CSS
+   pedestal under it. Its picture shows until the first 3D frame (.is-3d), then fades out under the model. A vertical
+   swipe still scrolls the page (pan-y); a sideways drag turns the character. */
+#screen-list.md .zc-3d {
+  position: absolute; inset: 0; width: 100%; height: 100%; display: block; opacity: 0; touch-action: pan-y; cursor: grab;
+  transition: opacity .45s var(--md-ease); -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none;
+}
+#screen-list.md .zc-3d:active { cursor: grabbing; }
+#screen-list.md .zc-3d:focus-visible { outline: 3px solid var(--md-oro-claro); outline-offset: -8px; }
+#screen-list.md .zc-stage.is-3d .zc-3d { opacity: 1; }
+#screen-list.md .zc-stage.has-3d .zc-fig, #screen-list.md .zc-stage.has-3d .zc-ped-shadow { transition: opacity .35s var(--md-ease); }
+#screen-list.md .zc-stage.is-3d .zc-fig, #screen-list.md .zc-stage.is-3d .zc-ped-shadow { opacity: 0; }
+#screen-list.md .zc-stage.is-3d .zc-pod { transition: none; }
+/* (the picture hidden under the model stops its own idle: no animation running where nobody sees it) */
+#screen-list.md .zc-stage.is-3d .zc-pod :is(.zc-fig, .zc-fig-in, .zc-ped-shadow, .zc-sheen > i) { animation: none; }
+/* the hint that teaches by doing: a hand swiping (or tapping) and four words, under the pedestal, never on a button */
+#screen-list.md .zc-3d-hint {
+  position: absolute; left: 50%; bottom: 34px; z-index: 1; display: flex; align-items: center; gap: 8px; padding: 6px 16px 6px 8px;
+  border-radius: 999px; background: rgba(22, 14, 52, .8); box-shadow: 0 4px 14px rgba(10, 6, 30, .35), inset 0 0 0 2px rgba(243, 218, 148, .55);
+  color: #fff7e2; font: 800 16px/1.15 var(--md-body); white-space: nowrap; pointer-events: none;
+  opacity: 0; transform: translate(-50%, 8px); transition: opacity .3s var(--md-ease), transform .3s var(--md-ease);
+}
+#screen-list.md .zc-3d-hint.is-on { opacity: 1; transform: translate(-50%, 0); }
+#screen-list.md .zc-3d-hand { display: flex; width: 40px; height: 40px; }
+#screen-list.md .zc-3d-hint.is-spin.is-on .zc-3d-hand { animation: zc-swipe 1.5s cubic-bezier(.45, 0, .25, 1) infinite; }
+#screen-list.md .zc-3d-hint.is-tap.is-on .zc-3d-hand { animation: zc-tap 1.1s cubic-bezier(.45, 0, .25, 1) infinite; }
+@keyframes zc-swipe { 0%, 100% { transform: translateX(-7px) rotate(-8deg); } 50% { transform: translateX(9px) rotate(8deg); } }
+@keyframes zc-tap { 0%, 100% { transform: none; } 40% { transform: translateY(3px) scale(.86); } 60% { transform: translateY(1px) scale(.92); } }
+@media (min-width: 700px) {
+  #screen-list.md .zc-3d-hint { bottom: 36px; font-size: 17px; }
+}
 /* the spotlight */
 #screen-list.md .zc-hero {
   position: relative; display: block; height: 300px; border-radius: 26px; overflow: hidden; background: #1a1240; box-shadow: 0 6px 0 var(--md-oro-line); text-decoration: none;

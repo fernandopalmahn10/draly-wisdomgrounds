@@ -311,3 +311,79 @@ line, an automatic purse of 2026-10-19 merging at 25, the two merges of v1 words
 laundering cases with v2 prices, `limits` and the v1-unit `caps`, and on the server: all 20 listed with pictures and no
 word of why they were held, «Te faltan 745» for a kid with 55, a seeded v1 purse keeping its 300 coins, Sheikh and
 welcome, the four once held bought and equipped.
+
+## In real 3D · 2026-10-20 (a try of 3 characters, local only until his «sube»)
+His words: "Is it too much to ask that it looked like a display in 3D in which when you access the marketplace, each
+character… you can touch it and move it. I always loved that. Like if you were interacting in the 3D world"; his pick
+«Real 3D, try 3 first»: his own 3D models, shrunk for the web; kids spin them with a finger, pinch to zoom, tap and they
+hop. Three first (Dralingo Sheikh, Hamdan con kandura, the panda); if he loves it, the other 17 follow.
+
+### The models (root repo `tools/blender/zoco_web_glb.py` + `zoco_web_run.sh`)
+- Made from HIS files in `ONLY MAIN CHARACTERS/` with the roster renders' own prep (`roster_config.json`: the same file,
+  the same pieces left out (truck, «FRESH OIL» sign, wing letters), the same pose), then: pose baked (no skeleton), one
+  UV map per piece (Hamdan's hands came out black when two maps with different names were joined), points that sit on
+  each other merged (decimating without it tore the Sheikh's kandura into shards), decimated per piece (small pieces
+  keep ≥ 400-500 triangles: eyes, teeth), joined, look-alike materials merged (the Sheikh 43 → 19), one-colour pictures
+  turned into plain colours, specular / roughness pictures dropped (the Sheikh's cane keeps its gold: its specular
+  colour painted into its colour picture), pictures ≤ 1024 px as WebP (Hamdan's face and the panda's body 2048), Draco.
+  Feet on 0, 1 unit tall, facing +Z, the turning axis through the body (the middle of 12-40 % of the height, not a cane).
+- Built 2026-10-20 (`assets-library/zoco-3d/2026-10-20/`, local, with `contact-sheet.jpg` and a `.json` per model):
+  Dralingo Sheikh 51 968 triangles · 406 KB · 19 materials; Hamdan 45 996 · 512 KB · 9; Panda 22 864 · 112 KB · 2.
+  Checked: no closed piece inside out (`check` mode), side by side with the Zoco picture and the render (front, 45°,
+  side, back). The Sheikh model sits (the render's pose) and has no mustache (the model has none; his glossy picture does).
+- **They go online only with his «sube»**: `public/assets/zoco/3d/` is git-ignored; `scripts/test-zoco3d.js` fails if one
+  is ever tracked. Deploying the code without them is safe: each 3D page asks once, gets a 404, keeps its picture.
+
+### The page (js/zoco3d/stage.js, js/mi-dralingo.js `zoco3d` / `want3d`, css/mi-dralingo.css «the character in real 3D»)
+- Only the characters of saga.js `ZOCO_3D` (`skin3d(id)`: the file `/assets/zoco/3d/<id>.glb?v=<sha1 8>`, the clear coat,
+  the roughness range), only on a character's page (`#zoco-<id>`), locked ones too (the window into what you can win).
+- The still picture shows first on its pedestal (no ~1 MB loop downloaded for a page that will show 3D); the PAGE fetches
+  the model first (a missing one costs one quick 404, never three.js), then three.js 0.170 + the Draco decoder from
+  jsDelivr (the import map in homework.html, the same as the golden Dralingo's on /audios); the first frame fades the
+  picture out under the model. Every load has its own ticket (`Z3D.seq`): a load the kid walked away from stops at its
+  next step (before the graphics work) and never touches the next character's; one stuck for 15 s gives the picture
+  and its loop back.
+- A transparent canvas over the stage; the CSS pedestal stays. The camera looks down at the pedestal top's angle
+  (asin 0.2 ≈ 11.5°) and the feet stand on its centre (setViewOffset); the model is as tall as the picture was, never
+  wider than ~42 % of the stage from its axis, its head under «Volver al Zoco» and the purse.
+- Drag: a full turn across ~1.1 stage widths, inertia, a little tilt (−0.12…0.24 rad). `touch-action: pan-y`: a vertical
+  swipe still scrolls the page. Pinch or the wheel: zoom 0.85-2.2 towards the face, the CSS pedestal zooms with it (the
+  same 2D zoom); at a limit the wheel scrolls the page (never trapped). Tap ON the character (a ray): a hop (crouch,
+  jump with a full spin, land squash, settle, 0.82 s; its shadow shrinks in the air). Keys: ← → turn, ↑ ↓ tilt, + −
+  zoom, Enter / Space hop. Untouched 2.6 s: back to facing the kid, looking around slowly (±0.42 rad), breathing.
+- Teach by doing: a first visit pops it in and turns it once by itself with a hand «Gíralo con el dedo» («Arrástralo
+  para girarlo» with a mouse) until the kid turns it (`draly_zoco3d_spun`); then «¡Tócalo!» until the first hop
+  (`draly_zoco3d_tap`). English in hw-i18n.
+- Glossy toy look: MeshPhysicalMaterial (clear coat 0.1-0.25, roughness clamped), RoomEnvironment, a warm key, a cool
+  fill, a warm rim, neutral tone mapping; a soft round shadow on the pedestal (a picture, no shadow maps).
+- Cheap phones: at most ~1.5 Mpx drawn a frame (pixel ratio ≤ 2), ~30 frames a second when nobody touches it, ~12 after
+  25 s, none after 90 s (a touch, a key, the pointer over it or coming back wakes it), nothing drawn while the tab is
+  hidden or the stage is off screen, the picture under it stops its own idle, the Draco workers closed once the model
+  is read, one model at a time carried over a redraw of the page (no reload), everything given back (listeners,
+  observers, the scene, the WebGL context) when the kid leaves the page or when something fails half way.
+- Never tries (saga.js `skin3dBlock`; the graphics probe last): reduced motion, Save-Data, < 2 GB of memory, no hardware
+  WebGL 2 (three.js 0.170 needs WebGL 2; a software one would only heat the phone; `draly_zoco3d_sw = 1` allows it for
+  test browsers), a model that failed on this page (404, 15 s without it, a shader the GPU cannot build): the picture and
+  its idle loop, as before. A first lost context (the phone took its graphics back while WhatsApp was open) tries again
+  once the page is visible; a second keeps the picture.
+
+### Checked (2026-10-20, a throw-away local server with a made-up kid: `.claude/launch.json` «zoco3d-try»)
+- 390×844, 1600×900, 1366×657, 360×640: the three in 3D, no browser errors, nothing wider than the window.
+- Driven with a mouse and synthetic fingers (32 checks): the demo turn and the hand, a drag turning it (+2.1 rad,
+  inertia, tilt), «¡Tócalo!», a tap → hop, a tap on the sky → nothing, the wheel and a pinch zooming within 0.85-2.2
+  with the pedestal, the wheel scrolling a taller page at the zoom limit, keys, a redraw keeping the same model, «Volver
+  al Zoco» disposing it, another character opening in ~1.3 s, a model 404 and reduced motion keeping the picture and its
+  loop; after the fresh-eyes review: leaving mid-load for another character (one canvas, the right one, the first one
+  not marked failed), a first lost context coming back by itself and a second keeping the picture, a model stuck 19 s
+  giving the loop back at 15 s, asleep after a long while and awake under the pointer.
+- Measured locally: first 3D frame ~0.5 s after the page opens (warm cache), ~1.3 s the first time (three.js from the
+  CDN); with the CPU 4× slower and a 9 Mbit/s 4G-like line, cold: ~4 s from the page's model request to the first
+  frame (this test browser draws without a graphics card), ~30 frames a second idle; first visit ~0.8 MB (three.js
+  257 KB, loaders 37 KB, Draco 70 KB, the model 112-512 KB). JS heap ~13-17 MB; 20 draw calls / 52 k triangles for the
+  Sheikh.
+- Real wheel scroll check on the four character pages (3 in 3D + one picture) × 390×844 / 360×640 / 1366×657 / 1600×900,
+  wheel over the character and over the sheet: 0 traps.
+- `node scripts/test-zoco3d.js` (no server, 88 checks): the manifest, who never tries, the models off git and (when on
+  disk) light and hashed, the module's rules (import map only, ~1.5 Mpx, pause and sleep, give-back on leave and on a
+  failure half way, Draco workers closed, hardware WebGL 2, shader and context checks, the wheel, a trackpad pinch,
+  pan-y, the load ticket, model before three.js, the 15 s watchdog, its words in English).
