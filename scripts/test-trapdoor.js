@@ -392,6 +392,16 @@ function at(m, k, slice, r) { const d = m.kids[k]; const [x, y] = A.pointAt(A.sl
   ok(T.addRounds(m) && m.rounds === R.ROUNDS_MAX, 'never past 15 rounds');
   m.final = true;
   ok(!T.addRounds(m), 'not during the Final Round');
+  // «−30 s» = 2 rondas menos (2026-10-20)
+  const c = game(5).m;
+  c.rounds = 7; c.r = 1;
+  ok(T.cutRounds(c) && c.rounds === 5, '«−30 s» = 2 rondas menos');
+  c.r = 4;
+  ok(!T.cutRounds(c) && c.rounds === 5, 'never the round being played nor the next one (round 4 of 5)');
+  c.r = 1; c.rounds = 3;
+  ok(T.cutRounds(c) && c.rounds === 2, 'a match keeps 2 rounds at least');
+  c.final = true; c.rounds = 9;
+  ok(!T.cutRounds(c), 'not during the Final Round');
   // skip
   const g2 = game(5);
   T.addKid(g2.m, 1, 'red', g2.now);

@@ -100,6 +100,9 @@
   $('balance-btn').addEventListener('click', () => socket.emit('host:auto-balance', { pin }));
   $('start-btn').addEventListener('click', () => socket.emit('host:start', { pin }));
   $('add-time-btn').addEventListener('click', () => { socket.emit('host:add-time', { pin, seconds: 30 }); banner('+30 segundos ⏱'); });
+  $('cut-time-btn').addEventListener('click', () => socket.emit('host:add-time', { pin, seconds: -30 }));
+  socket.on('host:time-cut', (d) => { if (d && d.add) banner(`${-d.add} segundos menos ⏱`); });
+  socket.on('host:time-refused', () => banner('Ya casi termina: no se puede quitar más tiempo'));
   $('end-now-btn').addEventListener('click', () => { if (confirm('¿Terminar la ronda ahora?')) socket.emit('host:end-now', { pin }); });
   $('play-again-btn').addEventListener('click', () => { if (ceremony) { ceremony.stop(); ceremony = null; } hurryOff(); socket.emit('host:reset', { pin }); showScreen('lobby'); playMusic('music-lobby', 0.35); });
   socket.on('host:start-error', (e) => alert(e && e.message ? e.message : 'No se pudo empezar.'));

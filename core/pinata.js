@@ -10,6 +10,7 @@
 // gap), the last 30 s count double, and the end is a Mario Party ceremony with bonus stars (finish / stars).
 // Spec: docs/specs/pinata-tigre-v2.md. Player fields carry a `pn` prefix; the game object is `m` (server: g.pn).
 'use strict';
+const Party = require('./party');   // clockShift: the teacher's «−30 s»
 
 const Mochi = require('./mochi');      // shared team helpers: teamSizes, weights, pickTeam, mulberry32
 
@@ -132,13 +133,18 @@ function startPlay(m, now) {
   m.phaseUntil = m.endsAt;
 }
 // the teacher's «+30 s»: the end moves; the frenzy keeps its start when it is already on (more double time)
-function addTime(m, ms) {
+// «−30 s» (ms < 0, his ask 2026-10-20): `now` = this game's clock (its pause moment while paused); the cut stops 10 s
+// before the end (Party.clockShift) and leaves the round's length alone, and an end inside the last 30 s starts the
+// frenzy on the next tick, as if the clock got there. Returns the change that applied (ms), false when nothing changed.
+function addTime(m, ms, now) {
   if (m.phase !== 'play') return false;
+  ms = Party.clockShift(m.endsAt, ms, now == null ? Date.now() : now);
+  if (!ms) return false;
   m.endsAt += ms;
   m.phaseUntil = m.endsAt;
   if (!m.frenzy) m.frenzyAt = m.endsAt - frenzyMs(m.duration);
-  m.duration += ms / 1000;
-  return true;
+  if (ms > 0) m.duration += ms / 1000;
+  return ms;
 }
 
 // ---------- answers and the swing ----------

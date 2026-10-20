@@ -122,6 +122,7 @@
     setTimeout(() => { b.disabled = false; }, 800);
   });
   $('more-btn').addEventListener('click', () => socket.emit('host:hc-more', { pin }));
+  $('less-btn').addEventListener('click', () => socket.emit('host:hc-less', { pin }));
   const endNow = () => { if (confirm('¿Terminar el concurso ahora?')) socket.emit('host:end-now', { pin }); };
   $('end-now-btn').addEventListener('click', endNow);
   $('paused-end-btn').addEventListener('click', endNow);     // the pause card covers the bar: Terminar is there too
@@ -420,6 +421,8 @@
     if (!game) return;
     $('round-label').textContent = game.round ? `Ronda ${game.round}` : '¡Listos!';
     $('round-of').textContent = `de ${game.rounds}`;
+    // «−5 rondas» never takes the round being played nor the next one (server host:hc-less)
+    $('less-btn').disabled = game.phase === 'final' || game.rounds <= Math.max((game.round || 0) + 1, 2);
   }
   function paintTop(top) {
     lastTop = top || lastTop;

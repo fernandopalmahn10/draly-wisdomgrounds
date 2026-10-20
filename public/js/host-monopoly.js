@@ -172,6 +172,7 @@
   $('pause-btn').addEventListener('click', () => socket.emit('host:pause', { pin, paused: !paused }));
   $('resume-btn').addEventListener('click', () => socket.emit('host:pause', { pin, paused: false }));
   $('more-btn').addEventListener('click', () => socket.emit('host:add-time', { pin, seconds: 30 }));
+  $('less-btn').addEventListener('click', () => socket.emit('host:add-time', { pin, seconds: -30 }));
   $('skip-btn').addEventListener('click', () => {
     const b = $('skip-btn');
     if (b.disabled) return;
@@ -421,6 +422,7 @@
       const left = g.paused ? g.pausedLeft : Math.max(0, g.endAt - performance.now());
       const s = Math.max(0, Math.ceil(left / 1000));
       $('clock').textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+      if ($('less-btn')) $('less-btn').disabled = g.phase !== 'play' || left <= 11000;   // «−30 s» stops 10 s before the end (core/party.js clockShift)
       const c10 = $('count10');
       if (g.phase === 'play' && !g.paused && s <= 10 && s > 0) {
         c10.classList.remove('hidden');
@@ -537,7 +539,7 @@
     if (!g) return;
     g.endAt = performance.now() + (d.endsMs || 0);
     if (g.paused) g.pausedLeft = d.endsMs || g.pausedLeft;
-    band('time', [bold(`+${d.add || 30} segundos más`)], null, 1600);
+    band('time', [bold(d.add < 0 ? `${-d.add} segundos menos` : `+${d.add || 30} segundos más`)], null, 1600);
   });
   function setPaused(v) {
     paused = !!v;

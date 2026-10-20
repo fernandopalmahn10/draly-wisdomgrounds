@@ -1097,7 +1097,7 @@
       if (!on || !g) return;
       g.endAt = performance.now() + (d.endsMs || 0);
       if (g.paused) g.pausedLeft = d.endsMs || g.pausedLeft;
-      banner('lead', [bold(`+${d.add || 30} segundos más`)], null, 1600);
+      banner('lead', [bold(d.add < 0 ? `${-d.add} segundos menos` : `+${d.add || 30} segundos más`)], null, 1600);
     });
     s.on('mn:pause', (d) => {
       if (!on || !g) return;

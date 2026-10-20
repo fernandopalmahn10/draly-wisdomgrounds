@@ -264,7 +264,7 @@
       if (!d || d.id !== matchId) return;
       if (rd) rd.rounds = d.rounds;
       if (scene && scene.rd) scene.rd.rounds = d.rounds;
-      if (!d.refused) moment({ kind: 'more', title: '¡Más rondas!', sub: `Ahora son ${d.rounds}` });
+      if (!d.refused) moment({ kind: 'more', title: d.cut ? '¡Menos rondas!' : '¡Más rondas!', sub: `Ahora son ${d.rounds}` });
       hud(true);
     });
     s.on('td:captains', (c) => { captains = c; });

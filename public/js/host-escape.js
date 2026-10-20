@@ -188,6 +188,9 @@
   $('duration-slider').addEventListener('change', (e) => socket.emit('host:set-duration', { pin, duration: +e.target.value }));
   $('start-btn').addEventListener('click', () => { $('start-btn').disabled = true; socket.emit('host:start', { pin }); });
   $('add-time-btn').addEventListener('click', () => { socket.emit('host:add-time', { pin, seconds: 30 }); banner('+30 segundos ⏱'); });
+  $('cut-time-btn').addEventListener('click', () => socket.emit('host:add-time', { pin, seconds: -30 }));
+  socket.on('host:time-cut', (d) => { if (d && d.add) banner(`${-d.add} segundos menos ⏱`); });
+  socket.on('host:time-refused', () => banner('Ya casi termina: no se puede quitar más tiempo'));
   $('end-now-btn').addEventListener('click', () => { if (confirm('¿Terminar la ronda ahora?')) socket.emit('host:end-now', { pin }); });
   $('pause-btn').addEventListener('click', () => socket.emit('host:pause', { pin, paused: !paused }));
   $('skip-btn').addEventListener('click', () => socket.emit('host:es-skip', { pin }));

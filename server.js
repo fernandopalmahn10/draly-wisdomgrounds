@@ -10545,6 +10545,8 @@ function finAgain(g, payload) { return payload && Object.assign({}, payload, { a
 function finFinalLeft(g) { return g && g.finalizing ? Math.max(0, g.finalizing.until - Date.now()) : 0; }
 // the teacher paused one of the four games (its clock stands still)
 function finPaused(g) { return !!((g.snow && g.snow.paused) || (g.escape && g.escape.paused) || (g.kingdoms && g.kingdoms.paused) || (g.paint && g.paint.paused) || (g.td && g.td.paused)); }
+// the moment a paused game stopped (its g.endsAt moves on «Seguir»), null while it runs: the clock of a «−30 s»
+function finPausedAt(g) { const s = [g.snow, g.escape, g.kingdoms, g.paint, g.halcon].find((x) => x && x.paused); return s ? s.pausedAt : null; }
 // the last 30 s and «⏸ Pausa» / «+30 s»: the ×2 chips stop with the clock (`hold`) and come back with the new seconds
 // (`again`: no second banner)
 function finFrenzyAgain(pin, g, paused) {
@@ -12477,6 +12479,28 @@ io.on('connection', (socket) => {
       io.to(pin).emit('hc:rounds', { id: h.id, round: h.round, rounds: h.rounds });
     } catch (e) { console.error('[host:hc-more]', e); }
   });
+  // Teacher, mid-game: «−5 rondas» (his ask 2026-10-20, every game can take time away too): never the round being
+  // played nor the next one (that one becomes the last), so the contest never ends by itself.
+  socket.on('host:hc-less', (data) => {
+    try {
+      const pin = data && data.pin;
+      const g = games[pin];
+      if (!g || g.hostId !== socket.id || g.gameType !== 'halcon' || !g.halcon || g.state !== 'active') return;
+      const h = g.halcon;
+      const floor = Math.max(h.round + 1, 2);
+      if (h.phase === 'final' || h.phase === 'done' || h.rounds <= floor) return;
+      const before = h.rounds;
+      h.rounds = Math.max(floor, h.rounds - Halcon.R.MORE);
+      const cut = (before - h.rounds) * Halcon.R.CAP_PER_ROUND_S * 1000;
+      g.endsAt -= cut;
+      g.duration -= cut / 1000;
+      if (!h.paused) {
+        if (g.endTimer) clearTimeout(g.endTimer);
+        g.endTimer = setTimeout(() => { if (games[pin] && games[pin].state === 'active') endGame(pin); }, Math.max(0, g.endsAt - Date.now()));
+      }
+      io.to(pin).emit('hc:rounds', { id: h.id, round: h.round, rounds: h.rounds, cut: true });
+    } catch (e) { console.error('[host:hc-less]', e); }
+  });
   // Teacher «⏭ Saltar».
   socket.on('host:hc-skip', (data) => {
     try {
@@ -12497,29 +12521,37 @@ io.on('connection', (socket) => {
     } catch (e) { console.error('[player:kd-plant]', e); }
   });
 
-  // Teacher "+30 s" (any timed game): pushes the end of the round back.
+  // Teacher «+30 s» / «−30 s» (any timed game; seconds < 0 takes time away, his ask 2026-10-20: every pin game, today's
+  // and future ones): moves the end of the round. A cut never ends a round by itself (Party.clockShift stops it 10 s
+  // before the end; nothing left to take = nothing happens) and leaves the round's length alone: the next round gets
+  // the teacher's pick, and an end inside the last 30 s starts that moment as if the clock got there.
   socket.on('host:add-time', (data) => {
     const { pin, seconds } = data || {};
     const g = games[pin];
     if (!g || g.hostId !== socket.id || g.state !== 'active' || g.finalizing) return;
-    const add = Math.max(10, Math.min(120, Number(seconds) || 30)) * 1000;
+    const want = Number(seconds) || 30;
+    const add = (want < 0 ? -1 : 1) * Math.max(10, Math.min(120, Math.abs(want))) * 1000;
+    // the games whose room tick owns the clock: the change that applied, in whole seconds, for the screens' banner
+    const said = (ms) => Math.round(ms / 1000);
     // Dàfùwēng · Monopolio: its room tick owns the clock; the teacher's pick (g.duration) stays for the next round
     if (g.gameType === 'monopoly' && g.mn) {
-      if (!Mono.addTime(g.mn, add)) return;
-      g.endsAt = g.mn.endsAt;
       const clock = mnClock(g.mn);
-      io.to(pin).emit('mn:time', { id: g.mn.id, endsMs: Math.max(0, g.mn.endsAt - clock), frenzy: g.mn.frenzy, frenzyMs: Math.max(0, g.mn.frenzyAt - clock), add: add / 1000 });
+      const d = Mono.addTime(g.mn, add, clock);
+      if (!d) return;
+      g.endsAt = g.mn.endsAt;
+      io.to(pin).emit('mn:time', { id: g.mn.id, endsMs: Math.max(0, g.mn.endsAt - clock), frenzy: g.mn.frenzy, frenzyMs: Math.max(0, g.mn.frenzyAt - clock), add: said(d) });
       g._lastBcast = 0;
       broadcast(pin);
       return;
     }
-    // Vuelo del Dragón: the same (and a sprint that no longer fitted may come back)
+    // Vuelo del Dragón: the same (and after a «+30 s» a sprint that no longer fitted may come back)
     if (g.gameType === 'dragon-eye' && g.dr) {
-      if (!Dragon.addTime(g.dr, add)) return;
-      g.endsAt = g.dr.endsAt;
       const clock = drClock(g.dr);
-      Dragon.reopenSprints(g.dr, clock);
-      io.to(pin).emit('dr:time', { id: g.dr.id, endsMs: Math.max(0, g.dr.endsAt - clock), frenzy: g.dr.frenzy, frenzyMs: Math.max(0, g.dr.frenzyAt - clock), add: add / 1000 });
+      const d = Dragon.addTime(g.dr, add, clock);
+      if (!d) return;
+      g.endsAt = g.dr.endsAt;
+      if (d > 0) Dragon.reopenSprints(g.dr, clock);
+      io.to(pin).emit('dr:time', { id: g.dr.id, endsMs: Math.max(0, g.dr.endsAt - clock), frenzy: g.dr.frenzy, frenzyMs: Math.max(0, g.dr.frenzyAt - clock), add: said(d) });
       g._lastBcast = 0;
       broadcast(pin);
       return;
@@ -12527,46 +12559,62 @@ io.on('connection', (socket) => {
     // Mochi Mash: the room's tick owns the clock (no end timer); g.duration (the teacher's pick) is not touched, so the
     // next round starts with the picked time again
     if (g.gameType === 'mochi-mash' && g.mm) {
-      if (!Mochi.addTime(g.mm, add)) return;
-      g.endsAt = g.mm.endsAt;
       const clock = g.mm.paused ? g.mm.pausedAt : Date.now();
-      io.to(pin).emit('mm:time', { id: g.mm.id, endsMs: Math.max(0, g.mm.endsAt - clock), frenzy: g.mm.frenzy, frenzyMs: Math.max(0, g.mm.frenzyAt - clock), add: add / 1000 });
+      const d = Mochi.addTime(g.mm, add, clock);
+      if (!d) return;
+      g.endsAt = g.mm.endsAt;
+      io.to(pin).emit('mm:time', { id: g.mm.id, endsMs: Math.max(0, g.mm.endsAt - clock), frenzy: g.mm.frenzy, frenzyMs: Math.max(0, g.mm.frenzyAt - clock), add: said(d) });
       g._lastBcast = 0;
       broadcast(pin);
       return;
     }
     if (g.gameType === 'pinata' && g.pn) {     // the same for Piñata Tigre
-      if (!Pinata.addTime(g.pn, add)) return;
-      g.endsAt = g.pn.endsAt;
       const clock = g.pn.paused ? g.pn.pausedAt : Date.now();
-      io.to(pin).emit('pn:time', { id: g.pn.id, endsMs: Math.max(0, g.pn.endsAt - clock), frenzy: g.pn.frenzy, frenzyMs: Math.max(0, g.pn.frenzyAt - clock), add: add / 1000 });
+      const d = Pinata.addTime(g.pn, add, clock);
+      if (!d) return;
+      g.endsAt = g.pn.endsAt;
+      io.to(pin).emit('pn:time', { id: g.pn.id, endsMs: Math.max(0, g.pn.endsAt - clock), frenzy: g.pn.frenzy, frenzyMs: Math.max(0, g.pn.frenzyAt - clock), add: said(d) });
       g._lastBcast = 0;
       broadcast(pin);
       return;
     }
-    // Las Trampillas counts in rounds: «+30 s» = 2 rondas más (up to 15; not once the Final Round is on)
+    // Las Trampillas counts in rounds: «+30 s» = 2 rondas más (up to 15), «−30 s» = 2 rondas menos (never the round
+    // being played nor the next one); neither once the Final Round is on
     if (g.gameType === 'trapdoor' && g.td) {
-      if (!Trap.addRounds(g.td, Trap.R.MORE)) { io.to(socket.id).emit('td:rounds', { id: g.td.id, rounds: g.td.rounds, r: g.td.r, refused: true, why: g.td.rounds >= Trap.R.ROUNDS_MAX ? 'max' : 'final' }); return; }
+      const cut = add < 0;
+      if (!(cut ? Trap.cutRounds(g.td, Trap.R.MORE) : Trap.addRounds(g.td, Trap.R.MORE))) {
+        const fin = g.td.final || g.td.phase === 'final' || g.td.phase === 'done';
+        io.to(socket.id).emit('td:rounds', { id: g.td.id, rounds: g.td.rounds, r: g.td.r, refused: true, cut, why: fin ? 'final' : cut ? 'min' : 'max' });
+        return;
+      }
       const now = Date.now();
       g.endsAt = Trap.endsAt(g.td, now);
       g.duration = tdCapS(g.td.rounds);
-      io.to(pin).emit('td:rounds', { id: g.td.id, rounds: g.td.rounds, r: g.td.r, endsMs: Math.max(0, g.endsAt - now) });
+      io.to(pin).emit('td:rounds', { id: g.td.id, rounds: g.td.rounds, r: g.td.r, cut, endsMs: Math.max(0, g.endsAt - now) });
       g._lastBcast = 0;
       broadcast(pin);
       return;
     }
     if (g.gameType === 'sixseven' && g.ss) {   // the same for 6-7 Swing
-      if (!Sixseven.addTime(g.ss, add)) return;
-      g.endsAt = g.ss.endsAt;
       const clock = g.ss.paused ? g.ss.pausedAt : Date.now();
-      io.to(pin).emit('ss:time', { id: g.ss.id, endsMs: Math.max(0, g.ss.endsAt - clock), frenzy: g.ss.frenzy, frenzyMs: Math.max(0, g.ss.frenzyAt - clock), add: add / 1000 });
+      const d = Sixseven.addTime(g.ss, add, clock);
+      if (!d) return;
+      g.endsAt = g.ss.endsAt;
+      io.to(pin).emit('ss:time', { id: g.ss.id, endsMs: Math.max(0, g.ss.endsAt - clock), frenzy: g.ss.frenzy, frenzyMs: Math.max(0, g.ss.frenzyAt - clock), add: said(d) });
       g._lastBcast = 0;
       broadcast(pin);
       return;
     }
-    g.endsAt += add;
-    g.duration += add / 1000;
-    g.extraSecs = (g.extraSecs || 0) + add / 1000;   // only for this round: host:reset gives it back (playtest 2026-10-11)
+    // Reinos, Pintores, Nieve, La Gran Fuga: g.endsAt is the clock (paused: it stands at the pause moment and moves on
+    // «Seguir»); a cut leaves g.duration and extraSecs alone (the next round gets the teacher's pick back)
+    const d = Party.clockShift(g.endsAt, add, finPausedAt(g) || Date.now());
+    if (!d) { if (add < 0) io.to(socket.id).emit('host:time-refused', { cut: true }); return; }   // their projector says why
+    if (d < 0) io.to(socket.id).emit('host:time-cut', { add: said(d) });
+    g.endsAt += d;
+    if (d > 0) {
+      g.duration += d / 1000;
+      g.extraSecs = (g.extraSecs || 0) + d / 1000;   // only for this round: host:reset gives it back (playtest 2026-10-11)
+    }
     if (g.endTimer) clearTimeout(g.endTimer);
     g.endTimer = null;
     if (!(g.snow && g.snow.paused) && !(g.escape && g.escape.paused) && !(g.halcon && g.halcon.paused) && !(g.kingdoms && g.kingdoms.paused) && !(g.paint && g.paint.paused)) g.endTimer = setTimeout(() => {   // paused: the resume re-arms it

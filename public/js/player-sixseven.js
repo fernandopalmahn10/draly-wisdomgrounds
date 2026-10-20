@@ -1015,7 +1015,7 @@
       if (!on || !g) return;
       g.endAt = performance.now() + (d.endsMs || 0);
       if (g.paused) g.pausedLeft = d.endsMs || g.pausedLeft;
-      banner('time', `+${d.add || 30} segundos más`, null, 1600);
+      banner('time', d.add < 0 ? `${-d.add} segundos menos` : `+${d.add || 30} segundos más`, null, 1600);
       frenzyChip();
     });
     s.on('ss:pause', (d) => {

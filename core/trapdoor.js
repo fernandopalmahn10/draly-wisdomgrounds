@@ -364,6 +364,14 @@ function addRounds(m, n) {
   m.rounds = Math.min(R.ROUNDS_MAX, m.rounds + (n || R.MORE));
   return m.rounds > before;
 }
+// «−30 s» = 2 rondas menos (his ask 2026-10-20): never the round being played nor the next one (that one becomes the
+// Final Round, announced as always), a match of 2 rounds at least, never once the Final Round is on
+function cutRounds(m, n) {
+  if (m.final || m.phase === 'final' || m.phase === 'done') return false;
+  const before = m.rounds;
+  m.rounds = Math.max(m.r + 1, 2, m.rounds - (n || R.MORE));
+  return m.rounds < before;
+}
 // «⏭ Saltar»: the intro → round 1 now; a tally → the next round now
 function skip(m, now, rand) {
   if (m.paused) return [];
@@ -412,6 +420,6 @@ function finish(rows, totalsIn) {
 
 module.exports = {
   R, A, ROUND_MS, other, clampRounds, timeCapMs, newGame, kidOf, addKid, bounds, msToLock, hubNumber, planJumps,
-  startRound, freeSpot, lock, graceOf, openDoors, closeDoors, tally, advance, stepKids, go, wantQ, tooFast, answer, pause, resume, addRounds,
+  startRound, freeSpot, lock, graceOf, openDoors, closeDoors, tally, advance, stepKids, go, wantQ, tooFast, answer, pause, resume, addRounds, cutRounds,
   skip, endsAt, STARS, finish,
 };

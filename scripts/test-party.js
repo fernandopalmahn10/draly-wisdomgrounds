@@ -144,4 +144,10 @@ const cast = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'cast.js
 });
 ok(/reino: 'cheer', pintado: 'cheer', nieve: 'cheer', animo: 'hello'/.test(cast), 'the ending moods have their sticker poses');
 ok(!/[\u4e00-\u9fff]/.test(fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'party.js'), 'utf8')), 'no hanzi in the ending');
+// the teacher's \u00ab+30 s\u00bb / \u00ab\u221230 s\u00bb (every pin game, 2026-10-20): a cut stops 10 s before the end, never ends a round
+eq(Party.clockShift(100000, 30000, 0), 30000, '\u00ab+30 s\u00bb adds 30 s');
+eq(Party.clockShift(100000, -30000, 0), -30000, '\u00ab\u221230 s\u00bb with 100 s left takes 30 s');
+eq(Party.clockShift(100000, -30000, 75000), -15000, '\u00ab\u221230 s\u00bb with 25 s left stops 10 s before the end');
+eq(Party.clockShift(100000, -30000, 91000), 0, '\u00ab\u221230 s\u00bb with 9 s left: nothing to take');
+eq(Party.clockShift(100000, -30000, 95000), 0, 'never a positive change from a cut');
 console.log(`party: all ${checks} checks passed`);

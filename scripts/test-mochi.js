@@ -246,6 +246,18 @@ function game(players, dur, now) {
   const fz = m.frenzyAt;
   M.addTime(m, 30000);
   eq(m.frenzyAt, fz, 'frenzy already on: it stays on');
+  // «−30 s» (2026-10-20): the end moves back, the round's length stays, never below 10 s left
+  {
+    const pl2 = room(2, 2);
+    const c = game(pl2, 120, 0);
+    M.startPlay(c, 1000);
+    const e0 = c.endsAt, d0 = c.duration;
+    eq(M.addTime(c, -30000, 2000), -30000, '«−30 s» takes 30 s');
+    ok(c.endsAt === e0 - 30000 && c.duration === d0 && c.frenzyAt === c.endsAt - 30000, '…the end and the frenzy move, the length stays');
+    eq(M.addTime(c, -30000, c.endsAt - 15000), -5000, 'with 15 s left it stops 10 s before the end');
+    ok(M.tick(c, c.endsAt - 10000).frenzy, 'inside the last 30 s the frenzy starts on the next tick');
+    eq(M.addTime(c, -30000, c.endsAt - 10000), false, 'nothing left to take: no change');
+  }
   // «¡FINAL!» cuts an open window; the grace still counts a batch in flight
   const q = pl.g0;
   M.answer(m, q, true, 1, 20000);

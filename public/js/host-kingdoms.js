@@ -107,6 +107,9 @@
     socket.emit('host:add-time', { pin, seconds: 30 });
     banner('+30 segundos ⏱');
   });
+  $('cut-time-btn').addEventListener('click', () => socket.emit('host:add-time', { pin, seconds: -30 }));
+  socket.on('host:time-cut', (d) => { if (d && d.add) banner(`${-d.add} segundos menos ⏱`); });
+  socket.on('host:time-refused', () => banner('Ya casi termina: no se puede quitar más tiempo'));
   $('end-now-btn').addEventListener('click', () => {
     if (confirm('¿Terminar la ronda ahora?')) socket.emit('host:end-now', { pin });
   });

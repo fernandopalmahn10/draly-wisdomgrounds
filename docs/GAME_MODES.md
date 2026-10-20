@@ -98,6 +98,15 @@ hover, no aggressive shake).
 display only shows team state and gameplay events. Praise/motivational
 copy belongs on the player's phone.
 
+**The teacher's clock (every game, since 2026-10-20):** «⏸ Pausa», «+30 s» AND «−30 s» side by side, «Terminar».
+Both time buttons send `host:add-time { pin, seconds: ±30 }`; the server applies `core/party.js clockShift` (a cut stops
+10 s before the end and never ends a round; it leaves the round's length alone, so the last 30 s start as if the clock
+got there). A game whose room tick owns the clock gives its rules module `addTime(m, ms, now)` (returns the change that
+applied, false for none) and answers `<prefix>:time { endsMs, frenzy, frenzyMs, add }` (`add` < 0 = «… segundos
+menos» on every screen); the others use `g.endsAt` and the projector hears `host:time-cut` / `host:time-refused`. Games
+that count rounds take rounds away instead (Las Trampillas «−2 rondas», Ojos de Halcón «−5 rondas»), never the round
+being played nor the next one. Grey «−30 s» out where the server would refuse. Test: `scripts/test-clock-live.js`.
+
 ---
 
 ## Status (2026-10-11)

@@ -7,6 +7,7 @@
 // Mario Party ceremony with bonus stars (finish / stars).
 // Spec: docs/specs/mochi-mash-v2.md. Player fields carry an `mm` prefix; the game object is `m` (server: g.mm).
 'use strict';
+const Party = require('./party');   // clockShift: the teacher's «−30 s»
 
 const R = {
   INTRO_MS: 2800,            // «¡Toca rápido!» → «¿Listos?» → «¡YA!» after the 3.5 s run-in countdown
@@ -132,13 +133,18 @@ function startPlay(m, now) {
   m.phaseUntil = m.endsAt;
 }
 // The teacher's «+30 s»: the end moves; the frenzy keeps its start when it is already on (more double-mochi time).
-function addTime(m, ms) {
+// «−30 s» (ms < 0, his ask 2026-10-20): `now` = this game's clock (its pause moment while paused); the cut stops 10 s
+// before the end (Party.clockShift) and leaves the round's length alone, and an end inside the last 30 s starts the
+// frenzy on the next tick, as if the clock got there. Returns the change that applied (ms), false when nothing changed.
+function addTime(m, ms, now) {
   if (m.phase !== 'play') return false;
+  ms = Party.clockShift(m.endsAt, ms, now == null ? Date.now() : now);
+  if (!ms) return false;
   m.endsAt += ms;
   m.phaseUntil = m.endsAt;
   if (!m.frenzy) m.frenzyAt = m.endsAt - frenzyMs(m.duration);
-  m.duration += ms / 1000;
-  return true;
+  if (ms > 0) m.duration += ms / 1000;
+  return ms;
 }
 
 // ---------- answers and the mash window ----------

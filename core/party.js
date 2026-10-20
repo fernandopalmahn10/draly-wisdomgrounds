@@ -14,6 +14,15 @@ const GRACE_MS = 600;
 const FRENZY_MS = 30000;      // the last 30 s of a round of 60 s or more: each game doubles its own thing (server fin:frenzy)
 const MAX_STARS = 4;          // the ceremony stays short: at most four categories (2.1 s each)
 const WHO_MAX = 4;            // at most four winners drawn per star («y N más» for the rest)
+const MIN_LEFT_MS = 10000;    // the teacher's «−30 s» never ends a round by itself: it stops 10 s before the end
+
+// The teacher's «+30 s» / «−30 s» (his ask 2026-10-20, every pin game) on a clock that ends at `endsAt`: the change
+// that really applies. `now` = that game's own clock (its pause moment while paused). A cut stops MIN_LEFT_MS before
+// the end; 0 = nothing left to take.
+function clockShift(endsAt, ms, now) {
+  if (!(ms < 0)) return ms;
+  return Math.min(0, Math.max(endsAt + ms, now + MIN_LEFT_MS) - endsAt);
+}
 
 // defs: [{ id, name, unit, val(row) → number, ok(row) → bool, best: 'max' | 'min', round(value), maxShare }]
 // rows: [{ k, …stats }] → [{ id, name, unit, value, winners: [k…] }]
@@ -55,4 +64,4 @@ function publicStars(st, byK, valueOf) {
   }));
 }
 
-module.exports = { FINAL_MS, GRACE_MS, FRENZY_MS, MAX_STARS, WHO_MAX, stars, ranks, share, lite, publicStars };
+module.exports = { FINAL_MS, GRACE_MS, FRENZY_MS, MAX_STARS, WHO_MAX, MIN_LEFT_MS, clockShift, stars, ranks, share, lite, publicStars };

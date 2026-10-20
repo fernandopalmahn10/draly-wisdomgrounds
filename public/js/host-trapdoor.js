@@ -116,6 +116,7 @@
   $('balance-btn').addEventListener('click', () => socket.emit('host:auto-balance', { pin }));
   $('start-btn').addEventListener('click', () => socket.emit('host:start', { pin }));
   $('add-time-btn').addEventListener('click', () => socket.emit('host:add-time', { pin, seconds: 30 }));
+  $('cut-time-btn').addEventListener('click', () => socket.emit('host:add-time', { pin, seconds: -30 }));
   $('skip-btn').addEventListener('click', () => socket.emit('host:td-skip', { pin }));
   $('end-now-btn').addEventListener('click', () => { if (confirm('¿Terminar la partida ahora?')) socket.emit('host:end-now', { pin }); });
   $('play-again-btn').addEventListener('click', () => { if (ceremony) { ceremony.stop(); ceremony = null; } socket.emit('host:reset', { pin }); showScreen('lobby'); playMusic('music-lobby', 0.35); });
@@ -259,10 +260,12 @@
       band('¡Ronda final!', '¡Vale doble! Caen 4 trampillas', 'final', 2100, [m.r, m.rounds], '¡Rápido!');
       hurryStart(true);
       $('add-time-btn').disabled = true;
+      $('cut-time-btn').disabled = true;
     } else {
       const sub = m.kind === 'three' ? (m.r === Math.floor(m.rounds / 2) + 1 ? '¡Ahora caen 3 trampillas!' : 'Caen 3 trampillas') : 'Caen 2 trampillas';
       band(`Ronda ${m.r}`, sub, m.kind === 'three' ? 'three' : '', 1450, [m.r, m.rounds]);
       $('add-time-btn').disabled = false;
+      $('cut-time-btn').disabled = m.rounds <= Math.max(m.r + 1, 2);   // «−2 rondas» never takes the next round (it would be the Final Round)
       sfx('round', 0.6);                          // (the Final Round has its «¡Rápido!» jingle instead)
     }
     paintTop();
@@ -299,10 +302,11 @@
   socket.on('td:rise', (m) => { if (!scene || !m || m.id !== matchId) return; scene.rise(m.k, m.x, m.y, performance.now()); sfx('back', 0.45); risePit([m.k]); });
   socket.on('td:rounds', (d) => {
     if (!d || d.id !== matchId) return;
-    if (d.refused) { banner(d.why === 'max' ? `Ya son ${d.rounds} rondas: es el máximo` : 'La ronda final ya empezó'); return; }
+    if (d.refused) { banner(d.why === 'max' ? `Ya son ${d.rounds} rondas: es el máximo` : d.why === 'min' ? 'Ya no se pueden quitar más rondas' : 'La ronda final ya empezó'); return; }
+    if (d.r != null) $('cut-time-btn').disabled = d.rounds <= Math.max(d.r + 1, 2);
     if (rd) rd.rounds = d.rounds;
     if (scene && scene.rd) scene.rd.rounds = d.rounds;
-    band('¡+2 rondas!', `Ahora son ${d.rounds}`, '', 1300);
+    band(d.cut ? '¡−2 rondas!' : '¡+2 rondas!', `Ahora son ${d.rounds}`, '', 1300);
     paintTop();
   });
   const nameOf = (k) => (roster[k] ? roster[k][0] : '');
@@ -527,7 +531,7 @@
     $('win-banner').textContent = d.winner === 'red' || d.winner === 'gold' ? `¡Gana el ${NAMES[d.winner]}!` : '¡Empate en las trampillas!';
   });
 
-  function showScreen(name) { ['lobby', 'countdown', 'active', 'win'].forEach((n) => $('screen-' + n).classList.toggle('hidden', n !== name)); if (name === 'lobby') { rd = null; hurryEnd(); $('add-time-btn').disabled = false; } }
+  function showScreen(name) { ['lobby', 'countdown', 'active', 'win'].forEach((n) => $('screen-' + n).classList.toggle('hidden', n !== name)); if (name === 'lobby') { rd = null; hurryEnd(); $('add-time-btn').disabled = false; $('cut-time-btn').disabled = false; } }
 
   window.TrapdoorHost = {
     scene: () => scene,
