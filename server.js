@@ -6599,7 +6599,7 @@ app.post('/api/ruta/tareas', (req, res) => {
       lists.sent.forEach((id) => { const e = at(id); if (!e.h) e.h = now; if (!e.s) e.s = now; });   // sent = heard too
       lists.unsent.forEach((id) => { const e = at(id); delete e.s; });
     }, { activity: true });
-    // 🪙 +50 a homework of the kid's own level marked «¡Ya la mandé!», «Deshacer» takes them back (core/zoco.js)
+    // 🪙 a homework of the kid's own level marked «¡Ya la mandé!» pays (core/zoco.js PAY.hw), «Deshacer» takes it back
     if (lists.sent.length || lists.unsent.length) coins = _zocoPay(rec.code, (r) => Zoco.settleHw(r, _zocoHwIds(r)));
     else coins = _zocoPay(rec.code, () => ({ got: 0, items: [] }));
   }
@@ -6723,7 +6723,7 @@ app.post('/api/ruta/train/finish', (req, res) => {
   if (rec) _zocoOpen(rec.code);                          // 🪙 (before the step: a world at its goal before El Zoco never pays)
   const out = Train.finish(String(b.round), _trainWho(req, res, d.a), d.a, rec);
   if (!out.ok) return res.status(out.status || 400).json(out);
-  // 🪙 +20 the first time a world reaches its goal (core/zoco.js; a replayed round pays nothing more)
+  // 🪙 PAY.train the first time a world reaches its goal (core/zoco.js; a replayed round pays nothing more)
   const coins = rec && out.saved ? _zocoOut(_zocoPay(rec.code, (r) => Zoco.settleTrain(r, d.lvl, RutaProgress.getSettings().doradoPct))) : undefined;
   res.json(coins ? Object.assign({}, out, { coins }) : out);
 });
@@ -7587,7 +7587,7 @@ function mnFinish(pin, g) {
     const one = end.forPlayer(pid);
     if (one) io.to(pid).emit('game-end', one);
   });
-  _zocoGameEnd(pin, g, end);   // 🪙 El Zoco: +10 a game played for real, +5 a bonus star (after the ceremony is sent)
+  _zocoGameEnd(pin, g, end);   // 🪙 El Zoco: a game played for real and its bonus stars pay (core/zoco.js PAY; after the ceremony is sent)
 }
 
 // === 🐉 VUELO DEL DRAGÓN v2 (gameType 'dragon-eye') — «La Carrera del Cielo de Dubái», a Mario Party sky race ===
@@ -7885,7 +7885,7 @@ function drFinish(pin, g) {
     const one = end.forPlayer(pid);
     if (one) io.to(pid).emit('game-end', one);
   });
-  _zocoGameEnd(pin, g, end);   // 🪙 El Zoco: +10 a game played for real, +5 a bonus star (after the ceremony is sent)
+  _zocoGameEnd(pin, g, end);   // 🪙 El Zoco: a game played for real and its bonus stars pay (core/zoco.js PAY; after the ceremony is sent)
 }
 
 // === 🏰 REINOS DE COLORES (gameType 'kingdoms') — hex territory game, Kahoot «Color Kingdoms» style ===
@@ -9178,7 +9178,7 @@ function hcFinish(pin, g) {
     const one = end.forPlayer(pid);
     if (one) io.to(pid).emit('game-end', one);
   });
-  _zocoGameEnd(pin, g, end);   // 🪙 El Zoco: +10 a game played for real, +5 a bonus star (after the ceremony is sent)
+  _zocoGameEnd(pin, g, end);   // 🪙 El Zoco: a game played for real and its bonus stars pay (core/zoco.js PAY; after the ceremony is sent)
 }
 // The game-end payloads (the projector's, and each phone's own: its board + its place). Built again on demand, so a
 // projector or a phone that drops around the end still gets its finale after reconnecting (reclaim / resync).
@@ -9428,7 +9428,7 @@ function mmFinish(pin, g) {
     const one = end.forPlayer(pid);
     if (one) io.to(pid).emit('game-end', one);
   });
-  _zocoGameEnd(pin, g, end);   // 🪙 El Zoco: +10 a game played for real, +5 a bonus star (after the ceremony is sent)
+  _zocoGameEnd(pin, g, end);   // 🪙 El Zoco: a game played for real and its bonus stars pay (core/zoco.js PAY; after the ceremony is sent)
 }
 
 // === 🐯 PIÑATA TIGRE v2 (gameType 'pinata') — «La Fiesta de las Piñatas», team hits + a server-judged timing meter ===
@@ -9662,7 +9662,7 @@ function pnFinish(pin, g) {
     const one = end.forPlayer(pid);
     if (one) io.to(pid).emit('game-end', one);
   });
-  _zocoGameEnd(pin, g, end);   // 🪙 El Zoco: +10 a game played for real, +5 a bonus star (after the ceremony is sent)
+  _zocoGameEnd(pin, g, end);   // 🪙 El Zoco: a game played for real and its bonus stars pay (core/zoco.js PAY; after the ceremony is sent)
 }
 
 // === 🤙 6-7 SWING v2 (gameType 'sixseven') — «La Balanza de Oro», sums whose answer is always 6 or 7 ===
@@ -9934,7 +9934,7 @@ function ssFinish(pin, g) {
     const one = end.forPlayer(pid);
     if (one) io.to(pid).emit('game-end', one);
   });
-  _zocoGameEnd(pin, g, end);   // 🪙 El Zoco: +10 a game played for real, +5 a bonus star (after the ceremony is sent)
+  _zocoGameEnd(pin, g, end);   // 🪙 El Zoco: a game played for real and its bonus stars pay (core/zoco.js PAY; after the ceremony is sent)
 }
 
 // === 🚀 LA GRAN FUGA DE DUBÁI (gameType 'escape') — Kahoot «Robot Run» style co-op chase, Dralingo episode ===
@@ -10488,7 +10488,7 @@ function finFinish(pin, g) {
     if (p.disconnected) return;
     io.to(pid).emit('game-end', end.forPlayer(pid) || end.guest());
   });
-  _zocoGameEnd(pin, g, end);   // 🪙 El Zoco: +10 a game played for real, +5 a bonus star (after the ceremony is sent)
+  _zocoGameEnd(pin, g, end);   // 🪙 El Zoco: a game played for real and its bonus stars pay (core/zoco.js PAY; after the ceremony is sent)
 }
 // the last 30 s of a round (all four games): one check every 0.5 s; +30 s can switch it off again
 setInterval(() => {
@@ -10528,7 +10528,7 @@ function _gameAvatar(sent, rec, proven) {
 // The class games that pay (every pin game; never the warm-up, reading or exam rooms: those are class tools)
 const ZOCO_GAMES = ['kingdoms', 'paint', 'snow', 'escape', 'trapdoor', 'halcon', 'mochi-mash', 'pinata', 'sixseven', 'monopoly', 'dragon-eye'];
 // A pin game's round ended (each game's finisher, right after it built its end payloads): every kid whose account the
-// phone proved and who played for real (Zoco.GAME_MIN answers) gets +10 and +5 per bonus star of the ceremony, once per
+// phone proved and who played for real (Zoco.GAME_MIN answers) gets PAY.game and PAY.star per bonus star of the ceremony, once per
 // round (the room's id + the round's start), within the day's caps. The phone hears it as `zoco:coins` (a small «+N
 // monedas» moment after its own card, never over the ceremony). `end.forPlayer(pid).me` = the kid's card: `answered`
 // (Ojos de Halcón: the rounds it looked), `stars` = its bonus stars (Monopolio and the Carrera: `bonus`; their `stars`

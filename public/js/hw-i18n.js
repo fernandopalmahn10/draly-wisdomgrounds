@@ -397,6 +397,7 @@
       'El rastreador de la pandilla, con su chaqueta negra y azul. Mira… escucha.': 'The tracker of the gang, in his black-and-blue jacket. Look… listen.',
       'El explorador de la pandilla, siempre buscando la próxima X del mapa. ¡A la aventura!': 'The explorer of the gang, always looking for the next X on the map. Off on an adventure!',
       'El perro de Adric sigue cualquier pista.': 'Adric\'s dog follows any trail.', 'La poni unicornio de Aileen.': 'Aileen\'s unicorn pony.',
+      'Galopa con Aileen a toda velocidad y su cuerno brilla con cada acierto. ¡Dale!': 'She gallops with Aileen at full speed and her horn shines with every right answer. Go on!',
       'Un panda de China, amigo de toda la pandilla.': 'A panda from China, friend of the whole gang.',
     };
     for (var k in M) if (DICT.map[k] === undefined) DICT.map[k] = M[k];
@@ -421,6 +422,10 @@
     PATTERNS.push({ re: /^Dralingo te dio (\d+) monedas? por todo lo que ya hiciste\.$/, en: 'Dralingo gave you $1 coins for everything you already did.' });
     PATTERNS.push({ re: /^Tienes (\d+) monedas? esperando: llegan mañana\. Cada día pagan hasta (\d+) palabras y (\d+) tareas\.$/,
       en: 'You have $1 coins waiting: they arrive tomorrow. Each day pays up to $2 words and $3 homework tasks.' });
+    // (v2, 2026-10-20: the day's limits always in «¿Cómo gano monedas?», the waiting coins on their own line)
+    PATTERNS.push({ re: /^Tienes (\d+) monedas? esperando: llegan mañana\.$/, en: 'You have $1 coins waiting: they arrive tomorrow.' });
+    PATTERNS.push({ re: /^Cada día pagan hasta (\d+) palabras, (\d+) tareas, (\d+) juegos y (\d+) estrellas\.$/,
+      en: 'Each day pays up to $1 words, $2 homework tasks, $3 games and $4 stars.' });
   })();
 
   // Quick reject: nothing to translate unless the text has latin

@@ -59,29 +59,44 @@
   // a row here, a row in core/zoco.js (the test checks both lists agree).
   // ar = the full picture's width / height, hx = where the face is across it (0 left … 1 right): a page places a
   // character by its face (the shop's spotlight); the round head pictures are cut around the face the same way.
+  // fx (2026-10-20, the pedestal) = where the character stands across it (its feet, paws or seat), when not under the face.
   const ZOCO = [
-    { id: 'dralingo-sheikh', base: 'dralingo', label: 'Dralingo Sheikh', ar: 1.46, hx: 0.375 },
-    { id: 'dralingo-sheikh-roja', base: 'dralingo', label: 'Dralingo Sheikh · ghutra roja', ar: 1.46, hx: 0.375 },
-    { id: 'dralingo-sheikh-paseo', base: 'dralingo', label: 'Dralingo de paseo', ar: 1.33, hx: 0.36 },
-    { id: 'dralingo-sheikh-paseo-roja', base: 'dralingo', label: 'Dralingo de paseo · ghutra roja', ar: 1.33, hx: 0.36 },
-    { id: 'dralingo-clasico', base: 'dralingo', label: 'Dralingo clásico', ar: 1.46, hx: 0.365 },
-    { id: 'bebe-dralingo-emperador', base: 'dralingo', label: 'Bebé Dralingo Emperador', ar: 0.86, hx: 0.5 },
-    { id: 'bebe-dralingo-kufiya', base: 'dralingo', label: 'Bebé Dralingo con kufiya', ar: 1.08, hx: 0.49 },
-    { id: 'dralingo-emperador', base: 'dralingo', label: 'Dralingo Emperador', ar: 1.14, hx: 0.33 },
-    { id: 'dralingo-emperador-barba', base: 'dralingo', label: 'Dralingo Emperador Sabio', ar: 1.14, hx: 0.33 },
-    { id: 'dralingo-emperador-qin', base: 'dralingo', label: 'Dralingo Emperador Qin', ar: 1.22, hx: 0.335 },
-    { id: 'dralingo-fuego-azul', base: 'dralingo', label: 'Dralingo Fuego Azul', ar: 1.57, hx: 0.44 },
+    { id: 'dralingo-sheikh', base: 'dralingo', label: 'Dralingo Sheikh', ar: 1.46, hx: 0.375, fx: 0.47 },
+    { id: 'dralingo-sheikh-roja', base: 'dralingo', label: 'Dralingo Sheikh · ghutra roja', ar: 1.46, hx: 0.375, fx: 0.47 },
+    { id: 'dralingo-sheikh-paseo', base: 'dralingo', label: 'Dralingo de paseo', ar: 1.33, hx: 0.36, fx: 0.48 },
+    { id: 'dralingo-sheikh-paseo-roja', base: 'dralingo', label: 'Dralingo de paseo · ghutra roja', ar: 1.33, hx: 0.36, fx: 0.48 },
+    { id: 'dralingo-clasico', base: 'dralingo', label: 'Dralingo clásico', ar: 1.46, hx: 0.365, fx: 0.44 },
+    { id: 'bebe-dralingo-emperador', base: 'dralingo', label: 'Bebé Dralingo Emperador', ar: 0.86, hx: 0.5, fx: 0.52 },
+    { id: 'bebe-dralingo-kufiya', base: 'dralingo', label: 'Bebé Dralingo con kufiya', ar: 1.08, hx: 0.49, fx: 0.52 },
+    { id: 'dralingo-emperador', base: 'dralingo', label: 'Dralingo Emperador', ar: 1.14, hx: 0.33, fx: 0.46 },
+    { id: 'dralingo-emperador-barba', base: 'dralingo', label: 'Dralingo Emperador Sabio', ar: 1.14, hx: 0.33, fx: 0.46 },
+    { id: 'dralingo-emperador-qin', base: 'dralingo', label: 'Dralingo Emperador Qin', ar: 1.22, hx: 0.335, fx: 0.46 },
+    { id: 'dralingo-fuego-azul', base: 'dralingo', label: 'Dralingo Fuego Azul', ar: 1.57, hx: 0.44, fx: 0.5 },
     { id: 'profe-fer', base: 'fer', label: 'Profe Fer de traje', ar: 0.45, hx: 0.49 },
     { id: 'hamdan-3d', base: 'hamdan', label: 'Hamdan con kandura', ar: 0.38, hx: 0.47 },
-    { id: 'latifa-3d', base: 'latifa', label: 'Latifa con abaya' },
-    { id: 'aileen-3d', base: 'aileen', label: 'Aileen artes marciales', ar: 0.55, hx: 0.52 },
+    { id: 'latifa-3d', base: 'latifa', label: 'Latifa con abaya', ar: 0.44, hx: 0.5, fx: 0.49 },
+    { id: 'aileen-3d', base: 'aileen', label: 'Aileen artes marciales', ar: 0.55, hx: 0.52, fx: 0.48 },
     { id: 'adric-3d', base: 'adric', label: 'Adric de negro', ar: 0.41, hx: 0.5 },
     { id: 'adrian-3d', base: 'adrian', label: 'Adrian con chaqueta', ar: 0.45, hx: 0.52 },
-    { id: 'perro-de-adric', base: 'adric', label: 'El perro de Adric', animal: true, emoji: '🐕' },
-    { id: 'poni-de-aileen', base: 'aileen', label: 'La poni unicornio de Aileen', animal: true, emoji: '🦄' },
-    { id: 'panda-3d', base: 'dralingo', label: 'Panda', animal: true, emoji: '🐼' },
+    { id: 'perro-de-adric', base: 'adric', label: 'El perro de Adric', animal: true, emoji: '🐕', ar: 0.85, hx: 0.82, fx: 0.57 },
+    { id: 'poni-de-aileen', base: 'aileen', label: 'La poni unicornio de Aileen', animal: true, emoji: '🦄', ar: 0.9, hx: 0.79, fx: 0.53 },
+    { id: 'panda-3d', base: 'dralingo', label: 'Panda', animal: true, emoji: '🐼', ar: 0.55, hx: 0.47, fx: 0.5 },
   ];
   const ZB = '/assets/zoco/';
+  // 🆕 2026-10-20 · the art slots of El Zoco (his words: "they look too plain and boring now… it should feel like the 3D
+  // avatar is there waiting for you"). Filled ONLY by `node scripts/zoco-art.js` from the files it finds (swapping in new
+  // art is data: drop the files with the right names, run the script, it writes these two maps with a ?v= per file and
+  // bumps saga.js everywhere); empty = every character shows its render, as on 2026-10-19.
+  //   ZOCO_ART[id]  = { full, avatar[, ar, hx, fx] }  the glossy platform-look picture (public/assets/zoco/full/<id>-g.webp
+  //                   + avatar/<id>-g.webp): the shop, the games, Mi perfil and the rosters draw it instead of the render
+  //   ZOCO_ANIM[id] = { still, full, lite[, ar, hx, fx] }  the idle «waiting» loop (public/assets/zoco/anim/<id>-still.webp,
+  //                   <id>.webp, <id>-lite.webp): only where one screen shows one character, the still first, the loop
+  //                   swapped in once loaded (the lite one on a phone), never with reduced motion
+  // ar comes from the file; hx / fx default to the render's (the art is made from the render: same pose).
+  // <zoco-art>
+  const ZOCO_ART = {};
+  const ZOCO_ANIM = {};
+  // </zoco-art>
   // a kid who had picked a brand avatar now shows one of the saga (server migrates the record once, pages map too)
   const LEGACY_AVATARS = {
     gojo: 'adric', yugi: 'adrian', yuji: 'hamdan', shelly: 'aileen', fnaf: 'camel', dandy: 'oryx', hanzo: 'hamdan',
@@ -95,8 +110,15 @@
   const ANIM = byId(ANIMS), BURST = byId(BURSTS), AVATAR = byId(AVATARS), SKIN = byId(ZOCO);
   const legacyAvatar = (id) => own(LEGACY_AVATARS, id);
   const zoco = (id) => own(SKIN, id);
+  const zArt = (id) => { const z = zoco(id); return z ? own(ZOCO_ART, z.id) : null; };
+  // a picture's look: { ar, hx, fx } (fx = hx when the character stands under its face; a slot's own values win)
+  const lookOf = (z, slot) => {
+    const ar = Number((slot && slot.ar) || z.ar) || 1;
+    const hx = Number((slot && slot.hx) || z.hx) || 0.5;
+    return { ar, hx, fx: Number((slot && slot.fx) || z.fx) || hx };
+  };
   return {
-    ANIMS, BURSTS, AVATARS, LEGACY_AVATARS, ZOCO,
+    ANIMS, BURSTS, AVATARS, LEGACY_AVATARS, ZOCO, ZOCO_ART, ZOCO_ANIM,
     anim: (id) => own(ANIM, id),
     byEmoji: (e) => AVATARS.find((a) => a.emoji === e) || null,
     burst: (id) => own(BURST, id),
@@ -106,10 +128,19 @@
     zoco,
     // the saga character a skin is a form of ('dralingo-fuego-azul' → 'dralingo'); any other value as it is
     skinBase: (id) => { const z = zoco(id); return z ? z.base : id; },
-    // the round head picture (256 × 256) of a saga avatar or a skin; null for anything else
-    skinHead: (id) => { const z = zoco(id); if (z) return ZB + 'avatar/' + z.id + '.webp'; const a = own(AVATAR, legacyAvatar(id) || id); return a ? a.url : null; },
-    // a skin's full-body picture (480 px tall, transparent; one pose: games draw it for every pose); null for the rest
-    skinBody: (id) => { const z = zoco(id); return z ? ZB + 'full/' + z.id + '.webp' : null; },
+    // the round head picture (256 × 256) of a saga avatar or a skin; null for anything else (a skin's glossy head first)
+    skinHead: (id) => { const z = zoco(id); if (z) { const g = zArt(z.id); return g && g.avatar ? g.avatar : ZB + 'avatar/' + z.id + '.webp'; } const a = own(AVATAR, legacyAvatar(id) || id); return a ? a.url : null; },
+    // a skin's full-body picture (transparent; one pose: games draw it for every pose; its glossy picture first, else
+    // the 480 px render); null for the rest
+    skinBody: (id) => { const z = zoco(id); if (!z) return null; const g = zArt(z.id); return g && g.full ? g.full : ZB + 'full/' + z.id + '.webp'; },
+    // 🆕 2026-10-20 the idle «waiting» loop of a skin: { still, full, lite, ar, hx, fx } or null (no loop yet)
+    skinAnim: (id) => {
+      const z = zoco(id);
+      const a = z ? own(ZOCO_ANIM, z.id) : null;
+      return a && a.still && a.full ? Object.assign({ still: a.still, full: a.full, lite: a.lite || a.full }, lookOf(z, a)) : null;
+    },
+    // 🆕 2026-10-20 how a skin's full-body picture (skinBody) stands: { ar, hx, fx }; null for the rest
+    skinLook: (id) => { const z = zoco(id); return z ? lookOf(z, zArt(z.id)) : null; },
     // a character's name for a «Vas a jugar como …» line: a skin's own name, a saga avatar's name (no emoji in front)
     labelOf(id) {
       const z = zoco(id);
@@ -132,7 +163,7 @@
     // (2026-10-19: a skin of El Zoco → its own head picture)
     avatarUrl(name) {
       const z = zoco(name);
-      if (z) return ZB + 'avatar/' + z.id + '.webp';
+      if (z) { const g = zArt(z.id); return g && g.avatar ? g.avatar : ZB + 'avatar/' + z.id + '.webp'; }
       const a = own(AVATAR, legacyAvatar(name) || name);
       if (a) return a.url;
       if (typeof name !== 'string' || !/^[a-z0-9]+$/.test(name)) return null;

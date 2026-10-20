@@ -1,20 +1,24 @@
 #!/usr/bin/env node
-// test-zoco.js — El Zoco de Dralingo (2026-10-19, his OK: "Okay I approve the design of the Souq"): coins judged by the
-// server, the characters shop, a skin as the kid's character everywhere. Two parts, both on MADE-UP accounts in temporary
-// folders (never data/, never the live site); throw-away teacher codes that are never printed:
+// test-zoco.js — El Zoco de Dralingo (2026-10-19, his OK: "Okay I approve the design of the Souq"; v2 2026-10-20: "make it
+// a lot more difficult to get the points" + "I bought licenses for all these models" + "the 3D avatar is there waiting for
+// you"): coins judged by the server, the characters shop, a skin as the kid's character everywhere. Two parts, both on
+// MADE-UP accounts in temporary folders (never data/, never the live site); throw-away teacher codes never printed:
 //   1. in this process (core/zoco.js on a temp folder, the clock moved by hand): the catalog against saga.js and the
-//      files, held characters never on sale, the amounts, the daily caps and what waits for the next days, «Deshacer»
-//      taking its +50 back (even below 0 after a purchase: no spend-then-undo minting), nothing paid twice (unmark +
-//      mark, a replayed practice, the same game), the 7-day streak, the welcome grant from what was done before,
-//      the merge of an automatic account (only work NEW to the real account moves: no laundering loop), the caps' day
-//      only moving forward (a time-zone flip), buying (atomic, owned, too few coins), setAvatar only for an owned skin,
-//      SnowMap / saga resolving a skin id, the held characters' pictures not published
+//      files (all 20 on sale, nothing held, prices 800-3000, the art slots ZOCO_ART / ZOCO_ANIM matching the files and
+//      swapping art as data only), the v2 amounts (core/zoco.js PAY, read from there), the daily caps in steps and what
+//      waits for the next days, «Deshacer» taking back what it paid (even below 0 after a purchase: no spend-then-undo
+//      minting), nothing paid twice (unmark + mark, a replayed practice, the same game), the 7-day streak, the welcome
+//      grant from what was done before, a purse of 2026-10-19 taking the v2 amounts (coins, characters, welcome and keys
+//      untouched; only what was waiting in today's amounts; once), the merge of an automatic account (only work NEW to
+//      the real account moves: no laundering loop), the caps' day only moving forward (a time-zone flip), buying
+//      (atomic, owned, too few coins), setAvatar only for an owned skin, SnowMap / saga resolving a skin id
 //   2. its OWN server (port 4580, never 3000): GET /api/zoco and the home's pill for every kind of visitor, the steps
 //      paying in their own endpoints (seals, homework marks, a practice at its goal, a class PIN game played for real
 //      with its bonus stars), a stranger / another kid / another site never earning, spending or equipping for someone,
-//      buying with too few coins refused, held characters invisible and unbuyable, a skin not owned refused as an
-//      avatar (homework, equip, a PIN join, the lobby swap, the 8-character cut), a skin showing in a pin game's player
-//      list and ending, and a dropped kid's slot taken by a classmate paying nobody
+//      buying with too few coins refused, the four once held on sale, a purse of 2026-10-19 keeping its coins and
+//      characters, a skin not owned refused as an avatar (homework, equip, a PIN join, the lobby swap, the 8-character
+//      cut), a skin showing in a pin game's player list and ending, and a dropped kid's slot taken by a classmate paying
+//      nobody
 //   node scripts/test-zoco.js            (--port 4580 · --keep to leave the server running)
 'use strict';
 const http = require('http');
@@ -62,6 +66,18 @@ fs.writeFileSync(path.join(UNIT, 'student-records.json'), JSON.stringify({
   AUTO22: { code: 'AUTO22', displayName: 'Dragoncito 123', firstSeen: NOW, lastSeen: NOW, level: 'hsk2', auto: true, sentencesBuilt: [] },
   REAL: { code: 'REAL', displayName: 'Kid Real', firstSeen: NOW - 9 * DAY, lastSeen: NOW, level: 'hsk2', classroomCode: '1002', sentencesBuilt: [] },
   REA2: { code: 'REA2', displayName: 'Kid Real 2', firstSeen: NOW - 9 * DAY, lastSeen: NOW, level: 'hsk2', classroomCode: '1002', sentencesBuilt: [] },
+  // a kid whose purse opened on 2026-10-19 (v1 amounts): 300 coins, a character bought at its old price, the welcome
+  // grant paid, a homework paid 50, and in today's line 41 coins of words (21 words at 2) + two homeworks at 50; today's
+  // counters at the old caps (60 coins of words = 30 words, 100 coins of homework = 2)
+  OLDK: { code: 'OLDK', displayName: 'Kid Old', firstSeen: NOW - 20 * DAY, lastSeen: NOW, level: 'hsk2', classroomCode: '1002', sentencesBuilt: [],
+    avatar: 'dralingo-sheikh', tareas: { [NEW[0]]: { h: NOW - DAY, s: NOW - DAY }, 'zz-old-1': { h: NOW, s: NOW }, 'zz-old-2': { h: NOW, s: NOW } },
+    zoco: { v: 1, at: NOW - DAY, c: 300, e: 450, sp: 150, w: 150, ps: 100, own: ['dralingo-sheikh'], buys: [['dralingo-sheikh', 150, NOW - DAY]],
+      k: { ['hw:' + NEW[0]]: 50, 'train:hsk2:1': 20 }, sk: { hsk2: '1-50' }, gm: {}, q: { seal: 41, hw: [['zz-old-1', 50], ['zz-old-2', 50]] },
+      day: { d: today(), seal: 60, hw: 100, game: 2, star: 3 }, log: [[NOW - DAY, 150, 'welcome']] } },
+  // an automatic account of 2026-10-19 with a homework waiting at the old 50
+  AUTOV: { code: 'AUTOV', displayName: 'Dragoncito 321', firstSeen: NOW - DAY, lastSeen: NOW, level: 'hsk2', auto: true, sentencesBuilt: [],
+    tareas: { 'zz-auto-1': { h: NOW, s: NOW } },
+    zoco: { v: 1, at: NOW - DAY, c: 0, e: 0, sp: 0, w: 0, ps: 0, own: [], buys: [], k: {}, sk: {}, gm: {}, q: { seal: 0, hw: [['zz-auto-1', 50]] }, day: {}, log: [] } },
 }));
 const Saga = require('../public/js/saga');
 const SnowMap = require('../public/js/snow-map');
@@ -76,21 +92,34 @@ Date.now = () => realNow() + shift;
 const nextDay = () => { shift += DAY; };
 
 function unit() {
-  section('the catalog: his renders, the right ones, light files');
+  const P = Zoco.PAY, CAP = Zoco.CAP, CAPC = Zoco.CAPC;
+  section('v2 (2026-10-20): the amounts, the caps, the prices');
+  ok(P.seal === 1 && P.train === 10 && P.hw === 25 && P.game === 5 && P.star === 2 && P.streak === 15, 'the amounts: +1 a word, +10 a practice, +25 a homework, +5 a game, +2 a star, +15 a 7-day streak');
+  ok(CAP.seal === 30 && CAP.hw === 2 && CAP.game === 4 && CAP.star === 5, 'the daily caps: 30 words, 2 homework, 4 games, 5 stars');
+  ok(CAPC.seal === CAP.seal * P.seal && CAPC.hw === CAP.hw * P.hw, '… the words\' and homework\'s caps in coins follow');
+
+  section('the catalog: his renders, all 20 on sale, light files');
   const ids = Zoco.CATALOG.map((x) => x.id);
   ok(ids.length === 20 && new Set(ids).size === 20, 'twenty characters in the catalog (the 22 he saw in green, minus the two cone-hat babies)');
   ok(Saga.ZOCO.length === ids.length && Saga.ZOCO.every((z) => ids.includes(z.id)), 'saga.js draws exactly the catalog\'s characters (one list each, the same ids)');
   ['bebe-dralingo', 'bebe-dralingo-alas', 'dralingo-come-palabras', 'camello', 'monje-john', 'chica-kung-fu', 'hombre-latino', 'jefe-maya']
     .forEach((id) => ok(!ids.includes(id) && !Saga.zoco(id), 'kept out: ' + id));
-  const held = Zoco.CATALOG.filter((x) => x.hold).map((x) => x.id).sort();
-  ok(JSON.stringify(held) === JSON.stringify(['latifa-3d', 'panda-3d', 'perro-de-adric', 'poni-de-aileen']), 'held until he confirms where the model came from: the dog, the pony, the panda, Latifa con abaya (' + held.join(', ') + ')');
-  ok(Zoco.CATALOG.every((x) => x.price >= 150 && x.price <= 400 && Number.isInteger(x.price)), 'prices 150-400');
+  const held = Zoco.CATALOG.filter((x) => x.hold).map((x) => x.id);
+  ok(held.length === 0 && Zoco.CATALOG.every((x) => Zoco.onSale(x)), 'nothing held: he bought the licences (the dog, the pony, the panda and Latifa con abaya on sale)');
+  const price = (id) => Zoco.item(id).price;
+  ok(Zoco.CATALOG.every((x) => Number.isInteger(x.price) && x.price >= 800 && x.price <= 3000), 'prices 800-3000');
+  ok(price('dralingo-emperador-qin') === 3000 && Zoco.CATALOG.every((x) => x.price <= 3000) && Zoco.CATALOG.filter((x) => x.price === 3000).length === 1, 'Dralingo Emperador Qin 3000, the top (and the only one)');
+  const min = Math.min(...Zoco.CATALOG.map((x) => x.price));
+  ok(['dralingo-sheikh', 'dralingo-sheikh-roja', 'dralingo-clasico'].every((id) => price(id) === min) && min === 800, 'the plain forms the cheapest (800)');
+  const mid = ['profe-fer', 'hamdan-3d', 'latifa-3d', 'aileen-3d', 'adric-3d', 'adrian-3d', 'perro-de-adric', 'poni-de-aileen', 'panda-3d'];
+  ok(mid.every((id) => price(id) > min && price(id) < 1800), 'the gang and the pets in the middle (' + mid.map(price).join(', ') + ')');
+  ok(['dralingo-emperador', 'dralingo-emperador-barba', 'dralingo-fuego-azul'].every((id) => price(id) >= 1800 && price(id) > Math.max(...mid.map(price))), 'the emperors and Fuego Azul dearer than the gang and the pets');
   ok(Zoco.CATALOG.every((x) => typeof x.blurb === 'string' && x.blurb.length > 10 && !/[㐀-鿿]/.test(x.blurb) && !/—/.test(x.blurb)), 'a Spanish line for each, no hanzi, no em dash');
   ok(Saga.ZOCO.every((z) => /^[a-z0-9-]{3,40}$/.test(z.id) && !Saga.avatar(z.id) && !Saga.LEGACY_AVATARS[z.id]), 'skin ids never collide with a saga avatar or an old avatar name');
+  ok(Saga.ZOCO.every((z) => z.ar > 0.2 && z.ar < 2 && z.hx > 0 && z.hx < 1 && (z.fx == null || (z.fx > 0 && z.fx < 1))), 'every character says how it stands (ar, hx, fx): the pedestal places it by its feet');
   const pub = path.join(ROOT, 'public', 'assets', 'zoco');
   let big = 0, missing = 0;
-  const sold = Zoco.CATALOG.filter((x) => !x.hold).map((x) => x.id);
-  sold.forEach((id) => {
+  ids.forEach((id) => {
     ['full', 'avatar'].forEach((k) => {
       const f = path.join(pub, k, id + '.webp');
       if (!fs.existsSync(f)) { missing++; return; }
@@ -98,11 +127,9 @@ function unit() {
       if (n > (k === 'full' ? 60 : 30) * 1024 || n < 2000) big++;
     });
   });
-  ok(missing === 0, 'every character on sale has its full-body picture and its head (' + sold.length * 2 + ' files)');
+  ok(missing === 0, 'every character has its full-body picture and its head (' + ids.length * 2 + ' files, the four once held included)');
   ok(big === 0, 'full-body pictures ≤ 60 KB, heads ≤ 30 KB (compressed)');
-  ok(held.every((id) => !fs.existsSync(path.join(pub, 'full', id + '.webp')) && !fs.existsSync(path.join(pub, 'avatar', id + '.webp'))),
-    'the held characters\' pictures are not published (their licence is still to confirm)');
-  const extra = fs.readdirSync(path.join(pub, 'full')).concat(fs.readdirSync(path.join(pub, 'avatar'))).filter((f) => !sold.includes(f.replace(/\.webp$/, '')));
+  const extra = fs.readdirSync(path.join(pub, 'full')).concat(fs.readdirSync(path.join(pub, 'avatar'))).filter((f) => !ids.includes(f.replace(/(-g)?\.webp$/, '')));
   ok(!extra.length, 'nothing else in public/assets/zoco (' + extra.join(', ') + ')');
   const roster = path.join(ROOT, '..', '..', '..', '..', 'assets-library', 'originals-renders', '2026-10-19', 'roster.json');
   if (fs.existsSync(roster)) {
@@ -121,21 +148,51 @@ function unit() {
     ok(Saga.ZOCO.every((z) => (R.find((c) => c.id === rid(z.id)) || {}).status === 'keep'), 'every one of them «keep» in roster.json');
   } else console.log('    (roster.json not on this computer: names not compared)');
 
+  section('the art slots (ZOCO_ART, ZOCO_ANIM): the files decide, swapping art is data only');
+  const Art = require('./zoco-art');
+  const sagaSrc = fs.readFileSync(path.join(ROOT, 'public', 'js', 'saga.js'), 'utf8');
+  const maps = Art.readMaps(sagaSrc);
+  const built = Art.build(maps);
+  ok(!built.problems.length, 'every art file has a catalog name and is light enough (' + built.problems.join(' · ') + ')');
+  ok(JSON.stringify(built.art) === JSON.stringify(Saga.ZOCO_ART) && JSON.stringify(built.anim) === JSON.stringify(Saga.ZOCO_ANIM), 'saga.js\'s maps are exactly the files on disk (scripts/zoco-art.js --check)');
+  const allUrls = [].concat(...Object.values(Saga.ZOCO_ART).map((e) => [e.full, e.avatar]), ...Object.values(Saga.ZOCO_ANIM).map((e) => [e.still, e.full, e.lite]))
+    .filter(Boolean);
+  ok(allUrls.every((u) => /\?v=[0-9a-f]{8}$/.test(u) && fs.existsSync(path.join(ROOT, 'public', u.replace(/\?.*$/, '')))), 'each art file named in the maps exists and carries its own ?v= (' + allUrls.length + ')');
+  ok(Object.keys(Saga.ZOCO_ART).concat(Object.keys(Saga.ZOCO_ANIM)).every((id) => ids.includes(id)), 'the maps name catalog characters only');
+  const pages = ['homework.html', 'player.html', 'maestro.html', 'host-halcon.html'].map((p) => fs.readFileSync(path.join(ROOT, 'public', p), 'utf8').match(/js\/saga\.js\?v=([A-Za-z0-9_-]+)/)[1]);
+  ok(new Set(pages).size === 1, 'every page loads the same saga.js version (' + pages[0] + ')');
+  // data only: one line in a map moves the picture of the shop and every game, and gives a character its idle loop
+  const T = 'hamdan-3d';
+  const keepArt = Saga.ZOCO_ART[T], keepAnim = Saga.ZOCO_ANIM[T];
+  Saga.ZOCO_ART[T] = { full: '/assets/zoco/full/hamdan-3d-g.webp?v=00000001', avatar: '/assets/zoco/avatar/hamdan-3d-g.webp?v=00000002', ar: 0.5 };
+  Saga.ZOCO_ANIM[T] = { still: '/s.webp', full: '/f.webp', lite: '/l.webp', ar: 0.6 };
+  const vT = Zoco.view({ zoco: null }).items.find((i) => i.id === T);
+  ok(Saga.skinBody(T) === Saga.ZOCO_ART[T].full && Saga.skinHead(T) === Saga.ZOCO_ART[T].avatar && Saga.avatarUrl(T) === Saga.ZOCO_ART[T].avatar
+    && vT.full === Saga.ZOCO_ART[T].full && vT.head === Saga.ZOCO_ART[T].avatar, 'a glossy picture in ZOCO_ART: the shop, the games (skinBody / skinHead) and the rosters (avatarUrl) draw it');
+  const an = Saga.skinAnim(T);
+  ok(an && an.still === '/s.webp' && an.full === '/f.webp' && an.lite === '/l.webp' && an.ar === 0.6 && an.hx === Saga.zoco(T).hx && an.fx === an.hx, 'an idle loop in ZOCO_ANIM: still + loop + lite, standing like its render (hx / fx)');
+  delete Saga.ZOCO_ART[T]; delete Saga.ZOCO_ANIM[T];
+  if (keepArt) Saga.ZOCO_ART[T] = keepArt;
+  if (keepAnim) Saga.ZOCO_ANIM[T] = keepAnim;
+  const none = ids.filter((id) => !Saga.ZOCO_ART[id] && !Saga.ZOCO_ANIM[id]);
+  ok(none.every((id) => Saga.skinBody(id) === '/assets/zoco/full/' + id + '.webp' && Saga.skinAnim(id) === null), 'with no art in the maps a character shows its render, no loop (as on 2026-10-19)');
+  ok(Saga.skinLook('perro-de-adric').fx < Saga.skinLook('perro-de-adric').hx && Saga.skinLook('profe-fer').fx === Saga.skinLook('profe-fer').hx, 'the dog stands on its paws, not its head (fx); a person stands under the face');
+
   section('a skin id on every page and in every game');
   ok(Saga.avatarUrl('dralingo-fuego-azul') === '/assets/zoco/avatar/dralingo-fuego-azul.webp' && Saga.skinBody('hamdan-3d') === '/assets/zoco/full/hamdan-3d.webp', 'saga.js: a skin\'s head and full body');
-  ok(Saga.avatarUrl('hamdan') === '/assets/saga/avatars/hamdan.webp' && Saga.skinBody('hamdan') === null, '… the free saga avatars as before');
+  ok(Saga.avatarUrl('hamdan') === '/assets/saga/avatars/hamdan.webp' && Saga.skinBody('hamdan') === null && Saga.skinAnim('hamdan') === null, '… the free saga avatars as before');
   ok(Saga.emojiOf('dralingo-emperador-qin') === '🐉' && Saga.emojiOf('profe-fer') === '👨‍🏫' && Saga.emojiOf('panda-3d') === '🐼' && Saga.emojiOf('🧔') === '🧔' && Saga.emojiOf('x-y') === '', 'a text-only list prints the character\'s emoji, never an id');
   ok(Saga.labelOf('aileen-3d') === 'Aileen artes marciales' && Saga.labelOf('hamdan') === 'Hamdan', '«Vas a jugar como …»: the skin\'s name');
-  ok(SnowMap.skinFor('dralingo-fuego-azul', 'Ana') === 'dralingo-fuego-azul', 'SnowMap.skinFor (server and phones): a skin is the kid\'s character');
+  ok(SnowMap.skinFor('dralingo-fuego-azul', 'Ana') === 'dralingo-fuego-azul' && SnowMap.skinFor('latifa-3d', 'Ana') === 'latifa-3d', 'SnowMap.skinFor (server and phones): a skin is the kid\'s character (Latifa con abaya too)');
   ok(['dralingo', 'fer', 'hamdan', 'latifa', 'aileen', 'adric', 'adrian', 'camel', 'plane', 'falcon', 'oryx'].includes(SnowMap.skinFor('no-such-skin', 'Ana')), '… an unknown id falls back to a saga character');
-  ok(Saga.zoco('__proto__') === null && Saga.zoco('constructor') === null && Zoco.item('__proto__') === null, 'own keys only (no prototype tricks)');
+  ok(Saga.zoco('__proto__') === null && Saga.zoco('constructor') === null && Zoco.item('__proto__') === null && Saga.skinAnim('__proto__') === null, 'own keys only (no prototype tricks)');
 
   section('the welcome grant: what was done before El Zoco never pays coin by coin');
   const env = { goal: 70 };
   const pre = Students.get('PREA');
   Zoco.ensure(pre, env);
-  const want = Math.min(Zoco.WELCOME_MAX, 40 + 10 * 1 + 25 * 1);
-  ok(pre.zoco.c === want && pre.zoco.w === want && pre.zoco.e === want, 'a one-time welcome grant from it (40 words + 1 practice at the goal + 1 homework sent = ' + want + ', at most ' + Zoco.WELCOME_MAX + ')');
+  const want = Math.min(Zoco.WELCOME_MAX, Math.round(40 * P.seal / 2 + 1 * P.train / 2 + 1 * P.hw / 2));
+  ok(pre.zoco.c === want && pre.zoco.w === want && pre.zoco.e === want && pre.zoco.pv === 2, 'a one-time welcome grant at half of today\'s pay (40 words + 1 practice at the goal + 1 homework sent = ' + want + ', at most ' + Zoco.WELCOME_MAX + ')');
   ok(Zoco.ensure(pre, env) === pre.zoco && pre.zoco.c === want, '… once only');
   const fresh = Students.get('NEWB');
   Zoco.ensure(fresh, env);
@@ -145,18 +202,18 @@ function unit() {
   RP.applySeals('PREA', 'hsk2', range(1, 40), []);
   ok(Zoco.settleSeals(pre, 'hsk2').got === 0 && pre.zoco.c === want, 'unmarking and marking again the 40 old words pays nothing');
   RP.applySeals('PREA', 'hsk2', [41, 42], []);
-  ok(Zoco.settleSeals(pre, 'hsk2').got === 4 && pre.zoco.c === want + 4, 'two new words: +2 each');
+  ok(Zoco.settleSeals(pre, 'hsk2').got === 2 * P.seal && pre.zoco.c === want + 2 * P.seal, 'two new words: +' + P.seal + ' each');
   RP.applySeals('PREA', 'hsk2', [], [41]);
   ok(Zoco.settleSeals(pre, 'hsk2').got === 0, 'unmark one: nothing taken (the word stays counted)');
   RP.applySeals('PREA', 'hsk2', [41], []);
-  ok(Zoco.settleSeals(pre, 'hsk2').got === 0 && pre.zoco.c === want + 4, '… and marking it again pays nothing (no farming by repeating a tap)');
+  ok(Zoco.settleSeals(pre, 'hsk2').got === 0 && pre.zoco.c === want + 2 * P.seal, '… and marking it again pays nothing (no farming by repeating a tap)');
   // the practice done before: never again
   RP.recordPractice('PREA', 'hsk2', 1, 95);
   ok(Zoco.settleTrain(pre, 'hsk2', 70).got === 0, 'world 1 (at its goal before El Zoco) played again: nothing');
   RP.recordPractice('PREA', 'hsk2', 2, 60);
   ok(Zoco.settleTrain(pre, 'hsk2', 70).got === 0, 'world 2 below its goal: nothing');
   RP.recordPractice('PREA', 'hsk2', 2, 80);
-  ok(Zoco.settleTrain(pre, 'hsk2', 70).got === 20, 'world 2 reaches its goal: +20');
+  ok(Zoco.settleTrain(pre, 'hsk2', 70).got === P.train, 'world 2 reaches its goal: +' + P.train);
   RP.recordPractice('PREA', 'hsk2', 2, 100);
   ok(Zoco.settleTrain(pre, 'hsk2', 70).got === 0, '… its best beaten later: nothing more');
   // the homework sent before: unmark + mark = nothing, never a take-back
@@ -166,108 +223,138 @@ function unit() {
   mark('PREA', NEW[0], true);
   ok(Zoco.settleHw(pre, NEW).got === 0, '… and marked again: nothing paid');
 
-  section('the homework marks: +50 once, «Deshacer» takes them back, the day\'s cap');
+  section('the homework marks: +' + P.hw + ' once, «Deshacer» takes them back, ' + CAP.hw + ' a day');
   mark('NEWB', NEW[1], true);
   let r = Zoco.settleHw(fresh, NEW);
-  ok(r.got === 50 && fresh.zoco.c === 50, '«¡Ya la mandé!»: +50');
+  ok(r.got === P.hw && fresh.zoco.c === P.hw, '«¡Ya la mandé!»: +' + P.hw);
   ok(Zoco.settleHw(fresh, NEW).got === 0, 'the same marks again: nothing');
   mark('NEWB', NEW[1], false);
   r = Zoco.settleHw(fresh, NEW);
-  ok(r.got === -50 && fresh.zoco.c === 0 && r.items[0].why === 'undo', '«Deshacer»: the +50 go back');
+  ok(r.got === -P.hw && fresh.zoco.c === 0 && r.items[0].why === 'undo', '«Deshacer»: the +' + P.hw + ' go back');
   mark('NEWB', NEW[1], true);
-  ok(Zoco.settleHw(fresh, NEW).got === 50 && fresh.zoco.c === 50, 'marked again: +50 (one payment while it is marked)');
+  ok(Zoco.settleHw(fresh, NEW).got === P.hw && fresh.zoco.c === P.hw, 'marked again: +' + P.hw + ' (one payment while it is marked)');
   mark('NEWB', OLD[0], true);
   ok(Zoco.settleHw(fresh, NEW).got === 0, 'another level\'s homework (it only plays): nothing');
-  // the cap: 3 homeworks a day, the 4th waits (a new day; NEW has 3, one already paid: made-up ids are enough here)
+  // the cap: 2 homeworks a day, the rest waits (a new day; NEW has 3, one already paid: made-up ids are enough here)
   nextDay();
   const four = NEW.concat(['zz-e09-r1', 'zz-e09-r2']);
   four.forEach((id) => mark('NEWB', id, true));
   r = Zoco.settleHw(fresh, four);
-  ok(fresh.zoco.day.hw === Zoco.CAP.hw && fresh.zoco.q.hw.length === 1 && r.got === Zoco.CAP.hw, 'four new homeworks in a day: three are paid (cap ' + Zoco.CAP.hw + '), one waits for tomorrow');
+  ok(fresh.zoco.day.hw === CAPC.hw && fresh.zoco.q.hw.length === 2 && r.got === CAPC.hw, 'four new homeworks in a day: two are paid (cap ' + CAP.hw + '), two wait for tomorrow');
   mark('NEWB', 'zz-e09-r2', false);
-  ok(Zoco.settleHw(fresh, four).got === 0 && fresh.zoco.q.hw.length === 0, 'the one waiting unmarked: it leaves the line (nothing to take back)');
+  ok(Zoco.settleHw(fresh, four).got === 0 && fresh.zoco.q.hw.length === 1, 'one waiting unmarked: it leaves the line (nothing to take back)');
   mark('NEWB', 'zz-e09-r2', true);
   Zoco.settleHw(fresh, four);
-  ok(fresh.zoco.q.hw.length === 1, 'marked again: back in line');
+  ok(fresh.zoco.q.hw.length === 2, 'marked again: back in line');
   const c0 = fresh.zoco.c;
   nextDay();
   r = Zoco.settle(fresh);
-  ok(r.got === 50 && fresh.zoco.c === c0 + 50 && fresh.zoco.q.hw.length === 0, 'a new day: what waited is paid first thing (+50)');
+  ok(r.got === 2 * P.hw && fresh.zoco.c === c0 + 2 * P.hw && fresh.zoco.q.hw.length === 0, 'a new day: what waited is paid first thing (+' + 2 * P.hw + ')');
 
-  section('La Base\'s words: +2 each, first time only, 50 words a day (the rest waits)');
+  section('La Base\'s words: +' + P.seal + ' each, first time only, ' + CAP.seal + ' words a day (the rest waits)');
   const before = fresh.zoco.c;
   RP.applySeals('NEWB', 'hsk2', range(1, 60), []);
   r = Zoco.settleSeals(fresh, 'hsk2');
-  ok(r.got === Zoco.CAP.seal && fresh.zoco.q.seal === 120 - Zoco.CAP.seal, '60 words at once: ' + Zoco.CAP.seal + ' coins today, ' + (120 - Zoco.CAP.seal) + ' wait');
+  ok(r.got === CAPC.seal && fresh.zoco.q.seal === 60 * P.seal - CAPC.seal, '60 words at once: ' + CAPC.seal + ' coins today, ' + (60 * P.seal - CAPC.seal) + ' wait');
   RP.applySeals('NEWB', 'hsk2', [61], []);
-  ok(Zoco.settleSeals(fresh, 'hsk2').got === 0 && fresh.zoco.q.seal === 120 - Zoco.CAP.seal + 2, 'one more today: it waits too');
+  ok(Zoco.settleSeals(fresh, 'hsk2').got === 0 && fresh.zoco.q.seal === 61 * P.seal - CAPC.seal, 'one more today: it waits too');
   nextDay();
   r = Zoco.settle(fresh);
-  ok(r.got === 22 && fresh.zoco.q.seal === 0 && fresh.zoco.c === before + Zoco.CAP.seal + 22, 'the next day the waiting coins come in (+22)');
+  ok(r.got === CAPC.seal && fresh.zoco.q.seal === 1 && fresh.zoco.c === before + 2 * CAPC.seal, 'the next day ' + CAPC.seal + ' of the waiting coins come in (the day\'s cap), 1 still waits');
+  nextDay();
+  ok(Zoco.settle(fresh).got === 1 && fresh.zoco.q.seal === 0, '… and the last one the day after');
 
-  section('the 7-day streak: +30 at 7, 14, 21… of the same run, once each');
+  section('the 7-day streak: +' + P.streak + ' at 7, 14, 21… of the same run, once each');
   const st = Students.get('NEWB');
   st.streak = 6; st.dayDate = today(Date.now() - DAY);
   ok(Zoco.settleStreak(st).got === 0, '6 days: nothing yet');
   st.streak = 7; st.dayDate = today();
-  ok(Zoco.settleStreak(st).got === 30, '7 days in a row: +30');
+  ok(Zoco.settleStreak(st).got === P.streak, '7 days in a row: +' + P.streak);
   ok(Zoco.settleStreak(st).got === 0, '… once');
   st.streak = 14; st.dayDate = today(Date.now() + 7 * DAY);
-  ok(Zoco.settleStreak(st).got === 30, '14 days of the same run: +30 more');
+  ok(Zoco.settleStreak(st).got === P.streak, '14 days of the same run: +' + P.streak + ' more');
   ok(Zoco.streakKeys(pre).length === 1 && Object.prototype.hasOwnProperty.call(pre.zoco.k, Zoco.streakKeys(pre)[0]) && pre.zoco.k[Zoco.streakKeys(pre)[0]] === 0, 'a streak reached before El Zoco never pays');
 
-  section('a class PIN game: +10 played for real, +5 a bonus star, once per game, the day\'s caps');
+  section('a class PIN game: +' + P.game + ' played for real, +' + P.star + ' a bonus star, once per game, the day\'s caps');
   const g = Students.get('REAL');
   Zoco.ensure(g, env);
   ok(Zoco.gameEnd(g, 'room1:1', { answered: 2, stars: 3 }).got === 0, '2 answers: not played for real (nothing)');
-  ok(Zoco.gameEnd(g, 'room1:2', { answered: 5, stars: 2 }).got === 20, '5 answers and 2 bonus stars: +10 +5 +5');
+  ok(Zoco.gameEnd(g, 'room1:2', { answered: 5, stars: 2 }).got === P.game + 2 * P.star, '5 answers and 2 bonus stars: +' + P.game + ' +' + P.star + ' +' + P.star);
   ok(Zoco.gameEnd(g, 'room1:2', { answered: 9, stars: 4 }).got === 0, 'the same game again (a reconnect): nothing');
   let paid = 0;
   for (let i = 3; i <= 9; i++) paid += Zoco.gameEnd(g, 'room1:' + i, { answered: 4, stars: 0 }).got;
-  ok(paid === 10 * (Zoco.CAP.game - 1), 'games in a day: only ' + Zoco.CAP.game + ' pay (a teacher\'s «Otra ronda» many times)');
+  ok(paid === P.game * (CAP.game - 1), 'games in a day: only ' + CAP.game + ' pay (a teacher\'s «Otra ronda» many times)');
   let stars = 0;
   for (let i = 10; i <= 14; i++) stars += Zoco.gameEnd(g, 'room1:' + i, { answered: 4, stars: 3 }).got;
-  ok(stars === 5 * (Zoco.CAP.star - 2), 'bonus stars in a day: only ' + Zoco.CAP.star + ' pay');
+  ok(stars === P.star * (CAP.star - 2), 'bonus stars in a day: only ' + CAP.star + ' pay');
 
   section('the shop: buy once, enough coins, on sale only');
   const b = Students.get('REAL');
-  b.zoco.c = 120;
+  b.zoco.c = 790;
   let x = Zoco.buy(b, 'dralingo-sheikh');
-  ok(!x.ok && x.status === 402 && x.why === 'coins' && b.zoco.c === 120 && !b.zoco.own.length, 'too few coins (120 for 150): refused, nothing changes');
-  b.zoco.c = 360;
+  ok(!x.ok && x.status === 402 && x.why === 'coins' && x.need === 10 && b.zoco.c === 790 && !b.zoco.own.length, 'too few coins (790 for 800): refused, nothing changes («Te faltan 10»)');
+  b.zoco.c = 2300;
   x = Zoco.buy(b, 'dralingo-sheikh');
-  ok(x.ok && b.zoco.c === 210 && b.zoco.own.includes('dralingo-sheikh') && b.zoco.sp === 150, 'enough coins: bought (−150), on the record');
-  ok(Zoco.buy(b, 'dralingo-sheikh').status === 409 && b.zoco.c === 210, 'buying it again: refused');
-  for (const id of ['latifa-3d', 'perro-de-adric', 'poni-de-aileen', 'panda-3d', 'bebe-dralingo', 'camello', '__proto__', 'hamdan', '', null]) {
+  ok(x.ok && b.zoco.c === 1500 && b.zoco.own.includes('dralingo-sheikh') && b.zoco.sp === 800, 'enough coins: bought (−800), on the record');
+  ok(Zoco.buy(b, 'dralingo-sheikh').status === 409 && b.zoco.c === 1500, 'buying it again: refused');
+  for (const id of ['bebe-dralingo', 'camello', '__proto__', 'hamdan', '', null]) {
     const y = Zoco.buy(b, id);
-    ok(!y.ok && y.status === 404 && b.zoco.c === 210, 'not on sale: ' + JSON.stringify(id));
+    ok(!y.ok && y.status === 404 && b.zoco.c === 1500, 'not on sale: ' + JSON.stringify(id));
   }
+  x = Zoco.buy(b, 'latifa-3d');
+  ok(x.ok && b.zoco.c === 100 && b.zoco.own.includes('latifa-3d'), 'Latifa con abaya (once held) is on sale: bought (−1400)');
   const v = Zoco.view(b);
-  ok(v.items.length === 16 && !v.items.some((i) => Zoco.item(i.id).hold) && v.items.find((i) => i.id === 'dralingo-sheikh').owned, 'the shop shows the 16 on sale (a held one only to a kid who already owns it), «Tuyo» on the one bought');
+  ok(v.items.length === 20 && v.items.find((i) => i.id === 'dralingo-sheikh').owned && v.items.find((i) => i.id === 'panda-3d').price === 1200, 'the shop shows all 20 with their v2 prices, «Tuyo» on the ones bought');
+  ok(v.caps.seal === CAP.seal && v.caps.hw === CAP.hw && v.caps.game === CAP.game && v.caps.star === CAP.star, '«¿Cómo gano monedas?» gets the day\'s caps in steps');
+  ok(JSON.stringify(v.ways.map((w) => w.coins)) === JSON.stringify([P.seal, P.train, P.hw, P.game, P.star, P.streak]), '… and the six ways with today\'s amounts');
   ok(Students.setAvatar('REAL', 'dralingo-sheikh') && Students.get('REAL').avatar === 'dralingo-sheikh', 'an owned skin can be the avatar');
   ok(!Students.setAvatar('REAL', 'dralingo-fuego-azul') && Students.get('REAL').avatar === 'dralingo-sheikh', 'a skin not owned: refused');
   ok(!Students.setAvatar('NEWB', 'dralingo-sheikh'), '… another kid\'s skin: refused');
   ok(Students.setAvatar('NEWB', 'hamdan'), 'the free saga avatars stay free');
 
-  section('spend, then «Deshacer»: the 50 go back even below 0');
+  section('spend, then «Deshacer»: the homework\'s coins go back even below 0');
   const u = Students.get('NEWB');
-  u.zoco.c = 260;
+  nextDay();
+  u.zoco.c = 1800;
   mark('NEWB', NEW[2], false); Zoco.settleHw(u, NEW);
   const cBefore = u.zoco.c;
   mark('NEWB', NEW[2], true); r = Zoco.settleHw(u, NEW);
-  ok(r.got === 50 && u.zoco.c === cBefore + 50, 'a homework marked: +50 (' + u.zoco.c + ')');
-  ok(Zoco.buy(u, 'dralingo-emperador').ok, 'a purchase with them (−250)');
+  ok(r.got === P.hw && u.zoco.c === cBefore + P.hw, 'a homework marked: +' + P.hw + ' (' + u.zoco.c + ')');
+  ok(Zoco.buy(u, 'dralingo-emperador').ok, 'a purchase with them (−1800)');
   mark('NEWB', NEW[2], false);
   Zoco.settleHw(u, NEW);
-  ok(u.zoco.c === cBefore + 50 - 250 - 50 && u.zoco.c < 0, '«Deshacer» after spending: the balance goes below 0 (' + u.zoco.c + '), never a free coin');
+  ok(u.zoco.c === cBefore + P.hw - 1800 - P.hw && u.zoco.c < 0, '«Deshacer» after spending: the balance goes below 0 (' + u.zoco.c + '), never a free coin');
   ok(Zoco.buy(u, 'dralingo-clasico').status === 402, '… and nothing can be bought until it is earned back');
+
+  section('a purse of 2026-10-19 takes the v2 amounts, once: coins, characters, welcome and keys untouched');
+  const o = Students.get('OLDK');
+  o.zoco.day.d = Zoco.localDay(o);   // (its counters are today's: the test's clock has moved on since the record was written)
+  Zoco.ensure(o, env);
+  const oz = o.zoco;
+  ok(oz.v === 1 && oz.pv === 2 && oz.pvAt > 0, 'its purse now pays in the v2 amounts (pv 2; the shape stays v 1, so a server rolled back still reads it)');
+  ok(oz.c === 300 && oz.e === 450 && oz.sp === 150 && JSON.stringify(oz.own) === '["dralingo-sheikh"]' && oz.buys.length === 1, 'its 300 coins, its character bought at the old price, what it earned and spent: as they were');
+  ok(oz.w === 150 && oz.log.filter((e) => e[2] === 'welcome').length === 1, 'the welcome grant already paid: not paid again, not taken back');
+  ok(oz.k['hw:' + NEW[0]] === 50 && oz.k['train:hsk2:1'] === 20, 'every key keeps what it paid');
+  ok(oz.q.seal === 21 * P.seal && JSON.stringify(oz.q.hw) === JSON.stringify([['zz-old-1', P.hw], ['zz-old-2', P.hw]]), 'what was waiting goes in today\'s amounts (21 words → ' + 21 * P.seal + ', two homeworks → ' + P.hw + ' each)');
+  ok(oz.day.seal === 30 * P.seal && oz.day.hw === 2 * P.hw && oz.day.game === 2 && oz.day.star === 3, 'today\'s counters in today\'s amounts (30 words and 2 homeworks already today: the caps are reached)');
+  const at = oz.pvAt;
+  ok(Zoco.ensure(o, env) === oz && oz.pvAt === at && oz.c === 300 && oz.q.seal === 21 * P.seal, 'once only (touching it again changes nothing)');
+  RP.applySeals('OLDK', 'hsk2', [51], []);
+  ok(Zoco.settleSeals(o, 'hsk2').got === 0 && oz.q.seal === 22 * P.seal, 'a new word today: today\'s cap is used, it waits');
+  mark('OLDK', NEW[0], false);
+  r = Zoco.settleHw(o, NEW);
+  ok(r.got === -50 && oz.c === 250, '«Deshacer» of the homework paid 50 under v1: the 50 it paid go back (never minted)');
+  ok(Students.setAvatar('OLDK', 'dralingo-sheikh'), 'its character still equips');
+  nextDay();
+  r = Zoco.settle(o);
+  ok(r.got === 22 * P.seal + 2 * P.hw && oz.q.seal === 0 && oz.q.hw.length === 0, 'the next day the line is paid in v2 amounts (+' + (22 * P.seal + 2 * P.hw) + ')');
 
   section('the day only moves forward: flipping the time zone never resets the caps');
   const tzr = Students.get('REAL');
   tzr.tz = 'Pacific/Kiritimati';
   const dayK = Zoco.localDay(tzr);
   Zoco.settle(tzr);
-  tzr.zoco.day.seal = Zoco.CAP.seal;   // (today's seal cap used up)
+  tzr.zoco.day.seal = CAPC.seal;   // (today's seal cap used up)
   tzr.zoco.q.seal = 40;
   tzr.tz = 'Pacific/Niue';
   ok(Zoco.localDay(tzr) < dayK, '(Niue\'s date is a day behind Kiritimati\'s)');
@@ -277,42 +364,58 @@ function unit() {
   tzr.tz = 'UTC'; tzr.zoco.q.seal = 0; tzr.zoco.day = {};
 
   section('an automatic account moves into the real one: coins and characters, nothing paid twice');
+  nextDay();
   const a = Students.get('AUTO22');
   Zoco.ensure(a, env);
   RP.applySeals('AUTO22', 'hsk2', range(1, 10), []);
   Zoco.settleSeals(a, 'hsk2');
   NEW.forEach((id) => mark('AUTO22', id, true));
   Zoco.settleHw(a, NEW);
-  ok(a.zoco.c === 20 + 50 * NEW.length && Zoco.buy(a, 'dralingo-clasico').ok, 'the automatic account earned ' + (20 + 50 * NEW.length) + ' and bought one (150)');
+  ok(a.zoco.c === 10 * P.seal + CAPC.hw && a.zoco.q.hw.length === NEW.length - CAP.hw, 'the automatic account earned ' + (10 * P.seal + CAPC.hw) + ' (10 words, 2 homeworks) and 1 homework waits');
+  // (a class game history of 790 on it, as if it had played for weeks: enough for a character)
+  a.zoco.gm['old:1'] = [Date.now(), 790]; a.zoco.c += 790; a.zoco.e += 790;
+  ok(Zoco.buy(a, 'dralingo-clasico').ok, 'it bought one (800)');
   const coinsA = a.zoco.c, coinsR = Students.get('REAL').zoco.c;
   const m = Zoco.merge(a, Students.get('REAL'), env);
   const real = Students.get('REAL');
   ok(m.c === coinsA && real.zoco.c === coinsR + coinsA && a.zoco.c === 0, 'its coins join the real account (' + coinsA + ': everything it did is new there)');
   ok(real.zoco.own.includes('dralingo-clasico') && real.zoco.own.includes('dralingo-sheikh'), 'its characters too');
-  ok(real.zoco.k['hw:' + NEW[0]] === 50, 'its homework keys keep what they paid (so «Deshacer» on the real account takes the 50 back)');
+  ok(real.zoco.k['hw:' + NEW[0]] === P.hw && real.zoco.q.hw.some((y) => y[0] === NEW[2] && y[1] === P.hw), 'its homework keys keep what they paid (so «Deshacer» takes them back), its waiting one joins the line');
   RP.applySeals('REAL', 'hsk2', range(1, 10), []);
   ok(Zoco.settleSeals(real, 'hsk2').got === 0, 'its words moving in pay nothing a second time');
+  const a1 = Students.get('AUTOV');
+  const m1 = Zoco.merge(a1, Students.get('REA2'), env);
+  ok(a1.zoco.pv === 2 && m1.c === 0 && Students.get('REA2').zoco.q.hw.some((y) => y[0] === 'zz-auto-1' && y[1] === P.hw), 'an automatic purse of 2026-10-19: its waiting homework joins the line at today\'s ' + P.hw + ', never 50');
 
   section('a merge never launders coins: work the real account already did is worth nothing');
   const r2 = Students.get('REA2');
   Zoco.ensure(r2, env);
+  r2.zoco.q.hw = [];
   RP.applySeals('REA2', 'hsk2', range(1, 50), []);
   Zoco.settleSeals(r2, 'hsk2');
   mark('REA2', NEW[0], true);
   Zoco.settleHw(r2, NEW);
   const c2 = r2.zoco.c;
-  ok(c2 === Zoco.CAP.seal + 50, 'the real account did 50 words and a homework (' + c2 + ')');
-  // «Salir» → a fresh automatic account → the same 50 words and the same homework → spend → «Pasar mi progreso»
+  ok(c2 === CAPC.seal + P.hw, 'the real account did 50 words and a homework (' + c2 + ')');
+  // «Salir» → a fresh automatic account → the same 50 words and the same homework → «Pasar mi progreso»
   const au = Students.createAuto('Dragoncito 777', 'hsk2', 'seal');
   Zoco.ensure(au, env);
   RP.applySeals(au.code, 'hsk2', range(1, 50), []);
   Zoco.settleSeals(au, 'hsk2');
   mark(au.code, NEW[0], true);
   Zoco.settleHw(au, NEW);
-  ok(au.zoco.c === Zoco.CAP.seal + 50 && Zoco.buy(au, 'dralingo-sheikh-roja').ok, 'the automatic account earned the same ' + (Zoco.CAP.seal + 50) + ' and spent 150');
-  const mm = Zoco.merge(au, r2, env);
-  ok(mm.c === -150 && r2.zoco.c === c2 - 150 && r2.zoco.own.includes('dralingo-sheikh-roja'), 'the merge: nothing new, so the character comes with its price (a debt of 150), never free coins');
-  ok(Zoco.merge(au, r2, env).c === 0 && r2.zoco.c === c2 - 150, 'merging the same account again: nothing');
+  ok(au.zoco.c === CAPC.seal + P.hw, 'the automatic account earned the same ' + (CAPC.seal + P.hw));
+  ok(Zoco.merge(au, r2, env).c === 0 && r2.zoco.c === c2, 'the merge: nothing new, no coins');
+  // … and spent on duplicate work: the character comes with its price (a debt), never free coins
+  const au3 = Students.createAuto('Dragoncito 779', 'hsk2', 'seal');
+  Zoco.ensure(au3, env);
+  RP.applySeals(au3.code, 'hsk2', range(1, 50), []);
+  Zoco.settleSeals(au3, 'hsk2');
+  au3.zoco.gm['old:3'] = [Date.now(), 790]; au3.zoco.c += 790; au3.zoco.e += 790;
+  ok(Zoco.buy(au3, 'dralingo-sheikh-roja').ok, 'another one: the same 50 words, 790 from games, and it spent 800');
+  const mm = Zoco.merge(au3, r2, env);
+  ok(mm.c === 790 - 800 && r2.zoco.c === c2 - 10 && r2.zoco.own.includes('dralingo-sheikh-roja'), 'the merge: only the 790 are new, so the character costs the real account 10 (a debt), never free coins');
+  ok(Zoco.merge(au3, r2, env).c === 0 && r2.zoco.c === c2 - 10, 'merging the same account again: nothing');
   // real new work does move
   const au2 = Students.createAuto('Dragoncito 778', 'hsk2', 'seal');
   Zoco.ensure(au2, env);
@@ -320,7 +423,7 @@ function unit() {
   Zoco.settleSeals(au2, 'hsk2');
   const before2 = r2.zoco.c;
   const m2 = Zoco.merge(au2, r2, env);
-  ok(m2.c === 20 && r2.zoco.c === before2 + 20, 'an automatic account with 10 words the real one never marked: +20 (only those)');
+  ok(m2.c === 10 * P.seal && r2.zoco.c === before2 + 10 * P.seal, 'an automatic account with 10 words the real one never marked: +' + 10 * P.seal + ' (only those)');
   RP.applySeals('REA2', 'hsk2', range(51, 60), []);
   ok(Zoco.settleSeals(r2, 'hsk2').got === 0, '… and those words moving in never pay again');
 }
@@ -331,9 +434,19 @@ function unit() {
 const DATA = fs.mkdtempSync(path.join(os.tmpdir(), 'draly-zoco-'));
 fs.writeFileSync(path.join(DATA, 'ruta-settings.json'), JSON.stringify({ trainingLive: true, doradoPct: 70, trainingLaunchAt: NOW - 5 * DAY }));
 // a kid who did things BEFORE El Zoco (40 words, 1 practice at the goal, 1 homework sent, 6 days in a row up to yesterday)
+// a purse already in the v2 amounts (pv 2) with a balance, and one of 2026-10-19 (v1: no pv)
+const purse2 = (c) => ({ v: 1, pv: 2, at: NOW - 30 * DAY, c, e: c, sp: 0, w: 0, ps: 0, own: [], buys: [], k: {}, sk: {}, gm: {}, q: { seal: 0, hw: [] }, day: {}, log: [] });
 fs.writeFileSync(path.join(DATA, 'student-records.json'), JSON.stringify({
   PRE7: { code: 'PRE7', displayName: 'Kid Before', firstSeen: NOW - 40 * DAY, lastSeen: NOW - DAY, level: 'hsk2', classroomCode: '1002', sentencesBuilt: [],
     ruta: { hsk2: { s: '1-40', p: { 1: 80, 2: 50 } } }, tareas: { [NEW[0]]: { h: NOW - 2 * DAY, s: NOW - 2 * DAY } }, streak: 6, dayDate: today(NOW - DAY), tz: 'UTC' },
+  // a kid who saved for weeks, and one with one character's worth
+  RICH: { code: 'RICH', displayName: 'Kid Rich', firstSeen: NOW - 60 * DAY, lastSeen: NOW - DAY, level: 'hsk2', classroomCode: '1002', sentencesBuilt: [], tz: 'UTC', zoco: purse2(2600) },
+  RIC2: { code: 'RIC2', displayName: 'Kid Rich 2', firstSeen: NOW - 60 * DAY, lastSeen: NOW - DAY, level: 'hsk2', classroomCode: '1002', sentencesBuilt: [], tz: 'UTC', zoco: purse2(1000) },
+  // a purse of 2026-10-19: 300 coins, a character bought at 150 and equipped, the welcome grant (150) paid, 10 coins of
+  // words (5 words at 2) waiting since yesterday
+  OLDV: { code: 'OLDV', displayName: 'Kid V1', firstSeen: NOW - 30 * DAY, lastSeen: NOW - DAY, level: 'hsk2', classroomCode: '1002', sentencesBuilt: [], tz: 'UTC',
+    avatar: 'dralingo-sheikh', zoco: { v: 1, at: NOW - DAY, c: 300, e: 450, sp: 150, w: 150, ps: 100, own: ['dralingo-sheikh'], buys: [['dralingo-sheikh', 150, NOW - DAY]],
+      k: {}, sk: {}, gm: {}, q: { seal: 10, hw: [] }, day: { d: today(NOW - DAY), seal: 100, hw: 150, game: 6, star: 8 }, log: [[NOW - DAY, 150, 'welcome']] } },
 }));
 const rnd = (n) => crypto.randomBytes(n).toString('hex').toUpperCase();
 const LEGACY = 'legacy-' + rnd(12);
@@ -539,6 +652,7 @@ async function hijackGame(A, B, codeB) {
 }
 
 async function run() {
+  const P = Zoco.PAY, CAP = Zoco.CAP, CAPC = Zoco.CAPC;
   const stamp = Date.now().toString(36).slice(-4);
   section('every kind of visitor on GET /api/zoco and the home\'s pill');
   const anon = phone();
@@ -550,10 +664,13 @@ async function run() {
   ok(kidA.ok && kidA.level === 'hsk2', 'a New HSK 1 kid (made up)');
   r = await shop(A);
   ok(r.status === 200 && r.json.student === true && r.json.coins === 0 && r.json.welcome === 0 && /^[a-f0-9]{12}$/.test(r.json.who), 'their shop: 0 coins, no welcome grant (nothing done before)');
-  ok(r.json.items.length === 16 && !r.json.items.some((i) => ['latifa-3d', 'perro-de-adric', 'poni-de-aileen', 'panda-3d'].includes(i.id)), '16 characters on sale; the held ones are not even listed');
-  ok(!/latifa-3d|perro-de-adric|poni-de-aileen|panda-3d|Ready Player|origen del modelo|licencia/.test(r.text), '… nothing of the held ones in the answer (not their names, not why they are held)');
+  const HELD4 = ['latifa-3d', 'perro-de-adric', 'poni-de-aileen', 'panda-3d'];
+  ok(r.json.items.length === 20 && HELD4.every((id) => r.json.items.some((i) => i.id === id && i.full === '/assets/zoco/full/' + id + '.webp')), 'all 20 characters on sale, the dog, the pony, the panda and Latifa con abaya with their pictures');
+  ok(!/Ready Player|origen del modelo|licencia|"hold"/.test(r.text), '… and no word of why they were held');
+  ok(r.json.items.find((i) => i.id === 'dralingo-emperador-qin').price === 3000 && Math.min(...r.json.items.map((i) => i.price)) === 800, 'the v2 prices (800 … Dralingo Emperador Qin 3000)');
   ok(!r.text.includes(kidA.studentCode), 'the student code never travels');
-  ok(JSON.stringify(r.json.ways.map((w) => w.coins)) === JSON.stringify([2, 20, 50, 10, 5, 30]), '«¿Cómo gano monedas?»: +2 · +20 · +50 · +10 · +5 c/u · +30 (the approved amounts)');
+  ok(JSON.stringify(r.json.ways.map((w) => w.coins)) === JSON.stringify([1, 10, 25, 5, 2, 15]), '«¿Cómo gano monedas?»: +1 · +10 · +25 · +5 · +2 c/u · +15 (v2)');
+  ok(r.json.caps.seal === 30 && r.json.caps.hw === 2 && r.json.caps.game === 4 && r.json.caps.star === 5, '… and the day\'s caps: 30 words, 2 homeworks, 4 games, 5 stars');
   r = await home(A, kidA.studentCode);
   ok(r.json.ok && r.json.zoco && r.json.zoco.coins === 0 && Number(r.json.zoco.now) > 0, 'the home sends the coins pill to the kid\'s own session');
   const B = phone();
@@ -562,120 +679,138 @@ async function run() {
   ok(r.status === 403 || (r.json && r.json.zoco === null), 'another kid\'s home from this phone: never their coins');
 
   section('a kid who did things before El Zoco: a one-time welcome grant, nothing twice');
-  const P = phone();
-  const kidP = await enter(P, '1002', null, 'PRE7');
+  const Pp = phone();
+  const kidP = await enter(Pp, '1002', null, 'PRE7');
   ok(kidP.ok, 'the kid logs in with their class code and code');
-  r = await home(P, 'PRE7');
-  const welcome = 40 + 10 + 25;
-  ok(r.json.zoco && r.json.zoco.coins === welcome && r.json.zoco.news.some((n) => n.why === 'welcome' && n.n === welcome), 'the home: the welcome grant (' + welcome + ') and its news for the «+N monedas» moment');
-  r = await seals(P, 'hsk2', [41], []);
-  ok(r.json.coins && r.json.coins.got === 2 + 30 && r.json.coins.items.some((i) => i.why === 'streak'), 'a new word today: +2, and the 7th day in a row: +30 (' + JSON.stringify(r.json.coins && r.json.coins.items) + ')');
-  const r1 = await seals(P, 'hsk2', [], range(1, 40));
-  r = await seals(P, 'hsk2', range(1, 40), []);
+  r = await home(Pp, 'PRE7');
+  const welcome = Math.round(40 * P.seal / 2 + P.train / 2 + P.hw / 2);
+  ok(r.json.zoco && r.json.zoco.coins === welcome && r.json.zoco.news.some((n) => n.why === 'welcome' && n.n === welcome), 'the home: the welcome grant at half of today\'s pay (' + welcome + ') and its news for the «+N monedas» moment');
+  r = await seals(Pp, 'hsk2', [41], []);
+  ok(r.json.coins && r.json.coins.got === P.seal + P.streak && r.json.coins.items.some((i) => i.why === 'streak'), 'a new word today: +' + P.seal + ', and the 7th day in a row: +' + P.streak + ' (' + JSON.stringify(r.json.coins && r.json.coins.items) + ')');
+  const r1 = await seals(Pp, 'hsk2', [], range(1, 40));
+  r = await seals(Pp, 'hsk2', range(1, 40), []);
   ok(r1.status === 200 && !r1.json.coins && r.status === 200 && !r.json.coins, 'the old words unmarked and marked again: no coins');
-  r = await tareas(P, { unsent: [NEW[0]] });
+  r = await tareas(Pp, { unsent: [NEW[0]] });
   ok(r.status === 200 && !r.json.coins, 'the homework sent before: «Deshacer» takes nothing (it never paid)');
-  r = await tareas(P, { sent: [NEW[0]] });
+  r = await tareas(Pp, { sent: [NEW[0]] });
   ok(r.status === 200 && !r.json.coins, '… marked again: nothing');
+
+  section('a purse of 2026-10-19 (v1 amounts) on the server: its coins and characters stay');
+  const O = phone();
+  ok((await enter(O, '1002', null, 'OLDV')).ok, 'the kid logs in');
+  r = await shop(O);
+  ok(r.json.coins === 300 + 5 * P.seal && r.json.welcome === 150 && r.json.own.includes('dralingo-sheikh') && r.json.equipped === 'dralingo-sheikh' && r.json.waiting === 0,
+    'its 300 coins, its character (bought at 150, still theirs and still equipped), its welcome grant (150, not paid again); the 10 coins of 5 words waiting since yesterday came in at today\'s +' + P.seal + ' a word (' + r.json.coins + ')');
+  ok(r.json.items.find((i) => i.id === 'dralingo-sheikh').owned && r.json.items.find((i) => i.id === 'dralingo-sheikh').price === 800, '… «Tuyo» on it, whatever its price is now');
 
   section('the steps pay in their own endpoints, once');
   r = await seals(A, 'hsk2', [1, 2, 3], []);
-  ok(r.json.coins && r.json.coins.got === 6 && r.json.coins.c === 6, 'La Base: three words, +6');
+  ok(r.json.coins && r.json.coins.got === 3 * P.seal && r.json.coins.c === 3 * P.seal, 'La Base: three words, +' + 3 * P.seal);
   ok(!(await seals(A, 'hsk2', [], [1, 2, 3])).json.coins && !(await seals(A, 'hsk2', [1, 2, 3], [])).json.coins, 'unmark + mark the same words: nothing');
   r = await seals(A, 'hsk2', range(4, 60), []);
-  ok(r.json.coins && r.json.coins.got === Zoco.CAP.seal - 6, 'many words at once: up to the day\'s cap (' + Zoco.CAP.seal + ')');
+  ok(r.json.coins && r.json.coins.got === CAPC.seal - 3 * P.seal, 'many words at once: up to the day\'s cap (' + CAP.seal + ' words)');
   r = await shop(A);
-  ok(r.json.coins === Zoco.CAP.seal && r.json.waiting === (57 * 2) - (Zoco.CAP.seal - 6), 'the rest waits for tomorrow (' + r.json.waiting + ')');
+  ok(r.json.coins === CAPC.seal && r.json.waiting === 57 * P.seal - (CAPC.seal - 3 * P.seal), 'the rest waits for tomorrow (' + r.json.waiting + ')');
   r = await tareas(A, { sent: [NEW[1]] });
-  ok(r.json.coins && r.json.coins.got === 50 && r.json.coins.c === Zoco.CAP.seal + 50, '«¡Ya la mandé!»: +50');
+  ok(r.json.coins && r.json.coins.got === P.hw && r.json.coins.c === CAPC.seal + P.hw, '«¡Ya la mandé!»: +' + P.hw);
   ok(!(await tareas(A, { sent: [NEW[1]] })).json.coins, 'the same mark again: nothing');
   r = await tareas(A, { unsent: [NEW[1]] });
-  ok(r.json.coins && r.json.coins.got === -50, '«Deshacer»: the +50 go back');
+  ok(r.json.coins && r.json.coins.got === -P.hw, '«Deshacer»: the +' + P.hw + ' go back');
   r = await tareas(A, { sent: [NEW[1]] });
-  ok(r.json.coins && r.json.coins.got === 50, 'marked again: +50');
+  ok(r.json.coins && r.json.coins.got === P.hw, 'marked again: +' + P.hw);
   r = await tareas(A, { sent: [OLD[0]] });
   ok(r.status === 200 && !r.json.coins, 'another level\'s homework: no coins');
-  ok((await shop(A)).json.coins === Zoco.CAP.seal + 50, 'A has ' + (Zoco.CAP.seal + 50));
-  // a code in the body never moves coins to someone else
+  ok((await shop(A)).json.coins === CAPC.seal + P.hw, 'A has ' + (CAPC.seal + P.hw));
+  // a code in the body never moves coins to someone else (and the day's 2 homeworks are used: this one waits)
+  const wA = (await shop(A)).json.waiting;
   r = await tareas(A, { code: kidB.studentCode, sent: [NEW[2]] });
-  ok(r.json.coins && r.json.coins.got === 50 && (await shop(B)).json.coins === 0, 'a classmate\'s code in the body: the coins go to the logged-in kid, the classmate earns nothing');
-  const coinsA = (await shop(A)).json.coins;
+  const sB = (await shop(B)).json;
+  ok(r.status === 200 && !r.json.coins && (await shop(A)).json.waiting === wA + P.hw && sB.coins === 0 && sB.waiting === 0, 'a classmate\'s code in the body: the homework is the logged-in kid\'s (it waits: 2 a day already), the classmate earns nothing');
 
-  section('El Entrenamiento: +20 the first time a world reaches its goal');
+  section('El Entrenamiento: +' + P.train + ' the first time a world reaches its goal');
   const T = phone();
   const kidT = await enter(T, '1001', 'Zoco T ' + stamp);
   ok(kidT.ok && kidT.level === 'hsk1', 'an HSK 1 kid (Pinyin básico is open from the start)');
   let pl = await play(T, 'hsk1', 'pinyin', 4);
   ok(pl.fin.ok && pl.fin.pct < 70 && !pl.fin.coins, 'a round below the goal: no coins (' + pl.fin.pct + ' %)');
   pl = await play(T, 'hsk1', 'pinyin', 99);
-  ok(pl.fin.ok && pl.fin.pct >= 70 && pl.fin.coins && pl.fin.coins.got === 20, 'a round at the goal: +20 (' + pl.fin.pct + ' %)');
+  ok(pl.fin.ok && pl.fin.pct >= 70 && pl.fin.coins && pl.fin.coins.got === P.train, 'a round at the goal: +' + P.train + ' (' + pl.fin.pct + ' %)');
   const again = await post('/api/ruta/train/finish', { round: pl.round }, as(T));
   ok(again.json.ok && !again.json.coins, 'the same round finished again: nothing');
   pl = await play(T, 'hsk1', 'pinyin', 99);
   ok(pl.fin.ok && !pl.fin.coins, 'the world played again at its goal: nothing (first time only)');
 
   section('the shop: strangers, other kids, other sites, too few coins');
+  const R = phone();
+  ok((await enter(R, '1002', null, 'RICH')).ok, 'a kid who saved 2600 coins logs in');
+  const coinsR0 = (await shop(R)).json.coins;
+  ok(coinsR0 === 2600, '… 2600 in their purse');
   r = await buy(B, 'dralingo-sheikh');
-  ok(r.status === 402 && r.json.why === 'coins' && (await shop(B)).json.coins === 0, 'too few coins: 402, nothing bought');
-  ok((await buy(A, 'dralingo-sheikh', { 'Sec-Fetch-Site': 'cross-site' })).status === 403, 'a request from another site: 403');
-  ok((await buy(A, 'dralingo-sheikh', { Origin: 'https://evil.example' })).status === 403, 'another Origin: 403');
-  ok((await post('/api/zoco/buy', { id: 'dralingo-sheikh', who: 'aaaaaaaaaaaa' }, as(A))).status === 409, 'a sibling\'s mirror (another account\'s who): 409');
-  for (const id of ['latifa-3d', 'perro-de-adric', 'poni-de-aileen', 'panda-3d', 'bebe-dralingo', '__proto__', 'hamdan']) {
-    r = await buy(A, id);
-    ok(r.status === 404 && (await shop(A)).json.coins === coinsA, 'not on sale, refused: ' + id);
+  ok(r.status === 402 && r.json.why === 'coins' && r.json.need === 800 && (await shop(B)).json.coins === 0, 'too few coins: 402 («Te faltan 800»), nothing bought');
+  r = await buy(A, 'dralingo-sheikh');
+  ok(r.status === 402 && r.json.need === 800 - (CAPC.seal + P.hw), 'A with ' + (CAPC.seal + P.hw) + ' coins: «Te faltan ' + (800 - (CAPC.seal + P.hw)) + '» (a character takes weeks)');
+  ok((await buy(R, 'dralingo-sheikh', { 'Sec-Fetch-Site': 'cross-site' })).status === 403, 'a request from another site: 403');
+  ok((await buy(R, 'dralingo-sheikh', { Origin: 'https://evil.example' })).status === 403, 'another Origin: 403');
+  ok((await post('/api/zoco/buy', { id: 'dralingo-sheikh', who: 'aaaaaaaaaaaa' }, as(R))).status === 409, 'a sibling\'s mirror (another account\'s who): 409');
+  for (const id of ['bebe-dralingo', '__proto__', 'hamdan', 'camello']) {
+    r = await buy(R, id);
+    ok(r.status === 404 && (await shop(R)).json.coins === coinsR0, 'not on sale, refused: ' + id);
   }
-  r = await post('/api/zoco/buy', { id: 'dralingo-sheikh', code: kidB.studentCode }, as(A));
-  ok(r.status === 200 && r.json.ok && r.json.coins === coinsA - 150 && r.json.own.includes('dralingo-sheikh'), 'A buys Dralingo Sheikh (150): their own purse, a code in the body ignored');
+  r = await post('/api/zoco/buy', { id: 'dralingo-sheikh', code: kidB.studentCode }, as(R));
+  ok(r.status === 200 && r.json.ok && r.json.coins === coinsR0 - 800 && r.json.own.includes('dralingo-sheikh'), 'R buys Dralingo Sheikh (800): their own purse, a code in the body ignored');
   ok((await shop(B)).json.own.length === 0 && (await shop(B)).json.coins === 0, '… B owns nothing and paid nothing');
-  ok((await buy(A, 'dralingo-sheikh')).status === 409, 'buying it again: 409');
+  ok((await buy(R, 'dralingo-sheikh')).status === 409, 'buying it again: 409');
+  r = await buy(R, 'latifa-3d');
+  ok(r.status === 200 && r.json.coins === coinsR0 - 800 - 1400 && r.json.own.includes('latifa-3d'), 'R buys Latifa con abaya (1400): once held, on sale now');
+  const coinsR = r.json.coins;
 
   section('a skin as the avatar: only when owned');
-  ok((await equip(B, 'dralingo-sheikh')).status === 403, 'B equips A\'s skin: refused');
+  ok((await equip(B, 'dralingo-sheikh')).status === 403, 'B equips R\'s skin: refused');
   r = await post('/api/homework/avatar', { accessCode: '1002', studentCode: kidB.studentCode, avatar: 'dralingo-sheikh' }, as(B));
   ok(r.status === 400, '… nor through Mi perfil\'s old avatar endpoint');
-  ok((await equip(A, 'dralingo-fuego-azul')).status === 403, 'A equips a skin not bought: refused');
-  ok((await equip(A, 'latifa-3d')).status === 403, '… a held one: refused');
-  r = await equip(A, 'dralingo-sheikh');
-  ok(r.status === 200 && r.json.ok, 'A equips the skin they bought');
-  ok((await shop(A)).json.equipped === 'dralingo-sheikh', '… it is their avatar now');
-  ok((await equip(A, 'dralingo-sheikh', { 'Sec-Fetch-Site': 'cross-site' })).status === 403, 'equip from another site: 403');
+  ok((await equip(R, 'dralingo-fuego-azul')).status === 403, 'R equips a skin not bought: refused');
+  ok((await equip(B, 'panda-3d')).status === 403, '… B the panda (on sale, not bought): refused');
+  ok((await equip(R, 'latifa-3d')).status === 200, 'R equips Latifa con abaya, bought');
+  r = await equip(R, 'dralingo-sheikh');
+  ok(r.status === 200 && r.json.ok, 'R equips Dralingo Sheikh, bought');
+  ok((await shop(R)).json.equipped === 'dralingo-sheikh', '… it is their avatar now');
+  ok((await equip(R, 'dralingo-sheikh', { 'Sec-Fetch-Site': 'cross-site' })).status === 403, 'equip from another site: 403');
   r = await equip(B, 'hamdan');
   ok(r.status === 200, 'the free saga avatars stay free');
 
-  section('the purchase is atomic (two taps at once never buy twice or go below 0)');
+  section('the purchase is atomic (three taps at once never buy twice or go below 0)');
   const C = phone();
-  const kidC = await enter(C, '1002', 'Zoco C ' + stamp);
-  await tareas(C, { sent: NEW.slice(0, 3) });
+  const kidC = await enter(C, '1002', null, 'RIC2');
   r = await shop(C);
   const cC = r.json.coins;
   const both = await Promise.all([buy(C, 'dralingo-clasico'), buy(C, 'dralingo-clasico'), buy(C, 'dralingo-sheikh-roja')]);
   const okN = both.filter((x) => x.status === 200).length;
   const after = (await shop(C)).json;
-  ok(after.coins >= 0 && after.coins === cC - 150 * okN && after.own.filter((x) => x === 'dralingo-clasico').length <= 1, 'three buys at once with ' + cC + ' coins: ' + okN + ' bought, ' + after.coins + ' left, never twice');
+  ok(okN === 1 && after.coins === cC - 800 && after.own.length === 1, 'three buys at once with ' + cC + ' coins (one character\'s worth): ' + okN + ' bought, ' + after.coins + ' left, never twice');
 
-  section('a class PIN game: a skin in the room, +10 played for real, +5 a bonus star');
+  section('a class PIN game: a skin in the room, +' + P.game + ' played for real, +' + P.star + ' a bonus star');
   const res = await pinGame([
-    { ph: A, name: 'Ana ' + stamp, code: kidA.studentCode, accessCode: '1002', avatar: '🐉', answers: 4 },
+    { ph: R, name: 'Ana ' + stamp, code: 'RICH', accessCode: '1002', avatar: '🐉', answers: 4 },
     { ph: B, name: 'Beto ' + stamp, code: kidB.studentCode, accessCode: '1002', avatar: 'dralingo-sheikh', answers: 4, swapTry: 'dralingo-sheikh' },
     { ph: C, name: 'Caro ' + stamp, code: kidC.studentCode, accessCode: '1002', avatar: 'panda-3dX', answers: 1 },
-    { ph: phone(), name: 'Dani ' + stamp, code: kidA.studentCode, accessCode: '', avatar: 'dralingo-sheikh', answers: 4 },
+    { ph: phone(), name: 'Dani ' + stamp, code: 'RICH', accessCode: '', avatar: 'dralingo-sheikh', answers: 4 },
   ]);
   const [mA, mB, mC, mD] = res.out;
-  ok(mA.join && mA.join.ok && mA.join.avatar === 'dralingo-sheikh' && mA.join.skins.includes('dralingo-sheikh'), 'A joins: the room plays A\'s skin (the account\'s skin wins over the phone\'s pick) and tells the phone which skins A owns');
+  ok(mA.join && mA.join.ok && mA.join.avatar === 'dralingo-sheikh' && mA.join.skins.includes('dralingo-sheikh') && mA.join.skins.includes('latifa-3d'), 'R joins: the room plays R\'s skin (the account\'s skin wins over the phone\'s pick) and tells the phone which skins R owns');
   ok(mB.join && mB.join.ok && mB.join.avatar === '🐉' && mB.join.skins.length === 0, 'B sends a skin B does not own: the room plays its base character (🐉)');
-  ok(mD.join && mD.join.ok && mD.join.guest === true && mD.join.avatar === '🐉', 'a stranger typing A\'s code with A\'s skin: a guest, never A\'s skin');
+  ok(mD.join && mD.join.ok && mD.join.guest === true && mD.join.avatar === '🐉', 'a stranger typing R\'s code with R\'s skin: a guest, never R\'s skin');
   const roster = (st) => Object.values((st && st.players) || {});
-  ok(roster(res.st0).some((p) => p.avatar === 'dralingo-sheikh' && /^Ana /.test(p.name)), 'the projector\'s player list carries A\'s skin');
+  ok(roster(res.st0).some((p) => p.avatar === 'dralingo-sheikh' && /^Ana /.test(p.name)), 'the projector\'s player list carries R\'s skin');
   ok(!roster(res.st1).some((p) => /^Beto /.test(p.name) && p.avatar === 'dralingo-sheikh'), 'the lobby swap to a skin not owned: nothing changes');
   const meA = mA.end && mA.end.me;
-  ok(meA && meA.skin === 'dralingo-sheikh', 'the ending: A\'s card is drawn with A\'s skin');
+  ok(meA && meA.skin === 'dralingo-sheikh', 'the ending: R\'s card is drawn with R\'s skin');
   const hostRows = mA.end && mA.end.fin ? [].concat(mA.end.fin.crews.red || [], mA.end.fin.crews.gold || []) : [];
   ok(hostRows.some((x) => x.skin === 'dralingo-sheikh'), '… and the ceremony\'s crews too');
   const starsA = meA && Array.isArray(meA.stars) ? meA.stars.length : 0;
-  ok(mA.coins && mA.coins.got === 10 + 5 * Math.min(starsA, Zoco.CAP.star), 'A played for real: +10 and +5 per bonus star (' + starsA + ' stars → ' + (mA.coins && mA.coins.got) + ')');
+  ok(mA.coins && mA.coins.got === P.game + P.star * Math.min(starsA, CAP.star), 'R played for real: +' + P.game + ' and +' + P.star + ' per bonus star (' + starsA + ' stars → ' + (mA.coins && mA.coins.got) + ')');
   ok(mC.coins === null, 'C answered once: not played for real, no coins');
-  ok(mC.join && mC.join.avatar === '🐼', 'a skin smuggled through the 8-character cut («panda-3dX» → «panda-3d», held): its emoji, never the skin');
-  ok(mD.coins === null && (await shop(A)).json.coins === coinsA - 150 + (mA.coins ? mA.coins.got : 0), 'the stranger\'s join paid nothing to A');
+  ok(mC.join && mC.join.avatar === '🐼', 'a skin smuggled through the 8-character cut («panda-3dX» → «panda-3d», not owned): its emoji, never the skin');
+  ok(mD.coins === null && (await shop(R)).json.coins === coinsR + (mA.coins ? mA.coins.got : 0), 'the stranger\'s join paid nothing to R');
   const cA0 = (await shop(A)).json.coins, cC0 = (await shop(C)).json.coins;
   const hj = await hijackGame({ ph: A, code: kidA.studentCode }, C, kidC.studentCode);
   ok(hj.jb && hj.jb.ok && hj.jb.rejoined === true, 'C types the name of A\'s dropped slot and takes it (as rooms always did)');
@@ -684,9 +819,12 @@ async function run() {
   section('nothing in the record that the phone could have written');
   await sleep(1500);
   const recs = JSON.parse(fs.readFileSync(path.join(DATA, 'student-records.json'), 'utf8'));
-  const za = recs[kidA.studentCode] && recs[kidA.studentCode].zoco;
-  ok(za && za.v === 1 && Array.isArray(za.own) && za.own.length === 1 && JSON.stringify(za).length < 3000, 'A\'s purse on their record (' + JSON.stringify(za || {}).length + ' characters)');
-  ok(recs[kidA.studentCode].avatar === 'dralingo-sheikh', 'A\'s avatar: the skin');
+  const za = recs.RICH && recs.RICH.zoco;
+  ok(za && za.v === 1 && za.pv === 2 && Array.isArray(za.own) && za.own.length === 2 && JSON.stringify(za).length < 3000, 'R\'s purse on their record (' + JSON.stringify(za || {}).length + ' characters)');
+  ok(recs.RICH.avatar === 'dralingo-sheikh', 'R\'s avatar: the skin');
+  ok(recs.OLDV && recs.OLDV.zoco.pv === 2 && recs.OLDV.zoco.c === 300 + 5 * P.seal && recs.OLDV.zoco.w === 150, 'the purse of 2026-10-19 saved in v2 amounts, its coins and welcome kept');
+  const zA = recs[kidA.studentCode] && recs[kidA.studentCode].zoco;
+  ok(zA && zA.pv === 2, 'a purse opened today is v2 from the start');
   ok(!allLog.includes(kidA.studentCode) && !allLog.includes(SEED), 'no student code or teacher code in the server log');
 }
 

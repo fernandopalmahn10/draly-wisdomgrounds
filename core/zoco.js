@@ -6,8 +6,9 @@
 // finds the record, an archived kid included, and saves it). How a skin is drawn lives in public/js/saga.js (ZOCO).
 //
 // rec.zoco = {
-//   v: 1, at: <when the purse was opened>,
-//   c: coins now (an undone homework can leave it below 0: «Deshacer» always takes its +50 back, so a spend-then-undo
+//   v: 1 (the purse's shape), pv: 2 (paid in the 2026-10-20 amounts; pvAt: when a purse of 2026-10-19 took them, see
+//   upgrade()), at: <when the purse was opened>,
+//   c: coins now (an undone homework can leave it below 0: «Deshacer» always takes back what it paid, so a spend-then-undo
 //      never mints coins), e: coins earned in all, sp: coins spent in all, w: the one-time welcome grant,
 //   ps: coins paid for La Base's words in all (a merge moves at most that for words new to the real account),
 //   own: [skin ids bought, in order], buys: [[id, price, when]],
@@ -26,32 +27,42 @@ const Saga = require('../public/js/saga');
 let RP = null;
 const rp = () => RP || (RP = require('./ruta-progress'));
 
-// ── what each real step pays (the approved amounts) ──────────────────────────────────────────────────────────────
+// ── what each real step pays ─────────────────────────────────────────────────────────────────────────────────────
+// v2 · 2026-10-20 (his words: "make it a lot more difficult to get the points, because elsewhere everyone is going to
+// be unlocking super cool characters"): an active kid earns ~150 a week, so the first character (800) takes ~5 weeks and
+// Dralingo Emperador Qin (3000) ~5 months. (v1 of 2026-10-19 paid 2 · 20 · 50 · 10 · 5 · 30.)
 const PAY = {
-  seal: 2,      // a word marked in La Base, the first time only (unmark + mark again pays nothing)
-  train: 20,    // a practice of El Entrenamiento that reaches its goal (the Dorado %), once per world
-  hw: 50,       // a homework marked «¡Ya la mandé!», once per homework; «Deshacer» takes the 50 back
-  game: 10,     // a class PIN game played for real (GAME_MIN answers or more)
-  star: 5,      // each bonus star of that game's ceremony
-  streak: 30,   // 7 days in a row with a real step (each 7 of the same run: 7, 14, 21…)
+  seal: 1,      // a word marked in La Base, the first time only (unmark + mark again pays nothing)
+  train: 10,    // a practice of El Entrenamiento that reaches its goal (the Dorado %), once per world
+  hw: 25,       // a homework marked «¡Ya la mandé!», once per homework; «Deshacer» takes back what it paid
+  game: 5,      // a class PIN game played for real (GAME_MIN answers or more)
+  star: 2,      // each bonus star of that game's ceremony
+  streak: 15,   // 7 days in a row with a real step (each 7 of the same run: 7, 14, 21…)
 };
 const GAME_MIN = 3;          // «played for real»: at least this many answers in the game
-// daily caps (the kid's own calendar). Seals and homework are one-time steps that a free tap can take in bulk (300
-// words in two minutes, every homework of the level at once): what passes the day's cap WAITS and is paid on the next
-// days (nothing is lost, it is only paced). Games and stars repeat (a teacher plays «Otra ronda»): past the cap they
-// simply pay nothing that day.
-const CAP = { seal: 100, hw: 150, game: 6, star: 8 };   // coins of seals · coins of homework · games · stars per day
+// daily caps (the kid's own calendar), in STEPS: 30 words, 2 homework, 4 games, 5 stars a day. Seals and homework are
+// one-time steps that a free tap can take in bulk (300 words in two minutes, every homework of the level at once): what
+// passes the day's cap WAITS and is paid on the next days (nothing is lost, it is only paced). Games and stars repeat (a
+// teacher plays «Otra ronda»): past the cap they simply pay nothing that day.
+const CAP = { seal: 30, hw: 2, game: 4, star: 5 };      // words · homework · games · stars per day
+// the day's counters of words and homework count COINS (day.seal, day.hw: what a v1 purse already holds), so their caps
+// in coins are the steps × what one pays
+const CAPC = { seal: CAP.seal * PAY.seal, hw: CAP.hw * PAY.hw };
 const WELCOME_MAX = 150;     // the one-time welcome grant for what a kid already did before El Zoco (see welcomeOf)
+// what a v1 purse's waiting line and day counters were worth per step (upgrade() turns them into today's amounts)
+const PAY_V1 = { seal: 2, hw: 50 };
 const LOG_MAX = 40;
 const GAME_KEEP_MS = 14 * 86400000;
 
-// ── the catalog (the renders' ids and names are saga.js ZOCO; price 150-400, his range) ──────────────────────────────
-// hold: kept OUT of the shop until he says so (hidden from kids and never sold; a kid who owns one keeps it). Held
-// 2026-10-19: where the model came from is not confirmed yet (roster.json), so their pictures are not published either
-// (security review: a licence question is about the files too). To sell one: delete its `hold` (one line) and copy its
-// two renders from assets-library/originals-renders/2026-10-19 (full/<roster id>.webp → public/assets/zoco/full/<id>.webp,
-// avatar/<roster id>.webp → public/assets/zoco/avatar/<id>.webp; roster ids: latifa, panda, perro-de-adric,
-// poni-de-aileen); scripts/test-zoco.js checks the files of everything on sale.
+// ── the catalog (the renders' ids and names are saga.js ZOCO) ────────────────────────────────────────────────────────
+// Prices 800-3000 since 2026-10-20 (v2, «Unlocking is hard and special»): the plain forms cheapest (800), the gang and the
+// pets in the middle, the emperors and Fuego Azul dearer, Dralingo Emperador Qin 3000 at the top (table: docs/specs/zoco.md).
+// A character already bought stays bought whatever its price is now.
+// hold: '<why>' keeps a character OUT of the shop until he says so (hidden from kids and never sold; a kid who owns one
+// keeps it), and its pictures are not published either (a licence question is about the files too). Nothing is held since
+// 2026-10-20 (his words: "I bought licenses for all these models before in the past": the dog, the pony, the panda and
+// Latifa con abaya went on sale, their renders shipped like the others). scripts/test-zoco.js checks the files of
+// everything on sale.
 const CATS = [
   { id: 'dralingo', title: 'Dralingo', one: 'forma', many: 'formas', tag: 'Dralingo · forma especial' },
   { id: 'pandilla', title: 'La pandilla', one: 'personaje', many: 'personajes', tag: 'La pandilla · nuevo look' },
@@ -60,26 +71,26 @@ const CATS = [
 const ADDED = '2026-10-19';
 const CATALOG = [
   // (order = the shop's order: look-alikes never side by side, on a phone's 2 columns or a laptop's 5)
-  { id: 'dralingo-emperador-qin', cat: 'dralingo', price: 400, hero: true, blurb: 'La corona de los emperadores de la Gran Muralla. Úsalo en tu perfil y en los juegos de la clase.' },
-  { id: 'dralingo-fuego-azul', cat: 'dralingo', price: 300, blurb: 'Su superpoder: un fuego azul que nunca quema. Ilumina las palabras y le da fuerza a tus amigos.' },
-  { id: 'dralingo-sheikh', cat: 'dralingo', price: 150, blurb: 'Dralingo con su kandura blanca y su ghutra, sentado tranquilo, como en casa en Dubái.' },
-  { id: 'dralingo-emperador-barba', cat: 'dralingo', price: 350, blurb: 'Dralingo cuando ya es muy sabio: barba blanca larga y la calma de los grandes maestros.' },
-  { id: 'dralingo-sheikh-paseo-roja', cat: 'dralingo', price: 200, blurb: 'De paseo con su bastón y la ghutra roja.' },
-  { id: 'dralingo-clasico', cat: 'dralingo', price: 150, blurb: 'El dragón azul de siempre, con las alas abiertas y la ghutra roja.' },
-  { id: 'dralingo-emperador', cat: 'dralingo', price: 250, blurb: 'Gorro de emperador y túnica blanca, listo para recorrer la Ciudad Prohibida.' },
-  { id: 'bebe-dralingo-kufiya', cat: 'dralingo', price: 200, blurb: 'Dralingo de bebé, con su kufiya roja y blanca.' },
-  { id: 'dralingo-sheikh-roja', cat: 'dralingo', price: 150, blurb: 'El mismo Dralingo Sheikh, con la ghutra de cuadros rojos y blancos.' },
-  { id: 'bebe-dralingo-emperador', cat: 'dralingo', price: 200, blurb: 'Dralingo de bebé, con un gorro de emperador rojo. ¡Pequeño pero valiente!' },
-  { id: 'dralingo-sheikh-paseo', cat: 'dralingo', price: 200, blurb: 'Dralingo sale de paseo por Dubái con su bastón. ¡Yalla, amigos!' },
-  { id: 'profe-fer', cat: 'pandilla', price: 200, blurb: 'Tu profe con su traje azul de gala. ¡Atención, equipo!' },
-  { id: 'hamdan-3d', cat: 'pandilla', price: 200, blurb: 'El capitán de la pandilla, con su kandura y su ghutra. ¡Bienvenidos a Dubái!' },
-  { id: 'latifa-3d', cat: 'pandilla', price: 200, hold: 'su cabeza viene de Ready Player Me: revisar los términos', blurb: 'La estratega de la pandilla: siempre tiene un plan.' },
-  { id: 'aileen-3d', cat: 'pandilla', price: 200, blurb: 'Aileen con su traje blanco de artes marciales. ¡Dale, vos podés!' },
-  { id: 'adric-3d', cat: 'pandilla', price: 200, blurb: 'El rastreador de la pandilla, con su chaqueta negra y azul. Mira… escucha.' },
-  { id: 'adrian-3d', cat: 'pandilla', price: 200, blurb: 'El explorador de la pandilla, siempre buscando la próxima X del mapa. ¡A la aventura!' },
-  { id: 'perro-de-adric', cat: 'mascotas', price: 250, hold: 'el origen del modelo no está confirmado', blurb: 'El perro de Adric sigue cualquier pista.' },
-  { id: 'poni-de-aileen', cat: 'mascotas', price: 250, hold: 'el origen del modelo no está confirmado', blurb: 'La poni unicornio de Aileen.' },
-  { id: 'panda-3d', cat: 'mascotas', price: 250, hold: 'la licencia del modelo no está confirmada', blurb: 'Un panda de China, amigo de toda la pandilla.' },
+  { id: 'dralingo-emperador-qin', cat: 'dralingo', price: 3000, hero: true, blurb: 'La corona de los emperadores de la Gran Muralla. Úsalo en tu perfil y en los juegos de la clase.' },
+  { id: 'dralingo-fuego-azul', cat: 'dralingo', price: 2500, blurb: 'Su superpoder: un fuego azul que nunca quema. Ilumina las palabras y le da fuerza a tus amigos.' },
+  { id: 'dralingo-sheikh', cat: 'dralingo', price: 800, blurb: 'Dralingo con su kandura blanca y su ghutra, sentado tranquilo, como en casa en Dubái.' },
+  { id: 'dralingo-emperador-barba', cat: 'dralingo', price: 2200, blurb: 'Dralingo cuando ya es muy sabio: barba blanca larga y la calma de los grandes maestros.' },
+  { id: 'dralingo-sheikh-paseo-roja', cat: 'dralingo', price: 1000, blurb: 'De paseo con su bastón y la ghutra roja.' },
+  { id: 'dralingo-clasico', cat: 'dralingo', price: 800, blurb: 'El dragón azul de siempre, con las alas abiertas y la ghutra roja.' },
+  { id: 'dralingo-emperador', cat: 'dralingo', price: 1800, blurb: 'Gorro de emperador y túnica blanca, listo para recorrer la Ciudad Prohibida.' },
+  { id: 'bebe-dralingo-kufiya', cat: 'dralingo', price: 1200, blurb: 'Dralingo de bebé, con su kufiya roja y blanca.' },
+  { id: 'dralingo-sheikh-roja', cat: 'dralingo', price: 800, blurb: 'El mismo Dralingo Sheikh, con la ghutra de cuadros rojos y blancos.' },
+  { id: 'bebe-dralingo-emperador', cat: 'dralingo', price: 1500, blurb: 'Dralingo de bebé, con un gorro de emperador rojo. ¡Pequeño pero valiente!' },
+  { id: 'dralingo-sheikh-paseo', cat: 'dralingo', price: 1000, blurb: 'Dralingo sale de paseo por Dubái con su bastón. ¡Yalla, amigos!' },
+  { id: 'profe-fer', cat: 'pandilla', price: 1600, blurb: 'Tu profe con su traje azul de gala. ¡Atención, equipo!' },
+  { id: 'hamdan-3d', cat: 'pandilla', price: 1400, blurb: 'El capitán de la pandilla, con su kandura y su ghutra. ¡Bienvenidos a Dubái!' },
+  { id: 'latifa-3d', cat: 'pandilla', price: 1400, blurb: 'La estratega de la pandilla: siempre tiene un plan.' },
+  { id: 'aileen-3d', cat: 'pandilla', price: 1400, blurb: 'Aileen con su traje blanco de artes marciales. ¡Dale, vos podés!' },
+  { id: 'adric-3d', cat: 'pandilla', price: 1400, blurb: 'El rastreador de la pandilla, con su chaqueta negra y azul. Mira… escucha.' },
+  { id: 'adrian-3d', cat: 'pandilla', price: 1400, blurb: 'El explorador de la pandilla, siempre buscando la próxima X del mapa. ¡A la aventura!' },
+  { id: 'perro-de-adric', cat: 'mascotas', price: 1200, blurb: 'El perro de Adric sigue cualquier pista.' },
+  { id: 'poni-de-aileen', cat: 'mascotas', price: 1500, blurb: 'Galopa con Aileen a toda velocidad y su cuerno brilla con cada acierto. ¡Dale!' },
+  { id: 'panda-3d', cat: 'mascotas', price: 1200, blurb: 'Un panda de China, amigo de toda la pandilla.' },
 ];
 const ITEM = Object.create(null);
 CATALOG.forEach((x) => { ITEM[x.id] = x; });
@@ -133,23 +144,49 @@ function sealCount(rec, level) {
   return b ? rp().sealsOf(rec, level).size : 0;
 }
 // the welcome grant (decided 2026-10-19, documented in docs/specs/zoco.md): what a kid did BEFORE El Zoco never pays
-// coin by coin (no retroactive pay), but a diligent kid should not start at 0 next to a new one either: half pay for it
-// (1 a word, 10 a practice at the goal, 25 a homework sent), at most WELCOME_MAX (one character at most).
+// coin by coin (no retroactive pay), but a diligent kid should not start at 0 next to a new one either: half pay for it,
+// at most WELCOME_MAX (about a week of an active kid). Half of TODAY's pay (v2, 2026-10-20: ½ a word, 5 a practice at the
+// goal, 12.5 a homework sent) for a purse opened from now on; a grant already paid under v1 stays as it was.
 function welcomeOf(rec, goal) {
   let n = 0;
-  levelsOf(rec).forEach((lvl) => { n += sealCount(rec, lvl) + 10 * trainKeysAtGoal(rec, lvl, goal).length; });
-  n += 25 * sentIds(rec).length;
+  levelsOf(rec).forEach((lvl) => { n += (PAY.seal / 2) * sealCount(rec, lvl) + (PAY.train / 2) * trainKeysAtGoal(rec, lvl, goal).length; });
+  n += (PAY.hw / 2) * sentIds(rec).length;
   return Math.min(WELCOME_MAX, Math.max(0, Math.round(n)));
+}
+// A purse opened under v1 (2026-10-19) takes the v2 amounts at its next touch, once (2026-10-20, his rule: "Characters
+// already bought stay bought; the welcome grant already paid stays"): its coins (a debt too), what it earned and spent,
+// its characters, its welcome grant and every key with what it paid stay exactly as they are (so «Deshacer» of a
+// homework paid 50 still takes back 50: never minted). What it had WAITING for the day's cap was not in the kid's purse
+// yet: each waiting step is paid at the amount of the day it is paid (a word 2 → 1, a homework 50 → 25), and today's
+// counters of words and homework are turned into the same steps (so today's caps count what really happened today).
+// (The purse's shape is the same, so it keeps `v: 1` and gets `pv: 2` = paid in the v2 amounts: a server rolled back
+// to v1 still reads every purse as it is, never mistaking one for a damaged purse and opening a new one over it.)
+function upgrade(z) {
+  if (!obj(z) || z.v !== 1 || z.pv === 2) return z;
+  const words = (coins) => Math.ceil(Math.max(0, Number(coins) || 0) / PAY_V1.seal);
+  const hws = (coins) => Math.round(Math.max(0, Number(coins) || 0) / PAY_V1.hw);
+  if (obj(z.q)) {
+    z.q.seal = words(z.q.seal) * PAY.seal;
+    // (a homework waiting for nothing stays at nothing: never more than it would have paid)
+    if (Array.isArray(z.q.hw)) z.q.hw = z.q.hw.filter((x) => Array.isArray(x)).map((x) => [x[0], Number(x[1]) > 0 ? Math.min(PAY.hw, Number(x[1])) : 0]);
+  }
+  if (obj(z.day)) {
+    if (z.day.seal) z.day.seal = words(z.day.seal) * PAY.seal;
+    if (z.day.hw) z.day.hw = hws(z.day.hw) * PAY.hw;
+  }
+  z.pv = 2;
+  z.pvAt = Date.now();
+  return z;
 }
 // The kid's purse, opened the first time El Zoco meets the record (their home, the shop, or their first real step after
 // the launch: server.js calls this BEFORE a step changes the record). Everything already done counts as done (never paid
 // again) and sizes the welcome grant. env: { goal } (the Dorado %). → rec.zoco
 function ensure(rec, env) {
   if (!rec) return null;
-  if (obj(rec.zoco) && rec.zoco.v === 1) return rec.zoco;
+  if (obj(rec.zoco) && rec.zoco.v === 1) return upgrade(rec.zoco);
   const goal = Number(env && env.goal) || 70;
   const now = Date.now();
-  const z = { v: 1, at: now, c: 0, e: 0, sp: 0, w: 0, ps: 0, own: [], buys: [], k: {}, sk: {}, gm: {}, q: { seal: 0, hw: [] }, day: {}, log: [] };
+  const z = { v: 1, pv: 2, at: now, c: 0, e: 0, sp: 0, w: 0, ps: 0, own: [], buys: [], k: {}, sk: {}, gm: {}, q: { seal: 0, hw: [] }, day: {}, log: [] };
   levelsOf(rec).forEach((lvl) => {
     const b = rp().baseOf(lvl);
     if (b) { const s = rp().encodeSeals(rp().sealsOf(rec, lvl)); if (s) z.sk[lvl] = s; }
@@ -188,12 +225,12 @@ function settleQueue(rec, out) {
   const t = today(rec, z);
   if (!obj(z.q)) z.q = { seal: 0, hw: [] };
   if (z.q.seal > 0) {
-    const n = Math.min(z.q.seal, Math.max(0, CAP.seal - t.seal));
+    const n = Math.min(z.q.seal, Math.max(0, CAPC.seal - t.seal));
     if (n > 0) { z.q.seal -= n; t.seal += n; z.ps = (Number(z.ps) || 0) + n; credit(z, n, 'seal', out); }
   }
   const hw = Array.isArray(z.q.hw) ? z.q.hw : (z.q.hw = []);
   const sent = new Set(sentIds(rec));
-  while (hw.length && t.hw + hw[0][1] <= CAP.hw) {
+  while (hw.length && t.hw + hw[0][1] <= CAPC.hw) {
     const [id, n] = hw.shift();
     if (!sent.has(id) || own(z.k, 'hw:' + id)) continue;   // (unmarked meanwhile, or already paid: nothing)
     t.hw += n;
@@ -220,7 +257,7 @@ function settleSeals(rec, level) {
     const t = today(rec, z);
     settleQueue(rec, out);
     const coins = fresh * PAY.seal;
-    const pay = Math.min(coins, Math.max(0, CAP.seal - t.seal));
+    const pay = Math.min(coins, Math.max(0, CAPC.seal - t.seal));
     if (pay > 0) { t.seal += pay; z.ps = (Number(z.ps) || 0) + pay; credit(z, pay, 'seal', out); }
     if (coins > pay) z.q.seal = (Number(z.q.seal) || 0) + (coins - pay);
   }
@@ -251,7 +288,7 @@ function settleHw(rec, ids) {
   if (!Array.isArray(z.q.hw)) z.q.hw = [];
   settleQueue(rec, out);
   // pays: the kid's own level's homework (`ids`); takes back: any homework that paid or waits, whatever its level (a kid
-  // who moved up a level and unmarks an old homework gives its 50 back too)
+  // who moved up a level and unmarks an old homework gives back what it paid too)
   const all = new Set(list);
   Object.keys(z.k).forEach((k) => { if (k.indexOf('hw:') === 0) all.add(k.slice(3)); });
   z.q.hw.forEach((x) => { if (Array.isArray(x)) all.add(x[0]); });
@@ -260,7 +297,7 @@ function settleHw(rec, ids) {
     const waiting = z.q.hw.findIndex((x) => x[0] === id);
     if (sent.has(id)) {
       if (own(z.k, key) || waiting >= 0 || list.indexOf(id) < 0) return;
-      if (t.hw + PAY.hw <= CAP.hw) { t.hw += PAY.hw; z.k[key] = PAY.hw; credit(z, PAY.hw, 'hw', out); }
+      if (t.hw + PAY.hw <= CAPC.hw) { t.hw += PAY.hw; z.k[key] = PAY.hw; credit(z, PAY.hw, 'hw', out); }
       else z.q.hw.push([id, PAY.hw]);
     } else {
       if (waiting >= 0) { z.q.hw.splice(waiting, 1); return; }
@@ -340,8 +377,8 @@ function buy(rec, id) {
 // (security review 2026-10-19) only what is NEW to the real account moves: a merge never pays twice for the same words or
 // homework (else «a fresh automatic account → mark everything → «Pasar mi progreso»» would mint coins in a loop):
 //   · the keys the real account lacks (a practice, a homework, a game, a streak) with what they paid there (so
-//     «Deshacer» on the real account still takes a homework's 50 back), and its homework still waiting in line;
-//   · its words the real account never counted, 2 each, never more than the automatic account really earned or had
+//     «Deshacer» on the real account still takes back what a homework paid), and its homework still waiting in line;
+//   · its words the real account never counted, PAY.seal each, never more than the automatic account really earned or had
 //     waiting for words (`ps` + its seal line); the part that was still waiting joins the real account's line;
 //   · minus what it spent: its characters move too, so a shortfall (it spent coins on work the real account had already
 //     done) is a debt on the real account, never minted.
@@ -349,7 +386,7 @@ function merge(from, to, env) {
   if (!from || !to) return { c: 0, own: 0 };
   ensure(to, env);
   const zt = to.zoco;
-  const zf = obj(from.zoco) && from.zoco.v === 1 ? from.zoco : null;
+  const zf = obj(from.zoco) && from.zoco.v === 1 ? upgrade(from.zoco) : null;   // (its waiting line in today's amounts)
   const out = { c: 0, own: 0 };
   if (!obj(zt.q)) zt.q = { seal: 0, hw: [] };
   if (!Array.isArray(zt.q.hw)) zt.q.hw = [];
@@ -428,9 +465,10 @@ function view(rec, opts) {
   const mine = z && Array.isArray(z.own) ? z.own : [];
   const items = CATALOG.filter((x) => onSale(x) || mine.includes(x.id)).map((x) => {
     const s = Saga.zoco(x.id);
+    // (the pictures through saga.js: a glossy picture in its ZOCO_ART replaces the render here and in every game)
     return {
       id: x.id, name: s.label, cat: x.cat, price: x.price, blurb: x.blurb, owned: mine.includes(x.id), hero: !!x.hero,
-      animal: !!s.animal, full: '/assets/zoco/full/' + x.id + '.webp', head: '/assets/zoco/avatar/' + x.id + '.webp',
+      animal: !!s.animal, full: Saga.skinBody(x.id), head: Saga.skinHead(x.id),
     };
   });
   const news = z ? z.log.filter((e) => Array.isArray(e) && Number(e[0]) > since).map((e) => ({ at: e[0], n: e[1], why: e[2] })) : [];
@@ -439,6 +477,7 @@ function view(rec, opts) {
     coins: z ? z.c : 0, earned: z ? z.e : 0, waiting: q, welcome: z ? z.w : 0,
     own: mine.slice(), equipped: rec && typeof rec.avatar === 'string' ? rec.avatar : null,
     items, cats: CATS.map((c) => ({ id: c.id, title: c.title, one: c.one, many: c.many, tag: c.tag })), fresh: isNew(),
+    // caps: what a day pays at most, in steps (30 words, 2 homework, 4 games, 5 stars; since v2 never in coins)
     ways: WAYS, news, caps: { seal: CAP.seal, hw: CAP.hw, game: CAP.game, star: CAP.star, gameMin: GAME_MIN },
   };
 }
@@ -450,8 +489,8 @@ function brief(rec, since) {
 }
 
 module.exports = {
-  PAY, CAP, GAME_MIN, WELCOME_MAX, CATS, CATALOG, WAYS, ADDED,
+  PAY, CAP, CAPC, GAME_MIN, WELCOME_MAX, CATS, CATALOG, WAYS, ADDED,
   item, isSkin, onSale, owns, localDay,
-  ensure, welcomeOf, settle, settleQueue: (rec) => { const out = result(rec.zoco); settleQueue(rec, out); return done(rec.zoco, out); },
+  ensure, upgrade, welcomeOf, settle, settleQueue: (rec) => { const out = result(rec.zoco); settleQueue(rec, out); return done(rec.zoco, out); },
   settleSeals, settleTrain, settleHw, settleStreak, gameEnd, buy, merge, view, brief, streakKeys,
 };

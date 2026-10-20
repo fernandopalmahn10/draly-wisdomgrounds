@@ -545,11 +545,19 @@ is different, since a name that stays the same, alt="Aileen", looped forever and
 `docs/specs/zoco.md`).** Kids unlock new characters (his own 3D models, rendered on this laptop) with coins they earn with
 real steps. The server judges every coin on the kid's own record (`core/zoco.js`); the phone never says how many it has,
 and coins are never bought with money.
-- **Earning:** +2 a word marked in La Base (first time only), +20 a practice of El Entrenamiento that reaches its goal
-  (once per world), +50 a homework marked «¡Ya la mandé!» (once; «Deshacer» takes the 50 back), +10 a class PIN game
-  played for real (3 answers or more), +5 per bonus star of its ceremony, +30 each 7 days in a row. Daily caps: 50 words
-  and 3 homeworks pay a day (the rest waits and comes the next days), 6 games and 8 bonus stars a day. What a kid did
-  before El Zoco never pays coin by coin: a one-time welcome grant instead (half pay, at most 150).
+- **Earning (v2, 20 October 2026, your words: "make it a lot more difficult to get the points"):** +1 a word marked in
+  La Base (first time only), +10 a practice of El Entrenamiento that reaches its goal (once per world), +25 a homework
+  marked «¡Ya la mandé!» (once; «Deshacer» takes back what it paid), +5 a class PIN game played for real (3 answers or
+  more), +2 per bonus star of its ceremony, +15 each 7 days in a row. Daily caps: 30 words and 2 homeworks pay a day (the
+  rest waits and comes the next days), 4 games and 5 bonus stars a day. Prices 800 to 3000: an active kid earns about
+  150 a week, so the first character takes about 5 weeks and Dralingo Emperador Qin about 5 months. What a kid did
+  before El Zoco never pays coin by coin: a one-time welcome grant instead (half pay, at most 150). Coins, characters
+  and welcome grants from 19 October stay as they were.
+- **The character waits for you (v2):** the spotlight, a character's page, «¡Ya es tuyo!» and «Ahora juegas con» show
+  the character on a lit pedestal like a game's character-select screen, breathing and swaying gently with a light
+  sweeping over it. The glossy pictures and the idle loops made in Higgsfield and Canva land as files
+  (`public/assets/zoco/full/<id>-g.webp`, `avatar/<id>-g.webp`, `anim/<id>.webp`, `<id>-lite.webp`, `<id>-still.webp`)
+  plus one command, `node scripts/zoco-art.js`.
 - **The shop** lives in «Mi Dralingo»: the coins pill in the band (and a door after the path on a phone, a tile in the
   dock on a laptop) → `#zoco` (the shop), `#zoco-<id>` (a character: «Desbloquear por N» asks once more), `#monedas`
   («¿Cómo gano monedas?»), `#tuyo-<id>` («¡Ya es tuyo!» → «Usarlo ahora»), and Mi perfil's «Elige tu personaje»
@@ -558,9 +566,9 @@ and coins are never bought with money.
 - **A skin is the kid's character everywhere:** the avatar in Mi perfil, the home, Papás, every pin game on the phone and
   the projector (full body in the games, the head in round avatars), the ceremonies. The server accepts a skin only when
   the kid owns it (homework avatar, «Usarlo», a PIN join proven by the phone, the lobby swap); the 11 saga avatars stay
-  free. Held back until you confirm where the model came from: the dog, the pony, the panda and «Latifa con abaya» (their
-  pictures are not published either; to sell one, delete its `hold` in `core/zoco.js` and copy its two renders into
-  `public/assets/zoco`). Left out: the two Baby Dralingos in the storybook outfit and the six flagged renders.
+  free. Since 20 October all 20 are on sale (your words: "I bought licenses for all these models"), the dog, the pony,
+  the panda and «Latifa con abaya» included. Left out: the two Baby Dralingos in the storybook outfit and the six
+  flagged renders.
 - **Never twice:** an automatic account's «Pasar mi progreso» brings only work that is new to the real account; a
   phone that changes its time zone never resets the daily caps; a dropped kid's game slot never pays whoever takes it.
 Tests: `node scripts/test-zoco.js` (port 4580).

@@ -611,6 +611,21 @@ the checklist for any new game mode.
   `roster.json`): the 22 he saw in green, minus anything he hasn't cleared. Kept OUT until he says so: the six orange
   ones (Come-palabras, Camello, Monje John, Chica Kung Fu, Señor de lentes, Guardián maya) and the two Baby Dralingos in
   the storybook look (cone hat + robe: the brand rule keeps one area's look out of another). Prices 150-400.
+- **Unlocking is hard and special** (his words 2026-10-20: "make it a lot more difficult to get the points, because
+  elsewhere everyone is going to be unlocking super cool characters"): since 2026-10-20 the amounts are +1 a word (first
+  time), +10 a practice at its goal (once per world), +25 a homework (once; «Deshacer» takes it back), +5 a class game
+  played for real, +2 a star, +15 a 7-day streak; daily caps 30 words, 2 homework, 4 games, 5 stars; prices 800-3000
+  (an active kid earns ~150 a week: the first character takes ~5 weeks, Dralingo Emperador Qin ~5 months). Characters
+  already bought stay bought; the welcome grant already paid stays.
+- **Licences: he bought licences for all these models** (his words 2026-10-20: "I bought licenses for all these models
+  before in the past"): the dog, the pony, the panda and Latifa con abaya are on sale (no more `hold`). The six orange
+  ones stay out for their kid-safety notes, not for licences, until he says.
+- **The character waits for you** (his words 2026-10-20: "they look too plain and boring now… it should feel like the
+  3D avatar is there waiting for you"): every Zoco character gets the glossy platform look (a Higgsfield picture made
+  from the render, his OK to use Higgsfield and Canva) and an idle «waiting» animation (Canva Image to Video, the
+  `canva-animate` skill: breathing, a blink, a glance at you, a small wave), shown where one screen shows one character
+  (the spotlight, the character's page, «¡Ya es tuyo!», Mi perfil) with a still first and the lite loop on phones; the
+  character stands on a lit pedestal like a game's character-select screen.
 - **A skin is the kid's character everywhere**: Mi perfil, the home, every pin game on the phone and the projector, the
   ceremonies; the server only accepts an avatar the kid owns (the base saga avatars stay free for everyone).
 - Kid-safe pictures, Spanish UI, no hanzi; every screen with its «Volver»; works on phones and laptops.
@@ -620,7 +635,7 @@ the checklist for any new game mode.
   (max 150), «Pasar mi progreso» brings only work new to the real account, views `#zoco` / a character / `#monedas` in
   Mi Dralingo, Mi perfil «Elige tu personaje», skins in all 11 pin games + ceremonies + Papás + /maestro, pictures in
   `public/assets/zoco/` (a held character's pictures are not published). Spec `docs/specs/zoco.md`.
-  To sell a held one (dog, pony, panda, Latifa con abaya): delete its `hold` line and copy its two renders.
+  To sell a held one: delete its `hold` line and copy its two renders (done for all four 2026-10-20).
   `node scripts/test-zoco.js` must pass.
 
 ## Levels: YCT mode everywhere (his direction 2026-10-12)

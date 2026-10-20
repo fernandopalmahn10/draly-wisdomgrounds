@@ -766,13 +766,102 @@ body.md-in { height: auto; min-height: 100vh; min-height: 100dvh; overflow: visi
 #screen-list.md .zc-msg.is-light { color: #ffd9d9; }
 #screen-list.md .zc :is(a, button):focus-visible { outline-color: var(--md-rojo); }
 #screen-list.md :is(.zc-head, .zc-stage-top, .zc-new) :is(a, button):focus-visible { outline-color: var(--md-oro-claro); }
+/* ── the pedestal (2026-10-20, «The character waits for you», his words: "it should feel like the 3D avatar is there
+   waiting for you"): one character on a lit pedestal like a game's character-select screen (js/mi-dralingo.js podHtml).
+   The host places it: --px across, --pb from its bottom, --pw the pedestal's width, --hmax the character's tallest, --room
+   how far it may spread from its feet (its own container units). .zc-pod is the point where the feet stand (the centre
+   of the pedestal's top); --fx = where the character stands across its picture, --ar its width / height, --reach how far
+   it spreads from its feet (a winged Dralingo): a wide one stands smaller so its wings stay on screen.
+   Alive (.is-idle, a still picture): it breathes (3.8 s), sways softly from its feet (twice as slow), its floor shadow
+   breathes with it, and a light sweeps over it and across the pedestal's gold rim every 7.6 s. A real idle loop playing
+   (.is-live, saga.js ZOCO_ANIM) needs none of that: only the rim's light. Reduced motion: nothing moves. */
+#screen-list.md .zc-pod { position: absolute; left: var(--px, 50%); bottom: var(--pb, 40px); width: 0; height: 0; --h: var(--hmax, 240px); }
+@supports (width: 1cqw) {
+  #screen-list.md .zc-pod { --h: min(var(--hmax, 240px), calc((var(--room, 50cqw) - 6px) / var(--reach, .4))); }
+}
+#screen-list.md .zc-ped-glow {
+  position: absolute; left: calc(var(--pw) * -.8); bottom: calc(var(--pw) * -.02); width: calc(var(--pw) * 1.6); height: calc(var(--h) * .9); pointer-events: none;
+  background: radial-gradient(ellipse 50% 72% at 50% 100%, rgba(255, 222, 146, .52), rgba(255, 214, 120, .16) 52%, rgba(255, 214, 120, 0) 74%);
+}
+#screen-list.md .zc-ped { position: absolute; left: calc(var(--pw) / -2); top: calc(var(--pw) * -.1); width: var(--pw); height: calc(var(--pw) * .31); }
+/* the drum: Rojo Imperial, lit from the front, a gold rim at its foot */
+#screen-list.md .zc-ped::before {
+  content: ''; position: absolute; left: 0; right: 0; top: calc(var(--pw) * .1); height: calc(var(--pw) * .21);
+  border-radius: 0 0 50% 50% / 0 0 calc(var(--pw) * .1) calc(var(--pw) * .1);
+  background: linear-gradient(90deg, #2c0606, #681313 17%, #8f2626 47%, #681313 80%, #2c0606);
+  box-shadow: inset 0 calc(var(--pw) * -.024) 0 var(--md-oro), 0 calc(var(--pw) * .035) calc(var(--pw) * .07) rgba(12, 4, 24, .42);
+}
+/* its top: a cream light in the middle falling to a gold rim (the spotlight on it) */
+#screen-list.md .zc-ped-top {
+  position: absolute; left: 0; top: 0; width: 100%; height: calc(var(--pw) * .2); border-radius: 50%; overflow: hidden;
+  background: radial-gradient(ellipse 58% 64% at 50% 42%, #fffdf6 0%, #f8edca 34%, #e8c878 72%, #c79c3e 100%);
+  box-shadow: inset 0 0 0 calc(var(--pw) * .016) #f3da94, inset 0 calc(var(--pw) * -.02) calc(var(--pw) * .03) rgba(133, 99, 29, .5);
+}
+#screen-list.md .zc-ped-top::after {
+  content: ''; position: absolute; top: 0; bottom: 0; left: -36%; width: 32%; opacity: 0;
+  background: linear-gradient(100deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, .9) 50%, rgba(255, 255, 255, 0));
+}
+/* the shadow under its feet, on the pedestal */
+#screen-list.md .zc-ped-shadow {
+  --sw: min(calc(var(--pw) * .74), calc(var(--h) * var(--ar, .45) * .6));
+  position: absolute; left: calc(var(--sw) / -2); top: calc(var(--pw) * -.034); width: var(--sw); height: calc(var(--pw) * .068); border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(70, 34, 4, .55), rgba(70, 34, 4, 0));
+}
+/* the character: standing by its feet on the centre, a hair into the surface */
+#screen-list.md .zc-fig {
+  position: absolute; bottom: calc(var(--pw) * -.028); left: calc(var(--fx, .5) * var(--ar, .45) * var(--h) * -1); width: calc(var(--ar, .45) * var(--h)); height: var(--h);
+  transform-origin: calc(var(--fx, .5) * 100%) 100%;
+}
+#screen-list.md .zc-fig-in { position: relative; display: block; width: 100%; height: 100%; transform-origin: calc(var(--fx, .5) * 100%) 100%; }
+#screen-list.md .zc-fig-img { display: block; width: 100%; height: 100%; max-width: none; object-fit: contain; object-position: 50% 100%; transition: transform .22s var(--md-ease); }
+/* a free character of the saga (its picture's own width): centred on its feet */
+#screen-list.md .zc-pod.is-free .zc-fig { left: 0; width: 0; display: flex; justify-content: center; transform-origin: 50% 100%; }
+#screen-list.md .zc-pod.is-free .zc-fig-in { flex: none; width: auto; transform-origin: 50% 100%; }
+#screen-list.md .zc-pod.is-free .zc-fig-img { width: auto; }
+/* the light that sweeps over the character, cut to its own shape (a mask of its picture) */
+#screen-list.md .zc-sheen { display: none; }
+#screen-list.md .zc-pod.is-idle .zc-sheen {
+  position: absolute; inset: 0; display: block; overflow: hidden; pointer-events: none;
+  -webkit-mask: var(--src) 50% 100% / contain no-repeat; mask: var(--src) 50% 100% / contain no-repeat;
+}
+#screen-list.md .zc-sheen > i {
+  position: absolute; top: -10%; bottom: -10%; left: 0; width: 46%; transform: translateX(-120%) skewX(-14deg);
+  background: linear-gradient(90deg, rgba(255, 250, 232, 0), rgba(255, 250, 232, .5) 50%, rgba(255, 250, 232, 0));
+}
+/* (emil-design-eng pass) the sway's period never divides the breath's, so the idle never visibly loops; the light passes
+   every 9 s, a treat and not a metronome; every animation takes its phase from the page's clock (--ph = −performance.now(),
+   js/mi-dralingo.js podHtml), so a redraw (data arriving, «Desbloquear») never snaps a breath back to its start */
+#screen-list.md .zc-pod.is-idle .zc-fig { animation: zc-sway 6.9s cubic-bezier(.37, 0, .63, 1) var(--ph, 0s) infinite; }
+#screen-list.md .zc-pod.is-idle .zc-fig-in { animation: zc-breathe 3.8s cubic-bezier(.37, 0, .63, 1) var(--ph, 0s) infinite; }
+#screen-list.md .zc-pod.is-idle .zc-ped-shadow { animation: zc-shadow 3.8s cubic-bezier(.37, 0, .63, 1) var(--ph, 0s) infinite; }
+#screen-list.md .zc-pod.is-idle .zc-sheen > i { animation: zc-sweep 9s cubic-bezier(.45, 0, .25, 1) calc(var(--ph, 0s) + 1.6s) infinite; }
+#screen-list.md .zc-pod:is(.is-idle, .is-live) .zc-ped-top::after { animation: zc-glint 9s cubic-bezier(.45, 0, .25, 1) calc(var(--ph, 0s) + 1.6s) infinite; }
+@keyframes zc-breathe { 0%, 100% { transform: none; } 50% { transform: scale(1.008, 1.022); } }
+@keyframes zc-sway { 0%, 100% { transform: rotate(-.6deg); } 50% { transform: rotate(.6deg); } }
+@keyframes zc-shadow { 0%, 100% { transform: none; opacity: 1; } 50% { transform: scale(.96); opacity: .86; } }
+@keyframes zc-sweep { 0% { transform: translateX(-120%) skewX(-14deg); } 15%, 100% { transform: translateX(260%) skewX(-14deg); } }
+@keyframes zc-glint { 0%, 10% { transform: none; opacity: 0; } 11% { opacity: 1; } 23% { transform: translateX(430%); opacity: 1; } 24%, 100% { transform: translateX(430%); opacity: 0; } }
+@keyframes zc-fade { from { opacity: 0; } to { opacity: 1; } }
+/* reduced motion: nothing moves; the new character of «¡Ya es tuyo!» still fades in (gentler, not gone) */
+@media (prefers-reduced-motion: reduce) {
+  #screen-list.md .zc-pod, #screen-list.md .zc-pod * { animation: none !important; }
+  #screen-list.md .zc-pod .zc-sheen, #screen-list.md .zc-pod .zc-ped-top::after { display: none; }
+  #screen-list.md .zc-pod.is-new .zc-fig-img { animation: zc-fade .2s ease-out both !important; }
+}
 /* the spotlight */
-#screen-list.md .zc-hero { position: relative; display: block; height: 300px; border-radius: 26px; overflow: hidden; background: #1a1240; box-shadow: 0 6px 0 var(--md-oro-line); text-decoration: none; }
+#screen-list.md .zc-hero {
+  position: relative; display: block; height: 300px; border-radius: 26px; overflow: hidden; background: #1a1240; box-shadow: 0 6px 0 var(--md-oro-line); text-decoration: none;
+  container-type: size; --px: 68%; --pb: 36px; --pw: 146px; --hmax: 226px; --room: 44cqw;
+}
 #screen-list.md .zc-hero-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 70%; }
 #screen-list.md .zc-hero picture { position: absolute; inset: 0; }
-#screen-list.md .zc-hero-img { position: absolute; left: calc(68% - var(--hx, .5) * var(--ar, 1) * 250px); bottom: 6px; height: 250px; width: auto; max-width: none; transition: transform .35s var(--md-ease); }
 #screen-list.md .zc-badge { position: absolute; left: 16px; top: 16px; display: inline-flex; padding: 6px 12px; border-radius: 999px; background: var(--md-red); color: var(--md-paper); font-weight: 800; font-size: 13px; }
-#screen-list.md .zc-hero-t { position: absolute; left: 16px; bottom: 16px; display: flex; flex-direction: column; gap: 8px; max-width: calc(68% - 76px); }
+#screen-list.md .zc-hero-t { position: absolute; z-index: 1; left: 16px; bottom: 16px; display: flex; flex-direction: column; gap: 8px; max-width: calc(68% - 76px); }
+/* (2026-10-20) a soft night behind the name: a wide winged character may spread its wing behind it */
+#screen-list.md .zc-hero-t::before {
+  content: ''; position: absolute; z-index: -1; left: -40px; right: -36px; top: -34px; bottom: -26px; pointer-events: none;
+  background: radial-gradient(closest-side, rgba(18, 10, 44, .62), rgba(18, 10, 44, .32) 60%, rgba(18, 10, 44, 0));
+}
 #screen-list.md .zc-hero-name { font: 800 26px/1.05 var(--md-head); color: var(--md-paper); text-shadow: 0 2px 0 var(--md-ink), 0 0 14px rgba(26, 18, 64, .7); }
 #screen-list.md .zc-hero-chip { display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; padding: 6px 12px 6px 6px; border-radius: 999px; background: var(--md-paper); color: var(--md-rojo); }
 #screen-list.md .zc-hero-chip .md-coin { width: 22px; height: 22px; }
@@ -831,13 +920,23 @@ body.md-in { height: auto; min-height: 100vh; min-height: 100dvh; overflow: visi
 #screen-list.md .zc-btn.is-plain { min-height: 48px; background: transparent; color: var(--md-rojo); font: 800 16px/1.2 var(--md-body); text-decoration: underline; text-underline-offset: 3px; }
 #screen-list.md .zc-btn:disabled { cursor: default; }
 #screen-list.md .zc-btn:not(:disabled):active, #screen-list.md .zc-card:active, #screen-list.md .zc-pick:active, #screen-list.md .zc-earn:active, #screen-list.md .md-zoco:active { transform: scale(.97); }
+/* (the big spotlight card: a gentler press) */
+#screen-list.md .zc-hero { transition: transform .14s var(--md-ease); }
+#screen-list.md .zc-hero:active { transform: scale(.985); }
 /* a character */
 #screen-list.md .zc-item { background: var(--md-paper); }
-#screen-list.md .zc-stage { position: relative; height: 430px; flex: none; background: #1a1240; overflow: hidden; }
+#screen-list.md .zc-stage {
+  position: relative; height: 430px; flex: none; background: #1a1240; overflow: hidden;
+  container-type: size; --px: 50%; --pb: 76px; --pw: 232px; --hmax: 288px; --room: 50cqw;
+}
 #screen-list.md .zc-stage picture { position: absolute; inset: 0; }
 #screen-list.md .zc-stage-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 40% 70%; }
-#screen-list.md .zc-shadow { position: absolute; left: 50%; bottom: 46px; width: 230px; height: 34px; margin-left: -115px; border-radius: 50%; background: var(--md-ink); opacity: .35; }
-#screen-list.md .zc-stage-img { position: absolute; left: 50%; bottom: 50px; height: 330px; width: auto; max-width: 94%; object-fit: contain; object-position: 50% 100%; transform: translateX(-50%); }
+/* the stage's spotlight: a soft cone of light from above onto the pedestal */
+#screen-list.md .zc-beam {
+  position: absolute; left: 50%; top: 0; bottom: var(--pb); width: calc(var(--pw) * 1.12); transform: translateX(-50%); pointer-events: none;
+  clip-path: polygon(41% 0, 59% 0, 100% 100%, 0 100%);
+  background: linear-gradient(180deg, rgba(255, 240, 206, 0) 0%, rgba(255, 240, 206, .1) 40%, rgba(255, 236, 196, .26) 100%);
+}
 #screen-list.md .zc-stage-top { position: absolute; left: 14px; right: 14px; top: 14px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 #screen-list.md .zc-sheet { position: relative; flex: 1; display: flex; flex-direction: column; gap: 14px; margin-top: -24px; padding: 22px 18px 24px; border-radius: 26px 26px 0 0; background: var(--md-paper); }
 #screen-list.md .zc-sheet-t { display: flex; flex-direction: column; gap: 4px; }
@@ -882,7 +981,18 @@ body.md-in { height: auto; min-height: 100vh; min-height: 100dvh; overflow: visi
 #screen-list.md .zc-new > :not(.zc-rays) { position: relative; }
 #screen-list.md .zc-new-chip { padding: 6px 14px; border-radius: 999px; background: var(--md-oro-claro); color: var(--md-rojo); font-weight: 800; font-size: 14px; }
 #screen-list.md .zc-new-h { margin: 0; font: 800 40px/1 var(--md-head); color: var(--md-oro-claro); }
-#screen-list.md .zc-new-img { height: 360px; max-height: 44vh; width: auto; max-width: 100%; object-fit: contain; margin-top: 4px; animation: zc-pop .6s var(--md-ease) both; }
+/* the new character pops up onto its pedestal (the pop on the picture, its idle on its wrappers: they never fight) */
+#screen-list.md .zc-new-stage {
+  position: relative; flex: none; width: 100%; max-width: 420px; height: min(392px, 46vh); margin-top: 4px;
+  container-type: size; --px: 50%; --pw: 200px; --pb: 50px; --hmax: min(330px, calc(46vh - 56px)); --room: 50cqw;
+}
+@supports (width: 1cqw) {
+  #screen-list.md .zc-new-stage { --pw: min(212px, 58cqw); --pb: calc(var(--pw) * .25); --hmax: calc(100cqh - var(--pb) - 6px); }
+}
+#screen-list.md .zc-pod.is-new .zc-fig-img { animation: zc-pop .6s var(--md-ease) both; transform-origin: calc(var(--fx, .5) * 100%) 100%; }
+#screen-list.md .zc-pod.is-new .zc-ped::before { background: linear-gradient(90deg, #1f0303, #4a0c0c 17%, #6e1a1a 47%, #4a0c0c 80%, #1f0303); }
+/* (the gold rays already turn behind it: no extra light sweeping here, one moving thing at a time) */
+#screen-list.md .zc-pod.is-new .zc-sheen, #screen-list.md .zc-pod.is-new .zc-ped-top::after { display: none; }
 #screen-list.md .zc-new-name { margin: 0; font: 800 26px/1.1 var(--md-head); }
 #screen-list.md .zc-new-sub { margin: 0; max-width: 340px; font-size: 15px; line-height: 1.4; color: var(--md-sand); }
 #screen-list.md .zc-new-acts { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 420px; margin-top: auto; }
@@ -893,9 +1003,13 @@ body.md-in { height: auto; min-height: 100vh; min-height: 100dvh; overflow: visi
 /* «Elige tu personaje» */
 #screen-list.md .zc-pick-head { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px 6px; }
 #screen-list.md .zc-now { display: flex; align-items: center; gap: 14px; margin: 6px 16px 0; padding: 14px; border-radius: 22px; background: var(--md-paper); box-shadow: inset 0 0 0 2px var(--md-line); }
-#screen-list.md .zc-now-art { flex: none; display: flex; align-items: flex-end; justify-content: center; width: 92px; height: 110px; border-radius: 18px; background: var(--md-sand); overflow: hidden; }
-#screen-list.md .zc-now-img { height: 104px; width: auto; max-width: 100%; object-fit: contain; object-position: 50% 100%; }
-#screen-list.md .zc-now-img:not(.is-body) { width: 84px; height: 84px; margin-bottom: 13px; border-radius: 50%; object-fit: cover; }
+/* (2026-10-20) the character you play as, on its own small lit pedestal */
+#screen-list.md .zc-now-art {
+  position: relative; flex: none; width: 140px; height: 160px; border-radius: 18px; overflow: hidden;
+  background: radial-gradient(ellipse 80% 70% at 50% 92%, #fffaf0 0%, var(--md-sand) 62%, #ead39a 100%);
+  /* (--room past the half: in this small frame a winged Dralingo may lose its wing tips, never his size) */
+  container-type: size; --px: 50%; --pb: 24px; --pw: 104px; --hmax: 126px; --room: 66cqw;
+}
 #screen-list.md .zc-now-t { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 #screen-list.md .zc-now-t > span:first-child { font-size: 14px; font-weight: 700; color: var(--md-soft); }
 #screen-list.md .zc-now-t b { font: 800 22px/1.1 var(--md-head); overflow-wrap: anywhere; }
@@ -921,21 +1035,18 @@ body.md-in { height: auto; min-height: 100vh; min-height: 100dvh; overflow: visi
 #screen-list.md .zc-pick .zc-pick-price b { font-size: 13px; }
 @media (hover: hover) and (pointer: fine) {
   #screen-list.md .zc-card:hover, #screen-list.md .zc-pick:not(.is-on):hover { box-shadow: inset 0 0 0 2px var(--md-oro-line), 0 4px 0 var(--md-oro-line); }
-  #screen-list.md .zc-hero:hover .zc-hero-img { transform: translateY(-4px); }
+  #screen-list.md .zc-hero:hover .zc-fig-img { transform: translateY(-5px); }
 }
 /* a laptop / tablet: wider grids, the character beside its sheet */
 @media (min-width: 700px) {
   #screen-list.md .zc-head { padding: 18px max(24px, calc(50% - 540px)) 22px; }
   #screen-list.md .zc-body { width: 100%; max-width: 1128px; margin: 0 auto; padding: 22px 24px 32px; }
   #screen-list.md .zc-grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 16px; }
-  #screen-list.md .zc-hero { height: 340px; }
-  #screen-list.md .zc-hero-img { left: calc(70% - var(--hx, .5) * var(--ar, 1) * 310px); height: 310px; }
+  #screen-list.md .zc-hero { height: 340px; --px: 70%; --pb: 40px; --pw: 196px; --hmax: 266px; --room: 40cqw; }
   #screen-list.md .zc-hero-t { left: 28px; bottom: 26px; max-width: min(360px, calc(70% - 120px)); }
   #screen-list.md .zc-hero-name { font-size: 36px; }
   #screen-list.md .zc-item { flex-direction: row; min-height: 100vh; min-height: 100dvh; }
-  #screen-list.md .zc-stage { flex: 1 1 58%; height: auto; min-height: 100vh; min-height: 100dvh; }
-  #screen-list.md .zc-stage-img { height: min(62vh, 520px); bottom: 70px; }
-  #screen-list.md .zc-shadow { bottom: 58px; width: 300px; margin-left: -150px; }
+  #screen-list.md .zc-stage { flex: 1 1 58%; height: auto; min-height: 100vh; min-height: 100dvh; --pb: 96px; --pw: 320px; --hmax: min(60vh, 500px); }
   #screen-list.md .zc-sheet { flex: 0 1 460px; justify-content: center; margin-top: 0; padding: 40px 36px; border-radius: 0; }
   #screen-list.md .zc-coins .zc-body, #screen-list.md .zc-pickpage .zc-body { max-width: 760px; }
   #screen-list.md .zc-coins .zc-head { padding-left: max(24px, calc(50% - 356px)); padding-right: max(24px, calc(50% - 356px)); }
@@ -947,19 +1058,20 @@ body.md-in { height: auto; min-height: 100vh; min-height: 100dvh; overflow: visi
   #screen-list.md .zc-pick-head, #screen-list.md .zc-now { width: calc(100% - 48px); max-width: 712px; margin-left: auto; margin-right: auto; }
   #screen-list.md .zc-pick-head { padding: 18px 0 6px; }
   #screen-list.md .zc-grid3 { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
-  #screen-list.md .zc-new-img { max-height: 46vh; }
+  #screen-list.md .zc-now-art { width: 172px; height: 184px; --pb: 26px; --pw: 124px; --hmax: 146px; }
 }
 @media (min-width: 1000px) {
   #screen-list.md .md-dock { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
 }
 @media (prefers-reduced-motion: reduce) {
-  #screen-list.md .zc-rays g, #screen-list.md .zc-new-img { animation: none !important; }
+  #screen-list.md .zc-rays g { animation: none !important; }
 }
 /* a short phone (360 × 640): the character's stage gives way, so «Desbloquear» sits on the first screen */
 @media (max-width: 699px) and (max-height: 760px) {
-  #screen-list.md .zc-stage { height: min(430px, 44vh); }
-  #screen-list.md .zc-stage-img { height: min(330px, 30vh); bottom: 40px; }
-  #screen-list.md .zc-shadow { bottom: 36px; }
+  #screen-list.md .zc-stage { height: min(430px, 44vh); --pb: 58px; --pw: 188px; --hmax: min(288px, calc(44vh - 118px)); }
+  /* («¡Ya es tuyo!»: «Usarlo ahora» and «Volver al Zoco» both on the first screen) */
+  #screen-list.md .zc-new { gap: 10px; padding-top: 24px; }
+  #screen-list.md .zc-new-stage { height: min(392px, 40vh); }
   #screen-list.md .zc-sheet { gap: 12px; padding-top: 18px; }
   #screen-list.md .zc-h1.is-dark { font-size: 26px; }
 }
@@ -968,7 +1080,7 @@ body.md-in { height: auto; min-height: 100vh; min-height: 100dvh; overflow: visi
   #screen-list.md .zc-head { gap: 8px; padding-top: 12px; padding-bottom: 16px; }
   #screen-list.md .zc-h1 { font-size: 30px; }
   #screen-list.md .zc-body { padding-top: 16px; gap: 20px; }
-  #screen-list.md .zc-hero { height: 250px; }
-  #screen-list.md .zc-hero-img { left: calc(70% - var(--hx, .5) * var(--ar, 1) * 230px); height: 230px; }
+  #screen-list.md .zc-hero { height: 250px; --pb: 30px; --pw: 150px; --hmax: 196px; }
+  #screen-list.md .zc-stage { --pb: 80px; --hmax: min(58vh, 460px); }
   #screen-list.md .zc-hero-name { font-size: 30px; }
 }

@@ -670,7 +670,7 @@
       tile('mensajes', ART.ferHello, 'Mensajes', 'De tu profe', '<span class="md-count" data-unread' + (n ? '' : ' hidden') + '>' + (n > 9 ? '9+' : n) + '</span>') +
       tile('oraciones', ART.aileenHello, 'Mis oraciones', 'Tuyas y de tu profe') +
       tile('desafio', ART.dragon, 'Desafío del día', 'Muy pronto: los juegos de la clase', '<span class="md-tile-lock">' + I.lock + '</span>') +
-      (coinsNow() == null ? '' : tile('zoco', ZOCO_ART.tile, 'El Zoco', 'Personajes nuevos', '<span class="md-tile-coins">' + I.coinS + '<b data-coins>' + coinsNow() + '</b></span>')) + '</nav>';
+      (coinsNow() == null ? '' : tile('zoco', zHead('dralingo-emperador-qin'), 'El Zoco', 'Personajes nuevos', '<span class="md-tile-coins">' + I.coinS + '<b data-coins>' + coinsNow() + '</b></span>')) + '</nav>';
   }
   function tabsHtml(sel) {
     const n = Number(H.state().unread) || 0;
@@ -709,9 +709,12 @@
   // (by the server's clock: js/zoco-coins.js draly_zoco_seen) pop once («+N monedas»). Pages: full pages on a phone and a
   // laptop (no band, no tabs), each with its «Volver».
   const ZOCO_ART = {
-    tile: A + 'zoco/avatar/dralingo-emperador-qin.webp', bg: A + 'paint/dubai/bg.webp', bgS: A + 'scenes/dubai-s.webp',
+    bg: A + 'paint/dubai/bg.webp', bgS: A + 'scenes/dubai-s.webp',
     point: A + 'dralingo/point.webp', win: A + 'dralingo/victory.webp', hello: A + 'dralingo/hello.webp',
   };
+  // a skin's pictures through saga.js (its glossy picture once scripts/zoco-art.js put one in ZOCO_ART, else the render)
+  const zHead = (id) => (window.Saga && window.Saga.skinHead ? window.Saga.skinHead(id) : A + 'zoco/avatar/' + id + '.webp');
+  const zBody = (id) => (window.Saga && window.Saga.skinBody ? window.Saga.skinBody(id) : A + 'zoco/full/' + id + '.webp');
   // the characters a «¡Ya es tuyo!» line calls «ella»
   const ZOCO_SHE = ['latifa-3d', 'aileen-3d', 'poni-de-aileen'];
   let Z = null, zAt = 0, zBusy = null, zFail = false, zFor = '', zHero = null, zConfirm = '', zMsg = null, zGift = false;
@@ -802,6 +805,56 @@
   const lockSvg = (cls) => '<span class="' + cls + '">' + I.lock + '</span>';
   // a picture of a character: its full-body render, alt = its name (the cards' pictures load lazily: 16 on a page)
   const pic = (x, cls, lazy, alt) => '<img class="' + cls + '" src="' + esc(x.full) + '" alt="' + esc(alt == null ? x.name : alt) + '"' + (lazy ? ' loading="lazy"' : '') + ' decoding="async">';
+  // ── «The character waits for you» (2026-10-20, his words: "they look too plain and boring now… it should feel like the
+  // 3D avatar is there waiting for you"). Where one screen shows one character (the spotlight, a character's page, «¡Ya
+  // es tuyo!», «Ahora juegas con») it stands on a lit pedestal like a game's character-select screen, alive:
+  //   · its idle loop when it has one (saga.js ZOCO_ANIM, filled by scripts/zoco-art.js): the still first, the loop
+  //     swapped in once loaded (zocoAlive, after the draw), the lite one on a phone or a small box;
+  //   · else its picture with a gentle CSS idle (css/mi-dralingo.css «the pedestal»: breathing, a soft sway, the floor
+  //     shadow breathing with it, a light sweeping over the character and the pedestal's rim).
+  // Reduced motion: the still / the picture, nothing moves. The character stands where its feet are (saga.js fx) on the
+  // pedestal's centre, and its size keeps its wings on screen (--reach, the CSS's container units).
+  const zLoops = new Set();   // the loops this page already loaded: a redraw shows them at once (no still flash)
+  const smallScreen = () => Number(window.innerWidth) < 700 || !!(typeof navigator !== 'undefined' && navigator.connection && navigator.connection.saveData);
+  // the free saga characters stand full-body too (their picture of the cast, the saga animals' still)
+  const FREE_BODY = { dralingo: A + 'dralingo/hello.webp', camel: A + 'saga/anim/camel-still.webp', plane: A + 'saga/anim/plane-still.webp',
+    falcon: A + 'saga/anim/falcon-still.webp', oryx: A + 'saga/anim/oryx-still.webp' };
+  const freeBody = (id) => FREE_BODY[id] || (['fer', 'hamdan', 'latifa', 'aileen', 'adric', 'adrian'].indexOf(id) >= 0 ? A + 'cast/' + id + '-hello.webp' : ZOCO_ART.hello);
+  // x = a shop item ({ id, name, full }) or a free character ({ id, name, url, free: true }); kind = hero · page · new · now
+  function podHtml(x, kind, alt) {
+    const S = window.Saga;
+    const an = !x.free && S && S.skinAnim ? S.skinAnim(x.id) : null;
+    const lk = an || (!x.free && S && S.skinLook ? S.skinLook(x.id) : null);
+    const loop = an && !calm() ? (kind === 'now' || smallScreen() ? an.lite : an.full) : '';
+    const ready = !!loop && zLoops.has(loop);
+    const src = an ? (ready ? loop : an.still) : x.free ? x.url : x.full;
+    const fx = lk ? lk.fx : 0.5;
+    // (--src: the light's sweep is cut to the character's own shape, a CSS mask of its picture; --ph: the idle's phase from
+    // the page's clock, so a redraw never snaps a breath back to its start)
+    const ph = Math.round((window.performance && performance.now ? performance.now() : Date.now() % 1e7));
+    const style = '--fx:' + fx + (lk ? ';--ar:' + lk.ar + ';--reach:' + (Math.max(fx, 1 - fx) * lk.ar).toFixed(3) : '') +
+      ';--ph:-' + ph + 'ms;--src:url(&quot;' + esc(src) + '&quot;)';
+    return '<span class="zc-pod is-' + kind + (an ? (ready ? ' is-live' : '') : ' is-idle') + (lk ? '' : ' is-free') + '" style="' + style + '">' +
+      '<i class="zc-ped-glow" aria-hidden="true"></i><span class="zc-ped" aria-hidden="true"><i class="zc-ped-top"></i></span>' +
+      '<i class="zc-ped-shadow" aria-hidden="true"></i>' +
+      '<span class="zc-fig"><span class="zc-fig-in"><img class="zc-fig-img" src="' + esc(src) + '" alt="' + esc(alt == null ? x.name : alt) + '"' +
+        (loop && !ready ? ' data-loop="' + esc(loop) + '"' : '') + (kind === 'hero' ? ' fetchpriority="high"' : '') + ' decoding="async">' +
+        '<i class="zc-sheen" aria-hidden="true"><i></i></i></span></span></span>';
+  }
+  // after a draw: the idle loops swap in over their stills once loaded (the page has settled first: 30 kids may open it
+  // at the same time in a class)
+  function zocoAlive() {
+    if (calm()) return;
+    document.querySelectorAll('#md-app img.zc-fig-img[data-loop]').forEach((img) => {
+      const src = img.getAttribute('data-loop');
+      img.removeAttribute('data-loop');
+      const pod = img.closest('.zc-pod');
+      const a = new Image();
+      a.onload = () => { zLoops.add(src); if (img.isConnected) { img.src = src; if (pod) pod.classList.add('is-live'); } };
+      a.onerror = () => { if (pod) pod.classList.add('is-idle'); };   // (no loop: the still gets the gentle CSS idle)
+      setTimeout(() => { a.src = src; }, document.readyState === 'complete' ? 400 : 1200);
+    });
+  }
   function cardHtml(x, c) {
     const ready = !x.owned && c >= x.price;
     return '<a class="zc-card' + (x.owned ? ' is-owned' : ready ? ' is-ready' : '') + '" href="#zoco-' + esc(x.id) + '">' +
@@ -825,12 +878,10 @@
     const c = coinsNow() || 0;
     const items = Z.items || [];
     const h = heroOf();
-    // the spotlight places the character by its face (saga.js ar / hx), so the title never sits on it
-    const hz = h && window.Saga && window.Saga.zoco ? window.Saga.zoco(h.id) : null;
-    const hv = ' style="--ar:' + (Number(hz && hz.ar) || 1) + ';--hx:' + (Number(hz && hz.hx) || 0.5) + '"';
-    const heroCard = h ? '<a class="zc-hero" href="#zoco-' + esc(h.id) + '"' + hv + '>' +
+    // the spotlight: the character on its lit pedestal at the right (2026-10-20), the title at the left never on it
+    const heroCard = h ? '<a class="zc-hero" href="#zoco-' + esc(h.id) + '">' +
       '<picture><source media="(min-width: 700px)" srcset="' + ZOCO_ART.bg + '"><img class="zc-hero-bg" src="' + ZOCO_ART.bgS + '" alt="" decoding="async" fetchpriority="high"></picture>' +
-      pic(h, 'zc-hero-img', false) +
+      podHtml(h, 'hero') +
       '<span class="zc-badge">' + (Z.fresh ? 'Nuevo en el Zoco' : h.owned ? 'Tuyo' : 'En el Zoco') + '</span>' +
       '<span class="zc-hero-t"><span class="zc-hero-name">' + esc(h.name) + '</span>' +
         (h.owned ? '<span class="zc-hero-chip is-owned">' + I.check + '<span>Tuyo</span></span>'
@@ -887,7 +938,7 @@
     }
     return '<section class="zc zc-item" aria-labelledby="zc-h">' +
       '<div class="zc-stage"><picture><source media="(min-width: 700px)" srcset="' + ZOCO_ART.bg + '"><img class="zc-stage-bg" src="' + ZOCO_ART.bgS + '" alt="" decoding="async"></picture>' +
-        '<i class="zc-shadow" aria-hidden="true"></i>' + pic(x, 'zc-stage-img', false) +
+        '<i class="zc-beam" aria-hidden="true"></i>' + podHtml(x, 'page') +
         '<div class="zc-stage-top">' + backHtml('#zoco', 'Volver al Zoco') + purseHtml('is-small') + '</div></div>' +
       '<div class="zc-sheet"><div class="zc-sheet-t"><span class="zc-tag">' + esc(cat.tag) + '</span>' +
         '<h1 class="zc-h1 is-dark" id="zc-h" tabindex="-1">' + esc(x.name) + '</h1><p class="zc-blurb">' + esc(x.blurb) + '</p></div>' +
@@ -898,14 +949,17 @@
     const ways = (Z.ways || []).map((w) => '<li class="zc-way"><span class="zc-way-n">' + esc(w.n) + '</span>' +
       '<span class="zc-way-t"><b>' + esc(w.what) + '</b><span>' + esc(w.where) + '</span></span>' +
       '<span class="zc-way-c">' + I.coinS + '<b>' + esc('+' + w.coins + (w.each ? ' c/u' : '')) + '</b></span></li>').join('');
-    const wait = Z.waiting > 0 ? '<p class="zc-note">' + I.coinS + '<span>' + esc('Tienes ' + coinsWord(Z.waiting) + ' esperando: llegan mañana. Cada día pagan hasta ' + (Z.caps.seal / 2) + ' palabras y ' + (Z.caps.hw / 50) + ' tareas.') + '</span></p>' : '';
+    // (v2, 2026-10-20: the day's limits in plain words, always: a character takes weeks of real steps)
+    const cp = Z.caps || {};
+    const caps = cp.seal ? '<p class="zc-note">' + I.coinS + '<span>' + esc('Cada día pagan hasta ' + cp.seal + ' palabras, ' + cp.hw + ' tareas, ' + cp.game + ' juegos y ' + cp.star + ' estrellas.') + '</span></p>' : '';
+    const wait = Z.waiting > 0 ? '<p class="zc-note">' + I.coinS + '<span>' + esc('Tienes ' + coinsWord(Z.waiting) + ' esperando: llegan mañana.') + '</span></p>' : '';
     return '<section class="zc zc-coins" aria-labelledby="zc-h">' +
       '<header class="zc-head zc-head-art">' + backHtml('#zoco', 'Volver al Zoco') +
         '<div class="zc-head-split"><div class="zc-head-t"><h1 class="zc-h1" id="zc-h" tabindex="-1">¿Cómo gano monedas?</h1>' +
           '<p class="zc-sub">Cada paso de verdad te da monedas. Nunca se compran con dinero.</p></div>' +
           '<img class="zc-head-img" src="' + ZOCO_ART.point + '" alt="" width="118" height="171" decoding="async"></div></header>' +
       '<div class="zc-body">' + (debtNow() ? '<p class="zc-note">' + I.coinS + '<span>' + esc('Una tarea se deshizo después de gastar sus monedas: tus próximas ' + coinsWord(debtNow()) + ' la pagan.') + '</span></p>' : '') +
-        '<ol class="zc-ways">' + ways + '</ol>' + wait +
+        '<ol class="zc-ways">' + ways + '</ol>' + caps + wait +
         '<p class="zc-soon">' + I.lock + '<span>Desafío del día: muy pronto también da monedas</span></p>' +
         '<button type="button" class="zc-btn is-rojo zc-cta" data-act="today">¡A ganar monedas!</button></div></section>';
   }
@@ -921,7 +975,7 @@
         '<path d="M195 210 L370 380 L320 410 Z"/><path d="M195 210 L60 410 L20 380 Z"/><path d="M195 210 L0 230 L0 170 Z"/><path d="M195 210 L20 60 L60 20 Z"/></g>' +
         '<circle cx="195" cy="210" r="120" fill="#e8c878" opacity=".25"/></svg>' +
       '<span class="zc-new-chip">¡Nuevo personaje!</span>' +
-      '<h1 class="zc-new-h" id="zc-h" tabindex="-1">¡Ya es tuyo!</h1>' + pic(x, 'zc-new-img', false) +
+      '<h1 class="zc-new-h" id="zc-h" tabindex="-1">¡Ya es tuyo!</h1><div class="zc-new-stage">' + podHtml(x, 'new') + '</div>' +
       '<p class="zc-new-name">' + esc(x.name) + '</p>' +
       '<p class="zc-new-sub">' + esc(using ? 'Ya juegas con ' + (she ? 'ella' : 'él') + ' en tu clase y aparece en tu perfil.' : 'Desde hoy puedes jugar con ' + (she ? 'ella' : 'él') + ' en tu clase y verl' + (she ? 'a' : 'o') + ' en tu perfil.') + '</p>' +
       '<div class="zc-new-acts">' + (using ? '<a class="zc-btn is-gold" href="#personaje">Ver mis personajes</a>'
@@ -938,8 +992,8 @@
     const curSkin = mine.find((x) => x.id === cur);
     const curFree = !curSkin && S ? (S.avatar(cur) || S.avatar('dralingo')) : null;
     const curName = curSkin ? curSkin.name : curFree ? S.labelOf(curFree.id) : 'Dralingo';
-    const curImg = curSkin ? '<img class="zc-now-img is-body" src="' + esc(curSkin.full) + '" alt="' + esc(curName) + '">'
-      : '<img class="zc-now-img" src="' + esc(curFree ? curFree.url : ZOCO_ART.hello) + '" alt="' + esc(curName) + '">';
+    // (2026-10-20) the character you play as, full-body on its pedestal: a skin, or a free one of the saga
+    const curImg = podHtml(curSkin || { id: curFree ? curFree.id : 'dralingo', name: curName, url: freeBody(curFree ? curFree.id : 'dralingo'), free: true }, 'now');
     const tile = (id, img, name, body) => '<button type="button" class="zc-pick' + (cur === id ? ' is-on' : '') + '" data-act="zoco-pick" data-id="' + esc(id) + '" aria-pressed="' + (cur === id) + '">' +
       '<img class="' + (body ? 'is-body' : 'is-head') + '" src="' + esc(img) + '" alt="" loading="lazy" decoding="async"><span>' + esc(name) + '</span></button>';
     // (every character you have is a round head, like the free ones: one look for the whole list)
@@ -964,7 +1018,7 @@
     const c = coinsNow();
     if (c == null) return '';
     if (!doorPic) doorPic = DOOR_PICS[Math.floor(Math.random() * DOOR_PICS.length)];
-    return '<a class="md-zoco" href="#zoco"><img src="' + A + 'zoco/full/' + doorPic + '.webp" alt="" width="96" height="80" loading="lazy" decoding="async">' +
+    return '<a class="md-zoco" href="#zoco"><img src="' + esc(zBody(doorPic)) + '" alt="" width="96" height="80" loading="lazy" decoding="async">' +
       '<span class="md-zoco-t"><b>El Zoco de Dralingo</b><small>Personajes nuevos para ti</small></span>' +
       '<span class="md-zoco-c">' + I.coinS + '<b data-coins>' + c + '</b></span>' + I.fwd + '</a>';
   }
@@ -1119,6 +1173,7 @@
   }
   // after a draw: the homework cards (js/ruta.js), Mis oraciones, Mis exámenes, the moment of a finished experience
   function mount(v) {
+    if (isZoco(v)) zocoAlive();   // (🪙 a character waiting on its pedestal: its idle loop over the still)
     const box = document.querySelector('#md-app [data-hw-mount]');
     const e = box ? M.exps.find((x) => x.n === Number(box.getAttribute('data-hw-mount'))) : null;
     const m = modOf();
