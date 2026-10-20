@@ -144,7 +144,8 @@ the checklist for any new game mode.
 - **Keep the site light** (his ask 2026-10-12: "if I keep adding games and assets, are we gonna hit a limit?"). Games
   are cheap (code + sounds 1-3 MB each); media is what grows. Still pictures WebP under ~300 KB (720-1200 px, quality
   ~82), animations under 2 MB, sounds mp3 under 2 MB (exam recordings exempt), no file over 10 MB, never BMP/TIFF/WAV.
-  Never deploy source or working files (3D .glb sources, full-size originals, transcription notes, answer keys):
+  Never deploy source or working files (3D .glb sources (only the light web copies of El Zoco in
+  `public/assets/zoco/3d/`, his «sube» 2026-10-20), full-size originals, transcription notes, answer keys):
   originals go in `assets-library/`. `node scripts/asset-guard.js` before every commit with media (exit 1 = fix it).
 - **Platform health, monthly** (his ask 2026-10-12): `node scripts/health-check.js` reads Render (memory, CPU,
   downloads, data disk), the live `/api/_diag` and this repo; limits memory 70 %, CPU 60 %, student file 20 MB,
@@ -663,6 +664,14 @@ the checklist for any new game mode.
   `canva-animate` skill: breathing, a blink, a glance at you, a small wave), shown where one screen shows one character
   (the spotlight, the character's page, «¡Ya es tuyo!», Mi perfil) with a still first and the lite loop on phones; the
   character stands on a lit pedestal like a game's character-select screen.
+- **Every Zoco character in real 3D on its page** (his ask 2026-10-20: "when you access the marketplace, each character…
+  you can touch it and move it… like if you were interacting in the 3D world"; after trying 3: "I want all of them to be
+  like this", his «sube» for the web copies): drag to spin, pinch / wheel to zoom, tap to hop, a teaching hand on the
+  first visit; the picture first, three.js only on that page, today's loop as the fallback (reduced motion, Save-Data,
+  weak phones, no WebGL 2, a missing model). Only ids in saga.js `ZOCO_3D` get it; each model is made from his original
+  with `tools/blender/zoco_web_glb.py` (Draco + WebP, ≤ ~0.5 MB, fixes in Blender welcome) and committed in
+  `public/assets/zoco/3d/`. `node scripts/test-zoco3d.js` must pass. Next (his idea): 3D gestures (the panda eating,
+  a wave…) animated in Blender from a reference video he gives, instead of WebP loops.
 - **A skin is the kid's character everywhere**: Mi perfil, the home, every pin game on the phone and the projector, the
   ceremonies; the server only accepts an avatar the kid owns (the base saga avatars stay free for everyone).
 - Kid-safe pictures, Spanish UI, no hanzi; every screen with its «Volver»; works on phones and laptops.
