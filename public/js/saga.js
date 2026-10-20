@@ -147,14 +147,19 @@
   //   glb   its file (?v= = the file's own hash: a new model is a new name for Cloudflare and the phones)
   //   coat  the clear coat of the glossy look (0…1) · rough  its roughness range [lo, hi] · yaw  how it faces at rest
   const ZOCO_3D = {
+    'dralingo-emperador-qin': { glb: '/assets/zoco/3d/dralingo-emperador-qin.glb?v=740fbe47', coat: 0.25, rough: [0.3, 0.5] },
+    'dralingo-fuego-azul': { glb: '/assets/zoco/3d/dralingo-fuego-azul.glb?v=51d6e560', coat: 0.25, rough: [0.3, 0.5] },
     'dralingo-sheikh': { glb: '/assets/zoco/3d/dralingo-sheikh.glb?v=0151f8a8', coat: 0.25, rough: [0.3, 0.5] },
     'dralingo-emperador-barba': { glb: '/assets/zoco/3d/dralingo-emperador-barba.glb?v=77f5d05e', coat: 0.25, rough: [0.3, 0.5] },
     'dralingo-sheikh-paseo-roja': { glb: '/assets/zoco/3d/dralingo-sheikh-paseo-roja.glb?v=05c2c4e3', coat: 0.25, rough: [0.3, 0.5] },
+    'dralingo-clasico': { glb: '/assets/zoco/3d/dralingo-clasico.glb?v=4bda4ca8', coat: 0.25, rough: [0.3, 0.5] },
     'dralingo-emperador': { glb: '/assets/zoco/3d/dralingo-emperador.glb?v=60a3970b', coat: 0.25, rough: [0.3, 0.5] },
     'dralingo-sheikh-roja': { glb: '/assets/zoco/3d/dralingo-sheikh-roja.glb?v=574c7888', coat: 0.25, rough: [0.3, 0.5] },
     'dralingo-sheikh-paseo': { glb: '/assets/zoco/3d/dralingo-sheikh-paseo.glb?v=b32fe723', coat: 0.25, rough: [0.3, 0.5] },
     'profe-fer': { glb: '/assets/zoco/3d/profe-fer.glb?v=54151e56', coat: 0.1, rough: [0.38, 0.65] },
     'hamdan-3d': { glb: '/assets/zoco/3d/hamdan-3d.glb?v=70348a31', coat: 0.1, rough: [0.38, 0.65] },
+    'latifa-3d': { glb: '/assets/zoco/3d/latifa-3d.glb?v=a3c2c448', coat: 0.05, rough: [0.5, 0.75] },
+    'aileen-3d': { glb: '/assets/zoco/3d/aileen-3d.glb?v=4204fd7e', coat: 0.1, rough: [0.38, 0.65] },
     'adric-3d': { glb: '/assets/zoco/3d/adric-3d.glb?v=136b27e5', coat: 0.1, rough: [0.38, 0.65] },
     'adrian-3d': { glb: '/assets/zoco/3d/adrian-3d.glb?v=27628614', coat: 0.1, rough: [0.38, 0.65] },
     'perro-de-adric': { glb: '/assets/zoco/3d/perro-de-adric.glb?v=f1f669ca', coat: 0.15, rough: [0.38, 0.65] },

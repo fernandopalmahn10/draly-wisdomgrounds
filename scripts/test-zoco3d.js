@@ -46,7 +46,9 @@ for (const id of ids) {
   ok(m && new RegExp('^/assets/zoco/3d/' + id + '\\.glb\\?v=[0-9a-f]{8}$').test(m.glb), id + ': its file is /assets/zoco/3d/' + id + '.glb?v=<hash> (' + (m && m.glb) + ')');
   ok(m && m.coat >= 0 && m.coat <= 1 && m.rough[0] >= 0 && m.rough[0] <= m.rough[1] && m.rough[1] <= 1, id + ': its look in range');
 }
-for (const bad of [null, undefined, '', '__proto__', 'constructor', 'toString', 'nadie', 'dralingo-clasico', 'dralingo']) {
+// (today's content, never a copy: a character of the shop that has no model yet, if any is left)
+const without3d = (Saga.ZOCO || []).map((z) => z.id).filter((id) => !ids.includes(id));
+for (const bad of [null, undefined, '', '__proto__', 'constructor', 'toString', 'nadie', 'dralingo'].concat(without3d.slice(0, 1))) {
   ok(Saga.skin3d(bad) === null, 'no model for ' + JSON.stringify(bad));
 }
 // a hand-edited map: wrong paths give nothing, wild numbers are kept in range
@@ -103,7 +105,8 @@ function home(env) {
 {
   const H = home({ webgl: true, memory: 4 });
   ok(H && H.want3d && H.want3d('dralingo-sheikh') && H.want3d('dralingo-sheikh').glb === Saga.skin3d('dralingo-sheikh').glb, 'the page: a 3D character on a phone that can → its model');
-  ok(H && H.want3d('dralingo-emperador-qin') === null, 'the page: a character without a model → the picture');
+  if (without3d.length) ok(H && H.want3d(without3d[0]) === null, 'the page: a character without a model → the picture (' + without3d[0] + ')');
+  ok(H && H.want3d('dralingo') === null && H.want3d('nadie') === null, 'the page: a free saga character or an unknown id → the picture');
   ok(home({ webgl: true, reduced: true }).want3d('dralingo-sheikh') === null, 'the page: reduced motion → the picture');
   ok(home({ webgl: true, saveData: true }).want3d('dralingo-sheikh') === null, 'the page: Save-Data → the picture');
   ok(home({ webgl: false }).want3d('dralingo-sheikh') === null, 'the page: no WebGL → the picture');
