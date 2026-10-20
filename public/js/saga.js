@@ -94,8 +94,50 @@
   //                   swapped in once loaded (the lite one on a phone), never with reduced motion
   // ar comes from the file; hx / fx default to the render's (the art is made from the render: same pose).
   // <zoco-art>
-  const ZOCO_ART = {};
-  const ZOCO_ANIM = {};
+  const ZOCO_ART = {
+    "dralingo-emperador-qin": {"full":"/assets/zoco/full/dralingo-emperador-qin-g.webp?v=fe332ba6","ar":0.89,"avatar":"/assets/zoco/avatar/dralingo-emperador-qin-g.webp?v=5cc7b4ab"},
+    "dralingo-fuego-azul": {"full":"/assets/zoco/full/dralingo-fuego-azul-g.webp?v=133475ab","ar":0.74,"avatar":"/assets/zoco/avatar/dralingo-fuego-azul-g.webp?v=b213f566"},
+    "dralingo-sheikh": {"full":"/assets/zoco/full/dralingo-sheikh-g.webp?v=ed3ba907","ar":0.93,"avatar":"/assets/zoco/avatar/dralingo-sheikh-g.webp?v=fcb57545"},
+    "dralingo-emperador-barba": {"full":"/assets/zoco/full/dralingo-emperador-barba-g.webp?v=3891de33","ar":0.77,"avatar":"/assets/zoco/avatar/dralingo-emperador-barba-g.webp?v=596cb112"},
+    "dralingo-sheikh-paseo-roja": {"full":"/assets/zoco/full/dralingo-sheikh-paseo-roja-g.webp?v=d6faac2e","ar":1.01,"avatar":"/assets/zoco/avatar/dralingo-sheikh-paseo-roja-g.webp?v=013c7736"},
+    "dralingo-clasico": {"full":"/assets/zoco/full/dralingo-clasico-g.webp?v=db1635cc","ar":0.9,"avatar":"/assets/zoco/avatar/dralingo-clasico-g.webp?v=65e9fd79"},
+    "dralingo-emperador": {"full":"/assets/zoco/full/dralingo-emperador-g.webp?v=3819ca8a","ar":0.83,"avatar":"/assets/zoco/avatar/dralingo-emperador-g.webp?v=0995de32"},
+    "bebe-dralingo-kufiya": {"full":"/assets/zoco/full/bebe-dralingo-kufiya-g.webp?v=dafbbe2b","ar":0.58,"avatar":"/assets/zoco/avatar/bebe-dralingo-kufiya-g.webp?v=48ddb1c6"},
+    "dralingo-sheikh-roja": {"full":"/assets/zoco/full/dralingo-sheikh-roja-g.webp?v=936564d4","ar":0.86,"avatar":"/assets/zoco/avatar/dralingo-sheikh-roja-g.webp?v=f5da6feb"},
+    "bebe-dralingo-emperador": {"full":"/assets/zoco/full/bebe-dralingo-emperador-g.webp?v=f965205b","ar":0.49,"avatar":"/assets/zoco/avatar/bebe-dralingo-emperador-g.webp?v=d7a66869"},
+    "dralingo-sheikh-paseo": {"full":"/assets/zoco/full/dralingo-sheikh-paseo-g.webp?v=4e681764","ar":0.86,"avatar":"/assets/zoco/avatar/dralingo-sheikh-paseo-g.webp?v=fdf1d9d6"},
+    "profe-fer": {"full":"/assets/zoco/full/profe-fer-g.webp?v=1ab0a2f8","ar":0.34,"avatar":"/assets/zoco/avatar/profe-fer-g.webp?v=492b80a5"},
+    "hamdan-3d": {"full":"/assets/zoco/full/hamdan-3d-g.webp?v=fac9b8fa","ar":0.35,"avatar":"/assets/zoco/avatar/hamdan-3d-g.webp?v=880e36e2"},
+    "latifa-3d": {"full":"/assets/zoco/full/latifa-3d-g.webp?v=00fe06b5","ar":0.33,"avatar":"/assets/zoco/avatar/latifa-3d-g.webp?v=cc1a1bf4"},
+    "aileen-3d": {"full":"/assets/zoco/full/aileen-3d-g.webp?v=49051abb","ar":0.49,"avatar":"/assets/zoco/avatar/aileen-3d-g.webp?v=d58b99d1"},
+    "adric-3d": {"full":"/assets/zoco/full/adric-3d-g.webp?v=49570d13","ar":0.39,"avatar":"/assets/zoco/avatar/adric-3d-g.webp?v=20e31ca0"},
+    "adrian-3d": {"full":"/assets/zoco/full/adrian-3d-g.webp?v=5f4f6b73","ar":0.38,"avatar":"/assets/zoco/avatar/adrian-3d-g.webp?v=fc898fd1"},
+    "perro-de-adric": {"full":"/assets/zoco/full/perro-de-adric-g.webp?v=fa789149","ar":0.49,"avatar":"/assets/zoco/avatar/perro-de-adric-g.webp?v=d7f8c88e"},
+    "poni-de-aileen": {"full":"/assets/zoco/full/poni-de-aileen-g.webp?v=b643ac56","ar":0.76,"avatar":"/assets/zoco/avatar/poni-de-aileen-g.webp?v=967ea073"},
+    "panda-3d": {"full":"/assets/zoco/full/panda-3d-g.webp?v=17a735c6","ar":0.55,"avatar":"/assets/zoco/avatar/panda-3d-g.webp?v=2a102777"}
+  };
+  const ZOCO_ANIM = {
+    "dralingo-emperador-qin": {"still":"/assets/zoco/anim/dralingo-emperador-qin-still.webp?v=983a7e27","full":"/assets/zoco/anim/dralingo-emperador-qin.webp?v=6ff86d58","lite":"/assets/zoco/anim/dralingo-emperador-qin-lite.webp?v=d2f1cd4a","ar":1.23},
+    "dralingo-fuego-azul": {"still":"/assets/zoco/anim/dralingo-fuego-azul-still.webp?v=aa9070ac","full":"/assets/zoco/anim/dralingo-fuego-azul.webp?v=f66d6bd2","lite":"/assets/zoco/anim/dralingo-fuego-azul-lite.webp?v=86773418","ar":0.98},
+    "dralingo-sheikh": {"still":"/assets/zoco/anim/dralingo-sheikh-still.webp?v=316a814a","full":"/assets/zoco/anim/dralingo-sheikh.webp?v=c94d4467","lite":"/assets/zoco/anim/dralingo-sheikh-lite.webp?v=6c3c9f92","ar":1.26},
+    "dralingo-emperador-barba": {"still":"/assets/zoco/anim/dralingo-emperador-barba-still.webp?v=030f7c16","full":"/assets/zoco/anim/dralingo-emperador-barba.webp?v=2f64105d","lite":"/assets/zoco/anim/dralingo-emperador-barba-lite.webp?v=df859c4b","ar":1.09},
+    "dralingo-sheikh-paseo-roja": {"still":"/assets/zoco/anim/dralingo-sheikh-paseo-roja-still.webp?v=69b3f2a0","full":"/assets/zoco/anim/dralingo-sheikh-paseo-roja.webp?v=7107c862","lite":"/assets/zoco/anim/dralingo-sheikh-paseo-roja-lite.webp?v=250d2e88","ar":1.28},
+    "dralingo-clasico": {"still":"/assets/zoco/anim/dralingo-clasico-still.webp?v=734b53bc","full":"/assets/zoco/anim/dralingo-clasico.webp?v=feca1980","lite":"/assets/zoco/anim/dralingo-clasico-lite.webp?v=d4783746","ar":1.33},
+    "dralingo-emperador": {"still":"/assets/zoco/anim/dralingo-emperador-still.webp?v=e2c2936c","full":"/assets/zoco/anim/dralingo-emperador.webp?v=ceb393e6","lite":"/assets/zoco/anim/dralingo-emperador-lite.webp?v=53a7edd8","ar":1.24},
+    "bebe-dralingo-kufiya": {"still":"/assets/zoco/anim/bebe-dralingo-kufiya-still.webp?v=03a173e3","full":"/assets/zoco/anim/bebe-dralingo-kufiya.webp?v=9dc945dc","lite":"/assets/zoco/anim/bebe-dralingo-kufiya-lite.webp?v=714063e4","ar":0.76},
+    "dralingo-sheikh-roja": {"still":"/assets/zoco/anim/dralingo-sheikh-roja-still.webp?v=6f4ce379","full":"/assets/zoco/anim/dralingo-sheikh-roja.webp?v=4aad19bb","lite":"/assets/zoco/anim/dralingo-sheikh-roja-lite.webp?v=6db5f243","ar":1.31},
+    "bebe-dralingo-emperador": {"still":"/assets/zoco/anim/bebe-dralingo-emperador-still.webp?v=ac81b57c","full":"/assets/zoco/anim/bebe-dralingo-emperador.webp?v=4ef78b74","lite":"/assets/zoco/anim/bebe-dralingo-emperador-lite.webp?v=70a18cbf","ar":0.54},
+    "dralingo-sheikh-paseo": {"still":"/assets/zoco/anim/dralingo-sheikh-paseo-still.webp?v=433eb94b","full":"/assets/zoco/anim/dralingo-sheikh-paseo.webp?v=f9187a5d","lite":"/assets/zoco/anim/dralingo-sheikh-paseo-lite.webp?v=c1c0e4b5","ar":0.86},
+    "profe-fer": {"still":"/assets/zoco/anim/profe-fer-still.webp?v=b1c45624","full":"/assets/zoco/anim/profe-fer.webp?v=116823e7","lite":"/assets/zoco/anim/profe-fer-lite.webp?v=3e9f16ae","ar":0.36},
+    "hamdan-3d": {"still":"/assets/zoco/anim/hamdan-3d-still.webp?v=db713881","full":"/assets/zoco/anim/hamdan-3d.webp?v=c5d6033d","lite":"/assets/zoco/anim/hamdan-3d-lite.webp?v=1d168fa0","ar":0.36},
+    "latifa-3d": {"still":"/assets/zoco/anim/latifa-3d-still.webp?v=6ecbc16f","full":"/assets/zoco/anim/latifa-3d.webp?v=3493e02a","lite":"/assets/zoco/anim/latifa-3d-lite.webp?v=2b9b5d56","ar":0.34},
+    "aileen-3d": {"still":"/assets/zoco/anim/aileen-3d-still.webp?v=1ea4f4f8","full":"/assets/zoco/anim/aileen-3d.webp?v=17523627","lite":"/assets/zoco/anim/aileen-3d-lite.webp?v=1567dcec","ar":0.5},
+    "adric-3d": {"still":"/assets/zoco/anim/adric-3d-still.webp?v=cbe81f45","full":"/assets/zoco/anim/adric-3d.webp?v=217986d1","lite":"/assets/zoco/anim/adric-3d-lite.webp?v=a34f679e","ar":0.4},
+    "adrian-3d": {"still":"/assets/zoco/anim/adrian-3d-still.webp?v=0a7ebc4a","full":"/assets/zoco/anim/adrian-3d.webp?v=9803cb8f","lite":"/assets/zoco/anim/adrian-3d-lite.webp?v=9f72ed8b","ar":0.42},
+    "perro-de-adric": {"still":"/assets/zoco/anim/perro-de-adric-still.webp?v=44a46ef2","full":"/assets/zoco/anim/perro-de-adric.webp?v=e900dbdb","lite":"/assets/zoco/anim/perro-de-adric-lite.webp?v=63558f64","ar":0.5},
+    "poni-de-aileen": {"still":"/assets/zoco/anim/poni-de-aileen-still.webp?v=dab98333","full":"/assets/zoco/anim/poni-de-aileen.webp?v=174f3303","lite":"/assets/zoco/anim/poni-de-aileen-lite.webp?v=0b4c38a1","ar":0.79},
+    "panda-3d": {"still":"/assets/zoco/anim/panda-3d-still.webp?v=19ef5195","full":"/assets/zoco/anim/panda-3d.webp?v=0afe3b5f","lite":"/assets/zoco/anim/panda-3d-lite.webp?v=b9e6306d","ar":0.58}
+  };
   // </zoco-art>
   // a kid who had picked a brand avatar now shows one of the saga (server migrates the record once, pages map too)
   const LEGACY_AVATARS = {

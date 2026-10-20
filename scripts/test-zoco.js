@@ -235,7 +235,9 @@ function unit() {
   } finally { fs.rmSync(AR, { recursive: true, force: true }); }
 
   section('a skin id on every page and in every game');
-  ok(Saga.avatarUrl('dralingo-fuego-azul') === '/assets/zoco/avatar/dralingo-fuego-azul.webp' && Saga.skinBody('hamdan-3d') === '/assets/zoco/full/hamdan-3d.webp', 'saga.js: a skin\'s head and full body');
+  // (2026-10-20: the glossy art replaces a render once scripts/zoco-art.js writes it: `<id>-g.webp`, else `<id>.webp`)
+  const artPic = (u, kind, id) => new RegExp('^/assets/zoco/' + kind + '/' + id + '(-g)?\\.webp(\\?v=[\\w]+)?$').test(String(u || ''));
+  ok(artPic(Saga.avatarUrl('dralingo-fuego-azul'), 'avatar', 'dralingo-fuego-azul') && artPic(Saga.skinBody('hamdan-3d'), 'full', 'hamdan-3d'), 'saga.js: a skin\'s head and full body (the render, or its glossy picture)');
   ok(Saga.avatarUrl('hamdan') === '/assets/saga/avatars/hamdan.webp' && Saga.skinBody('hamdan') === null && Saga.skinAnim('hamdan') === null, '… the free saga avatars as before');
   ok(Saga.emojiOf('dralingo-emperador-qin') === '🐉' && Saga.emojiOf('profe-fer') === '👨‍🏫' && Saga.emojiOf('panda-3d') === '🐼' && Saga.emojiOf('🧔') === '🧔' && Saga.emojiOf('x-y') === '', 'a text-only list prints the character\'s emoji, never an id');
   ok(Saga.labelOf('aileen-3d') === 'Aileen artes marciales' && Saga.labelOf('hamdan') === 'Hamdan', '«Vas a jugar como …»: the skin\'s name');
@@ -752,7 +754,7 @@ async function run() {
   r = await shop(A);
   ok(r.status === 200 && r.json.student === true && r.json.coins === 0 && r.json.welcome === 0 && /^[a-f0-9]{12}$/.test(r.json.who), 'their shop: 0 coins, no welcome grant (nothing done before)');
   const HELD4 = ['latifa-3d', 'perro-de-adric', 'poni-de-aileen', 'panda-3d'];
-  ok(r.json.items.length === 20 && HELD4.every((id) => r.json.items.some((i) => i.id === id && i.full === '/assets/zoco/full/' + id + '.webp')), 'all 20 characters on sale, the dog, the pony, the panda and Latifa con abaya with their pictures');
+  ok(r.json.items.length === 20 && HELD4.every((id) => r.json.items.some((i) => i.id === id && /^\/assets\/zoco\/full\//.test(String(i.full || '')) && String(i.full).indexOf(id) > 0)), 'all 20 characters on sale, the dog, the pony, the panda and Latifa con abaya with their pictures');
   ok(!/Ready Player|origen del modelo|licencia|"hold"/.test(r.text), '… and no word of why they were held');
   ok(r.json.items.find((i) => i.id === 'dralingo-emperador-qin').price === 3000 && Math.min(...r.json.items.map((i) => i.price)) === 800, 'the v2 prices (800 … Dralingo Emperador Qin 3000)');
   ok(!r.text.includes(kidA.studentCode), 'the student code never travels');

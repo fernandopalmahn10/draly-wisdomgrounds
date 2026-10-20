@@ -828,8 +828,13 @@
     const S = window.Saga;
     const an = !x.free && S && S.skinAnim ? S.skinAnim(x.id) : null;
     const lk = an || (!x.free && S && S.skinLook ? S.skinLook(x.id) : null);
-    // (a phone and the small frame take the lite loop only: with none, or once a loop failed, the still keeps the CSS idle)
-    const want = an && !calm() ? (kind === 'now' || smallScreen() ? an.lite : an.full) : '';
+    // (the small frame and the shop's spotlight on a phone take the lite loop; a character's own page and «¡Ya es tuyo!»
+    // are ONE character on one kid's screen at home, so they take the full loop on a phone too (2026-10-20: the 200 px
+    // lite loop stretched over the big pedestal looked soft), unless the phone asks to save data; the «30 phones get the
+    // lite one» rule is for class games. With no loop, or once a loop failed, the still keeps the CSS idle)
+    const saveData = !!(typeof navigator !== 'undefined' && navigator.connection && navigator.connection.saveData);
+    const big = kind === 'page' || kind === 'new';
+    const want = an && !calm() ? (kind === 'now' || (smallScreen() && !(big && !saveData)) ? an.lite : (an.full || an.lite)) : '';
     const loop = want && !zLoopsBad.has(want) ? want : '';
     const ready = !!loop && zLoops.has(loop);
     const src = an ? (ready ? loop : an.still) : x.free ? x.url : x.full;
