@@ -11,6 +11,7 @@
 //   c: coins now (an undone homework can leave it below 0: «Deshacer» always takes back what it paid, so a spend-then-undo
 //      never mints coins), e: coins earned in all, sp: coins spent in all, w: the one-time welcome grant,
 //   ps: coins paid for La Base's words in all (a merge moves at most that for words new to the real account),
+//   ps1: the part of `ps` paid under v1 at 2 a word (set once by upgrade(): a merge moves those words at 2),
 //   own: [skin ids bought, in order], buys: [[id, price, when]],
 //   k: { '<key>': coins paid }      one payment per key, kept forever: 'train:<level>:<world>', 'hw:<homework id>',
 //                                   'streak:<first day of the run>:<n>' (0 = it was already done before the purse opened)
@@ -161,8 +162,10 @@ function welcomeOf(rec, goal) {
 // counters of words and homework are turned into the same steps (so today's caps count what really happened today).
 // (The purse's shape is the same, so it keeps `v: 1` and gets `pv: 2` = paid in the v2 amounts: a server rolled back
 // to v1 still reads every purse as it is, never mistaking one for a damaged purse and opening a new one over it.)
+// (a purse already at pv 2 or later is never converted again: a later version rolled back must not have its waiting
+// line halved a second time; whatever a rolled-back v1 server queued meanwhile is paid as it stands, see settleQueue)
 function upgrade(z) {
-  if (!obj(z) || z.v !== 1 || z.pv === 2) return z;
+  if (!obj(z) || z.v !== 1 || Number(z.pv) >= 2) return z;
   const words = (coins) => Math.ceil(Math.max(0, Number(coins) || 0) / PAY_V1.seal);
   const hws = (coins) => Math.round(Math.max(0, Number(coins) || 0) / PAY_V1.hw);
   if (obj(z.q)) {
@@ -174,6 +177,9 @@ function upgrade(z) {
     if (z.day.seal) z.day.seal = words(z.day.seal) * PAY.seal;
     if (z.day.hw) z.day.hw = hws(z.day.hw) * PAY.hw;
   }
+  // (review 2026-10-20) the coins its words really earned under v1 (2 a word): a «Pasar mi progreso» moves those words
+  // at what they paid, never at today's 1 (coins in a balance keep their value everywhere)
+  z.ps1 = Math.max(0, Number(z.ps) || 0);
   z.pv = 2;
   z.pvAt = Date.now();
   return z;
@@ -230,8 +236,15 @@ function settleQueue(rec, out) {
   }
   const hw = Array.isArray(z.q.hw) ? z.q.hw : (z.q.hw = []);
   const sent = new Set(sentIds(rec));
-  while (hw.length && t.hw + hw[0][1] <= CAPC.hw) {
-    const [id, n] = hw.shift();
+  // (review 2026-10-20: a damaged entry at the front never blocks the line: it is dropped, and an amount is read within
+  // 0 … PAY.hw, so one bad number can't hold every homework behind it forever)
+  while (hw.length) {
+    const x = hw[0];
+    if (!Array.isArray(x)) { hw.shift(); continue; }
+    const n = Math.min(Math.max(0, Number(x[1]) || 0), PAY.hw);
+    if (t.hw + n > CAPC.hw) break;
+    hw.shift();
+    const id = x[0];
     if (!sent.has(id) || own(z.k, 'hw:' + id)) continue;   // (unmarked meanwhile, or already paid: nothing)
     t.hw += n;
     z.k['hw:' + id] = n;
@@ -412,7 +425,10 @@ function merge(from, to, env) {
       rp().decodeSeals(zf.sk[lvl], b.words).forEach((n) => { if (!known.has(n)) fresh++; });
     });
     const sealLine = Math.max(0, Number(obj(zf.q) && zf.q.seal) || 0);
-    const sealWorth = Math.min(fresh * PAY.seal, Math.max(0, Number(zf.ps) || 0) + sealLine);
+    // (review 2026-10-20) words paid under v1 move at what they paid (2 each, `ps1`), the rest at today's PAY.seal; never
+    // more than the automatic account really earned for words or had waiting
+    const at1 = Math.min(fresh, Math.floor((Math.max(0, Number(zf.ps1) || 0)) / PAY_V1.seal));
+    const sealWorth = Math.min(at1 * PAY_V1.seal + (fresh - at1) * PAY.seal, Math.max(0, Number(zf.ps) || 0) + sealLine);
     const sealQ = Math.min(sealLine, sealWorth);
     worth += sealWorth - sealQ;
     zt.q.seal = (Number(zt.q.seal) || 0) + sealQ;
@@ -477,8 +493,12 @@ function view(rec, opts) {
     coins: z ? z.c : 0, earned: z ? z.e : 0, waiting: q, welcome: z ? z.w : 0,
     own: mine.slice(), equipped: rec && typeof rec.avatar === 'string' ? rec.avatar : null,
     items, cats: CATS.map((c) => ({ id: c.id, title: c.title, one: c.one, many: c.many, tag: c.tag })), fresh: isNew(),
-    // caps: what a day pays at most, in steps (30 words, 2 homework, 4 games, 5 stars; since v2 never in coins)
-    ways: WAYS, news, caps: { seal: CAP.seal, hw: CAP.hw, game: CAP.game, star: CAP.star, gameMin: GAME_MIN },
+    // limits: what a day pays at most, in steps (30 words, 2 homeworks, 4 games, 5 stars), read by the v2 page. `caps`
+    // keeps the v1 units for this release (coins of words at 2, of homework at 50), so a tab opened before the deploy
+    // still says «30 palabras y 2 tareas» (its code divides by 2 and by 50); drop it once every phone has the v2 page.
+    ways: WAYS, news,
+    limits: { seal: CAP.seal, hw: CAP.hw, game: CAP.game, star: CAP.star, gameMin: GAME_MIN },
+    caps: { seal: CAP.seal * PAY_V1.seal, hw: CAP.hw * PAY_V1.hw, game: CAP.game, star: CAP.star, gameMin: GAME_MIN },
   };
 }
 // the coins pill and its news only (the home's band)

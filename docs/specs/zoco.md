@@ -213,8 +213,23 @@ homeworks, two class games and ~30 words a week, a streak) earns ~150 a week.
   every purse as it is (it would mistake a `v: 2` for a damaged purse and open a new one over it, coins and characters
   lost). An automatic account's purse is upgraded the same way before «Pasar mi progreso» (its waiting homework joins the
   real account's line at 25).
+- **Coins already in a balance keep their value everywhere, a «Pasar mi progreso» move included** (review 2026-10-20: the
+  merge valued an automatic account's words at today's 1 though they were paid 2, so a kid who had bought with them got
+  a debt): `upgrade()` keeps `ps1` (the coins its words earned under v1) and the merge moves the first `ps1 / 2` new
+  words at 2, the rest at today's 1, still never more than the account really earned for words or had waiting. Tested:
+  50 words paid 100 move 100; 100 words (200) that bought Dralingo Sheikh at 150 with 50 left move +50 with the Sheikh.
+- **«Deshacer» gives back exactly what that step paid; marking it again pays today's amount** (a homework paid 50 under
+  v1, undone and marked again: −50, then +25).
+- **A rollback** (v2 deployed, then a v1 server, then v2 again): a purse at `pv` 2 or later is never converted again
+  (`Number(pv) >= 2`: a later version rolled back never has its line halved a second time). Whatever the v1 server
+  queued meanwhile is paid as it stands when it comes due: the words' line holds coins, so those words pay their v1 2;
+  a homework in the line is read within 0 … today's 25 (a damaged entry, a null, «abc», a huge number, is dropped or
+  read within that range and never blocks the homework behind it).
 - The welcome grant for a purse opened from now on: half of the v2 pay (½ a word, 5 a practice, 12.5 a homework), at most
   150 (unchanged).
+- **Pages open across the deploy**: `GET /api/zoco` sends the day's limits in steps as `limits` (the v2 page reads
+  it) and keeps `caps` in the v1 units for this release (coins of words at 2, of homework at 50), so a tab opened before
+  the deploy still says «30 palabras y 2 tareas». Drop `caps` once every phone has the v2 page.
 
 ### Licences: all 20 on sale
 No `hold` left (the mechanism stays for later). The dog, the pony, the panda and Latifa con abaya were shipped like the 16 of
@@ -234,14 +249,20 @@ pony's line was its name; it got one of its own («Galopa con Aileen a toda velo
   the dog on its paws, never its head) on the pedestal's centre, and container units keep a winged Dralingo's wings on
   screen (`--reach`), except in the small «Ahora juegas con» frame, where the wing tips may go but never his size.
 - **Alive until the real loops land** (`.is-idle`): it breathes (3.8 s, scale 1.008 × 1.022 from the feet), sways from its
-  feet (±0.6°, 7.6 s), its shadow breathes with it, and every 7.6 s a light sweeps over the character (cut to its own
-  shape by a CSS mask of its picture) and across the pedestal's rim. Not on «¡Ya es tuyo!» (the rays already turn there).
-  Reduced motion: nothing moves.
+  feet (±0.6°, 6.9 s: never a multiple of the breath, so the idle never visibly loops), its shadow breathes with it, and
+  every 9 s a light sweeps over the character (cut to its own shape by a CSS mask of its picture) and across the
+  pedestal's rim. Every animation takes its phase from the page's clock (`--ph` = −`performance.now()`), so a redraw never
+  snaps a breath back. Not on «¡Ya es tuyo!» (the rays already turn there). Reduced motion: nothing moves; the new
+  character of «¡Ya es tuyo!» still fades in (0.2 s). The spotlight card presses (0.985); hover lifts the character
+  (0.22 s, mouse only).
 - **The slot for the real art** (saga.js, filled only by `node scripts/zoco-art.js`):
   - `ZOCO_ANIM[id] = { still, full, lite[, ar, hx, fx] }`: the still shows first, the loop swaps in once loaded (`zocoAlive`
     after a draw, 400 ms after the page settled), the lite one on a phone (< 700 px or Save-Data) and in the small frame,
     the full one on a laptop; `.is-live` = no CSS idle on the character (the loop is the motion), only the rim's light.
-    A loop that fails to load leaves the still with the CSS idle. Reduced motion: the still.
+    A phone never gets the full loop: with no lite one it keeps the still with the CSS idle (`skinAnim().lite` is null).
+    A loop that fails to load leaves the still with the CSS idle and is never asked for again on that page; a loop
+    whose picture was redrawn away before its timer is not loaded. Reduced motion: the still. A picture's address goes
+    into the CSS mask `url()` without `" ' ( ) \` or spaces.
   - `ZOCO_ART[id] = { full, avatar[, ar, hx, fx] }`: the glossy picture replaces the render everywhere through saga.js
     (`skinBody`, `skinHead`, `avatarUrl`): the shop, the spotlight, every pin game, Mi perfil, Papás, /maestro.
   - Empty maps (today) = everything as on 2026-10-19 (the renders, the CSS idle).
@@ -258,14 +279,35 @@ pony's line was its name; it got one of its own («Galopa con Aileen a toda velo
 
   The loop and its still come straight from `video_tools/canva_anim.py` (`<id>.webp` + `<id>-still.webp`; the lite one
   with `--size 240 --fps 12 --quality 62`). `ar` comes from the file; `hx` / `fx` default to the render's (the art is
-  made from the render: same pose); set them by hand in the map when a pose differs (the script keeps them).
-  `node scripts/zoco-art.js --check` (and test-zoco) fail when the maps and the files disagree.
+  made from the render: same pose); set them by hand in the map when a pose differs (the script keeps them; saga.js
+  reads only finite numbers, hx / fx within 0 … 1, ar within 0.2 … 3, and only string paths).
+  `node scripts/zoco-art.js --check` (and test-zoco) fail when the maps and the files disagree. The script refuses a
+  loop without its still or its lite one (a phone must never get the ~1 MB loop), checks each file's size before
+  reading it and reads only its header for the size in pixels, names the line of a hand edit that broke the JSON,
+  checks the new saga.js runs (and reads back to the same maps) before writing it, writes through a temp file + rename,
+  and takes `--root <folder>` (test-zoco runs its write path on a temp copy: refusals, hx / fx kept, CRLF, the bumps).
+
+### Screens checked (v2, 2026-10-20, made-up kids on a throw-away local server)
+- Sizes: phone 390×844, short phone 360×640, laptop 1366×657. 23 screenshots: the spotlight, a character's page (Qin,
+  the dog, Hamdan, Fuego Azul, Latifa, the pony on the laptop), «¡Ya es tuyo!», «Elige tu personaje» (a skin and a free
+  saga character), «¿Cómo gano monedas?» (Spanish and English), the home, the welcome gift; no browser errors, nothing
+  wider than the window. After the first look: a soft night behind the spotlight's name, a bigger «Ahora juegas con»
+  frame, and «¡Ya es tuyo!» at 360×640 with «Usarlo ahora» AND «Volver al Zoco» on the first screen.
+- The idle-loop slot in a real browser with stand-in loops (removed after): the still first, then the lite loop on a phone
+  and the full one on a laptop, `.is-live`; reduced motion kept the still.
+- Scroll check (a real mouse wheel, `platform-screenshots` scroll-check) on 12 Zoco views × 390×844 / 360×640 / 1366×657:
+  0 traps of 36.
+- Design pass: `emil-design-eng` on the idle (the timings above).
+- Copies: `.claude/handoff/zoco2-shots/` (taken before the idle's timing tweaks: same frames, other periods).
 
 ### Tests (v2)
-`node scripts/test-zoco.js`: 211 checks (v1: 171), all read the amounts from `core/zoco.js` (PAY, CAP, CAPC): the v2
-amounts, caps and prices (Qin 3000 the only top, the plain forms 800, the gang and pets in the middle), no hold and all 40
-pictures, the art slots (the maps match the files; a line in a map moves the shop's and the games' pictures and gives an
-idle loop: data only), a purse of 2026-10-19 upgraded once (coins, characters, welcome, keys kept; the line in v2
-amounts; «Deshacer» of a 50 takes back 50), an automatic purse of 2026-10-19 merging at 25, the laundering cases with
-v2 prices, and on the server: all 20 listed with pictures and no word of why they were held, «Te faltan 745» for a kid
-with 55, a seeded v1 purse keeping its 300 coins, Sheikh and welcome, the four once held bought and equipped.
+`node scripts/test-zoco.js`: 230 checks (v1: 171), all read the amounts from `core/zoco.js` (PAY, CAP, CAPC): the v2
+amounts, limits and prices (Qin 3000 the only top, the plain forms 800, the gang and pets in the middle), no hold and all
+40 pictures, the art slots (the maps match the files; a line in a map moves the shop's and the games' pictures and gives
+an idle loop: data only; odd hand edits read safely; no lite = no loop on a phone; the script's write path on a temp
+copy), a purse of 2026-10-19 upgraded once (coins, characters, welcome, keys kept; the line in v2 amounts; «Deshacer» of
+a 50 takes back 50), a rollback purse (pv 2 with a v1 line) and a pv 3 purse never converted again, a damaged waiting
+line, an automatic purse of 2026-10-19 merging at 25, the two merges of v1 words (+100; +50 with the Sheikh), the
+laundering cases with v2 prices, `limits` and the v1-unit `caps`, and on the server: all 20 listed with pictures and no
+word of why they were held, «Te faltan 745» for a kid with 55, a seeded v1 purse keeping its 300 coins, Sheikh and
+welcome, the four once held bought and equipped.

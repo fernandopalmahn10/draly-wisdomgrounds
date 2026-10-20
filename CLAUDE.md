@@ -604,19 +604,23 @@ the checklist for any new game mode.
   the Zoco, a locked character, «¿Cómo gano monedas?», «¡Ya es tuyo!», Mi perfil «Elige tu personaje»):
   https://claude.ai/artifact/Tfi3racK5kFX72yempjpzT. Build it as drawn; it lives inside the kid's home «Mi Dralingo».
 - **Coins come only from real steps, judged by the server, never bought with money** (the design says so to kids). The
-  approved amounts: +2 a word marked in La Base (first time only), +20 a practice of El Entrenamiento that reaches its
-  goal, +50 a homework marked «¡Ya la mandé!» (once per homework; «Deshacer» takes them back), +10 a class PIN game
-  played for real, +5 per star of the game's ceremony, +30 a 7-day streak. Nothing a kid can farm by repeating a tap.
+  v1 amounts (2026-10-19, superseded 2026-10-20 by «Unlocking is hard and special» below): +2 a word, +20 a practice,
+  +50 a homework, +10 a class game, +5 a star, +30 a 7-day streak. Nothing a kid can farm by repeating a tap.
 - **The characters** are his own 3D models rendered on this laptop (`assets-library/originals-renders/2026-10-19/`,
   `roster.json`): the 22 he saw in green, minus anything he hasn't cleared. Kept OUT until he says so: the six orange
   ones (Come-palabras, Camello, Monje John, Chica Kung Fu, Señor de lentes, Guardián maya) and the two Baby Dralingos in
-  the storybook look (cone hat + robe: the brand rule keeps one area's look out of another). Prices 150-400.
+  the storybook look (cone hat + robe: the brand rule keeps one area's look out of another). v1 prices 150-400
+  (superseded 2026-10-20: 800-3000).
 - **Unlocking is hard and special** (his words 2026-10-20: "make it a lot more difficult to get the points, because
   elsewhere everyone is going to be unlocking super cool characters"): since 2026-10-20 the amounts are +1 a word (first
   time), +10 a practice at its goal (once per world), +25 a homework (once; «Deshacer» takes it back), +5 a class game
   played for real, +2 a star, +15 a 7-day streak; daily caps 30 words, 2 homework, 4 games, 5 stars; prices 800-3000
   (an active kid earns ~150 a week: the first character takes ~5 weeks, Dralingo Emperador Qin ~5 months). Characters
-  already bought stay bought; the welcome grant already paid stays.
+  already bought stay bought; the welcome grant already paid stays. Coins already in a balance keep their value
+  everywhere, a «Pasar mi progreso» move included (coins really paid under v1 move at what they paid); coins still
+  WAITING for a daily cap are paid at the amount of the day they are paid (they were never in the balance, and paying
+  launch-day bulk taps at v1 rates would undo «a lot more difficult»). «Deshacer» gives back exactly what that step
+  paid; marking it again pays today's amount.
 - **Licences: he bought licences for all these models** (his words 2026-10-20: "I bought licenses for all these models
   before in the past"): the dog, the pony, the panda and Latifa con abaya are on sale (no more `hold`). The six orange
   ones stay out for their kid-safety notes, not for licences, until he says.
@@ -630,8 +634,8 @@ the checklist for any new game mode.
   ceremonies; the server only accepts an avatar the kid owns (the base saga avatars stay free for everyone).
 - Kid-safe pictures, Spanish UI, no hanzi; every screen with its «Volver»; works on phones and laptops.
 - **Built 2026-10-19** (his «sube» for the rendered pictures that day; the 3D files never leave the laptop):
-  `core/zoco.js` (catalog, prices, `hold` lines), the coin ledger on the record (idempotent award keys, daily caps:
-  50 seals, 3 homework, 6 games, 8 stars; «Deshacer» can leave a debt shown as 0), a one-time welcome grant at half pay
+  `core/zoco.js` (catalog, prices, `hold` lines), the coin ledger on the record (idempotent award keys, daily caps
+  (v1: 50 seals, 3 homework, 6 games, 8 stars; v2 since 2026-10-20 above); «Deshacer» can leave a debt shown as 0), a one-time welcome grant at half pay
   (max 150), «Pasar mi progreso» brings only work new to the real account, views `#zoco` / a character / `#monedas` in
   Mi Dralingo, Mi perfil «Elige tu personaje», skins in all 11 pin games + ceremonies + Papás + /maestro, pictures in
   `public/assets/zoco/` (a held character's pictures are not published). Spec `docs/specs/zoco.md`.

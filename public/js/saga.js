@@ -111,11 +111,17 @@
   const legacyAvatar = (id) => own(LEGACY_AVATARS, id);
   const zoco = (id) => own(SKIN, id);
   const zArt = (id) => { const z = zoco(id); return z ? own(ZOCO_ART, z.id) : null; };
+  // one picture of a skin's glossy art (a string, or null: a hand-edited map never yields a broken src)
+  const artOf = (id, k) => { const g = zArt(id); return g && typeof g[k] === 'string' && g[k] ? g[k] : null; };
   // a picture's look: { ar, hx, fx } (fx = hx when the character stands under its face; a slot's own values win)
+  // (review 2026-10-20: a hand-edited map can hold anything: finite numbers only, hx / fx within 0…1, ar within 0.2…3)
+  const num = (...vs) => { for (const v of vs) { const n = Number(v); if (v != null && v !== '' && Number.isFinite(n)) return n; } return null; };
+  const clamp = (n, a, b) => Math.min(b, Math.max(a, n));
   const lookOf = (z, slot) => {
-    const ar = Number((slot && slot.ar) || z.ar) || 1;
-    const hx = Number((slot && slot.hx) || z.hx) || 0.5;
-    return { ar, hx, fx: Number((slot && slot.fx) || z.fx) || hx };
+    const ar = clamp(num(slot && slot.ar, z.ar) || 1, 0.2, 3);
+    const hx = clamp(num(slot && slot.hx, z.hx) == null ? 0.5 : num(slot && slot.hx, z.hx), 0, 1);
+    const fx = num(slot && slot.fx, z.fx);
+    return { ar, hx, fx: fx == null ? hx : clamp(fx, 0, 1) };
   };
   return {
     ANIMS, BURSTS, AVATARS, LEGACY_AVATARS, ZOCO, ZOCO_ART, ZOCO_ANIM,
@@ -129,15 +135,17 @@
     // the saga character a skin is a form of ('dralingo-fuego-azul' → 'dralingo'); any other value as it is
     skinBase: (id) => { const z = zoco(id); return z ? z.base : id; },
     // the round head picture (256 × 256) of a saga avatar or a skin; null for anything else (a skin's glossy head first)
-    skinHead: (id) => { const z = zoco(id); if (z) { const g = zArt(z.id); return g && g.avatar ? g.avatar : ZB + 'avatar/' + z.id + '.webp'; } const a = own(AVATAR, legacyAvatar(id) || id); return a ? a.url : null; },
+    skinHead: (id) => { const z = zoco(id); if (z) { return artOf(z.id, 'avatar') || ZB + 'avatar/' + z.id + '.webp'; } const a = own(AVATAR, legacyAvatar(id) || id); return a ? a.url : null; },
     // a skin's full-body picture (transparent; one pose: games draw it for every pose; its glossy picture first, else
     // the 480 px render); null for the rest
-    skinBody: (id) => { const z = zoco(id); if (!z) return null; const g = zArt(z.id); return g && g.full ? g.full : ZB + 'full/' + z.id + '.webp'; },
-    // 🆕 2026-10-20 the idle «waiting» loop of a skin: { still, full, lite, ar, hx, fx } or null (no loop yet)
+    skinBody: (id) => { const z = zoco(id); if (!z) return null; return artOf(z.id, 'full') || ZB + 'full/' + z.id + '.webp'; },
+    // 🆕 2026-10-20 the idle «waiting» loop of a skin: { still, full, lite, ar, hx, fx } or null (no loop yet). lite is
+    // null when there is none: a phone then keeps the still (never the full ~1 MB loop)
     skinAnim: (id) => {
       const z = zoco(id);
       const a = z ? own(ZOCO_ANIM, z.id) : null;
-      return a && a.still && a.full ? Object.assign({ still: a.still, full: a.full, lite: a.lite || a.full }, lookOf(z, a)) : null;
+      return a && typeof a.still === 'string' && typeof a.full === 'string'
+        ? Object.assign({ still: a.still, full: a.full, lite: typeof a.lite === 'string' && a.lite ? a.lite : null }, lookOf(z, a)) : null;
     },
     // 🆕 2026-10-20 how a skin's full-body picture (skinBody) stands: { ar, hx, fx }; null for the rest
     skinLook: (id) => { const z = zoco(id); return z ? lookOf(z, zArt(z.id)) : null; },
@@ -163,7 +171,7 @@
     // (2026-10-19: a skin of El Zoco → its own head picture)
     avatarUrl(name) {
       const z = zoco(name);
-      if (z) { const g = zArt(z.id); return g && g.avatar ? g.avatar : ZB + 'avatar/' + z.id + '.webp'; }
+      if (z) { return artOf(z.id, 'avatar') || ZB + 'avatar/' + z.id + '.webp'; }
       const a = own(AVATAR, legacyAvatar(name) || name);
       if (a) return a.url;
       if (typeof name !== 'string' || !/^[a-z0-9]+$/.test(name)) return null;

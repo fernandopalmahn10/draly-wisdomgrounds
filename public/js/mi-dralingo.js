@@ -815,7 +815,10 @@
   // Reduced motion: the still / the picture, nothing moves. The character stands where its feet are (saga.js fx) on the
   // pedestal's centre, and its size keeps its wings on screen (--reach, the CSS's container units).
   const zLoops = new Set();   // the loops this page already loaded: a redraw shows them at once (no still flash)
+  const zLoopsBad = new Set();   // the loops that failed to load: the still with the CSS idle, never a retry each redraw
   const smallScreen = () => Number(window.innerWidth) < 700 || !!(typeof navigator !== 'undefined' && navigator.connection && navigator.connection.saveData);
+  // a picture's address for a CSS url(): the characters that could close it or escape it are dropped (review 2026-10-20)
+  const cssUrl = (u) => String(u || '').replace(/["'()\\\s]/g, '');
   // the free saga characters stand full-body too (their picture of the cast, the saga animals' still)
   const FREE_BODY = { dralingo: A + 'dralingo/hello.webp', camel: A + 'saga/anim/camel-still.webp', plane: A + 'saga/anim/plane-still.webp',
     falcon: A + 'saga/anim/falcon-still.webp', oryx: A + 'saga/anim/oryx-still.webp' };
@@ -825,16 +828,19 @@
     const S = window.Saga;
     const an = !x.free && S && S.skinAnim ? S.skinAnim(x.id) : null;
     const lk = an || (!x.free && S && S.skinLook ? S.skinLook(x.id) : null);
-    const loop = an && !calm() ? (kind === 'now' || smallScreen() ? an.lite : an.full) : '';
+    // (a phone and the small frame take the lite loop only: with none, or once a loop failed, the still keeps the CSS idle)
+    const want = an && !calm() ? (kind === 'now' || smallScreen() ? an.lite : an.full) : '';
+    const loop = want && !zLoopsBad.has(want) ? want : '';
     const ready = !!loop && zLoops.has(loop);
     const src = an ? (ready ? loop : an.still) : x.free ? x.url : x.full;
+    const idle = !an || (!loop && !calm());
     const fx = lk ? lk.fx : 0.5;
     // (--src: the light's sweep is cut to the character's own shape, a CSS mask of its picture; --ph: the idle's phase from
     // the page's clock, so a redraw never snaps a breath back to its start)
     const ph = Math.round((window.performance && performance.now ? performance.now() : Date.now() % 1e7));
     const style = '--fx:' + fx + (lk ? ';--ar:' + lk.ar + ';--reach:' + (Math.max(fx, 1 - fx) * lk.ar).toFixed(3) : '') +
-      ';--ph:-' + ph + 'ms;--src:url(&quot;' + esc(src) + '&quot;)';
-    return '<span class="zc-pod is-' + kind + (an ? (ready ? ' is-live' : '') : ' is-idle') + (lk ? '' : ' is-free') + '" style="' + style + '">' +
+      ';--ph:-' + ph + 'ms;--src:url(&quot;' + esc(cssUrl(src)) + '&quot;)';
+    return '<span class="zc-pod is-' + kind + (ready ? ' is-live' : idle ? ' is-idle' : '') + (lk ? '' : ' is-free') + '" style="' + style + '">' +
       '<i class="zc-ped-glow" aria-hidden="true"></i><span class="zc-ped" aria-hidden="true"><i class="zc-ped-top"></i></span>' +
       '<i class="zc-ped-shadow" aria-hidden="true"></i>' +
       '<span class="zc-fig"><span class="zc-fig-in"><img class="zc-fig-img" src="' + esc(src) + '" alt="' + esc(alt == null ? x.name : alt) + '"' +
@@ -851,8 +857,10 @@
       const pod = img.closest('.zc-pod');
       const a = new Image();
       a.onload = () => { zLoops.add(src); if (img.isConnected) { img.src = src; if (pod) pod.classList.add('is-live'); } };
-      a.onerror = () => { if (pod) pod.classList.add('is-idle'); };   // (no loop: the still gets the gentle CSS idle)
-      setTimeout(() => { a.src = src; }, document.readyState === 'complete' ? 400 : 1200);
+      // (no loop: the still gets the gentle CSS idle, and this page never asks for that loop again)
+      a.onerror = () => { zLoopsBad.add(src); if (img.isConnected && pod) pod.classList.add('is-idle'); };
+      // (a redraw before the timer: the old picture is gone, nothing to load for it)
+      setTimeout(() => { if (img.isConnected) a.src = src; }, document.readyState === 'complete' ? 400 : 1200);
     });
   }
   function cardHtml(x, c) {
@@ -950,7 +958,7 @@
       '<span class="zc-way-t"><b>' + esc(w.what) + '</b><span>' + esc(w.where) + '</span></span>' +
       '<span class="zc-way-c">' + I.coinS + '<b>' + esc('+' + w.coins + (w.each ? ' c/u' : '')) + '</b></span></li>').join('');
     // (v2, 2026-10-20: the day's limits in plain words, always: a character takes weeks of real steps)
-    const cp = Z.caps || {};
+    const cp = Z.limits || {};   // (in steps; `caps` keeps the v1 units for tabs opened before the deploy)
     const caps = cp.seal ? '<p class="zc-note">' + I.coinS + '<span>' + esc('Cada día pagan hasta ' + cp.seal + ' palabras, ' + cp.hw + ' tareas, ' + cp.game + ' juegos y ' + cp.star + ' estrellas.') + '</span></p>' : '';
     const wait = Z.waiting > 0 ? '<p class="zc-note">' + I.coinS + '<span>' + esc('Tienes ' + coinsWord(Z.waiting) + ' esperando: llegan mañana.') + '</span></p>' : '';
     return '<section class="zc zc-coins" aria-labelledby="zc-h">' +

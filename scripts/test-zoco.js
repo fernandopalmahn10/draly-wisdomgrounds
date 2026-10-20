@@ -24,6 +24,7 @@
 const http = require('http');
 const fs = require('fs');
 const os = require('os');
+const vm = require('vm');
 const path = require('path');
 const crypto = require('crypto');
 const { spawn } = require('child_process');
@@ -159,8 +160,9 @@ function unit() {
     .filter(Boolean);
   ok(allUrls.every((u) => /\?v=[0-9a-f]{8}$/.test(u) && fs.existsSync(path.join(ROOT, 'public', u.replace(/\?.*$/, '')))), 'each art file named in the maps exists and carries its own ?v= (' + allUrls.length + ')');
   ok(Object.keys(Saga.ZOCO_ART).concat(Object.keys(Saga.ZOCO_ANIM)).every((id) => ids.includes(id)), 'the maps name catalog characters only');
-  const pages = ['homework.html', 'player.html', 'maestro.html', 'host-halcon.html'].map((p) => fs.readFileSync(path.join(ROOT, 'public', p), 'utf8').match(/js\/saga\.js\?v=([A-Za-z0-9_-]+)/)[1]);
-  ok(new Set(pages).size === 1, 'every page loads the same saga.js version (' + pages[0] + ')');
+  const sagaPages = Art.pagesWithSaga(ROOT);
+  const versions = sagaPages.map((p) => fs.readFileSync(p, 'utf8').match(/js\/saga\.js\?v=([A-Za-z0-9_-]+)/g)).reduce((a, m) => a.concat(m || []), []);
+  ok(sagaPages.length >= 18 && new Set(versions).size === 1, 'all ' + sagaPages.length + ' pages that load saga.js load the same version (' + versions[0] + ')');
   // data only: one line in a map moves the picture of the shop and every game, and gives a character its idle loop
   const T = 'hamdan-3d';
   const keepArt = Saga.ZOCO_ART[T], keepAnim = Saga.ZOCO_ANIM[T];
@@ -171,12 +173,66 @@ function unit() {
     && vT.full === Saga.ZOCO_ART[T].full && vT.head === Saga.ZOCO_ART[T].avatar, 'a glossy picture in ZOCO_ART: the shop, the games (skinBody / skinHead) and the rosters (avatarUrl) draw it');
   const an = Saga.skinAnim(T);
   ok(an && an.still === '/s.webp' && an.full === '/f.webp' && an.lite === '/l.webp' && an.ar === 0.6 && an.hx === Saga.zoco(T).hx && an.fx === an.hx, 'an idle loop in ZOCO_ANIM: still + loop + lite, standing like its render (hx / fx)');
+  Saga.ZOCO_ANIM[T] = { still: '/s.webp', full: '/f.webp', ar: 0.6 };
+  ok(Saga.skinAnim(T).lite === null, 'a loop with no lite one: lite is null (a phone keeps the still, never the full loop)');
+  Saga.ZOCO_ART[T] = { full: 7, avatar: { x: 1 }, ar: 99, hx: -3, fx: 'x' };
+  const odd = Saga.skinLook(T);
+  ok(Saga.skinBody(T) === '/assets/zoco/full/hamdan-3d.webp' && Saga.skinHead(T) === '/assets/zoco/avatar/hamdan-3d.webp' && odd.ar === 3 && odd.hx === 0 && odd.fx === 0,
+    'odd values in a hand-edited map: the render\'s pictures, ar within 0.2…3, hx / fx within 0…1 (' + JSON.stringify(odd) + ')');
   delete Saga.ZOCO_ART[T]; delete Saga.ZOCO_ANIM[T];
   if (keepArt) Saga.ZOCO_ART[T] = keepArt;
   if (keepAnim) Saga.ZOCO_ANIM[T] = keepAnim;
   const none = ids.filter((id) => !Saga.ZOCO_ART[id] && !Saga.ZOCO_ANIM[id]);
   ok(none.every((id) => Saga.skinBody(id) === '/assets/zoco/full/' + id + '.webp' && Saga.skinAnim(id) === null), 'with no art in the maps a character shows its render, no loop (as on 2026-10-19)');
   ok(Saga.skinLook('perro-de-adric').fx < Saga.skinLook('perro-de-adric').hx && Saga.skinLook('profe-fer').fx === Saga.skinLook('profe-fer').hx, 'the dog stands on its paws, not its head (fx); a person stands under the face');
+
+  section('scripts/zoco-art.js writes on a copy: refusals, hand-set hx / fx kept, CRLF, the ?v= bumps');
+  const AR = fs.mkdtempSync(path.join(os.tmpdir(), 'draly-zoco-art-'));
+  const put = (rel, from) => { const f = path.join(AR, rel); fs.mkdirSync(path.dirname(f), { recursive: true }); fs.copyFileSync(path.join(ROOT, from), f); return f; };
+  try {
+    const sagaT = put('public/js/saga.js', 'public/js/saga.js');
+    fs.writeFileSync(sagaT, fs.readFileSync(sagaT, 'utf8').replace(/\r?\n/g, '\r\n'));   // (a Windows checkout: CRLF)
+    put('public/homework.html', 'public/homework.html');
+    put('public/host-snow.html', 'public/host-snow.html');
+    put('protected/pages/hsk-sim.html', 'protected/pages/hsk-sim.html');
+    const A1 = 'public/assets/zoco/anim/dralingo-clasico';
+    put('public/assets/zoco/full/hamdan-3d-g.webp', 'public/assets/zoco/full/hamdan-3d.webp');
+    put('public/assets/zoco/avatar/hamdan-3d-g.webp', 'public/assets/zoco/avatar/hamdan-3d.webp');
+    put(A1 + '-still.webp', 'public/assets/dralingo/anim/hello-still.webp');
+    put(A1 + '.webp', 'public/assets/dralingo/anim/hello.webp');
+    const before = fs.readFileSync(sagaT, 'utf8');
+    let w = Art.run({ root: AR });
+    ok(w.code === 1 && /dralingo-clasico-lite\.webp missing/.test(w.out) && fs.readFileSync(sagaT, 'utf8') === before, 'a loop without its lite one: refused, nothing written (' + w.out.split('\n')[0] + ')');
+    put(A1 + '-lite.webp', 'public/assets/dralingo/anim/hello.webp');   // (1.1 MB: over the lite one's 400 KB)
+    w = Art.run({ root: AR });
+    ok(w.code === 1 && /dralingo-clasico-lite\.webp is \d+ KB/.test(w.out) && fs.readFileSync(sagaT, 'utf8') === before, 'a lite loop over 400 KB: refused, nothing written');
+    put(A1 + '-lite.webp', 'public/assets/dralingo/anim/cheer-lite.webp');
+    put('public/assets/zoco/anim/dralingo-clasco.webp', 'public/assets/dralingo/anim/cheer-lite.webp');
+    w = Art.run({ root: AR });
+    ok(w.code === 1 && /no character of the catalog is called «dralingo-clasco»/.test(w.out), 'a misspelt name: refused, named');
+    fs.unlinkSync(path.join(AR, 'public/assets/zoco/anim/dralingo-clasco.webp'));
+    w = Art.run({ root: AR, check: true });
+    ok(w.code === 1, '--check: the maps and the files disagree');
+    w = Art.run({ root: AR });
+    const s1 = fs.readFileSync(sagaT, 'utf8');
+    const ctxS = { module: { exports: {} } };
+    new vm.Script(s1).runInNewContext(ctxS);
+    const S1 = { exports: ctxS.module.exports };
+    const m1 = Art.readMaps(s1);
+    ok(w.code === 0 && m1.anim['dralingo-clasico'] && /\?v=[0-9a-f]{8}$/.test(m1.anim['dralingo-clasico'].lite) && m1.art['hamdan-3d'] && /hamdan-3d-g\.webp\?v=/.test(m1.art['hamdan-3d'].full), 'written: the loop (still, full, lite) and the glossy picture, each with its ?v=');
+    ok(!/[^\r]\n/.test(s1) && S1.exports && S1.exports.skinAnim('dralingo-clasico').lite.indexOf('-lite.webp') > 0, 'saga.js keeps its CRLF and still runs (the new map read back through it)');
+    const pv = ['public/homework.html', 'public/host-snow.html', 'protected/pages/hsk-sim.html'].map((p) => (fs.readFileSync(path.join(AR, p), 'utf8').match(/js\/saga\.js\?v=([A-Za-z0-9_-]+)/) || [])[1]);
+    ok(w.v && pv.every((x) => x === w.v) && !fs.readdirSync(path.join(AR, 'public', 'js')).some((f) => /\.tmp-/.test(f)), 'the 3 pages of the copy bumped to ' + w.v + ', no temp file left');
+    // a hand-set fx survives a re-made picture
+    fs.writeFileSync(sagaT, s1.replace('"ar":0.4', '"ar":0.4,"fx":0.44'));
+    put('public/assets/zoco/full/hamdan-3d-g.webp', 'public/assets/zoco/full/adric-3d.webp');
+    w = Art.run({ root: AR });
+    const m2 = Art.readMaps(fs.readFileSync(sagaT, 'utf8'));
+    ok(w.code === 0 && m2.art['hamdan-3d'].fx === 0.44 && m2.art['hamdan-3d'].full !== m1.art['hamdan-3d'].full, 'a re-made picture gets a new ?v=, the hx / fx set by hand stay (' + JSON.stringify(m2.art['hamdan-3d']) + ')');
+    fs.writeFileSync(sagaT, fs.readFileSync(sagaT, 'utf8').replace('"fx":0.44', '"fx":0.44,'));
+    w = Art.run({ root: AR });
+    ok(w.code === 1 && /saga\.js line \d+: ZOCO_ART is not JSON/.test(w.out), 'a broken hand edit: named with its line, nothing written (' + w.out + ')');
+  } finally { fs.rmSync(AR, { recursive: true, force: true }); }
 
   section('a skin id on every page and in every game');
   ok(Saga.avatarUrl('dralingo-fuego-azul') === '/assets/zoco/avatar/dralingo-fuego-azul.webp' && Saga.skinBody('hamdan-3d') === '/assets/zoco/full/hamdan-3d.webp', 'saga.js: a skin\'s head and full body');
@@ -305,7 +361,8 @@ function unit() {
   ok(x.ok && b.zoco.c === 100 && b.zoco.own.includes('latifa-3d'), 'Latifa con abaya (once held) is on sale: bought (−1400)');
   const v = Zoco.view(b);
   ok(v.items.length === 20 && v.items.find((i) => i.id === 'dralingo-sheikh').owned && v.items.find((i) => i.id === 'panda-3d').price === 1200, 'the shop shows all 20 with their v2 prices, «Tuyo» on the ones bought');
-  ok(v.caps.seal === CAP.seal && v.caps.hw === CAP.hw && v.caps.game === CAP.game && v.caps.star === CAP.star, '«¿Cómo gano monedas?» gets the day\'s caps in steps');
+  ok(v.limits.seal === CAP.seal && v.limits.hw === CAP.hw && v.limits.game === CAP.game && v.limits.star === CAP.star, '«¿Cómo gano monedas?» gets the day\'s limits in steps (`limits`)');
+  ok(v.caps.seal / 2 === CAP.seal && v.caps.hw / 50 === CAP.hw, '… and `caps` stays in v1 units, so a tab opened before the deploy still reads «30 palabras y 2 tareas»');
   ok(JSON.stringify(v.ways.map((w) => w.coins)) === JSON.stringify([P.seal, P.train, P.hw, P.game, P.star, P.streak]), '… and the six ways with today\'s amounts');
   ok(Students.setAvatar('REAL', 'dralingo-sheikh') && Students.get('REAL').avatar === 'dralingo-sheikh', 'an owned skin can be the avatar');
   ok(!Students.setAvatar('REAL', 'dralingo-fuego-azul') && Students.get('REAL').avatar === 'dralingo-sheikh', 'a skin not owned: refused');
@@ -348,6 +405,25 @@ function unit() {
   nextDay();
   r = Zoco.settle(o);
   ok(r.got === 22 * P.seal + 2 * P.hw && oz.q.seal === 0 && oz.q.hw.length === 0, 'the next day the line is paid in v2 amounts (+' + (22 * P.seal + 2 * P.hw) + ')');
+
+  section('a purse already in v2 (or later) is never converted again; a damaged line never blocks');
+  // a rollback: v2 deployed (pv 2), then a v1 server queued at its own amounts (20 words at 2 = 40 coins, a homework at
+  // 50), then v2 again. The words' line holds coins: paid as they stand; a homework is read within 0 … today's 25.
+  const rb = Students.getOrCreate(null, 'Kid Rollback');
+  Students.updateTareas(rb.code, (all) => { all['zz-rb-1'] = { h: Date.now(), s: Date.now() }; }, { activity: true });
+  rb.zoco = { v: 1, pv: 2, at: Date.now() - DAY, c: 10, e: 10, sp: 0, w: 0, ps: 10, own: [], buys: [], k: {}, sk: {}, gm: {}, q: { seal: 40, hw: [['zz-rb-1', 50]] }, day: {}, log: [] };
+  Zoco.ensure(rb, env);
+  ok(rb.zoco.q.seal === 40 && rb.zoco.q.hw[0][1] === 50 && !rb.zoco.pvAt, 'a pv 2 purse: ensure() converts nothing again (the rolled-back line stays as it was queued)');
+  r = Zoco.settle(rb);
+  ok(r.got === CAPC.seal + P.hw && rb.zoco.q.seal === 40 - CAPC.seal && rb.zoco.k['hw:zz-rb-1'] === P.hw, 'the next touch: ' + CAPC.seal + ' of the 40 waiting coins of words (the day\'s cap), the homework at today\'s ' + P.hw + ' (its key says ' + P.hw + ': «Deshacer» takes back ' + P.hw + ')');
+  const p3 = { v: 1, pv: 3, q: { seal: 40, hw: [['x', 50]] }, day: {} };
+  Zoco.upgrade(p3);
+  ok(p3.q.seal === 40 && p3.q.hw[0][1] === 50 && p3.pv === 3, 'a purse of a later version (pv 3) rolled back: never halved again');
+  const bad = Students.getOrCreate(null, 'Kid Bad Line');
+  Students.updateTareas(bad.code, (all) => { all['zz-bad'] = { h: Date.now(), s: Date.now() }; all['zz-ok'] = { h: Date.now(), s: Date.now() }; }, { activity: true });
+  bad.zoco = { v: 1, pv: 2, at: Date.now(), c: 0, e: 0, sp: 0, w: 0, ps: 0, own: [], buys: [], k: {}, sk: {}, gm: {}, q: { seal: 0, hw: [null, ['zz-bad', 'abc'], ['zz-ok', 1e9]] }, day: {}, log: [] };
+  r = Zoco.settle(bad);
+  ok(bad.zoco.q.hw.length === 0 && r.got === P.hw && bad.zoco.k['hw:zz-bad'] === 0 && bad.zoco.k['hw:zz-ok'] === P.hw, 'a damaged line (a null, «abc», a billion): dropped or read within 0 … ' + P.hw + ', the rest still paid (+' + r.got + ')');
 
   section('the day only moves forward: flipping the time zone never resets the caps');
   const tzr = Students.get('REAL');
@@ -426,6 +502,17 @@ function unit() {
   ok(m2.c === 10 * P.seal && r2.zoco.c === before2 + 10 * P.seal, 'an automatic account with 10 words the real one never marked: +' + 10 * P.seal + ' (only those)');
   RP.applySeals('REA2', 'hsk2', range(51, 60), []);
   ok(Zoco.settleSeals(r2, 'hsk2').got === 0, '… and those words moving in never pay again');
+
+  section('a merge from an automatic account of 2026-10-19: its words move at what they paid (2 each), never erased');
+  const v1Auto = (name, purse) => { const x = Students.createAuto(name, 'hsk2', 'seal'); x.zoco = Object.assign({ v: 1, at: Date.now() - DAY, w: 0, own: [], buys: [], k: {}, gm: {}, q: { seal: 0, hw: [] }, day: {}, log: [] }, purse); return x; };
+  const fA = v1Auto('Dragoncito 501', { c: 100, e: 100, sp: 0, ps: 100, sk: { hsk2: '101-150' } });
+  const tA = Students.getOrCreate(null, 'Kid Merge A');
+  const mA = Zoco.merge(fA, tA, env);
+  ok(mA.c === 100 && tA.zoco.c === 100 && fA.zoco.ps1 === 100, '50 words paid 100 under v1, new to the real account: +100 (not 50)');
+  const fB = v1Auto('Dragoncito 502', { c: 50, e: 200, sp: 150, ps: 200, sk: { hsk2: '1-100' }, own: ['dralingo-sheikh'], buys: [['dralingo-sheikh', 150, Date.now() - DAY]] });
+  const tB = Students.getOrCreate(null, 'Kid Merge B');
+  const mB = Zoco.merge(fB, tB, env);
+  ok(mB.c === 50 && tB.zoco.c === 50 && tB.zoco.own.includes('dralingo-sheikh'), '100 words (200) that bought Dralingo Sheikh at 150 with 50 left: the real account ends at +50 with the Sheikh (never −50)');
 }
 
 // ════════════════════════════════════════════════════════════════════════════════════════════════════════════════
@@ -670,7 +757,8 @@ async function run() {
   ok(r.json.items.find((i) => i.id === 'dralingo-emperador-qin').price === 3000 && Math.min(...r.json.items.map((i) => i.price)) === 800, 'the v2 prices (800 … Dralingo Emperador Qin 3000)');
   ok(!r.text.includes(kidA.studentCode), 'the student code never travels');
   ok(JSON.stringify(r.json.ways.map((w) => w.coins)) === JSON.stringify([1, 10, 25, 5, 2, 15]), '«¿Cómo gano monedas?»: +1 · +10 · +25 · +5 · +2 c/u · +15 (v2)');
-  ok(r.json.caps.seal === 30 && r.json.caps.hw === 2 && r.json.caps.game === 4 && r.json.caps.star === 5, '… and the day\'s caps: 30 words, 2 homeworks, 4 games, 5 stars');
+  ok(r.json.limits.seal === 30 && r.json.limits.hw === 2 && r.json.limits.game === 4 && r.json.limits.star === 5, '… and the day\'s limits: 30 words, 2 homeworks, 4 games, 5 stars');
+  ok(r.json.caps.seal / 2 === 30 && r.json.caps.hw / 50 === 2, '… `caps` in v1 units for a tab opened before the deploy (it divides by 2 and 50)');
   r = await home(A, kidA.studentCode);
   ok(r.json.ok && r.json.zoco && r.json.zoco.coins === 0 && Number(r.json.zoco.now) > 0, 'the home sends the coins pill to the kid\'s own session');
   const B = phone();
