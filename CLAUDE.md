@@ -68,6 +68,9 @@ the checklist for any new game mode.
 - **Always ask him "is a class running right now?" before every deploy** (his rule 2026-10-12: "it's great that you
   asked… yes, there is, but I forgot. Always ask me"). A deploy drops the site for ~1 minute and every live room.
   Also check the live `/api/_diag` `rooms`; if a class is on, push only after it ends (rooms back to 0).
+  **Deploy in the morning** (his words 2026-10-20: "we work a lot in the early morning, until the first class, which is
+  4 p.m.… I won't be doing any changes when class time is up"): live updates go out before 4 p.m. his time (UTC−6);
+  later work waits, ready, for the next morning.
 - Never commit secrets (`.render-token`, credentials JSON, `data/*` runtime files with student data).
 - **Home-screen app (PWA, since 2026-10-12)**: `public/manifest.webmanifest` + `public/sw.js` + `public/js/pwa.js`,
   icons in `public/assets/app/` (made by `../video_tools/app_icon.py` from the green-screen Dralingo original). The
@@ -145,10 +148,34 @@ the checklist for any new game mode.
   server, database, lighter media) and tell him. Reports in `../reports/platform-health/`. Render facts: one Starter
   server (0.5 CPU, 512 MB) on the Hobby workspace; Render already serves through Cloudflare (compressed); the 1 GB data
   disk is why deploys have a ~1 min gap and why we can't run two instances. Only one paid service should be running.
+  `/api/_diag` `peak30` = the most live rooms, classes (rooms with 5+ kids) and kids at once in 30 days
+  (`core/usage-peaks.js`, numbers only); the health check warns at 3 classes or 90 kids and draws the red line at 5 or
+  150 on Starter (move up to Standard, ≈ 10 at once). Load test 2026-10-20 (5 robot classes of 30 at once, all PASS):
+  3 classes comfortable, 5 the edge of Starter.
+- **Content budget** (his ask 2026-10-20: "tell me… this much videos you can make, this much pin games… homeworks"):
+  media 218 MB of a comfortable 1 GB that day. A pin game ≈ 1-3 MB, a homework (audio + cover) ≈ 2 MB, an exam
+  simulation ≈ 5 MB, a Zoco character (picture + loop) ≈ 1 MB. No real videos on the platform (reels, ads, recorded
+  classes: WhatsApp / YouTube); short looping animations ≤ 1 MB are fine. Re-making the same big file many times grows
+  the GitHub history forever: finish a set, then commit it once (history cleaned 2026-10-20, skill
+  `git-history-cleanup`).
+- **Weekly backup, without him** (his OK 2026-10-20): Sunday 7:00 the laptop task «Dralingo weekly backup» runs the
+  root `tools/backup/pull-backup.js` → `C:\Users\ferpa\DralingoBackups\platform\` (12 newest + one a month for a year,
+  `backup-log.txt`; PARTIAL or SUSPECT remove nothing). `/api/admin/backup` answers the super admin or
+  `X-Backup-Token` = env `BACKUP_TOKEN` (32+ characters, else off; the key opens nothing else, 6 a day, one backup at
+  a time; set on Render 2026-10-20, the laptop's copy in `~/.dralingo/backup-token`). The signing key travels only in
+  the super admin's own download; keep it once as Render env `SIM_LOCK_KEY_HEX` (not set yet: optional, his call). A
+  new kind of file on the data disk joins `_sendBackup`, or a restore loses it. Restore: `docs/BACKUP.md`
+  (`scripts/unpack-backup.js`). `node scripts/test-scale.js` must pass.
 - **Cloudflare (his account, since 2026-10-12)**: `dralingo.app` (Free plan) → CNAMEs `app`, `@`, `www` proxied to
   `draly-wisdomgrounds-2.onrender.com`, SSL Full (strict), HTTPS always, TLS 1.2+, WebSockets on. Cache rule: `/assets/*`
   kept at Cloudflare 2 h (a picture replaced under the SAME name shows up within 2 h: give new art a new name or
-  `?v=`). Rate limit: 400 `/api/` requests per 10 s per connection (a whole class shares one school IP: never lower
+  `?v=`). **Cloudflare and the phones keep the platform's own files** (2026-10-20, his «fully scalable»): server.js
+  `_staticCache` gives files of public/assets, js and css asked for with exactly a `?v=` that our pages name
+  (`core/asset-refs.js`, read at boot) a year, immutable; a file with no query gets phones 10 min and Cloudflare 1 day
+  (`Cloudflare-CDN-Cache-Control`); any other query stays as before; HTML, sw.js, the manifest and everything outside
+  public/ are never kept. **A changed script, style, picture or sound gets a new `?v=` in every page that asks for it**
+  (a forgotten bump now sticks a year in phones): `node scripts/test-cache-versions.js` fails a deploy that forgets.
+  Homework audio carries `?v=<hash>` from audios-build.js. Rate limit: 400 `/api/` requests per 10 s per connection (a whole class shares one school IP: never lower
   it below class size × requests per page). API token in `~/.dralingo/cloudflare-token.txt` (zone dralingo.app only;
   never print it). Kids' saved student codes live per address (localStorage): never send kids to a new address
   without a step that carries their code over, or they create duplicate accounts. Since 2026-10-12 page loads on the
@@ -673,7 +700,7 @@ the checklist for any new game mode.
   the local harness `?debug=1&direct=1` on localhost only. Everyone else: the level's key screen («Entra a Mis Tareas»
   = `/homework.html?next=…` comes back to the exam). A teacher's try is graded, never saved; a solo grade goes on the
   logged-in kid's own record (a key-only phone: only when it sends the kid's class code + student code, else graded and
-  not saved); the payload's `ticket` still hands in after the room closed. Key: env `SIM_LOCK_SECRET`, else `data/sim-lock.key` (made once
+  not saved); the payload's `ticket` still hands in after the room closed. Key: env `SIM_LOCK_SECRET`, else env `SIM_LOCK_KEY_HEX`, else `data/sim-lock.key` (made once
   on the disk, gitignored). Any new page or endpoint that shows sim content goes through `_simGrant` + `SimLock.rewrite`;
   `node scripts/test-sims-lock.js` (starts its own server on 4000) must pass. The «Simulacro del examen» pack rounds show
   only their name to non-teachers on `/api/sets`.
