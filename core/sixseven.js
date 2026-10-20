@@ -206,7 +206,7 @@ function answer(m, p, choice, now) {
     p.ssMisses = (p.ssMisses || 0) + 1;
     const wait = p.ssMisses >= 2 ? R.WRONG2_MS : R.WRONG_MS;
     p.ssNextQAt = now + wait;
-    if (p.ssId != null) { m.fx[p.ssId] = m.fx[p.ssId] || [0, 0, 0, 0]; m.fx[p.ssId][2] = 1; }   // the projector: a wobble
+    if (p.ssId != null) { m.fx[p.ssId] = m.fx[p.ssId] || [0, 0, 0, 0, 0]; m.fx[p.ssId][2] = 1; }   // the projector: a wobble
     return Object.assign(base, { right: false, timeUp, tooFast, calm: p.ssMisses >= 2, wait, streak: 0, coins: 0, total: p.ssCoins, six: 0, pair: false });
   }
   p.ssMisses = 0;
@@ -239,10 +239,11 @@ function answer(m, p, choice, now) {
   // the kid's own «¡SIX SEVEN!»: 1 = racha 7, 2 = the 67th coin (both on one answer = 3)
   const six = (p.ssStreak === R.SIX_STREAK ? 1 : 0) | (coinsBefore < R.SIX_COINS && p.ssCoins >= R.SIX_COINS ? 2 : 0);
   if (p.ssId != null) {                // the screens' feed: who scored since the last tick (and who just did a «six seven»)
-    m.fx[p.ssId] = m.fx[p.ssId] || [0, 0, 0, 0];
+    m.fx[p.ssId] = m.fx[p.ssId] || [0, 0, 0, 0, 0];
     m.fx[p.ssId][0] += value;
     if (q.gold && goldExtra > 0) m.fx[p.ssId][1] = 1;   // (a golden coin on the screens only when the extra was paid)
     m.fx[p.ssId][3] |= six;
+    m.fx[p.ssId][4] |= q.ans === 6 ? 1 : 2;             // which number was right (1 = a 6, 2 = a 7): Liu or Qi cheers on the projector
   }
   p.ssNextQAt = now + R.RIGHT_MS;
   return Object.assign(base, { right: true, streak: p.ssStreak, mult, frenzy: m.frenzy, goldExtra, coins: value, total: p.ssCoins, wait: R.RIGHT_MS, six, pair });

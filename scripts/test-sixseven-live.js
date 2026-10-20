@@ -72,7 +72,15 @@ async function answer(kid, right, waitMs) {
 (async () => {
   const host = connect();
   let feed = 0;
-  host.on('ss:meter', (d) => { if (d && d.f && d.f.length) feed += d.f.length; });
+  const digs = { scored: 0, named: 0, bad: 0 };    // 2026-10-20: [k, coins, golden, wrong, six, dig] (dig 1 = a 6, 2 = a 7)
+  host.on('ss:meter', (d) => {
+    if (!d || !d.f || !d.f.length) return;
+    feed += d.f.length;
+    d.f.forEach((e) => {
+      if (!Array.isArray(e) || e.length !== 6 || !(e[5] >= 0 && e[5] <= 3)) { digs.bad++; return; }
+      if (e[1] > 0) { digs.scored++; if (e[5] > 0) digs.named++; }
+    });
+  });
   const { pin } = await ack(host, 'host:create', { gameType: 'sixseven', password: PASSWORD, style: 'zh' });
   ok(pin, 'room created');
   const s0 = next(host, 'state', 3000);
@@ -214,6 +222,7 @@ async function answer(kid, right, waitMs) {
   ok(!tu.correct && tu.sixseven.timeUp, 'time up is a wrong answer');
   await sleep(700);
   ok(feed > 0, `the projector's feed names who scored (${feed} entries)`);
+  ok(digs.bad === 0 && digs.scored > 0 && digs.named === digs.scored, `every projector feed entry that scored names its number for Liu / Qi (${digs.named} of ${digs.scored}, ${digs.bad} malformed)`);
 
   // «Pausa»: answers refused (the sum stays open), a resync sends the same sum, a long pause, then the answer counts
   for (const k of kids) { if (!k.q) await sum(k, 4000).catch(() => {}); }

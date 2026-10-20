@@ -149,7 +149,9 @@ the teacher's pick), two giant buttons «6 · liu» / «7 · qi», Fuego vs Mar 
 with a too-fast rule, a streak multiplier and wrong-answer waits so random tapping loses to thinking; Dralingo's «6-7» art,
 landmark race, comeback golden sums, Mario Party ceremony with bonus stars; second pass 2026-10-16 «no dead phones»: the
 tap reacts at once, a little world on the phone where my coins and my teammates' fly into our pan between sums, «¡SIX
-SEVEN!» moments during play (racha 7, the 67th coin, team waves at 67 gold); rules `core/sixseven.js` (no question pack),
+SEVEN!» moments during play (racha 7, the 67th coin, team waves at 67 gold); since 2026-10-20 Dralingo's friends **Liu** (the
+6) and **Qi** (the 7), blue brick-built number buddies, live on the two buttons, at Dralingo's feet on the projector, in the
+lobby, the intro and the ceremony, and join into **el 67** on every «¡SIX SEVEN!»; rules `core/sixseven.js` (no question pack),
 phone `js/player-sixseven.js`, projector `host-sixseven.html` + `js/host-sixseven.js`, shared `js/sixseven-stage.js` +
 `css/sixseven.css` (+ `js/mochi-stage.js` / `css/mochi.css` for the kid figures); spec `docs/specs/six-seven-v2.md`),
 **Vuelo del Dragón** (`dragon-eye`, remade 2026-10-16 on a branch, not deployed: «La Carrera del Cielo de Dubái», a Mario Party sky race in races of 4 dealt like Ojos de Halcón; every right answer is a flight where each swipe up (or tap) is a wing beat of the kid's own dragoncito, the kid's full-body character standing on it; one score = metres; the server caps the beats a second and judges every metre; golden rings, a tailwind for the last dragon (capped at the gap), a 12 s star sprint every 40 s at the next landmark, lead alarms, «¡Alas dobles!» + fireworks in the last 30 s, three bonus stars per race, each race's winner, the class podium; rules `core/dragon.js` + the course `js/dragon-course.js`, phone `js/player-dragon.js`, projector `host-dragon.html` + `js/host-dragon.js`, both draw `js/dragon-sky.js` + `css/dragon.css`; spec `docs/specs/dragon-v2.md`), **Dàfùwēng · Monopolio** (`monopoly`, remade 2026-10-16 on a

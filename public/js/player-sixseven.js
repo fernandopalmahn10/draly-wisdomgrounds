@@ -127,14 +127,18 @@
     if ($('ssx-chip')) $('ssx-chip').classList.add('hidden');
     const fin = $('ssx-final');
     if (fin) fin.classList.add('hidden');
-    document.body.classList.remove('ssx-frenzy', 'ssx-ended', 'ssx-locked', 'ssx-bannering');
+    document.body.classList.remove('ssx-frenzy', 'ssx-ended', 'ssx-locked', 'ssx-bannering', 'ssx-joined');
     if ($('ssx')) $('ssx').classList.remove('frenzy');
     footDance(0);
+    clearTimeout(joinT);
+    if ($('ssx-j67')) $('ssx-j67').classList.remove('show');
+    [6, 7].forEach((k) => { if (btnFr[k]) { btnFr[k].sway(false); btnFr[k].rest('stand'); } });
     if (all) { clearTimers(cerTimers); const f = $('ssx-finale'); if (f) f.remove(); }
   }
 
   // ---------- the game screen: my world + the card + the two buttons ----------
   let built = false, bal = null, coins = null, meFig = null, foot = null;
+  const btnFr = {};              // 6 → Liu, 7 → Qi (on the buttons)
   const figs = {};               // k → a teammate's / rival's figure in the world
   let crewKey = '';
   function build() {
@@ -144,6 +148,14 @@
     coins = new (X().Coins)($('ssx-fx'), 20);
     foot = X().dancer({ alt: '', on: false });
     $('ssx-foot').appendChild(foot);
+    // Liu (the 6) lives on the 6 button, Qi (the 7) on the 7 (2026-10-20): a first-time kid sees that liu = 6 and
+    // qi = 7 with nobody explaining; my right answer makes that friend cheer, a miss gets its «¡Uy!»
+    // (they hang from the card's bottom corners, so they draw over the buttons' corners: the card's layer is above the
+    // buttons, whose layer stays under the card so the verdict pill is never hidden)
+    btnFr[6] = X().friend('liu', { lite: true, cls: 'ssx-fr six', alt: '' });
+    btnFr[7] = X().friend('qi', { lite: true, cls: 'ssx-fr seven', alt: '' });
+    [6, 7].forEach((d) => { btnFr[d].setAttribute('aria-hidden', 'true'); $('ssx-card').appendChild(btnFr[d]); });
+    X().preloadFriends(true);
     // the press answers at once (pointerdown); the click that follows the same press (even a long one, or a slow
     // laptop mouse) is never a second answer to the NEXT sum. A click with no press before it is a keyboard (Enter / Space).
     const bind = (btn, choice) => {
@@ -329,6 +341,8 @@
     eq.innerHTML = '';
     eq.appendChild(X().sum(ss, 'ssx-sum'));
     $('ssx-ask').textContent = '?';
+    // a new sum: Liu and Qi calm down at once, so no friend still cheering beside one button pulls the next tap
+    [6, 7].forEach((k) => { const f = btnFr[k]; if (f && f.rest && f.dataset && f.dataset.pose !== f._rest) f.rest(f._rest); });
     $('ssx-verdict').className = 'ssx-verdict';
     $('ssx-verdict').textContent = '';
     ['ssx-b6', 'ssx-b7'].forEach((id) => $(id).classList.remove('picked', 'wrong', 'hint', 'right'));
@@ -533,7 +547,10 @@
     if (r.six) mySix(r);
     else if (DRAL_AT[r.streak] || (r.streak > 10 && r.streak % 5 === 0)) milestone(r);
     else if (r.streak === 6) { play('combo', 1.1, 0.5); bump($('ssx-combo')); }
-    if (r.pair && !r.six && Date.now() - lastMini > 2500) { lastMini = Date.now(); sixStamp('mini', 'liu · qi'); X().palms($('ssx-b6'), $('ssx-b7'), 6, 2); buzz([12, 40, 12]); }
+    if (r.pair && !r.six && Date.now() - lastMini > 2500) {
+      lastMini = Date.now(); sixStamp('mini', 'liu · qi'); X().palms($('ssx-b6'), $('ssx-b7'), 6, 2, [btnFr[6], btnFr[7]]); buzz([12, 40, 12]);
+      if (btnFr[6]) { btnFr[6].react('cheer', 1100); later(140, () => btnFr[7] && btnFr[7].react('cheer', 1000)); }   // a 6 then a 7: both friends
+    }
     // now and then (and on the first one) my captain cheers me on
     if (me.right === 1) gang('swing');
     else if (r.streak >= 3 && Math.random() < 0.3) gang('swing');
@@ -555,7 +572,8 @@
     $(r.ans === 6 ? 'ssx-b6' : 'ssx-b7').classList.add('right');
     verdict('ok', '¡Sí!', `${r.ans} · ${r.word}`);
     play(r.ans === 6 ? 'liu' : 'qi', 1, 0.95, 40);
-    X().palms($('ssx-b6'), $('ssx-b7'), side, 1);           // the two buttons do the 6-7 (they are the two palms)
+    X().palms($('ssx-b6'), $('ssx-b7'), side, 1, [btnFr[6], btnFr[7]]);   // the two buttons do the 6-7 (they are the two palms), Liu and Qi ride them
+    if (btnFr[r.ans]) btnFr[r.ans].react('cheer', 1250);   // Liu cheers my 6, Qi my 7 (his friend on the button)
     X().swing(meFig, side, r.mult >= 3);
     X().six(meFig, 760);                                   // my character does the 6-7 too (art batch 2026-10-17)
     buzz(r.mult >= 3 ? [14, 30, 14] : 14);
@@ -646,10 +664,27 @@
     crewCheer(myTeam(), 1600);
     if (bal) bal.rock(true);
     footDance(2000);
+    join67(1900);                                         // Liu and Qi leap off the buttons and become el 67
     lastDral = 0;                                         // this one always gets Dralingo (the stamp says it: no label)
     dralIn(null, false);
     const conf = $('ssx-conf');
     if (conf && S()) S().confetti(conf, null, 18);
+  }
+  // «¡SIX SEVEN!» = Liu and Qi team up (2026-10-20): they leap off the two buttons and el 67, the joined buddy, pops up
+  // at the foot of my balance cheering; then they drop back onto their buttons. Never over the buttons or the sum.
+  let joinT = null;
+  function join67(ms) {
+    const box = $('ssx-j67');
+    if (!box) return;
+    if (!box.firstChild) box.appendChild(X().friend('j67', { lite: true, pose: 'cheer', alt: '' }));
+    const f = box.firstChild;
+    if (f && f.pose) f.pose('cheer');
+    box.classList.remove('show');
+    void box.offsetWidth;
+    box.classList.add('show');
+    document.body.classList.add('ssx-joined');
+    clearTimeout(joinT);
+    joinT = setTimeout(() => { box.classList.remove('show'); document.body.classList.remove('ssx-joined'); }, ms || 1800);
   }
   function goldMoment(r) {
     play('gold', 1, 0.8);
@@ -667,6 +702,9 @@
     const picked = r.choice ? $(r.choice === 6 ? 'ssx-b6' : 'ssx-b7') : null;
     if (picked) { picked.classList.add('wrong'); X().wobble(picked, true); }
     $(r.ans === 6 ? 'ssx-b6' : 'ssx-b7').classList.add('hint');
+    // the friend I tapped goes «¡Uy!» (funny, never sad), the right one hops: «¡era yo!»
+    if (r.choice && btnFr[r.choice]) btnFr[r.choice].react('uy', 1200);
+    if (btnFr[r.ans]) later(220, () => btnFr[r.ans].react('stand', 500));
     if (r.tooFast) verdict('no', '¡Muy rápido!', `Primero lee la cuenta · era ${r.ans} · ${r.word}`);
     else if (r.timeUp) verdict('no', '¡Se acabó el tiempo!', `Era ${r.ans} · ${r.word}`);
     else verdict('no', '¡Uy!', `Era ${r.ans} · ${r.word}`);
@@ -813,6 +851,8 @@
     const b7 = el('span', 'ssi-pic-b b7');
     b7.append(el('b', null, '7'), el('small', null, 'qi'));
     btns.append(b6, b7);
+    X().friendOnPic(b6, 6, true);                         // Liu on the 6, Qi on the 7: the buttons as they really look
+    X().friendOnPic(b7, 7, true);
     pic.append(card, btns, el('i', 'ssx-hand ssi-pic-hand'));
     return pic;
   }
@@ -1009,6 +1049,7 @@
       if (skin() && skin().music) skin().music('music-final', 0.4);
       frenzyChip();
       footDance(1);
+      [6, 7].forEach((k) => btnFr[k] && btnFr[k].sway(true));   // the last 30 s: Liu and Qi do the 6-7 on their buttons
       gang('swing', { force: true });
     });
     s.on('ss:time', (d) => {
@@ -1100,6 +1141,7 @@
       buzz([30, 40, 30, 40, 30, 40, 90]);
       X().palms($('ssx-b6'), $('ssx-b7'), 6, 2);
       footDance(2400);
+      join67(2200);                                       // our wave: Liu and Qi become el 67 too
       const conf = $('ssx-conf');
       if (conf && S()) S().confetti(conf, d.team, 20);
       gang('sixseven', { force: true, ms: 2200 });
@@ -1159,6 +1201,7 @@
       box = el('div', 'ssx-how');
       box.id = 'ssx-how';
       box.innerHTML = '<div class="ssh-you"><div class="ssh-kid" id="ssh-kid"></div><div class="ssh-bal" id="ssh-bal"></div><span>Tú y tu balanza<b id="ssh-team"></b></span></div>'
+        + '<div class="ssh-friends" id="ssh-friends"><span>¡Liu es el 6 y Qi es el 7!</span></div>'
         + '<div class="ssh-style" id="ssh-style"></div>'
         + '<div class="ssh-title">Así se juega</div><ol>'
         + '<li><div class="ssh-step s1" id="ssh-s1"></div><span><b>Mira la cuenta</b>siempre da 6 o 7</span></li>'
@@ -1166,6 +1209,8 @@
         + '<li><div class="ssh-step s3" id="ssh-s3"></div><span><b>¡Llena tu balanza de oro!</b>En racha, cada acierto vale más</span></li>'
         + '</ol>';
       head.after(box);
+      $('ssh-friends').prepend(X().friendsRow({ lite: true }));   // Dralingo's friends: the 6 is liu, the 7 is qi
+      X().preloadFriends(true);
       new (X().Balance)($('ssh-s3')).set(-0.6, true);
       new (X().Balance)($('ssh-bal')).set(t === 'red' ? -0.5 : 0.5, true);
     }
@@ -1260,7 +1305,10 @@
       const lostMe = !tie && mo.winner !== t;
       const wc = mo.captains && !tie ? mo.captains[lostMe ? t : mo.winner] : null;
       if (wc && CAST()) s.appendChild(el('p', 'ssf-capline', `${CAST().captain(wc)}: «${CAST().line(wc, lostMe ? 'casi' : 'oro')}»`));
-      s.appendChild(X().dancer({ cls: 'ssf-dral' }));
+      // Dralingo dances the 6-7 with his friends Liu and Qi (2026-10-20; the phones' light loops)
+      const trio = el('div', 'ssf-trio');
+      trio.append(X().friend('liu', { lite: true, pose: 'dance', alt: '' }), X().dancer({ cls: 'ssf-dral' }), X().friend('qi', { lite: true, pose: 'dance', alt: '' }));
+      s.appendChild(trio);
       const row = el('div', 'ssf-teams');
       ['red', 'gold'].forEach((team) => {
         const winT = tie || mo.winner === team;

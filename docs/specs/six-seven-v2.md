@@ -509,3 +509,62 @@ Total 14/14 → ships (≥ 12, no 0)
 ### Art batch 1 · 2026-10-17
 - Dralingo's second 6-7 frame is a new picture now (`assets/sixseven/dralingo-67-b2.webp`: one hand up, the other on the hip; Higgsfield twice kept the same hand up, so the new pose is mirrored to alternate sides with frame a; the old mirror `-b` is gone). Every saga character has a «6-7 palms up» picture (`assets/halcon/cast/<id>-67.webp` for Fer, Hamdan, Latifa, Aileen, Adric; `assets/saga/67/{camel,plane,falcon,oryx}.webp` doing their own swing; Dralingo = frame a; Adrian shows his victory pose): `HalconBoard.art(skin, '67')`. The crews do it: my right answer, a teammate's coins and every team wave flip the figures to the 6-7 for a moment (`SixSevenStage.six()` / `sixCrew()`; each picture shows only once it has loaded, a wrong answer's pose is never undone). Fuego's Dralingo figure is red in the 6-7 pose too (sixseven.css).
 - The captains' new poses (Higgsfield Unlimited, 0 credits, his Chrome): `assets/cast/<id>-{talk,jump,wow,67}.webp` for Fer, Hamdan, Latifa, Aileen and Adric (Adrian: Higgsfield refuses him, his three poses stay) and Dralingo `assets/dralingo/{talk,jump,wow}.webp`. `js/cast.js` rotates them: `hello` → hello or talk, `cheer` → cheer or jump, `mystery` → mystery or wow (held 25 s per character, so a moment never flickers); `talk` / `jump` / `wow` / `67` ask for exactly one.
+
+## Dralingo's friends · Liu (6) and Qi (7) · 2026-10-20 (branch `sixseven-friends`)
+His ask (2026-10-20): "animate Dralingo and the 6-7, like the Roblox famous thing… both of them should be friends". His
+picks: «same style, our own» (blue brick-built number buddies a kid reads as «¡el 67!», never a copy of the Roblox
+«Steal a Brainrot» 67 figure) and the «A + C combo»: **Liu** (the 6) and **Qi** (the 7) are two friends (A); on a «¡SIX
+SEVEN!» they jump together and become **el 67**, one joined buddy (C). Their names ARE the pinyin the game teaches (liu = 6,
+qi = 7). Cast card: `claude-setup/cast.md` (Liu el bailarín, Qi el deportista).
+
+### What a kid sees (teach by doing: nobody has to explain liu = 6, qi = 7)
+- **Phone, the two buttons:** Liu stands on the top outer corner of «6 · liu», Qi on «7 · qi» (they hang from the card's
+  bottom corners, so they draw over the buttons' corners: never over the big digit, the pill or the verdict, which sits
+  above them). My right 6 → Liu cheers (his loop and a hop: stretched going up, squashed landing), my right 7 → Qi
+  cheers, until the next sum shows (then both calm down at once, so a cheering friend never pulls the next tap); they
+  ride the buttons' 6-7 swing; a miss → the friend I tapped goes «¡Uy!» (a funny wobble, never sad) and the right one
+  hops «¡era yo!»; a 6 then a 7 → both cheer; my «¡SIX SEVEN!» (racha 7, my 67th coin) and our team's wave → they leap
+  off the buttons and, a beat later, **el 67** lands at the foot of my balance cheering (1.9 s / 2.2 s) in the foot
+  Dralingo's spot (he steps aside; el 67 sits a little toward my crew's side, away from the big Dralingo who flies in from
+  the other side), then they drop back; the last 30 s → they sway the 6-7 on their buttons. They stay visible above the
+  «¡Recargando!» cover.
+- **Phone lobby:** «¡Liu es el 6 y Qi es el 7!» with both friends swaying over their pills «6 · liu» / «7 · qi».
+- **Intro card (phone and projector):** the pictured buttons have Liu and Qi on their corners, exactly like the real ones.
+- **Projector:** Liu and Qi stand at the foot of the balance on each side of Dralingo (6 left, 7 right, like the
+  buttons); the countdown: they race in from the left (both from the left: a 7 is never shown mirrored); every beat of
+  the score feed: Liu cheers when a right 6 came in, Qi when a right 7 did (at most one hop a friend every 2.6 s, never over a cheer still running); a
+  team's «¡SIX SEVEN!» wave → they jump together and el 67 cheers on that team's side (Fuego: Liu's spot, Mar: Qi's) while
+  Dralingo keeps dancing in the middle; the last 30 s → they sway the 6-7 with Dralingo. Lobby preview: the two friends in
+  front of the pans over their pills; on a full projector (860 px high or more) Liu, Dralingo and Qi wave hello above
+  «¡A jugar!» (`trio-wave`, `.ssp-hello`; its loop loads only once it shows).
+- **Ceremony, projector:** the losers' sob sinks them 10 %, so their gold line keeps room and draws on top (`.ssp-rside.lose`).
+- **Ceremony (both screens):** Liu and Qi dance their 6-7 loops on each side of Dralingo in the winners' moment.
+- **Dralingo's true second 6-7 frame** (the old art request): the other hand up (`dralingo-67-c.webp`), aligned with frame
+  a (`dralingo-67-a2.webp`) so the beat swap never jumps; used by this game's dancer (the warm-up and phone quick effects
+  still use `dralingo-67-a` + `-b2`).
+
+### Server: one more number in the projector's feed
+`core/sixseven.js` `answer()` marks which number was right since the last tick: `m.fx[id][4] |= 1` (a 6) or `2` (a 7);
+`server.js` sends the projector `f: [k, coins, golden, wrong, six, dig]` (the phones' feed is unchanged:
+`[k, coins, golden, six]`). Nothing else on the server changed: no new event, no extra traffic.
+
+### Art (Higgsfield Unlimited in his Chrome, 0 credits; 7 Kling 3 s loops = 26.25 credits; how-made and every job id in
+`.claude/handoff/sixseven-friends-progress.md`; originals in `assets-library/higgsfield/2026-10-20/sixseven/`)
+`public/assets/sixseven/friends/`: `liu.webp` + `liu-b.webp`, `qi.webp` + `qi-b.webp` (the two 6-7 frames, aligned on the
+feet by `video_tools/sticker_pair.py`, ~25 KB each), `liu-uy`, `qi-uy`, `liu-run`, `qi-run`, `67.webp` (stills); loops in
+`friends/anim/`: `liu-cheer`, `qi-cheer`, `67-cheer`, `liu-dance`, `qi-dance`, `67-dance` (full ≤ 0.87 MB for the projector, `-lite`
+168 px 10 fps ≤ 205 KB for phones, `-still` for reduced motion), `trio-wave` (0.98 MB, projector). Each loop is a Kling
+clip whose start frame = end frame (`video_tools/kling_frame.py`: keyed onto flat green with room to hop), keyed and
+looped by `video_tools/canva_anim.py`. A phone loads ~0.65 MB in the lobby (the stills, the three lite cheer loops and
+their stills) and ~0.4 MB more at the ceremony (the two lite dance loops); the projector ~5.5 MB (full loops + trio). The cheer loops skip two off-model moments of their clips (re-cut 2026-10-20: Qi 0-0.7 + 2.0-3.0 s, Liu 0-0.7 + 1.62-3.0 s).
+
+### Code
+`js/sixseven-stage.js`: `friend(id, o)` (poses stand / b / cheer / uy / run / dance; `pose`, `react`, `rest`, `sway`; a
+pose shows only once its picture has loaded), `friendsRow`, `numTag`, `friendOnPic`, `preloadFriends`; the dancer uses
+frames a2 + c. `js/player-sixseven.js`: the button friends (`btnFr`), `join67`, the reactions in `right`, `wrong`,
+`moments`, `mySix`, `wave`, the frenzy sway, the lobby row, the rules picture, the ceremony trio. `js/host-sixseven.js`:
+`hostFr`, `friendCheer` (from the feed's dig), `friendsJoin`, `friendsRest`, `friendsRunIn`, the lobby preview, the rules
+picture, the ceremony trio. `css/sixseven.css`: `.ssfr*`, `.ssx-card > .ssx-fr`, `.ssx-j67`, `.ssp-fr*`, `.ssp-pv-fr`,
+`.ssh-friends`, `.ssi-fr`, `.ssf-trio`, `.ssp-rmid`; reduced motion: no hops, sways or leaps (fades only).
+Tests: `test-sixseven.js` (+ the dig slot), `test-sixseven-live.js` (+ every scoring projector feed entry names its
+number), `test-sixseven-phone.js` unchanged and passing.

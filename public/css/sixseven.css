@@ -61,6 +61,32 @@
 .ssd-say { position: absolute; left: 50%; bottom: 100%; transform: translateX(-50%); white-space: nowrap; padding: 3px 12px; border-radius: 999px; background: #fff;
   border: 3px solid var(--ss-ink); font: 800 1rem/1.2 'Baloo 2', sans-serif; color: var(--ss-ink); }
 
+/* Liu (the 6) and Qi (the 7), Dralingo's friends (2026-10-20, js friend()): one picture per pose, bottom-aligned; .sway
+   swaps their two 6-7 stills on Dralingo's beat (only while they stand: a reaction takes over the picture) */
+.ssfr { position: relative; display: grid; place-items: end center; pointer-events: none; transform-origin: 50% 100%; }
+.ssfr img { grid-area: 1 / 1; width: 100%; height: 100%; object-fit: contain; object-position: 50% 100%; user-select: none; -webkit-user-drag: none;
+  filter: drop-shadow(0 5px 3px rgba(10, 8, 30, .35)); }
+.ssfr-b { opacity: 0; }
+.ssfr.sway:is(:not([data-pose]), [data-pose="stand"]) { animation: ss-bob .26s ease-in-out infinite alternate; }
+.ssfr.sway:is(:not([data-pose]), [data-pose="stand"]) .ssfr-a { animation: ss-beat-a .52s steps(1, end) infinite; }
+.ssfr.sway:is(:not([data-pose]), [data-pose="stand"]) .ssfr-b { animation: ss-beat-b .52s steps(1, end) infinite; }
+.ssfr.qi.sway .ssfr-a, .ssfr.qi.sway .ssfr-b { animation-delay: -.26s; }      /* Qi's palms swap half a beat after Liu's */
+/* the pill «6 · liu» / «7 · qi» under a friend, in the buttons' own colours */
+.ssfr-tag { display: inline-flex; align-items: center; gap: 5px; margin-top: 3px; padding: 1px 9px 1px 10px; border-radius: 999px; border: 3px solid var(--ss-ink); color: #fff;
+  font: 800 1.05rem/1.15 'Baloo 2', sans-serif; box-shadow: 0 3px 0 var(--ss-ink); white-space: nowrap; }
+.ssfr-tag.six { background: var(--ss-six); } .ssfr-tag.seven { background: var(--ss-seven); }
+.ssfr-tag b { -webkit-text-stroke: 3px var(--ss-ink); paint-order: stroke fill; font-size: 1.3rem; line-height: 1; }
+.ssfr-tag small { padding: 0 6px; border-radius: 999px; background: #fff; color: var(--ss-ink); font-size: .85rem; }
+/* «¡Liu es el 6 y Qi es el 7!»: the two friends side by side, each over its pill */
+.ssfr-row { display: flex; justify-content: center; align-items: flex-end; gap: 22px; }
+.ssfr-it { display: flex; flex-direction: column; align-items: center; }
+.ssfr-it .ssfr { width: 66px; height: 74px; }
+/* a pictured button (the rules cards) gets its friend in the corner, like the real buttons */
+.ssi-pic-b { position: relative; }
+.ssi-pic-b .ssi-fr { position: absolute; z-index: 2; top: -24%; width: 40%; height: 50%; }
+.ssi-pic-b .ssi-fr.six { left: -6%; }
+.ssi-pic-b .ssi-fr.seven { right: -6%; }
+
 /* ---------- the golden balance (js Balance: container query units, so it draws at any size) ---------- */
 .ssb { --a: 0deg; --bw: clamp(1.5px, .42cqw, 3px); position: relative; width: 100%; height: 100%; container-type: size; pointer-events: none; }
 .ssb-base { position: absolute; left: 33cqw; right: 33cqw; bottom: 0; height: 8cqh; border-radius: 40% 40% 10px 10px / 70% 70% 10px 10px; border: var(--bw) solid var(--ss-ink);
@@ -169,7 +195,8 @@ body.kd-phone.ssx-on #lobby-mascot, body.kd-phone.ssx-on #lobby-team-name { disp
 .ssx-bal { z-index: 1; left: 3%; right: 3%; top: 15%; bottom: 13%; }
 .ssx-bal .ssb-stack { transition-duration: .45s; }
 /* Dralingo at the foot of the balance: still between scores, a short 6-7 when my team scores (.go), always in the frenzy */
-.ssx-foot { z-index: 3; left: 50%; bottom: 3%; width: 18%; height: 38%; transform: translateX(-50%); pointer-events: none; }
+.ssx-foot { z-index: 3; left: 50%; bottom: 3%; width: 18%; height: 38%; transform: translateX(-50%); pointer-events: none; transition: opacity .12s; }
+body.ssx-joined .ssx-foot { opacity: 0; }   /* el 67 takes his spot for a moment (review 2026-10-20) */
 .ssx-foot .ssd { width: 100%; height: 100%; }
 /* the crews: Fuego under the left pan, Mar under the right one; mine has me big at the outer edge, side by side with
    two mates (never overlapping: kid-safe), the rivals a little smaller */
@@ -218,7 +245,7 @@ body.kd-phone.ssx-on #lobby-mascot, body.kd-phone.ssx-on #lobby-team-name { disp
 .ssx-qt { width: 86%; height: 9px; margin-top: 6px; border-radius: 999px; border: 2px solid var(--ss-ink); background: rgba(29, 36, 64, .12); overflow: hidden; }
 .ssx-qt i { display: block; height: 100%; transform-origin: 0 50%; background: linear-gradient(90deg, #fff4bd, var(--ss-gold)); }
 .ssx-qt.hurry i { background: linear-gradient(90deg, #ffb3a8, var(--ss-red)); }
-.ssx-verdict { position: absolute; left: 50%; bottom: -20px; z-index: 2; display: flex; align-items: baseline; gap: 8px; white-space: nowrap; padding: 3px 14px; border-radius: 999px;
+.ssx-verdict { position: absolute; left: 50%; bottom: -20px; z-index: 4; display: flex; align-items: baseline; gap: 8px; white-space: nowrap; padding: 3px 14px; border-radius: 999px;
   border: 3px solid var(--ss-ink); box-shadow: 0 3px 0 var(--ss-ink); background: #fff; color: var(--ss-ink); transform: translateX(-50%) scale(.6); opacity: 0; pointer-events: none; }
 .ssx-verdict.show { transform: translateX(-50%); opacity: 1; transition: transform .24s var(--ss-ease-pop), opacity .12s; }
 .ssx-verdict b { font: 800 1.2rem/1.2 'Baloo 2', sans-serif; }
@@ -355,6 +382,13 @@ body.kd-phone.ssx-on.ssx-ended .muted-toggle { left: 8px !important; right: auto
 .ssh-you span { align-self: center; font: 700 .9rem/1.2 'Nunito', sans-serif; }
 .ssh-you b { display: block; font: 800 1.2rem/1.1 'Baloo 2', sans-serif; color: var(--ss-blue-deep); }
 .ssx-how.red .ssh-you b { color: var(--ss-red-deep); }
+/* Dralingo's friends in the phone lobby: «¡Liu es el 6 y Qi es el 7!» (2026-10-20) */
+.ssh-friends { display: flex; align-items: flex-end; justify-content: center; gap: 12px; margin: 8px 0 0; padding: 8px 10px 6px; border-radius: 16px;
+  background: linear-gradient(180deg, #2b2a6e, #171a44); }
+.ssh-friends > span { order: 0; flex: 0 1 auto; align-self: center; max-width: 9.5em; color: #fff; font: 800 1.05rem/1.15 'Baloo 2', sans-serif; text-wrap: balance; }
+.ssh-friends .ssfr-row { order: -1; gap: 10px; }
+.ssh-friends .ssfr-it .ssfr { width: 58px; height: 66px; }
+.ssh-friends .ssfr-tag { font-size: .95rem; }
 .ssh-style { margin: 8px 0 0; padding: 4px 12px; border-radius: 999px; background: var(--ss-ink); color: #fff; text-align: center; font: 700 .9rem/1.3 'Nunito', sans-serif; }
 .ssh-style b { color: var(--ss-gold); font-family: 'Baloo 2', sans-serif; font-size: 1.05rem; }
 .ssh-style span { font-family: 'Baloo 2', sans-serif; }
@@ -424,7 +458,7 @@ body.kd-phone.ssx-on.ssx-ended .muted-toggle { left: 8px !important; right: auto
 .ssi-pic-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; height: 92px; }
 .ssi-pic-btns .ssi-pic-b.b7 { animation: ss-press 1.2s ease-in-out infinite; }
 @keyframes ss-press { 0%, 40%, 100% { transform: none; box-shadow: 0 4px 0 var(--ss-ink); } 50%, 60% { transform: translateY(3px); box-shadow: 0 1px 0 var(--ss-ink), 0 0 0 4px var(--ss-ok); } }
-.ssi-pic-hand { position: absolute; right: 4%; bottom: 30%; animation: ss-tap 1.2s ease-in-out infinite; }   /* on the 7, never over its «qi» */
+.ssi-pic-hand { position: absolute; right: 4%; bottom: 8%; animation: ss-tap 1.2s ease-in-out infinite; }   /* on the 7, never over its «qi» (low: Qi stands on its top corner) */
 .ssi-title { margin: 12px 0 2px; font: 800 2rem/1.02 'Baloo 2', sans-serif; color: var(--ss-ink); }
 .ssi-sub { margin: 0; font: 700 1rem/1.3 'Nunito', sans-serif; color: var(--ss-ink-soft); }
 .ssi-say { min-height: 1.1em; font: 800 3.4rem/1 'Baloo 2', sans-serif; color: var(--ss-gold); -webkit-text-stroke: 5px var(--ss-ink); paint-order: stroke fill; text-shadow: 0 6px 0 var(--ss-ink); }
@@ -507,6 +541,10 @@ body.ssx-on:not(.ssx-frenzy) .ssx-chip { display: none; }
 .ssf-stage.result.red { background: radial-gradient(120% 70% at 30% 20%, rgba(255, 140, 120, .35), transparent 70%); }
 .ssf-stage.result.gold { background: radial-gradient(120% 70% at 70% 20%, rgba(130, 170, 255, .35), transparent 70%); }
 .ssf-dral { width: 34vw; max-width: 170px; height: 15vh; }
+/* the winners' moment on the phone: Liu and Qi dance the 6-7 on each side of Dralingo (2026-10-20) */
+.ssf-trio { display: flex; align-items: flex-end; justify-content: center; gap: 2px; }
+.ssf-trio .ssf-dral { width: 30vw; max-width: 150px; }
+.ssf-trio .ssfr { flex: 0 0 auto; width: 19vw; max-width: 92px; height: 10.5vh; }
 .ssf-teams { flex: 1 1 auto; width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: end; }
 .ssf-side { position: relative; display: flex; flex-direction: column; align-items: center; gap: 10px; height: 100%; justify-content: flex-end; }
 .ssf-crew { position: relative; display: flex; justify-content: center; align-items: flex-end; height: 38vh; width: 100%; margin-bottom: 10px; }
@@ -587,6 +625,21 @@ body.ssx-on:not(.ssx-frenzy) .ssx-chip { display: none; }
   .ssx-btn span { font-size: clamp(1.1rem, 5.6vw, 1.4rem); }
   .ssx-btn { gap: 2px; justify-content: flex-start; padding-top: 6%; }
 }
+/* Liu on the 6 button, Qi on the 7 (2026-10-20): standing on the button's top outer corner (feet inside the corner,
+   never over the big digit or the «liu» / «qi» pill; the corner of the card above has no text), above the recharge
+   cover so a miss's «¡Uy!» stays visible; on my «¡SIX SEVEN!» they leap off and el 67 pops up at the foot of my
+   balance, then they drop back */
+.ssx-card > .ssx-fr { --fh: clamp(52px, 8.2vh, 74px); position: absolute; z-index: 3; bottom: -44px; width: var(--fh); height: var(--fh); pointer-events: none;
+  transition: opacity .2s .12s, transform .32s var(--ss-ease-pop) .12s; }
+.ssx-card > .ssx-fr.six { left: -14px; }
+.ssx-card > .ssx-fr.seven { right: -14px; }
+body.ssx-joined .ssx-card > .ssx-fr { opacity: 0; transform: translateY(-55%) scale(.7); transition: opacity .18s .1s, transform .22s var(--ss-ease-out); }
+.ssx-world > .ssx-j67 { z-index: 8; left: 44%; bottom: 1%; width: 26%; height: 58%; pointer-events: none; opacity: 0; transform: translate(-50%, 45%) scale(.5);
+  transition: opacity .16s, transform .34s var(--ss-ease-pop); }
+.ssx-world > .ssx-j67.show { opacity: 1; transform: translate(-50%, 0) scale(1); transition-delay: .14s; }
+.ssx.gold .ssx-world > .ssx-j67 { left: 56%; }   /* a Mar kid: the big Dralingo comes from the left, my crew is on the right */
+.ssx-j67 .ssfr { width: 100%; height: 100%; }
+
 /* the pause card shows the live score: the pause is a wait too */
 .ssx-pause-score { margin: 4px 0 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; font: 800 1rem/1.3 'Baloo 2', sans-serif; }
 .ssx-pause-score:empty { display: none; }
@@ -608,6 +661,11 @@ body.ssx-on:not(.ssx-frenzy) .ssx-chip { display: none; }
   .ssx-gang, .ssx-who { transition: opacity .2s !important; transform: none !important; }
   .ssx-six.show { animation: ss-fade67 1.2s linear both !important; }
   .ssx-six { transform: translate(-50%, -50%) !important; }
+  /* Liu, Qi and el 67: no hops, no leaps; el 67 fades in place */
+  .ssfr.sway, .ssfr.sway .ssfr-a, .ssfr.sway .ssfr-b { animation: none !important; }
+  .ssfr-b { opacity: 0 !important; }
+  .ssx-card > .ssx-fr, body.ssx-joined .ssx-card > .ssx-fr { transform: none !important; transition: opacity .2s !important; }
+  .ssx-world > .ssx-j67, .ssx-world > .ssx-j67.show { transform: translate(-50%, 0) !important; transition: opacity .2s !important; }
 }
 @keyframes ss-fade67 { 0% { opacity: 0; } 12% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }
 
@@ -663,6 +721,9 @@ body.ss-host .hidden { display: none !important; }
 .ssp-style:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--ss-ink); }
 .ssp-style:focus-visible { outline: 4px solid #fff; outline-offset: 2px; }
 .ssp-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: auto; padding: 10px; border-radius: 20px; background: rgba(255, 247, 227, .92); }
+/* Liu, Dralingo and Qi waving hello in the free space above the start card (a full projector; hidden on short screens) */
+.ssp-hello { flex: 1 1 0; min-height: 0; max-height: 250px; margin-bottom: -8px; pointer-events: none; }
+.ssp-hello img { display: block; width: 100%; height: 100%; object-fit: contain; object-position: 50% 100%; filter: drop-shadow(0 6px 8px rgba(14, 18, 48, .35)); }
 .ssp-dur { display: flex; align-items: center; gap: 6px; font: 800 1rem 'Nunito', sans-serif; }
 .ssp-dur .ssp-btn { padding: 8px 14px; font-size: 1rem; }
 .ssp-right { position: relative; display: flex; flex-direction: column; min-height: 0; gap: 12px; z-index: 2; }
@@ -763,7 +824,7 @@ body.ss-host .hidden { display: none !important; }
 .ssp-capt-say.show { opacity: 1; transform: none; }
 body.ss-host.band-on .ssp-capt-say { opacity: 0 !important; }
 /* the two crowds under their pans */
-.ssp-crowd { position: absolute; z-index: 3; bottom: 20px; width: 36vw; height: 22vh; display: flex; flex-wrap: wrap-reverse; justify-content: center; align-content: flex-start; gap: 0 2px; }
+.ssp-crowd { position: absolute; z-index: 3; bottom: 20px; width: 33vw; height: 22vh; display: flex; flex-wrap: wrap-reverse; justify-content: center; align-content: flex-start; gap: 0 2px; }
 .ssp-stage.frenzy .ssp-crowd { bottom: 30px; }   /* (clear of the last-30-s gold frame) */
 .ssp-crowd.red { left: 1.5vw; }
 .ssp-crowd.gold { right: 1.5vw; }
@@ -863,6 +924,9 @@ body.ss-host.band-on .ssp-capt-say { opacity: 0 !important; }
 .ssp-rcrew > .ssf-cloud { bottom: 96%; width: 230px; height: 118px; margin-left: -115px; }
 .ssp-rcrew.two > .ssf-cloud { bottom: 100%; }
 .ssp-rside .ssf-drop { width: 7px; height: 20px; }
+/* the losers' sob sinks them 10 %: their gold line stays readable on top, with room under them (2026-10-20 review) */
+.ssp-rside.lose { gap: 30px; }
+.ssp-rside > .ssf-total { position: relative; z-index: 2; }
 .ssp-rmid { width: 17vw; height: 42vh; align-self: end; margin-bottom: 4vh; }
 .ssp-rmid .ssd { width: 100%; height: 100%; }
 .ssp-fxl { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 3; }
@@ -894,7 +958,29 @@ body.ss-host.band-on .ssp-capt-say { opacity: 0 !important; }
 .ssp-endtools { position: fixed; z-index: 30; left: 50%; bottom: 18px; transform: translateX(-50%); display: flex; gap: 12px; }
 .ssp-skip { position: fixed; z-index: 31; right: 16px; bottom: 18px; }
 
+/* Liu (6) and Qi (7) with Dralingo at the foot of the balance (2026-10-20): the 6 on his left, the 7 on his right, like
+   the two buttons on every phone. A team's «¡SIX SEVEN!» wave: they jump together and el 67 cheers at Dralingo's feet. */
+.ssp-fr { position: absolute; z-index: 4; bottom: 12vh; width: 7.4vw; height: 18vh; transition: opacity .2s, transform .38s var(--ss-ease-pop); }
+.ssp-fr.six { left: calc(50% - 7vw - 7.6vw); }
+.ssp-fr.seven { left: calc(50% + 7vw + .2vw); }
+/* (el 67 cheers on the side of the team that waved, where Liu or Qi stood; Dralingo keeps dancing in the middle) */
+.ssp-fr.j67 { left: calc(50% - 11.4vw); bottom: 12vh; width: 8vw; height: 18vh; z-index: 5; opacity: 0; transform: translate(-50%, 30%) scale(.4); pointer-events: none; }
+.ssp-stage.joined-gold .ssp-fr.j67 { left: calc(50% + 11.4vw); }
+.ssp-stage.joined .ssp-fr.six, .ssp-stage.joined .ssp-fr.seven { opacity: 0; transform: translateY(-30%) scale(.7); }
+.ssp-stage.joined .ssp-fr.j67 { opacity: 1; transform: translate(-50%, 0) scale(1); transition-delay: .18s; }
+/* the lobby preview: Liu and Qi beside Dralingo, each over its own number pill «6 · liu» / «7 · qi» */
+.ssp-pv-fr { position: absolute; z-index: 2; bottom: 3%; width: 12%; height: 42%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; }
+.ssp-pv-fr.six { left: calc(50% - 9% - 12%); }
+.ssp-pv-fr.seven { left: calc(50% + 9%); }
+.ssp-pv-fr .ssfr { width: 100%; flex: 1 1 auto; min-height: 0; }
+.ssp-pv-dral { z-index: 2; }
+/* the ceremony: Liu and Qi dance the 6-7 with Dralingo between the two teams */
+.ssp-rmid { display: flex; align-items: flex-end; justify-content: center; gap: .4vw; width: 27vw; }
+.ssp-rmid .ssfr { flex: 0 0 auto; width: 6.8vw; height: 60%; }
+.ssp-rmid .ssd { flex: 0 0 auto; width: 12vw; }
+
 @media (prefers-reduced-motion: reduce) {
+  .ssp-fr, .ssp-dral { transition: none !important; }
   .ssp-stage.frenzy::before, .ssp-stage.frenzy .ssp-x2, .ssp-kid.new .mmk, .ssp-lm.won, .ssp-capt.cheer img, .ssp-count10.tick, .ssp-rules-card, .ssp-cer-h, .ssp-capline,
   .ssp-star-who .mmk, .ssp-star .ssf-val, .ssp-crowd .mmk .mmk-img, .ssp-pop { animation: none !important; }
   .ssp-bar i, .ssp-race-mark, .ssp-band, .ssp-capt-say, .ssp-say, .ssp-dral { transition: none !important; }
@@ -910,12 +996,14 @@ body.ss-host.band-on .ssp-capt-say { opacity: 0 !important; }
   .ssp-left > .ssp-steps { order: 2; }
   .ssp-left > .ssp-styles { order: 1; }
   .ssp-left > .ssp-tools { order: 1; }
+  .ssp-left > .ssp-hello { display: none; }
 }
 /* the projector lobby opened on a phone (2026-10-18): one column, nothing wider than the screen */
 @media (max-width: 760px) {
   .ssp-lobby { grid-template-columns: minmax(0, 1fr); height: auto; min-height: 100vh; min-height: 100dvh; }
   .ssp-lobby > * { min-width: 0; }
   .ssp-qr { display: none; }
+  .ssp-hello { display: none; }
   .ssp-styles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .ssp-style { min-width: 0; }
 }

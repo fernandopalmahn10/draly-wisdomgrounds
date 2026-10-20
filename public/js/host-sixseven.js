@@ -236,6 +236,24 @@
       pvBal.fill(14, 9, 20);
       pvBal.set(-0.35, true);
       $('pv-dral').appendChild(X.dancer({}));
+      // Dralingo's friends in the preview, each over its own number: «6 · liu» and «7 · qi» (a first look teaches it)
+      [['liu', 'six', 6], ['qi', 'seven', 7]].forEach(([id, cls, n]) => {
+        const box = node('div', null, 'ssp-pv-fr ' + cls);
+        const f = X.friend(id, {});                     // standing still: Dralingo dances and the trio waves (two moving things)
+        box.append(f, X.numTag(n));
+        $('preview').appendChild(box);
+      });
+      X.preloadFriends(false);
+      // Liu, Dralingo and Qi wave hello above «¡A jugar!» (a full projector only: css hides it on a short screen, and
+      // its loop loads only once it shows, e.g. after F11)
+      const hello = () => {
+        const im = $('ssp-hello');
+        if (!im || im.getAttribute('src') || getComputedStyle(im.parentNode).display === 'none') return;
+        im.src = A + 'friends/anim/trio-wave' + (reduced() ? '-still' : '') + '.webp';
+        window.removeEventListener('resize', hello);
+      };
+      hello();
+      window.addEventListener('resize', hello);
       new X.Balance($('step-bal')).set(-0.6, true);
       paintStyle();
       X.preload();
@@ -277,6 +295,12 @@
       bal = new X.Balance($('bal'));
       coins = new X.Coins($('fx'), 50);
       $('dral').appendChild(X.dancer({ alt: 'Dralingo hace el seis-siete' }));
+      // Liu (the 6) and Qi (the 7) stand with Dralingo at the foot of the balance: the 6 on his left, the 7 on his
+      // right, like the buttons on every phone (2026-10-20). A right 6 → Liu cheers, a right 7 → Qi cheers; a team's
+      // «¡SIX SEVEN!» wave → they jump together and become el 67.
+      hostFr = { 6: X.friend('liu', { cls: 'ssp-fr six' }), 7: X.friend('qi', { cls: 'ssp-fr seven' }), j: X.friend('j67', { cls: 'ssp-fr j67', pose: 'cheer' }) };
+      $('screen-stage').append(hostFr[6], hostFr[7], hostFr.j);
+      X.preloadFriends(false, null, ['stand', 'b', 'cheer', 'run']);
     }
     $('screen-stage').classList.remove('frenzy');
     paintMeter();
@@ -294,7 +318,7 @@
       const n = Math.min(mine.length, 16);
       const rows = n > 8 ? 2 : 1;
       const perRow = Math.ceil(n / rows) || 1;
-      const avail = window.innerWidth * 0.36 - 2 * (perRow - 1) - (mine.length > 16 ? 50 : 0);
+      const avail = window.innerWidth * 0.33 - 2 * (perRow - 1) - (mine.length > 16 ? 50 : 0);
       const kw = Math.max(44, Math.min(118, Math.floor(avail / perRow)));
       box.style.setProperty('--kw', kw + 'px');
       box.style.setProperty('--kh', (rows === 2 ? Math.round(window.innerHeight * 0.105) : Math.round(window.innerHeight * 0.19)) + 'px');
@@ -409,6 +433,9 @@
     buildStage();
     bal.set(0, true);
     bal.fill(0, 0, 100);
+    friendsRest('stand');
+    $('screen-stage').classList.remove('joined');
+    friendsRunIn();
     $('skip-btn').classList.add('hidden');
     $('more-btn').classList.add('hidden');
     clearInterval(clockT);
@@ -462,6 +489,8 @@
     const b7 = node('span', null, 'ssi-pic-b b7');
     b7.append(node('b', '7'), node('small', 'qi'));
     btns.append(b6, b7);
+    X.friendOnPic(b6, 6);                    // Liu on the 6, Qi on the 7: the buttons as every phone shows them
+    X.friendOnPic(b7, 7);
     pic.append(sumCard, btns, node('i', null, 'ssx-hand ssi-pic-hand'));
     const txt = node('div');
     txt.append(node('h2', '¡Toca el resultado!'), node('p', 'Cada cuenta da 6 o 7: 6 es liu, 7 es qi. Piensa bien: en racha, cada acierto vale más oro.'));
@@ -494,17 +523,57 @@
     if (!g) return;
     meter = Object.assign({}, meter, d);
     paintMeter();
-    (d.f || []).forEach(([k, n, gold, wrong, six]) => score(k, n, gold, wrong, six));
+    (d.f || []).forEach(([k, n, gold, wrong, six, dig]) => score(k, n, gold, wrong, six, dig));
   });
+  // Liu and Qi with Dralingo (2026-10-20): each cheers the right answers of its own number, at most one hop a beat
+  let hostFr = null, joinT = null;
+  const frAt = { 6: 0, 7: 0 };
+  function friendCheer(dig) {
+    if (!hostFr || $('screen-stage').classList.contains('joined')) return;
+    const now = performance.now();
+    // at most one hop a friend every 2.6 s, never on top of a cheer still running: with a whole class answering, a
+    // constant hop stops meaning «a 6 just came in» (design review 2026-10-20)
+    [6, 7].forEach((d) => {
+      if (!(dig & (d === 6 ? 1 : 2)) || now - frAt[d] < 2600 || hostFr[d].dataset.pose === 'cheer') return;
+      frAt[d] = now;
+      hostFr[d].react('cheer', 1200);
+    });
+  }
+  // (el 67 cheers on the side of the team that waved: Fuego on Liu's side, Mar on Qi's; Dralingo keeps the middle)
+  function friendsJoin(ms, team) {
+    if (!hostFr) return;
+    const st = $('screen-stage');
+    hostFr.j.pose('cheer');
+    st.classList.remove('joined');
+    void st.offsetWidth;
+    st.classList.toggle('joined-gold', team === 'gold');
+    st.classList.add('joined');
+    clearTimeout(joinT);
+    joinT = setTimeout(() => st.classList.remove('joined'), ms || 2400);
+  }
+  function friendsRest(p) { if (hostFr) [6, 7].forEach((d) => { hostFr[d].rest(p === 'sway' ? 'stand' : p); hostFr[d].sway(p === 'sway'); }); }
+  // the countdown: Liu races in from the left to Dralingo's left, Qi right behind him past Dralingo to his right
+  // (both from the left: a 7 is never shown mirrored)
+  function friendsRunIn() {
+    if (!hostFr || reduced()) return;
+    [6, 7].forEach((d, i) => {
+      const f = hostFr[d];
+      f.pose('run');
+      if (f.animate) f.animate([{ transform: `translateX(${d === 6 ? -42 : -60}vw)` }, { transform: 'translateX(0)' }],
+        { duration: 1000 + i * 250, delay: 250 + i * 220, easing: 'cubic-bezier(.22,1,.36,1)', fill: 'backwards' });
+      later(1350 + i * 470, () => f.rest('stand'));
+    });
+  }
   // kids who answered since the last beat: the kid swings and a coin flies up to the team's pan (or a wobble); a kid who
   // just did a «six seven» (racha 7, their 67th coin) gets a little «¡6-7!» over the head and a longer swing
   let flying = 0, pops = 0;
   const lastBump = { red: 0, gold: 0 };
-  function score(k, n, gold, wrong, six) {
+  function score(k, n, gold, wrong, six, dig) {
     const p = roster[k];
     if (!p || !bal) return;
     const f = figs[k];
     if (six && f && f.isConnected) kidPop(f, p.team);
+    if (n > 0 && dig) friendCheer(dig);
     if (n > 0) {
       if (f && f.isConnected) { X.swing(f, Math.random() < 0.5 ? 6 : 7, n >= 3); X.six(f, 650); }
       if (flying > 40) return;
@@ -553,6 +622,7 @@
     if (d.meter) { meter = Object.assign({}, meter, d.meter); paintMeter(); }
     const t = TEAM_NAME[d.team];
     crewCheer(d.team, 2600);
+    friendsJoin(2600, d.team);               // Liu and Qi jump together: el 67 cheers on that team's side
     band('six', [node('b', '¡SIX SEVEN!'), node('span', `¡El Equipo ${t} llegó a ${X.fmt(d.gold)} de oro! Liu, qi`)], d.team, 2400);
     sfx('shout', 0.9);
     later(1050, () => sfx('liuqi', 0.8));
@@ -619,6 +689,7 @@
   let hypeT = null;
   function hype() {
     clearInterval(hypeT);
+    friendsRest('sway');                     // the last 30 s: Liu and Qi do the 6-7 with Dralingo, non-stop
     hypeT = setInterval(() => {
       if (!g || g.phase !== 'play' || paused) return;
       const gap = Math.round(meter.r - meter.g);
@@ -736,7 +807,12 @@
         X.fitCloud(crew);
         if (win) { const conf = node('div', null, 'ssf-conf'); side.appendChild(conf); S.confetti(conf, tie ? null : team, tie ? 26 : 44); }
         row.appendChild(side);
-        if (ti === 0) { const mid = node('div', null, 'ssp-rmid'); mid.appendChild(X.dancer({ alt: 'Dralingo celebra con el seis-siete' })); row.appendChild(mid); }
+        if (ti === 0) {
+          // Dralingo dances the 6-7 in the middle with his friends Liu and Qi (2026-10-20)
+          const mid = node('div', null, 'ssp-rmid');
+          mid.append(X.friend('liu', { pose: 'dance', cls: 'ssp-rfr' }), X.dancer({ alt: 'Dralingo celebra con el seis-siete' }), X.friend('qi', { pose: 'dance', cls: 'ssp-rfr' }));
+          row.appendChild(mid);
+        }
       });
       box.appendChild(row);
       sfx('win', 0.9);

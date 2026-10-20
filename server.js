@@ -9971,12 +9971,12 @@ function ssTick(pin, m) {
       if (ev.frenzy) io.to(pin).emit('ss:frenzy', { endsMs: Math.max(0, m.endsAt - now) });
     }
     // the meter: the projector every 250 ms (with who scored), phones every 750 ms, only when something changed. Both
-    // carry the feed of who scored (f: [k, coins, golden, wrong, six] for the projector; [k, coins, golden, six] of the
+    // carry the feed of who scored (f: [k, coins, golden, wrong, six, dig] for the projector; [k, coins, golden, six] of the
     // biggest scorers since the last phone beat for the phones), so every phone sees its teammates' coins land in the
     // team's pan between its own sums (his «no dead phones», 2026-10-16). Still one event per beat, never one per answer.
     m.beat = (m.beat || 0) + 1;
     if (m.beat % 2 === 0) {
-      const fx = Object.entries(m.fx).map(([k, v]) => [Number(k), v[0], v[1], v[2], v[3] || 0]);
+      const fx = Object.entries(m.fx).map(([k, v]) => [Number(k), v[0], v[1], v[2], v[3] || 0, v[4] || 0]);   // (+ dig: 1 = a right 6, 2 = a right 7)
       m.fx = {};
       m.kfx = m.kfx || {};
       fx.forEach(([k, n, gold, , six]) => {

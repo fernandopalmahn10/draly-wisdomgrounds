@@ -32,7 +32,7 @@
   }
   const pre = {};
   function preload() {
-    ['dralingo-67-a.webp', 'dralingo-67-b2.webp'].forEach((f) => { if (!pre[f]) { pre[f] = new Image(); pre[f].src = A + f; } });
+    ['dralingo-67-a2.webp', 'dralingo-67-c.webp'].forEach((f) => { if (!pre[f]) { pre[f] = new Image(); pre[f].src = A + f; } });
   }
 
   // ---------- a gold coin (geometry: a disc with a square hole, like the old Chinese coins) ----------
@@ -219,18 +219,128 @@
     const a = el('img', 'ssd-a');
     a.alt = o.alt != null ? o.alt : 'Dralingo hace el seis-siete';
     a.draggable = false;
-    a.src = A + 'dralingo-67-a.webp';
-    a.width = 460; a.height = 520;
+    a.src = A + 'dralingo-67-a2.webp';
+    a.width = 466; a.height = 520;
     const b = el('img', 'ssd-b');
     b.alt = '';
     b.draggable = false;
-    b.src = A + 'dralingo-67-b2.webp';
-    b.width = 460; b.height = 520;
+    b.src = A + 'dralingo-67-c.webp';
+    b.width = 466; b.height = 520;
     d.append(a, b);
     if (o.say) d.appendChild(el('b', 'ssd-say', o.say));
     d.play = (on) => d.classList.toggle('on', on !== false && !reduced());
     if (o.on !== false) d.play(true);
     return d;
+  }
+
+  // ---------- Liu (the 6) and Qi (the 7), Dralingo's friends (2026-10-20, his pick «A + C») ----------
+  // Two walking digits built of blue toy bricks (our own drawing in the spirit of the «6 7» meme); on a «¡SIX SEVEN!»
+  // they jump together and become «el 67», one joined buddy. Their names ARE the pinyin the game teaches (liu = 6,
+  // qi = 7). Pictures: Higgsfield in his Chrome (Unlimited) + Kling 3 s loops, how-made in
+  // assets-library/higgsfield/2026-10-20/sixseven/. A pose is a still (.webp) or a loop (name.webp on the projector,
+  // name-lite.webp on phones, name-still.webp for reduced motion). A pose shows only once its picture has loaded, so a
+  // slow school Wi-Fi never shows a blank friend: until then the friend keeps the pose it has.
+  const FR = A + 'friends/';
+  const FRIENDS = {
+    liu: { alt: 'Liu, el seis', stand: 'liu.webp', b: 'liu-b.webp', cheer: 'liu-cheer', dance: 'liu-dance', uy: 'liu-uy.webp', run: 'liu-run.webp' },
+    qi: { alt: 'Qi, el siete', stand: 'qi.webp', b: 'qi-b.webp', cheer: 'qi-cheer', dance: 'qi-dance', uy: 'qi-uy.webp', run: 'qi-run.webp' },
+    j67: { alt: 'El 67: Liu y Qi juntos', stand: '67.webp', b: '67.webp', cheer: '67-cheer', dance: '67-dance', uy: '67.webp', run: '67.webp' },
+  };
+  const fpic = {};
+  function want(u) { if (!fpic[u]) { const i = new Image(); i.decoding = 'async'; i.src = u; fpic[u] = i; } return fpic[u]; }
+  const isReady = (u) => { const i = want(u); return i.complete && i.naturalWidth > 0; };
+  // the file of a pose: a still as it is; a loop by screen (lite on phones) or its still (reduced motion)
+  function fsrc(id, pose, lite, still) {
+    const F = FRIENDS[id] || FRIENDS.liu;
+    const v = F[pose] || F.stand;
+    if (/\.webp$/.test(v)) return FR + v;
+    return FR + 'anim/' + v + (still || reduced() ? '-still' : lite ? '-lite' : '') + '.webp';
+  }
+  // load what a screen will show, early (the lobby / the run-in), so the first reaction is never late
+  function preloadFriends(lite, ids, poses) {
+    (ids || ['liu', 'qi', 'j67']).forEach((id) => (poses || ['stand', 'b', 'cheer', 'uy']).forEach((p) => { want(fsrc(id, p, lite)); want(fsrc(id, p, lite, true)); }));
+  }
+  // one friend: a box with its picture. o: { pose, lite, cls, alt }. f.pose(p) shows a pose (when loaded),
+  // f.react(p, ms) shows it for a moment with a hop then goes back to its resting pose, f.rest(p) sets that resting
+  // pose ('stand', or 'dance' in the last 30 s / the ceremony), f.sway(on) swaps its two 6-7 stills on a beat (CSS).
+  function friend(id, o) {
+    o = o || {};
+    const f = el('div', 'ssfr ' + id + (o.cls ? ' ' + o.cls : ''));
+    f.setAttribute('role', 'img');
+    f.setAttribute('aria-label', o.alt != null ? o.alt : (FRIENDS[id] || FRIENDS.liu).alt);
+    const img = el('img', 'ssfr-a');
+    const img2 = el('img', 'ssfr-b');
+    [img, img2].forEach((i) => { i.alt = ''; i.draggable = false; i.decoding = 'async'; });
+    img.src = fsrc(id, o.pose || 'stand', o.lite);
+    img2.src = fsrc(id, 'b', o.lite);
+    f.append(img, img2);
+    f._id = id;
+    f._lite = !!o.lite;
+    f._rest = o.pose || 'stand';
+    f.dataset.pose = f._rest;
+    f.pose = (p) => {
+      let u = fsrc(id, p, f._lite);
+      if (!isReady(u)) {
+        const st = fsrc(id, p, f._lite, true);
+        if (isReady(st)) u = st;                                   // the loop is still coming: its first frame for now
+        else { want(u).addEventListener('load', () => { if (f._want === p) f.pose(p); }, { once: true }); f._want = p; return; }
+      }
+      f._want = p;
+      if (img.getAttribute('src') !== u) img.src = u;
+      f.dataset.pose = p;
+    };
+    f.react = (p, ms) => {
+      f.pose(p);
+      if (!reduced() && f.animate && p !== 'uy') {
+        // a real hop: stretched on the way up, a fast fall, squashed on landing (design review 2026-10-20)
+        f.animate([{ transform: 'translateY(0) scale(1)', easing: 'cubic-bezier(.2,.8,.3,1)' },
+          { transform: 'translateY(-14%) scale(.95, 1.06)', offset: 0.38, easing: 'cubic-bezier(.55,0,.9,.45)' },
+          { transform: 'translateY(0) scale(1.07, .93)', offset: 0.72, easing: 'ease-out' }, { transform: 'translateY(0) scale(1)' }],
+          { duration: 480, easing: 'linear' });
+      } else if (p === 'uy' && !reduced() && f.animate) {
+        f.animate([{ transform: 'rotate(0)' }, { transform: 'rotate(-7deg)' }, { transform: 'rotate(6deg)' }, { transform: 'rotate(-3deg)' }, { transform: 'rotate(0)' }],
+          { duration: 560, easing: 'ease-out' });
+      }
+      clearTimeout(f._t);
+      f._t = setTimeout(() => f.pose(f._rest), ms || 1300);
+    };
+    f.rest = (p) => { f._rest = p || 'stand'; clearTimeout(f._t); f.pose(f._rest); };
+    f.sway = (on) => f.classList.toggle('sway', on !== false && !reduced());
+    return f;
+  }
+
+  // «6 es liu · 7 es qi» shown by the friends themselves (the lobby, the run-in): each one over its own number pill,
+  // swaying the 6-7. o: { lite, sway (default true), cls }
+  function friendsRow(o) {
+    o = o || {};
+    const row = el('div', 'ssfr-row' + (o.cls ? ' ' + o.cls : ''));
+    row.setAttribute('role', 'img');
+    row.setAttribute('aria-label', 'Liu es el 6 y Qi es el 7');
+    [['liu', 6], ['qi', 7]].forEach(([id, n]) => {
+      const it = el('div', 'ssfr-it ' + (n === 6 ? 'six' : 'seven'));
+      const f = friend(id, { lite: o.lite, alt: '' });
+      f.removeAttribute('role');
+      f.removeAttribute('aria-label');
+      if (o.sway !== false) f.sway(true);
+      it.append(f, numTag(n));
+      row.appendChild(it);
+    });
+    return row;
+  }
+  // the pill «6 · liu» / «7 · qi», in the buttons' own colours (teal 6, violet 7)
+  function numTag(n) {
+    const tag = el('span', 'ssfr-tag ' + (n === 6 ? 'six' : 'seven'));
+    tag.setAttribute('translate', 'no');
+    tag.append(el('b', null, String(n)), el('small', null, n === 6 ? 'liu' : 'qi'));
+    return tag;
+  }
+  // a pictured button (rules cards) gets its friend in the same corner as on the real phone buttons
+  function friendOnPic(btn, n, lite) {
+    if (!btn) return;
+    const f = friend(n === 6 ? 'liu' : 'qi', { lite, alt: '', cls: 'ssi-fr ' + (n === 6 ? 'six' : 'seven') });
+    f.removeAttribute('role');
+    f.removeAttribute('aria-label');
+    btn.appendChild(f);
   }
 
   // ---------- the «6-7» pose (art batch 2026-10-17): a kid figure does the palms-up gesture for a moment ----------
@@ -273,7 +383,8 @@
   // the two giant buttons ARE the two palms of the 6-7 gesture: on a right answer one goes down while the other goes
   // up, then they swap and settle (the side the kid tapped goes down first, like a weight). times: 1 = one swing,
   // 2 = the double swing of a «six seven». Transforms only (WAAPI), ~0.4 s, never blocks a tap.
-  function palms(b6, b7, side, times) {
+  // fr: [Liu, Qi] standing on the buttons ride the same swing (added on top of any hop they are doing)
+  function palms(b6, b7, side, times, fr) {
     if (!b6 || !b7 || reduced() || !b6.animate) return;
     const d = side === 7 ? -1 : 1;                       // 6 tapped: the 6 palm sinks first
     const amp = times >= 2 ? 13 : 9;
@@ -288,6 +399,7 @@
     const o = { duration: times >= 2 ? 760 : 420, easing: 'cubic-bezier(.37,0,.63,1)' };
     b6.animate(k(d), o);
     b7.animate(k(-d), o);
+    if (fr) [[fr[0], d], [fr[1], -d]].forEach(([f, s]) => { if (f && f.animate) f.animate(k(s), Object.assign({ composite: 'add' }, o)); });
   }
   // the next sum swings in like a palm: the sum tips in from one side, the card rocks; alternating sides (6, 7, 6…)
   let wipeSide = 1;
@@ -359,5 +471,5 @@
     requestAnimationFrame(fit);
   }
 
-  root.SixSevenStage = { TEAM, PINYIN, MAX_DEG, tilt, Balance, Coins, coin, dancer, swing, wobble, palms, wipe, sumValue, cloud, fitCloud, sum, el, fmt, reduced, preload, six, sixCrew, sixReady, kid: (o) => S().kidFigure(o) };
+  root.SixSevenStage = { TEAM, PINYIN, MAX_DEG, tilt, Balance, Coins, coin, dancer, friend, friendsRow, friendOnPic, numTag, preloadFriends, FRIENDS, swing, wobble, palms, wipe, sumValue, cloud, fitCloud, sum, el, fmt, reduced, preload, six, sixCrew, sixReady, kid: (o) => S().kidFigure(o) };
 })(typeof window !== 'undefined' ? window : this);

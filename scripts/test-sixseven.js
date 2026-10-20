@@ -315,7 +315,17 @@ const valueOf = (e) => (e.op === '+' ? e.a + e.b : e.a - e.b);
   M.resetKid(p, m);
   for (let i = 0; i < 7; i++) { dealPlain(1000); M.answer(m, p, p.ssQ.ans, 2000); }
   eq(m.fx[p.ssId][3] & 1, 1, 'the feed marks the kid who just did «six seven»');
-  ok(m.fx[p.ssId].length === 4, 'feed entries: [coins, golden, wrong, six]');
+  ok(m.fx[p.ssId].length === 5, 'feed entries: [coins, golden, wrong, six, dig]');
+  // which number was right since the last tick (2026-10-20: Liu cheers a 6, Qi a 7 on the projector)
+  m.fx = {};
+  dealPlain(1000);
+  { const want = p.ssQ.ans; M.answer(m, p, want, 2000); eq(m.fx[p.ssId][4], want === 6 ? 1 : 2, 'the feed says which number was right (1 = 6, 2 = 7)'); }
+  { let tries = 0; const first = m.fx[p.ssId][4]; while (tries++ < 40) { dealPlain(1000); const a = p.ssQ.ans; M.answer(m, p, a, 2000); if ((a === 6 ? 1 : 2) !== first) break; }
+    eq(m.fx[p.ssId][4], 3, 'a 6 and a 7 in the same beat: both friends (1 | 2)'); }
+  m.fx = {};
+  dealPlain(1000);
+  M.answer(m, p, p.ssQ.ans === 6 ? 7 : 6, 2000);
+  eq(m.fx[p.ssId][4], 0, 'a wrong answer marks no number');
   // a «six seven» is cosmetic: same coins as without it
   eq(M.streakMult(7), 3, 'racha 7 pays ×3 like any racha 6-9');
 
