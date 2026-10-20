@@ -614,6 +614,14 @@ the checklist for any new game mode.
 - **A skin is the kid's character everywhere**: Mi perfil, the home, every pin game on the phone and the projector, the
   ceremonies; the server only accepts an avatar the kid owns (the base saga avatars stay free for everyone).
 - Kid-safe pictures, Spanish UI, no hanzi; every screen with its «Volver»; works on phones and laptops.
+- **Built 2026-10-19** (his «sube» for the rendered pictures that day; the 3D files never leave the laptop):
+  `core/zoco.js` (catalog, prices, `hold` lines), the coin ledger on the record (idempotent award keys, daily caps:
+  50 seals, 3 homework, 6 games, 8 stars; «Deshacer» can leave a debt shown as 0), a one-time welcome grant at half pay
+  (max 150), «Pasar mi progreso» brings only work new to the real account, views `#zoco` / a character / `#monedas` in
+  Mi Dralingo, Mi perfil «Elige tu personaje», skins in all 11 pin games + ceremonies + Papás + /maestro, pictures in
+  `public/assets/zoco/` (a held character's pictures are not published). Spec `docs/specs/zoco.md`.
+  To sell a held one (dog, pony, panda, Latifa con abaya): delete its `hold` line and copy its two renders.
+  `node scripts/test-zoco.js` must pass.
 
 ## Levels: YCT mode everywhere (his direction 2026-10-12)
 - "The whole platform has to have YCT mode": every place that checks, picks or shows a student's level reads
