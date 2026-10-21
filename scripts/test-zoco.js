@@ -293,9 +293,10 @@ function unit() {
   ok(Zoco.settleHw(fresh, NEW).got === P.hw && fresh.zoco.c === P.hw, 'marked again: +' + P.hw + ' (one payment while it is marked)');
   mark('NEWB', OLD[0], true);
   ok(Zoco.settleHw(fresh, NEW).got === 0, 'another level\'s homework (it only plays): nothing');
-  // the cap: 2 homeworks a day, the rest waits (a new day; NEW has 3, one already paid: made-up ids are enough here)
+  // the cap: 2 homeworks a day, the rest waits (a new day; three of NEW's ids, NEW[1] already paid, + two made-up ids =
+  // four new ones; 2026-10-21 the catalog got all 8 New HSK 1 homeworks and «NEW has 3» broke this check: take three)
   nextDay();
-  const four = NEW.concat(['zz-e09-r1', 'zz-e09-r2']);
+  const four = NEW.slice(0, 3).concat(['zz-e07-r9', 'zz-e08-r9'].slice(0, Math.max(0, 3 - NEW.length)), ['zz-e09-r1', 'zz-e09-r2']);
   four.forEach((id) => mark('NEWB', id, true));
   r = Zoco.settleHw(fresh, four);
   ok(fresh.zoco.day.hw === CAPC.hw && fresh.zoco.q.hw.length === 2 && r.got === CAPC.hw, 'four new homeworks in a day: two are paid (cap ' + CAP.hw + '), two wait for tomorrow');
