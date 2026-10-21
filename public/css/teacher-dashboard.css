@@ -1517,3 +1517,110 @@ button.m-emirati-stat.is-tappable small { color: var(--blue-deep); font-weight: 
   .btn, .m-start-tile, .m-start-link, .m-tool, .m-launch-game, .m-gif-tile, .wu-prac-opt, .wu-prac-simcard, .wu-prac-vocabchip { transition: background-color 150ms ease, border-color 150ms ease; }
   .btn:active:not(:disabled), .m-start-tile:active, .wu-prac-opt:active { transform: none; }
 }
+
+/* 🆕 2026-10-21 the words of La Base: a kid's words per experience (profile) and the class's easiest and hardest
+   (Class work → «Words: easiest and hardest»). Pinyin keeps its tone marks: Nunito has them, Noto Sans backs it up. */
+.m-ruta-sub { margin: 2px 0 0; max-width: 80ch; font-weight: 700; font-size: 0.875rem; color: var(--ink-soft); }
+.m-ruta-legend { max-width: 80ch; margin: -6px 0 12px; font-weight: 700; font-size: 0.875rem; color: var(--ink-soft); }
+.m-ruta-legend b { color: var(--ink); }
+.m-wxs { display: grid; gap: 6px; margin-top: 10px; }
+.m-wx { border: 1.5px solid var(--line-2); border-radius: 12px; background: var(--paper); }
+.m-wx[open] { background: var(--paper-hi); border-color: var(--ink); }
+.m-wx-sum, .m-wm-whead {
+  display: grid; align-items: center; gap: 4px 12px; min-height: 48px; padding: 6px 12px;
+  cursor: pointer; list-style: none; border-radius: 11px; font-weight: 800;
+}
+/* a kid's experience: number · name · bar · «8 of 12 marked» · chevron (the chevron always at the right edge) */
+.m-wx-sum { grid-template-columns: 26px minmax(0, 1fr) 72px 9.5em 14px; grid-template-areas: 'n name bar count chev'; }
+.m-wx-sum .m-wx-n, .m-wm-whead .m-wx-n { grid-area: n; }
+.m-wx-name { grid-area: name; }
+.m-wx-sum .m-ruta-bar { grid-area: bar; width: 100%; }
+.m-wx-count { grid-area: count; }
+.m-wx-sum .m-wx-chev, .m-wm-whead .m-wx-chev { grid-area: chev; justify-self: end; }
+/* the class view's experience: number · name · «N kids started…» · chevron, «Hardest: …» under it */
+.m-wm-whead { grid-template-columns: 26px minmax(0, 1fr) auto 14px; grid-template-areas: 'n name meta chev' '. hard hard chev'; }
+.m-wm-wname { grid-area: name; }
+.m-wm-wmeta { grid-area: meta; }
+.m-wm-hardest { grid-area: hard; }
+.m-wx-sum::-webkit-details-marker, .m-wm-whead::-webkit-details-marker { display: none; }
+.m-wx-sum:focus-visible, .m-wm-whead:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+.m-wx-n {
+  flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
+  font-size: 0.8125rem; font-weight: 900; background: var(--sky-2); border: 1.5px solid var(--line-2);
+}
+.m-wx-name, .m-wm-wname { min-width: 0; }
+.m-wx-count { font-size: 0.875rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; text-align: right; }
+.m-wx-count b { color: var(--ink); font-size: 1rem; }
+.m-wx-count.is-full, .m-wx-count.is-full b { color: var(--jade); }
+.m-wx-count.is-none { color: var(--ink-mute); }
+.m-wx-chev { flex: none; width: 10px; height: 10px; border-right: 2.5px solid var(--ink-soft); border-bottom: 2.5px solid var(--ink-soft); transform: rotate(45deg) translateY(-3px); transition: transform 180ms var(--ease-out); }
+details[open] > summary .m-wx-chev { transform: rotate(225deg) translate(-2px, -1px); }
+.m-wx-body { padding: 2px 12px 12px; }
+.m-wx-h { margin: 8px 0 6px; font-weight: 800; font-size: 0.8125rem; color: var(--ink-soft); text-transform: none; }
+.m-wx-h span { display: inline-block; min-width: 22px; padding: 0 6px; margin-left: 2px; border-radius: 999px; background: rgba(29, 36, 64, 0.08); color: var(--ink); text-align: center; font-variant-numeric: tabular-nums; }
+.m-wx-empty, .m-wm-empty { margin: 8px 0; font-weight: 700; color: var(--ink-soft); }
+.m-wchips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.m-wchip {
+  display: inline-flex; align-items: baseline; gap: 6px; padding: 5px 11px; border-radius: 999px;
+  background: rgba(29, 36, 64, 0.06); border: 1.5px solid rgba(29, 36, 64, 0.14); color: var(--ink-soft);
+}
+.m-wchip.is-on { background: var(--mint); border-color: rgba(26, 122, 67, 0.35); color: var(--jade); }
+.m-wchip-py { font-family: 'Nunito', 'Noto Sans', 'Segoe UI', sans-serif; font-weight: 900; font-size: 0.9375rem; color: var(--ink); }
+.m-wchip.is-on .m-wchip-py { color: var(--jade); }
+.m-wchip-tick { margin-right: 3px; font-weight: 900; }
+.m-wchip-es { font-weight: 700; font-size: 0.8125rem; }
+
+/* the class view */
+.m-wm-card { max-width: 900px; }
+.m-wm-levels { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 4px; }
+.m-wm-level {
+  min-height: 44px; padding: 4px 10px; border-radius: 12px; border: 2px solid var(--line-2); background: var(--paper-hi);
+  cursor: pointer; font: inherit;
+}
+.m-wm-level.is-on { border-color: var(--ink); box-shadow: var(--drop-sm); }
+.m-wm-level .m-level-pill { font-size: 0.9375rem; padding: 3px 12px; }
+.m-wm-level:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+.m-wm-legend { margin: 10px 0 0; padding: 10px 12px; border-radius: 12px; background: var(--butter); font-weight: 700; font-size: 0.875rem; color: #5b4300; }
+.m-wm-legend b { color: var(--ink); }
+.m-wm-key { display: inline-block; width: 12px; height: 12px; margin-right: 6px; border-radius: 3px; background: var(--coral); vertical-align: -1px; }
+.m-wm-sum { margin: 14px 0 8px; font-weight: 700; color: var(--ink-soft); }
+.m-wm-sum b { color: var(--ink); }
+.m-wm-worlds { display: grid; gap: 8px; }
+.m-wm-world { border: 2px solid var(--line-2); border-radius: var(--r-card); background: var(--paper-hi); }
+.m-wm-world[open] { border-color: var(--ink); }
+.m-wm-world.is-empty .m-wm-whead { cursor: default; color: var(--ink-mute); }
+.m-wm-wmeta { font-weight: 700; font-size: 0.875rem; color: var(--ink-soft); }
+.m-wm-hardn { color: var(--coral-ink); font-weight: 900; white-space: nowrap; }
+.m-wm-hardest { min-width: 0; font-weight: 700; font-size: 0.8125rem; color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.m-wm-hardest > span:first-child { color: var(--ink-mute); }
+.m-wm-hardest [lang] { font-family: 'Nunito', 'Noto Sans', 'Segoe UI', sans-serif; font-weight: 900; color: var(--ink); }
+.m-wm-world[open] .m-wm-hardest { display: none; }
+.m-wm-rows { list-style: none; margin: 0; padding: 0 12px 10px; }
+.m-wm-row {
+  display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(80px, 1fr) minmax(150px, auto); align-items: center; gap: 4px 14px;
+  min-height: 42px; padding: 4px 2px; border-top: 1px solid var(--line);
+}
+.m-wm-word { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.m-wm-word .m-wchip-es { color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.m-wm-bar { display: block; height: 10px; border-radius: 5px; background: rgba(29, 36, 64, 0.1); overflow: hidden; }
+.m-wm-bar i { display: block; height: 100%; min-width: 4px; border-radius: inherit; }
+.m-wm-row.is-low .m-wm-bar i { background: var(--coral); }
+.m-wm-row.is-mid .m-wm-bar i { background: #e9a91b; }
+.m-wm-row.is-high .m-wm-bar i { background: var(--jade-dot); }
+.m-wm-num { font-weight: 700; font-size: 0.875rem; color: var(--ink-soft); text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.m-wm-row.is-low .m-wm-num b { color: var(--coral-ink); }
+.m-wm-row.is-high .m-wm-num b { color: var(--jade); }
+.m-wm-num b { color: var(--ink); font-weight: 900; }
+.m-ruta-lbl { display: none; }
+@media (max-width: 720px) {
+  .m-ruta-lbl { display: inline; }
+  .m-wx-sum { grid-template-columns: 26px minmax(0, 1fr) 14px; grid-template-areas: 'n name chev' '. count chev' '. bar chev'; gap: 2px 10px; padding: 8px 12px; }
+  .m-wx-count { text-align: left; }
+  .m-wm-whead { grid-template-columns: 26px minmax(0, 1fr) 14px; grid-template-areas: 'n name chev' '. meta chev' '. hard chev'; gap: 2px 10px; padding: 8px 12px; }
+  .m-wm-hardest { white-space: normal; }
+  .m-wm-row { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'word num' 'bar bar'; gap: 2px 10px; padding: 6px 2px 8px; }
+  .m-wm-word { grid-area: word; flex-wrap: wrap; gap: 0 8px; }
+  .m-wm-bar { grid-area: bar; height: 8px; }
+  .m-wm-num { grid-area: num; }
+}
+@media (prefers-reduced-motion: reduce) { .m-wx-chev { transition: none; } }

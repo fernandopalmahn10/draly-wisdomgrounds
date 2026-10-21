@@ -100,7 +100,11 @@ the checklist for any new game mode.
 - **/maestro (remade 2026-10-13, `docs/specs/maestro-remake.md`)** loads only `css/teacher-dashboard.css` (style new
   dashboard parts there; `maestro.css` now serves `host-hsk.html` only). Messages use `notify()` toasts, never
   `alert()`; new windows are `.m-modal` + `.m-modal-card` (Esc, focus and scroll lock come for free); the start
-  actions stay at the top, nothing class-critical goes deeper than 2 taps.
+  actions stay at the top, nothing class-critical goes deeper than 2 taps. **Official tests is the big yellow start
+  tile** (his priority 2026-10-21: "official tests in yellow, the big one… launch a game has the priority and I don't
+  even use it enough"), and **launching a game never asks to pick kids**: a game tile opens its projector at once, like
+  the home screen's games (calling online kids in is an extra, never a required step). Every label a teacher reads says
+  plainly what it means (2026-10-21: «Open their seals», «best 100», «Unlock» were not understood).
 - Question packs follow the curriculum (`core/packs.js` → picker `/packs.html?game=…`): test family → level → world →
   round. Content lives in `core/packs/<level>.js` (words + exam-style items; built into questions by `core/packs.js`).
   Pictures come from Higgsfield (Nano Banana Pro, Unlimited ON) in his Chrome, saved to `assets-library/higgsfield/`,
@@ -380,6 +384,13 @@ the checklist for any new game mode.
   best % per sim) with «Desbloquear» / «Volver a bloquear» per world, all worlds and the Dorado («Volver a bloquear»
   undoes only a teacher's opening: a world the kid's seals opened stays open); the roster shows a thin gold bar of the
   class level's seals (seals count as roster activity). `node scripts/test-ruta-progress.js` (port 4420) must pass.
+  **Words marked, for teachers (his ask 2026-10-21: "which words they mark and which they don't… so that I put more
+  emphasis on that")**: in a kid's profile each experience of La Base folds open to its words (pinyin + Spanish, marked
+  ✓ green / not yet grey; `_rutaAdmin` worlds carry `words: [{ n, py, es, m }]` from `RutaProgress.worldWords`), and
+  /maestro → Class work → «Words: easiest and hardest» (`GET /api/admin/word-marks?level=`, numbers only, no names):
+  per experience, each word with how many of the kids who STARTED that experience (marked at least one of its words)
+  marked it, hardest first; only her own kids (her class codes; super admin: all), never the archive (`listAll`, never
+  `Students.get`). `node scripts/test-word-marks.js` (port 4610) must pass.
 - **Built (phase 4, 2026-10-16): El Entrenamiento.** `core/entrenamiento.js` (worlds, rounds, grading, voice, proofs) +
   `public/js/entrenamiento.js` / `css/entrenamiento.css`, drawn inside La Ruta Dorada's page: `/audios/<level>/entrenamiento`
   (the worlds, the Dorado meter) and `/audios/<level>/entrenamiento/<world>` (start card → round → stars), both behind

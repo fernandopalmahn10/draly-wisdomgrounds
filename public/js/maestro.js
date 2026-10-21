@@ -3728,7 +3728,7 @@
       // 🏆 2026-10-16: La Ruta Dorada of their class level in one thin gold bar under the level (seals in La Base; the
       // El Entrenamiento worlds their seals or a teacher opened, in the tooltip and the row's label)
       const rb = s.rutaBar;
-      const rutaTxt = rb ? 'La Ruta Dorada: ' + rb.sealed + ' of ' + rb.words + ' seals, ' + rb.train + ' of ' + rb.worlds + ' worlds ready for El Entrenamiento' : '';
+      const rutaTxt = rb ? 'La Ruta Dorada: ' + rb.sealed + ' of ' + rb.words + ' words marked, ' + rb.train + ' of ' + rb.worlds + ' experiences open in El Entrenamiento (practice rounds)' : '';
       const rutaBar = rb ? '<span class="m-row-ruta" title="' + escapeHtml(rutaTxt) + '">' + (rb.sealed > 0 && rb.words ? '<i style="width:' + Math.round((rb.sealed / rb.words) * 100) + '%"></i>' : '') + '</span>' : '';
       row.setAttribute('aria-label', name + ', code ' + s.code + ', ' + levelLabel(s.level) + (rutaTxt ? ', ' + rutaTxt : '') + ', '
         + (s.classroomName ? 'class ' + s.classroomName : 'no class') + ', '
@@ -3885,41 +3885,71 @@
     });
   }
   // ── 🏆 2026-10-16 La Ruta Dorada in a kid's profile (server.js _rutaAdmin, core/ruta-progress.js) ───────────────
-  // One card per level (their class level first): is the level open on their account, the «¡Me la sé!» seals per
-  // world, which El Entrenamiento worlds are open (their seals, or a teacher), El Simulacro Dorado under the rule in
-  // force, and their best % per simulation. «Desbloquear» opens a step early; «Volver a bloquear» undoes only what a
-  // teacher opened (a world the kid's own seals opened stays open).
-  const RUTA_VIA = { grandfathered: 'enrolled before the keys', teacher: 'unlocked by a teacher', key: 'key saved on their account' };
+  // One card per level (their class level first): is the level open on their account, the words they marked in La
+  // Base per experience (2026-10-21: each experience folds open to its words, marked ✓ or not yet), which El
+  // Entrenamiento experiences are open (their words, or a teacher), El Simulacro Dorado under the rule in force, and
+  // their best % per simulation. «Open early» opens a step before the kid earns it; «Close again» undoes only what a
+  // teacher opened (an experience the kid's own words opened stays open).
+  // 2026-10-21 (his words: «Open their seals», «best 100», «Unlock» were not understood): every label says plainly
+  // what it means.
+  const RUTA_VIA = { grandfathered: 'enrolled before the level keys', teacher: 'opened early by a teacher', key: 'the level key is saved on their account' };
+  // one word as a chip: pinyin (with its tones) + Spanish; marked = green ✓, not yet = grey (shared with the class view)
+  function wordChip(w, on, extra) {
+    return '<li class="m-wchip' + (on ? ' is-on' : '') + '"><span class="m-wchip-py" lang="zh-Latn">' + (on ? '<span class="m-wchip-tick" aria-hidden="true">✓</span>' : '') +
+      escapeHtml(w.py || '·') + '</span><span class="m-wchip-es">' + escapeHtml(w.es || '') + '</span>' + (extra || '') + '</li>';
+  }
+  // a kid's words in one experience, as a fold: «8 of 12 marked», then the words not marked yet, then the marked ones
+  function kidWorldWordsHtml(L, w) {
+    const words = Array.isArray(w.words) ? w.words : [];
+    const done = words.filter((x) => x.m);
+    const todo = words.filter((x) => !x.m);
+    const all = w.count || words.length;
+    const marked = words.length ? done.length : (w.sealed || 0);
+    const state = marked >= all && all > 0 ? ' is-full' : marked === 0 ? ' is-none' : '';
+    const pctW = all ? Math.round((marked / all) * 100) : 0;
+    const list = (title, arr, on) => (arr.length ? '<p class="m-wx-h">' + title + ' <span>' + arr.length + '</span></p><ul class="m-wchips">' + arr.map((x) => wordChip(x, on)).join('') + '</ul>' : '');
+    return '<details class="m-wx" data-wx="' + escapeHtml(L.id) + '-' + w.n + '">' +
+      '<summary class="m-wx-sum"><span class="m-wx-n" aria-hidden="true">' + w.n + '</span>' +
+        '<span class="m-wx-name">' + escapeHtml(w.name || w.short || ('Experience ' + w.n)) + '<span class="m-sr"> (experience ' + w.n + ')</span></span>' +
+        '<span class="m-ruta-bar' + (marked >= all && all > 0 ? ' is-full' : '') + '" aria-hidden="true"><i style="width:' + pctW + '%"></i></span>' +
+        '<span class="m-wx-count' + state + '"><b>' + marked + '</b> of ' + all + ' marked</span>' +
+        '<span class="m-wx-chev" aria-hidden="true"></span></summary>' +
+      '<div class="m-wx-body">' +
+        (words.length ? list('Not marked yet', todo, false) + list('Marked ✓', done, true)
+          : '<p class="m-wx-empty">The words of this experience could not be read. Try again later.</p>') +
+      '</div></details>';
+  }
   function rutaLevelHtml(L, S) {
     const name = escapeHtml(L.name);
     const pct = (a, b) => (b ? Math.round((a / b) * 100) : 0);
-    const btn = (label, attrs, kind) => '<button class="btn btn-sm ' + (kind || 'btn-ghost') + ' m-ruta-btn" type="button" ' + attrs + '>' + label + '</button>';
+    const btn = (label, attrs, kind, tip) => '<button class="btn btn-sm ' + (kind || 'btn-ghost') + ' m-ruta-btn" type="button" ' + attrs + (tip ? ' title="' + escapeHtml(tip) + '"' : '') + '>' + label + '</button>';
     const access = L.open
       ? '<span class="m-ruta-access is-open">🔓 Open · ' + escapeHtml(RUTA_VIA[L.via] || 'open') + '</span>'
-      : '<span class="m-ruta-access">🔒 Needs the ' + name + ' key</span>' + btn('🔓 Desbloquear ' + name, 'data-ruta-act="level"', 'btn-gold');
-    // 🎯 phase 4: their best % in each world of El Entrenamiento (gold once it reaches the Dorado's %)
+      : '<span class="m-ruta-access">🔒 Locked · needs the ' + name + ' key</span>' + btn('🔓 Open ' + name + ' early', 'data-ruta-act="level"', 'btn-gold', 'Opens La Base, El Entrenamiento and El Simulacro Dorado of ' + L.name + ' for this kid, without the level key');
+    // 🎯 phase 4: their best round in each experience of El Entrenamiento (green once it reaches the Dorado's %)
     const need = (S && S.doradoPct) || (L.dorado && L.dorado.pct) || 70;
-    const pctPill = (p) => (p == null ? '<span class="m-ruta-pct is-none">not practised</span>'
-      : '<span class="m-ruta-pct' + (p >= need ? ' is-ok' : '') + '">best ' + p + ' %</span>');
+    const pctPill = (p) => (p == null ? '<span class="m-ruta-pct is-none">no rounds yet</span>'
+      : '<span class="m-ruta-pct' + (p >= need ? ' is-ok' : '') + '">Best round: ' + p + ' %</span>');
     const rows = (L.worlds || []).map((w) => {
       const state = w.train
-        ? '<span class="m-ruta-train is-open">' + (w.via === 'seals' ? '✓ Open · their seals' : '🔓 Open · a teacher') + '</span>' + pctPill(w.practiced)
-        : '<span class="m-ruta-train">Closed</span>' + (w.practiced != null ? pctPill(w.practiced) : '');
+        ? '<span class="m-ruta-train is-open">' + (w.via === 'seals' ? '✓ Opened by their words' : '🔓 Opened early by a teacher') + '</span>' + pctPill(w.practiced)
+        : '<span class="m-ruta-train" title="Opens when the kid marks every word of this experience in La Base">Not open yet</span>' + (w.practiced != null ? pctPill(w.practiced) : '');
+      const wn = escapeHtml(w.name || w.short || ('Experience ' + w.n));
       const act = w.teacher
-        ? btn('Volver a bloquear', 'data-ruta-act="lock" data-step="train" data-world="' + w.n + '" aria-label="Volver a bloquear el mundo ' + w.n + ' de ' + name + '"')
-        : (!w.train ? btn('Desbloquear', 'data-ruta-act="unlock" data-step="train" data-world="' + w.n + '" aria-label="Desbloquear el mundo ' + w.n + ' de ' + name + '"') : '');
+        ? btn('Close again', 'data-ruta-act="lock" data-step="train" data-world="' + w.n + '" aria-label="Close again: ' + wn + ' in El Entrenamiento of ' + name + '"', '', 'Undo the teacher\'s opening (it stays open if the kid marked all its words)')
+        : (!w.train ? btn('Open early', 'data-ruta-act="unlock" data-step="train" data-world="' + w.n + '" aria-label="Open early: ' + wn + ' in El Entrenamiento of ' + name + '"', '', 'Lets this kid practise this experience before marking all its words') : '');
       return '<div class="m-ruta-tr" role="row">' +
-        '<span class="m-ruta-w" role="cell"><b>' + w.n + '</b><span>' + escapeHtml(w.name || w.short || ('World ' + w.n)) + '</span></span>' +
+        '<span class="m-ruta-w" role="cell"><b>' + w.n + '</b><span>' + wn + '</span></span>' +
         '<span class="m-ruta-seals" role="cell"><span class="m-ruta-bar' + (w.sealed >= w.count ? ' is-full' : '') + '" aria-hidden="true"><i style="width:' + pct(w.sealed, w.count) + '%"></i></span>' +
-          '<span class="m-ruta-num">' + w.sealed + '/' + w.count + '</span></span>' +
+          '<span class="m-ruta-num">' + w.sealed + ' of ' + w.count + '<span class="m-ruta-lbl"> words marked</span></span></span>' +
         '<span class="m-ruta-tcell" role="cell">' + state + '</span>' +
         '<span class="m-ruta-act" role="cell">' + act + '</span></div>';
     }).join('');
-    // the extra practice worlds (Pinyin básico, the Simulacro del examen): shown, never counted for the Dorado
+    // the extra practice rounds (Pinyin básico, the Simulacro del examen): shown, never counted for the Dorado
     const extraRows = (L.extra || []).map((x) => '<div class="m-ruta-tr is-extra" role="row">' +
       '<span class="m-ruta-w" role="cell"><b>' + (x.key === 'pinyin' ? 'Aa' : '★') + '</b><span>' + escapeHtml(x.name) + '</span></span>' +
       '<span class="m-ruta-seals" role="cell"><span class="m-ruta-num">—</span></span>' +
-      '<span class="m-ruta-tcell" role="cell"><span class="m-ruta-train">' + (x.key === 'pinyin' ? 'Open from the start' : 'Opens with every world') + '</span>' + pctPill(x.best) + '</span>' +
+      '<span class="m-ruta-tcell" role="cell"><span class="m-ruta-train">' + (x.key === 'pinyin' ? 'Open from the start' : 'Opens when every experience is open') + '</span>' + pctPill(x.best) + '</span>' +
       '<span class="m-ruta-act" role="cell"></span></div>').join('');
     const T = L.train || { open: 0, of: 0 };
     const anyTeacher = (L.worlds || []).some((w) => w.teacher);
@@ -3927,21 +3957,21 @@
     const D = L.dorado || {};
     const practisedOk = (L.worlds || []).filter((w) => w.practiced != null && w.practiced >= need).length;
     let dStatus;
-    if (D.rule === 'key') dStatus = L.open ? 'Open with the key (El Entrenamiento is switched off in Teachers)' : 'Locked: needs the ' + L.name + ' key';
+    if (D.rule === 'key') dStatus = L.open ? 'Open: the level key is enough (the practice rule is switched off in Teachers)' : 'Locked: needs the ' + L.name + ' key';
     else if (!L.open) dStatus = 'Locked: needs the ' + L.name + ' key';
     else if (D.open) {
-      dStatus = D.via === 'teacher' ? 'Open · unlocked by a teacher'
-        : D.via === 'taken' ? 'Open · they took a simulation before El Entrenamiento went live'
-        : 'Open · every world practised with ' + D.pct + ' % or more';
-    } else dStatus = 'Closed · ' + (D.practiced || 0) + ' of ' + D.of + ' worlds practised with ' + D.pct + ' % or more';
-    // (while the key rule is in force, «Desbloquear» only matters later: say so, before and after)
+      dStatus = D.via === 'teacher' ? 'Open · opened early by a teacher'
+        : D.via === 'taken' ? 'Open · they took a simulation before the practice rule started'
+        : 'Open · every experience practised with ' + D.pct + ' % or more';
+    } else dStatus = 'Not open yet · ' + (D.practiced || 0) + ' of ' + D.of + ' experiences practised with ' + D.pct + ' % or more (it opens when all are)';
+    // (while the key rule is in force, «Open early» only matters later: say so, before and after)
     const dNote = D.rule !== 'key' || !L.open ? ''
-      : ' <span class="m-ruta-note">' + (D.teacher ? 'Unlocked by a teacher too: it counts when El Entrenamiento is on.'
-        : '«Desbloquear» keeps it open for this kid when El Entrenamiento is on.') + '</span>';
+      : ' <span class="m-ruta-note">' + (D.teacher ? 'A teacher opened it early too: that counts once the practice rule is on.'
+        : '«Open early» keeps it open for this kid once the practice rule is on.') + '</span>';
     // 📖 phase 5: per simulation taken, the latest try's mistakes and «Ver su libro» (that kid's golden book, mistakes
     // first; the link opens only on a teacher's device, server.js /api/golden)
     const sims = (L.sims || []).map((s) => '<li class="m-ruta-sim' + (s.best == null ? '' : s.best >= 60 ? ' is-pass' : ' is-low') + '"><b>Sim ' + s.n + '</b>' +
-      (s.best == null ? '<span>not taken</span>' : '<span>best ' + s.best + ' % · ' + s.tries + (s.tries === 1 ? ' try' : ' tries') + '</span>') +
+      (s.best == null ? '<span>not taken yet</span>' : '<span>best score ' + s.best + ' % · ' + s.tries + (s.tries === 1 ? ' try' : ' tries') + '</span>') +
       (s.mistakes != null ? '<span class="m-ruta-miss' + (s.mistakes === 0 ? ' is-zero' : '') + '">' + (s.mistakes === 0 ? 'no mistakes' : s.mistakes + (s.mistakes === 1 ? ' mistake' : ' mistakes')) + ' (last try)</span>' : '') +
       (s.book ? '<a class="m-ruta-book" href="' + escapeHtml(s.book) + '" target="_blank" rel="noopener" aria-label="Ver su libro: Simulacro ' + s.n + ' de ' + name + '">📖 Ver su libro</a>' : '') +
       '</li>').join('');
@@ -3952,23 +3982,26 @@
       '</div>' +
       '<div class="m-ruta-steps">' +
         '<div class="m-ruta-step"><span class="m-ruta-step-n" aria-hidden="true">1</span><div class="m-ruta-step-body">' +
-          '<div class="m-ruta-step-title">La Base <span class="m-ruta-big">' + L.sealed + '<small> / ' + L.words + ' seals</small></span></div>' +
-          '<span class="m-ruta-bar is-wide' + (L.sealed >= L.words ? ' is-full' : '') + '" aria-hidden="true"><i style="width:' + pct(L.sealed, L.words) + '%"></i></span></div></div>' +
+          '<div class="m-ruta-step-title">La Base: words marked <span class="m-ruta-big">' + L.sealed + '<small> of ' + L.words + '</small></span></div>' +
+          '<p class="m-ruta-sub">The kid taps «¡Me la sé!» on each word they feel they know. Open an experience to see which words.</p>' +
+          '<span class="m-ruta-bar is-wide' + (L.sealed >= L.words ? ' is-full' : '') + '" aria-hidden="true"><i style="width:' + pct(L.sealed, L.words) + '%"></i></span>' +
+          '<div class="m-wxs">' + (L.worlds || []).map((w) => kidWorldWordsHtml(L, w)).join('') + '</div></div></div>' +
         '<div class="m-ruta-step"><span class="m-ruta-step-n" aria-hidden="true">2</span><div class="m-ruta-step-body">' +
-          '<div class="m-ruta-step-title">El Entrenamiento <span class="m-ruta-big">' + T.open + '<small> of ' + T.of + ' worlds open</small></span>' +
-            '<span class="m-ruta-big">' + practisedOk + '<small> of ' + T.of + ' with ' + need + ' %</small></span>' +
+          '<div class="m-ruta-step-title">El Entrenamiento (practice rounds) <span class="m-ruta-big">' + T.open + '<small> of ' + T.of + ' experiences open</small></span>' +
+            '<span class="m-ruta-big">' + practisedOk + '<small> of ' + T.of + ' with ' + need + ' % or more</small></span>' +
             '<span class="m-ruta-step-acts">' +
-              (!allOpen ? btn('Desbloquear todos', 'data-ruta-act="unlock" data-step="train" data-world="all" aria-label="Desbloquear todos los mundos de El Entrenamiento de ' + name + '"') : '') +
-              (anyTeacher ? btn('Volver a bloquear todos', 'data-ruta-act="lock" data-step="train" data-world="all" aria-label="Volver a bloquear lo que un maestro abrió en El Entrenamiento de ' + name + '"') : '') +
+              (!allOpen ? btn('Open all early', 'data-ruta-act="unlock" data-step="train" data-world="all" aria-label="Open early every experience of El Entrenamiento of ' + name + '"', '', 'Lets this kid practise every experience now') : '') +
+              (anyTeacher ? btn('Close all again', 'data-ruta-act="lock" data-step="train" data-world="all" aria-label="Close again what a teacher opened in El Entrenamiento of ' + name + '"', '', 'Undo every teacher opening (experiences opened by their words stay open)') : '') +
             '</span></div>' +
-          '<div class="m-ruta-table" role="table" aria-label="' + name + ': worlds">' +
-            '<div class="m-ruta-tr m-ruta-th" role="row"><span role="columnheader">World</span><span role="columnheader">La Base seals</span><span role="columnheader">El Entrenamiento</span><span role="columnheader"><span class="m-sr">Action</span></span></div>' +
+          '<p class="m-ruta-sub">Each experience opens by itself once the kid marks all its words. «Open early» lets them practise before that.</p>' +
+          '<div class="m-ruta-table" role="table" aria-label="' + name + ': experiences">' +
+            '<div class="m-ruta-tr m-ruta-th" role="row"><span role="columnheader">Experience</span><span role="columnheader">Words marked</span><span role="columnheader">Practice rounds</span><span role="columnheader"><span class="m-sr">Action</span></span></div>' +
             rows + extraRows + '</div></div></div>' +
         '<div class="m-ruta-step"><span class="m-ruta-step-n" aria-hidden="true">3</span><div class="m-ruta-step-body">' +
-          '<div class="m-ruta-step-title">El Simulacro Dorado' +
+          '<div class="m-ruta-step-title">El Simulacro Dorado (the exam simulations)' +
             '<span class="m-ruta-step-acts">' + (D.teacher
-              ? btn('Volver a bloquear', 'data-ruta-act="lock" data-step="dorado" aria-label="Volver a bloquear El Simulacro Dorado de ' + name + '"')
-              : btn('Desbloquear', 'data-ruta-act="unlock" data-step="dorado" aria-label="Desbloquear El Simulacro Dorado de ' + name + '"')) + '</span></div>' +
+              ? btn('Close again', 'data-ruta-act="lock" data-step="dorado" aria-label="Close again El Simulacro Dorado of ' + name + '"', '', 'Undo the teacher\'s opening')
+              : btn('Open early', 'data-ruta-act="unlock" data-step="dorado" aria-label="Open early El Simulacro Dorado of ' + name + '"', '', 'Opens the exam simulations for this kid before they practise every experience')) + '</span></div>' +
           '<p class="m-ruta-dstatus' + (L.open && (D.rule === 'key' || D.open) ? ' is-open' : '') + '">' + escapeHtml(dStatus) + dNote + '</p>' +
           (sims ? '<ul class="m-ruta-sims" aria-label="' + name + ': best score per simulation">' + sims + '</ul>' : '') +
         '</div></div>' +
@@ -3978,11 +4011,16 @@
     const R = data.ruta || { levels: [] };
     const S = R.settings || {};
     const rule = S.trainingLive
-      ? 'El Entrenamiento opens world by world with the kid\'s La Base seals. El Simulacro Dorado opens when every world is practised with ' + S.doradoPct +
-        ' % or more (kids who took a simulation before El Entrenamiento went live keep it open).'
-      : 'El Entrenamiento opens world by world with the kid\'s La Base seals. El Simulacro Dorado opens with the key (the rule is switched off in Teachers).';
+      ? 'Three steps: La Base (the kid marks the words they know), El Entrenamiento (practice rounds: an experience opens once all its words are marked) and El Simulacro Dorado (the exam simulations: open once every experience is practised with ' + S.doradoPct +
+        ' % or more; kids who took a simulation before this rule started keep it open).'
+      : 'Three steps: La Base (the kid marks the words they know), El Entrenamiento (practice rounds: an experience opens once all its words are marked) and El Simulacro Dorado (the exam simulations: open with the level key, the practice rule is switched off in Teachers).';
+    // the experiences the teacher had open stay open after a change (the card is drawn again)
+    const openFolds = new Set(Array.from(wrap.querySelectorAll('details.m-wx[open]')).map((d) => d.dataset.wx));
     wrap.innerHTML = '<h3 class="m-section-title" id="m-ruta-title">🏆 La Ruta Dorada</h3>' +
-      '<p class="m-ruta-rule">' + escapeHtml(rule) + '</p>' + R.levels.map((L) => rutaLevelHtml(L, S)).join('');
+      '<p class="m-ruta-rule">' + escapeHtml(rule) + '</p>' +
+      '<p class="m-ruta-legend"><b>Open early</b> = opens a step for this kid before they earn it. <b>Close again</b> = undoes only what a teacher opened.</p>' +
+      R.levels.map((L) => rutaLevelHtml(L, S)).join('');
+    wrap.querySelectorAll('details.m-wx').forEach((d) => { if (openFolds.has(d.dataset.wx)) d.open = true; });
     if (wrap.dataset.wired) return;
     wrap.dataset.wired = '1';
     wrap.addEventListener('click', (e) => {
@@ -4004,7 +4042,7 @@
             $('m-detail-key').classList.toggle('is-open', !!r.levelKey.open);
           }
           renderRuta(wrap, data);
-          // the focus stays where the teacher was: the same world's or step's button (now «Volver a bloquear» or «Desbloquear»), else the level's title
+          // the focus stays where the teacher was: the same experience's or step's button (now «Close again» or «Open early»), else the level's title
           const again = Array.from(wrap.querySelectorAll('[data-ruta-act]')).find((x) => {
             const c = x.closest('[data-level]');
             return [c ? c.dataset.level : '', x.dataset.rutaAct === 'level' ? 'level' : 'step', x.dataset.step || '', x.dataset.world || ''].join('|') === key;
@@ -4013,22 +4051,104 @@
           const target = again || (lvlCard && lvlCard.querySelector('.m-ruta-name'));
           if (target) { try { target.focus({ preventScroll: true }); } catch (_) {} }
           const who = data.displayName || data.code;
-          const what = act === 'level' ? 'La Ruta Dorada open' : (payload.step === 'dorado' ? 'El Simulacro Dorado' : (payload.world === 'all' ? 'El Entrenamiento, every world' : 'El Entrenamiento, world ' + payload.world));
-          notify('✓ ' + who + ': ' + what + (act === 'lock' ? ' locked again' : act === 'level' ? '' : ' unlocked') + '. Their phone shows it next time La Ruta Dorada opens.');
+          const what = act === 'level' ? 'La Ruta Dorada open' : (payload.step === 'dorado' ? 'El Simulacro Dorado' : (payload.world === 'all' ? 'El Entrenamiento, every experience' : 'El Entrenamiento, experience ' + payload.world));
+          notify('✓ ' + who + ': ' + what + (act === 'lock' ? ' closed again' : act === 'level' ? '' : ' opened early') + '. Their phone shows it next time La Ruta Dorada opens.');
         }).catch(() => { b.disabled = false; notify('Network error'); });
     });
   }
-  // 🔑 2026-10-15 La Ruta Dorada: is this kid's level open on their account (any phone)? «Desbloquear» opens it.
+  // 🔑 2026-10-15 La Ruta Dorada: is this kid's level open on their account (any phone)? «Open early» opens it.
   function levelKeyLine(lk) {
     if (!lk || !lk.level) return '🔑 La Ruta Dorada: no level yet (the kid has not entered a class code)';
     const name = escapeHtml(lk.levelName || levelLabel(lk.level));
     if (lk.open) {
-      const how = lk.via === 'grandfathered' ? 'enrolled before the keys' : lk.via === 'teacher' ? 'unlocked by a teacher' : 'key saved on their account';
+      const how = lk.via === 'grandfathered' ? 'enrolled before the level keys' : lk.via === 'teacher' ? 'opened early by a teacher' : 'the level key is saved on their account';
       return '🔓 La Ruta Dorada ' + name + ': <b>open</b> · ' + how;
     }
     return '🔒 La Ruta Dorada ' + name + ': <b>locked</b> (needs the ' + name + ' key) ' +
-      '<button class="btn btn-gold btn-sm" id="m-detail-unlock" type="button" title="Open La Base, El Entrenamiento and El Simulacro Dorado for this kid on every phone">🔓 Desbloquear</button>';
+      '<button class="btn btn-gold btn-sm" id="m-detail-unlock" type="button" title="Opens La Base, El Entrenamiento and El Simulacro Dorado for this kid on every phone, without the level key">🔓 Open early</button>';
   }
+  // ── 📊 2026-10-21 «Words: easiest and hardest» (Class work; server.js GET /api/admin/word-marks) ───────────────────
+  // His ask: which words the kids mark in La Base («¡Me la sé!») and which they don't, to put more emphasis on the hard
+  // ones. Pick a level (her own; the super admin: every level) → per experience, each word with how many of the kids
+  // who started that experience marked it, hardest first. Numbers only: no kid names here.
+  function wordMarksOpen(levelId) {
+    let overlay = $('m-wm-modal');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.className = 'm-modal hidden';
+      overlay.id = 'm-wm-modal';
+      overlay.innerHTML = '<div class="m-modal-card m-modal-card--wide m-wm-card">' +
+        '<button class="m-modal-close" type="button" aria-label="Close">✕</button>' +
+        '<h2>📊 Words: easiest and hardest</h2>' +
+        '<p class="m-modal-sub">Which words your kids mark as known in La Base («¡Me la sé!») and which they don\'t yet. Hardest first.</p>' +
+        '<div class="m-wm-levels" id="m-wm-levels" role="group" aria-label="Level"></div>' +
+        '<p class="m-wm-legend"><span class="m-wm-key is-low" aria-hidden="true"></span><b>Few kids marked it</b> = they don\'t feel they know it yet: practise these. ' +
+          'An experience counts only the kids who started it (marked at least one of its words).</p>' +
+        '<div class="m-wm-body" id="m-wm-body" aria-live="polite"></div></div>';
+      document.body.appendChild(overlay);
+      const close = () => overlay.classList.add('hidden');
+      overlay.querySelector('.m-modal-close').addEventListener('click', close);
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) { close(); return; }
+        const b = e.target.closest('[data-wm-level]');
+        if (b && !b.classList.contains('is-on')) wordMarksLoad(b.dataset.wmLevel);
+      });
+    }
+    overlay.classList.remove('hidden');
+    wordMarksLoad(levelId || overlay.dataset.level || '');
+  }
+  let _wmReq = 0;
+  function wordMarksLoad(levelId) {
+    const body = $('m-wm-body');
+    const levels = $('m-wm-levels');
+    if (!body) return;
+    const my = ++_wmReq;
+    body.innerHTML = '<p class="m-wm-empty">Loading…</p>';
+    levels.querySelectorAll('[data-wm-level]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.wmLevel === levelId)));
+    adminFetch('/api/admin/word-marks' + (levelId ? '?level=' + encodeURIComponent(levelId) : ''), pw)
+      .then((r) => r.json().catch(() => null))
+      .then((d) => {
+        if (my !== _wmReq) return;
+        if (!d || !d.ok) { body.innerHTML = '<p class="m-wm-empty">Could not load the words: ' + escapeHtml((d && d.error) || 'unknown error') + '. Try again.</p>'; return; }
+        $('m-wm-modal').dataset.level = d.level || '';
+        levels.innerHTML = (d.levels || []).map((l) => '<button class="m-wm-level' + (l.id === d.level ? ' is-on' : '') + '" type="button" data-wm-level="' + escapeHtml(l.id) + '" aria-pressed="' + (l.id === d.level) + '">' +
+          '<span class="m-level-pill is-' + escapeHtml(l.id) + '">' + escapeHtml(l.name) + '</span></button>').join('');
+        levels.classList.toggle('hidden', (d.levels || []).length < 2);
+        if (!d.level) { body.innerHTML = '<p class="m-wm-empty">None of your classes has a level with La Base yet.</p>'; return; }
+        body.innerHTML = wordMarksHtml(d);
+      })
+      .catch(() => { if (my === _wmReq) body.innerHTML = '<p class="m-wm-empty">Network error. Check the connection and try again.</p>'; });
+  }
+  function wordMarksHtml(d) {
+    const tone = (p) => (p >= 80 ? 'is-high' : p >= 50 ? 'is-mid' : 'is-low');
+    const sum = '<p class="m-wm-sum"><b>' + d.kids + (d.kids === 1 ? ' kid has' : ' kids have') + '</b> marked words in ' + escapeHtml(d.name) + ' La Base' +
+      (d.classKids ? ' <span>(' + d.classKids + (d.classKids === 1 ? ' kid is' : ' kids are') + ' in your ' + escapeHtml(d.name) + ' classes)</span>' : '') + '.</p>';
+    if (!d.kids) return sum + '<p class="m-wm-empty">No marks yet. When kids tap «¡Me la sé!» on the words they know in La Base, the easiest and hardest words show up here.</p>';
+    const worlds = (d.worlds || []).map((w) => {
+      const name = escapeHtml(w.name || w.short || ('Experience ' + w.n));
+      if (!w.started) {
+        return '<div class="m-wm-world is-empty"><div class="m-wm-whead"><span class="m-wx-n" aria-hidden="true">' + w.n + '</span><span class="m-wm-wname">' + name + '</span>' +
+          '<span class="m-wm-wmeta">no kid has started it yet</span></div></div>';
+      }
+      const words = (w.words || []).map((x) => Object.assign({ p: Math.round((x.marked / w.started) * 100) }, x))
+        .sort((a, b) => a.p - b.p || a.n - b.n);
+      const hard = words.filter((x) => x.p < 50).length;
+      const rows = words.map((x) => '<li class="m-wm-row ' + tone(x.p) + '">' +
+        '<span class="m-wm-word"><span class="m-wchip-py" lang="zh-Latn">' + escapeHtml(x.py || '·') + '</span><span class="m-wchip-es">' + escapeHtml(x.es || '') + '</span></span>' +
+        '<span class="m-wm-bar" aria-hidden="true"><i style="width:' + x.p + '%"></i></span>' +
+        '<span class="m-wm-num">' + x.marked + ' of ' + w.started + ' kids · <b>' + x.p + ' %</b></span></li>').join('');
+      const preview = words.slice(0, 3).map((x) => escapeHtml(x.py)).join(', ');
+      return '<details class="m-wm-world">' +
+        '<summary class="m-wm-whead"><span class="m-wx-n" aria-hidden="true">' + w.n + '</span><span class="m-wm-wname">' + name + '<span class="m-sr"> (experience ' + w.n + ')</span></span>' +
+          '<span class="m-wm-wmeta">' + w.started + (w.started === 1 ? ' kid started' : ' kids started') + ' · ' + w.all + ' marked every word' +
+          (hard ? ' · <b class="m-wm-hardn">' + hard + (hard === 1 ? ' hard word' : ' hard words') + '</b>' : '') + '</span>' +
+          '<span class="m-wm-hardest"><span>Hardest:</span> <span lang="zh-Latn">' + preview + '</span></span>' +
+          '<span class="m-wx-chev" aria-hidden="true"></span></summary>' +
+        '<ol class="m-wm-rows">' + rows + '</ol></details>';
+    }).join('');
+    return sum + '<div class="m-wm-worlds">' + worlds + '</div>';
+  }
+  if ($('m-words-btn')) $('m-words-btn').addEventListener('click', () => wordMarksOpen());
   function renderDetail(data) {
     // a profile opened from Classrooms or Online now while the Teachers tab is showing: bring the Students tab back
     if ($('m-tabpanel-students').classList.contains('hidden')) {
@@ -4111,14 +4231,14 @@
       if (r.top < bar || r.top > window.innerHeight * 0.45) window.scrollTo({ top: Math.max(0, r.top + window.scrollY - bar - 12) });
       setTimeout(() => { try { $('m-detail-back').focus({ preventScroll: true }); } catch (_) {} }, 0);
     }
-    // 🔑 «Desbloquear»: this kid's level opens on their account (their next /homework login opens it on any phone)
+    // 🔑 «Open early»: this kid's level opens on their account (their next /homework login opens it on any phone)
     const unlockBtn = $('m-detail-unlock');
     if (unlockBtn) unlockBtn.addEventListener('click', () => {
       unlockBtn.disabled = true;
       adminFetch('/api/admin/student/' + encodeURIComponent(data.code) + '/level-access', pw, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}),
       }).then((r) => r.json()).then((r) => {
-        if (!r || !r.ok) { unlockBtn.disabled = false; notify('Could not unlock: ' + ((r && r.error) || 'unknown error')); return; }
+        if (!r || !r.ok) { unlockBtn.disabled = false; notify('Could not open it: ' + ((r && r.error) || 'unknown error')); return; }
         const line = $('m-detail-key');
         if (line) { line.innerHTML = levelKeyLine(r.levelKey); line.classList.add('is-open'); }
         const rw = $('m-ruta');

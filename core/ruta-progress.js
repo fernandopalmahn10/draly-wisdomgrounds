@@ -158,8 +158,15 @@ function bases() {
     if (!l.base) return;
     const b = cat.find((x) => x && x.id === l.base);
     if (!b || !(Number(b.words) > 0) || !Array.isArray(b.worlds)) return;
-    let named = [];
-    try { named = JSON.parse(fs.readFileSync(path.join(BASE_DIR, b.id, 'base.json'), 'utf8')).worlds || []; } catch (_) { /* names are a nicety */ }
+    let named = [], list = [];
+    try {
+      const bj = JSON.parse(fs.readFileSync(path.join(BASE_DIR, b.id, 'base.json'), 'utf8'));
+      named = bj.worlds || [];
+      // 🆕 2026-10-21 (/maestro «Words: easiest and hardest» + a kid's words per experience): each word's number,
+      // pinyin and Spanish (no hanzi, no files): what a teacher reads
+      list = (Array.isArray(bj.words) ? bj.words : []).filter((w) => w && Number(w.n) > 0)
+        .map((w) => ({ n: Number(w.n), py: String(w.py || ''), es: String(w.es || '') }));
+    } catch (_) { /* names are a nicety */ }
     let next = 1;
     const worlds = b.worlds.map((w) => {
       const first = Number(w.first) || next;
@@ -168,12 +175,22 @@ function bases() {
       const nm = named.find((x) => x && x.n === w.n) || {};
       return { n: Number(w.n), first, count, name: String(nm.name || ''), short: String(nm.short || nm.name || '') };
     }).filter((w) => w.n > 0 && w.count > 0);
-    out[l.id] = { id: b.id, level: l.id, words: Number(b.words), worlds };
+    out[l.id] = { id: b.id, level: l.id, words: Number(b.words), worlds, list: list.filter((w) => w.n <= Number(b.words)) };
   });
   _bases = out;
   return _bases;
 }
 const baseOf = (level) => bases()[Levels.normalize(level)] || null;
+// the base's words of one world, by number: [{ n, py, es }] (empty when the base.json can't be read)
+function worldWords(level, world) {
+  const b = baseOf(level);
+  const w = b && b.worlds.find((x) => x.n === Number(world));
+  if (!w) return [];
+  const byN = new Map((b.list || []).map((x) => [x.n, x]));
+  const out = [];
+  for (let n = w.first; n < w.first + w.count; n++) out.push(byN.get(n) || { n, py: '', es: '' });
+  return out;
+}
 
 // ── the seals as ranges: {1,2,3,5} ⇄ '1-3,5' ─────────────────────────────────────────────────────────────────────
 function encodeSeals(set) {
@@ -374,7 +391,7 @@ function recordPractice(code, level, world, pct) {
 module.exports = {
   DEFAULTS, SETTINGS_FILE, PCT_MIN, PCT_MAX, EXTRA_WORLDS,
   loadSettings, getSettings, setSettings,
-  bases, baseOf, encodeSeals, decodeSeals,
+  bases, baseOf, worldWords, encodeSeals, decodeSeals,
   entryOf, sealsOf, hasAny, state, simTakenBefore,
   trainWorldOpen, doradoOpen,
   applySeals, setTeacherUnlock, recordPractice,

@@ -1878,6 +1878,10 @@ function _rutaAdmin(rec) {
     .map((l) => {
       const s = RutaProgress.state(rec, l.id);
       const via = LevelKeys.recordOpenVia(rec, l.id);
+      // 🆕 2026-10-21: each experience's words (pinyin + Spanish) and whether this kid marked it («¡Me la sé!»)
+      const sealed = RutaProgress.sealsOf(rec, l.id);
+      const worlds = s.worlds.map((w) => Object.assign({}, w, {
+        words: RutaProgress.worldWords(l.id, w.n).map((x) => ({ n: x.n, py: x.py, es: x.es, m: sealed.has(x.n) ? 1 : 0 })) }));
       // 🎯 phase 4: El Entrenamiento's extra worlds (Pinyin básico, Simulacro del examen) with the kid's best %: shown,
       // never counted for the Dorado (the regular worlds' best % is `practiced` in each world)
       const extra = (Train.worldsOf(l.id) || []).filter((w) => w.kind !== 'world')
@@ -1888,7 +1892,7 @@ function _rutaAdmin(rec) {
       let link = null;
       return {
         id: l.id, name: l.name, own: l.id === own, open: !!via, via: via || null,
-        words: s.words, sealed: s.sealed, worlds: s.worlds, train: s.train, dorado: s.dorado, extra,
+        words: s.words, sealed: s.sealed, worlds, train: s.train, dorado: s.dorado, extra,
         sims: _rutaSimsOf(l.id).map((x) => {
           const mine = tries.filter((t) => t && t.simId === x.id);
           const best = mine.reduce((m, t) => Math.max(m, Number(t.percent) || 0), -1);
@@ -1908,6 +1912,52 @@ function _rutaBar(s) {
   if (!st) return null;
   return { level: lvl, sealed: st.sealed, words: st.words, train: st.train.open, worlds: st.train.of };
 }
+// ── 🆕 2026-10-21 «Words: easiest and hardest» (/maestro → Class work) ──────────────────────────────────────────────
+// His ask: which words the kids mark («¡Me la sé!» in La Base) and which they don't, to know what to put more emphasis
+// on. Per experience (world) of the level's La Base: each word with how many of the kids who STARTED that experience
+// (marked at least one of its words) marked it; a kid who hasn't reached an experience says nothing about its words.
+// Only the teacher's own kids (her class codes; the super admin: everyone), never the archive (Students.listAll holds
+// the live accounts only; Students.get would bring an archived kid back). Numbers only: no names, no codes, no log line.
+// GET ?level=<id> (optional; default: the level where most of her kids marked words) → { levels: [{ id, name }], level, name,
+//   kids, classKids, worlds: [{ n, name, short, count, started, all, words: [{ n, py, es, marked }] }] }
+app.get('/api/admin/word-marks', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  const mine = session.isSuperAdmin || !session.teacher ? null : new Set(session.teacher.accessCodes || []);
+  const kids = Students.listAll().filter((s) => !mine || (s.classroomCode && mine.has(s.classroomCode)));
+  // the levels to pick from: her class codes' levels + any level her kids have marks in (super admin: every level)
+  const ids = new Set();
+  if (!mine) Levels.LEVELS.forEach((l) => ids.add(l.id));
+  else {
+    const cl = (session.teacher.codeLevels && typeof session.teacher.codeLevels === 'object') ? session.teacher.codeLevels : {};
+    (session.teacher.accessCodes || []).forEach((c) => ids.add(Levels.normalize(cl[c]) || Levels.DEFAULT));
+    kids.forEach((s) => { if (s.ruta && typeof s.ruta === 'object') Object.keys(s.ruta).forEach((k) => { const n = Levels.normalize(k); if (n) ids.add(n); }); });
+  }
+  const levels = Levels.LEVELS.filter((l) => ids.has(l.id) && RutaProgress.baseOf(l.id)).map((l) => ({ id: l.id, name: l.name }));
+  const asked = req.query.level == null || req.query.level === '' ? null : Levels.normalize(String(req.query.level).slice(0, 20));
+  if (req.query.level && !asked) return res.status(400).json({ ok: false, error: 'unknown level' });
+  if (!levels.length) return res.json({ ok: true, levels: [], level: null, kids: 0, classKids: 0, worlds: [] });
+  if (asked && !levels.some((l) => l.id === asked)) return res.status(403).json({ ok: false, error: 'not one of your levels' });
+  const marksIn = (id) => kids.map((s) => RutaProgress.sealsOf({ ruta: s.ruta }, id)).filter((set) => set.size > 0);
+  // not asked: the level where most of her kids have marked words (the first of her levels when none has any)
+  let lvl = asked, marks = asked ? marksIn(asked) : null;
+  if (!lvl) levels.forEach((l) => { const m = marksIn(l.id); if (!lvl || m.length > marks.length) { lvl = l.id; marks = m; } });
+  const b = RutaProgress.baseOf(lvl);
+  const classKids = kids.filter((s) => LevelKeys.classLevel({ level: s.rawLevel, classroomCode: s.classroomCode }) === lvl).length;
+  const worlds = b.worlds.map((w) => {
+    const words = RutaProgress.worldWords(lvl, w.n).map((x) => ({ n: x.n, py: x.py, es: x.es, marked: 0 }));
+    let started = 0, all = 0;
+    marks.forEach((set) => {
+      let got = 0;
+      words.forEach((x) => { if (set.has(x.n)) { x.marked++; got++; } });
+      if (got > 0) started++;
+      if (got > 0 && got === words.length) all++;
+    });
+    return { n: w.n, name: w.name, short: w.short, count: w.count, started, all, words };
+  });
+  res.json({ ok: true, levels, level: lvl, name: Levels.info(lvl).name, kids: marks.length, classKids, worlds });
+});
 // «Desbloquear» / «Volver a bloquear» one step for one kid: POST { level, step: 'train' | 'dorado', world: n | 'all',
 // action: 'unlock' | 'lock' }. Teachers of the kid's class (or the super admin). «Volver a bloquear» undoes only what a
 // teacher opened: a world the kid's own seals opened stays open.
