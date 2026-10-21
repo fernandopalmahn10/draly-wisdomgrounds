@@ -10,13 +10,14 @@
 //                                                      world N): its words first…first+count-1, the best % of its
 //                                                      practice (null = never played), open = its practice is open
 //           hws: [{ id, exp, round, title, sent }],    the level's homework audios, newest first (sent = «¡Ya la mandé!»)
-//           cur: n | null,                             the CLASS'S PACE (his picks 2026-10-21, «The class's pace decides
-//                                                      this week's homework»): the experience its teacher set in /maestro
-//                                                      (server.js _paceOf), else the level's default. Homework of the
-//                                                      experiences up to it is DUE; later ones stay visible and play, but
-//                                                      are never counted or shown as this week's. null = no pace known:
-//                                                      every homework is due and no week is named.
 //           sim: { n, percent, passed, at } | null }   the latest simulation taken (in class, with a PIN)
+//
+//   THE KID'S PACE (his final pick 2026-10-21, «Automatic by each kid»: no teacher setting): `pace` = the first
+//   experience whose words the kid has not all marked (the last one once every word is marked; paceOf() below).
+//   Homework of the experiences up to it is DUE; later ones stay visible and play, but are never counted or shown as
+//   this week's. A kid who marks nothing stays on experience 1 (his call); a teacher's preview (no seals) shows 1.
+//   No experiences at all = no pace: every homework is due and no week is named. (raw.cur, the class's pace of the
+//   morning of 2026-10-21, is no longer read.)
 //
 //   plan(raw) → { goal, sealed, words, of, complete, current, trainDone, pace,
 //                 exps: [{ n, name, pic, sealed, count, best, open, train, hw: { of, sent }, due, done, passed, state }],
@@ -29,12 +30,11 @@
 //
 // An experience is COMPLETE when every word is marked, its practice is at the goal, and its homework is sent (every
 // homework of it, or it has none yet). `current` = the first experience not complete (null: all of them are), where
-// homework that is not due yet never holds a kid back (2026-10-21, the class's pace: a kid ahead of the class who has
-// marked an experience's words and reached its practice goal moves on to the next one; its homework waits, it plays
-// already, and it becomes due when the class gets there). COMPLETE (the green ✓, «¡Experiencia lista!») stays strict.
+// homework that is not due yet never holds a kid back (2026-10-21; with the kid's own pace the experience at the pace
+// always has words left, so `current` is never past it). COMPLETE (the green ✓, «¡Experiencia lista!») stays strict.
 // «Lo más importante esta semana» (focus), in this order (his picks for the design, 2026-10-18; words before practice
 // since his priority of 2026-10-21, LADDER below):
-//   1. tarea     a homework to send: the newest DUE one not sent (up to the class's experience, never a later one)
+//   1. tarea     a homework to send: the newest DUE one not sent (up to the kid's experience, never a later one)
 //   2. words     the current experience has words to mark
 //   3. practice  the current experience's practice is open and below the goal
 //   4. teacher   every practice is at the goal (El Entrenamiento done) and no simulation passed yet: tell the teacher
@@ -54,6 +54,16 @@
   // the ladder (see above): kind → its step number
   const LADDER = Object.freeze([Object.freeze({ kind: 'words', step: 1 }), Object.freeze({ kind: 'tarea', step: 2 }), Object.freeze({ kind: 'practice', step: 3 })]);
   const stepOf = (kind) => { const s = LADDER.find((x) => x.kind === kind); return s ? s.step : null; };
+  // the kid's pace from their words: worlds = [{ n, count, sealed }] (any order) → the first experience with words
+  // still to mark, else the last one; null when there is no experience. ONE rule: plan() below, the module page
+  // (js/ruta.js) and the home's folders (js/mi-dralingo.js) all call it.
+  function paceOf(worlds) {
+    const ws = (Array.isArray(worlds) ? worlds : []).map((w) => ({ n: Number(w && w.n) || 0, count: Math.max(0, Number(w && w.count) || 0), sealed: Math.max(0, Number(w && w.sealed) || 0) }))
+      .filter((w) => w.n > 0).sort((a, b) => a.n - b.n);
+    if (!ws.length) return null;
+    const open = ws.find((w) => w.count > 0 && w.sealed < w.count);
+    return open ? open.n : ws[ws.length - 1].n;
+  }
 
   function plan(raw) {
     const r = raw && typeof raw === 'object' ? raw : {};
@@ -61,16 +71,21 @@
     const worlds = Array.isArray(r.worlds) ? r.worlds : [];
     const hws = Array.isArray(r.hws) ? r.hws.filter((h) => h && typeof h.id === 'string') : [];
     const seals = Array.isArray(r.seals) ? new Set(r.seals.map(Number).filter((n) => Number.isInteger(n) && n > 0)) : null;
-    // the class's pace: homework up to this experience is due (a homework of no experience counts as due)
-    const pace = Number.isInteger(num(r.cur)) && num(r.cur) > 0 ? num(r.cur) : null;
-    const dueExp = (n) => pace == null || (Number(n) || 0) <= pace;
-    const exps = worlds.map((w) => {
-      const n = Number(w.n) || 0;
+    // each experience's marked words first (the kid's pace is read from them)
+    const counted = worlds.map((w) => {
       const count = Math.max(0, Number(w.count) || 0);
       const first = Number(w.first) || 0;
       let sealed = Math.max(0, Number(w.sealed) || 0);
       if (seals && first > 0) { sealed = 0; for (let k = first; k < first + count; k++) if (seals.has(k)) sealed++; }
-      sealed = Math.min(sealed, count);
+      return { n: Number(w.n) || 0, count, sealed: Math.min(sealed, count) };
+    });
+    // the kid's pace: homework up to this experience is due (a homework of no experience counts as due)
+    const pace = paceOf(counted);
+    const dueExp = (n) => pace == null || (Number(n) || 0) <= pace;
+    const exps = worlds.map((w, i) => {
+      const n = counted[i].n;
+      const count = counted[i].count;
+      const sealed = counted[i].sealed;
       const best = num(w.best);
       const mine = hws.filter((h) => Number(h.exp) === n);
       const hw = { of: mine.length, sent: mine.filter((h) => h.sent).length };
@@ -85,7 +100,7 @@
     exps.forEach((e) => { e.state = e.done ? 'done' : (cur && e.n === cur.n ? 'current' : 'later'); });
     const sealed = exps.reduce((s, e) => s + e.sealed, 0);
     const words = Math.max(num(r.words) || 0, exps.reduce((s, e) => s + e.count, 0));
-    // this week's homework = the CLASS'S experience (2026-10-21; it was «the newest experience that has homework», which
+    // this week's homework = the KID'S experience (2026-10-21; it was «the newest experience that has homework», which
     // with every storybook built is always the last one): the folder that glows «Esta semana» for the kid
     const due = hws.filter((h) => dueExp(h.exp));
     const later = hws.filter((h) => !dueExp(h.exp));
@@ -151,7 +166,7 @@
       t = { kind: 'fine', exp: n, step: null, dorado: false, go: 'Ver mi Ruta', text: n ? '¡Vas muy bien! Repasa cuando quieras.' : '¡Vas muy bien! Muy pronto, tu Ruta Dorada.' };
     }
     // the DUE homework that waits outside today's step: one reminder line («Y tu tarea de esta semana: 1 por mandar.»);
-    // a later experience's homework is never in it (2026-10-21, the class's pace)
+    // a later experience's homework is never in it (2026-10-21, the kid's pace)
     const due = (Array.isArray(P.hws) ? P.hws : []).filter((h) => !h.sent && h.due !== false && !(t.kind === 'tarea' && Number(h.exp) === t.exp));
     t.remind = null;
     if (due.length) {
@@ -163,5 +178,5 @@
     return t;
   }
 
-  return { plan, today, LADDER, stepOf };
+  return { plan, today, paceOf, LADDER, stepOf };
 });

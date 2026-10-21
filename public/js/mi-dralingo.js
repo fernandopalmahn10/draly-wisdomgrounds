@@ -226,7 +226,7 @@
       const x = (r.exps || []).find((y) => Number(y.n) === e.n) || {};
       const hws = hwsAll.filter((h) => Number(h.exp) === e.n).sort((a, b) => (a.round || 0) - (b.round || 0));
       const heard = hws.some((h) => mk[h.id] && (mk[h.id].h || mk[h.id].s));
-      // (2026-10-21, the class's pace) an experience after the class's: its homework plays, nothing of it is due yet
+      // (2026-10-21, the kid's own pace) an experience after the kid's: its homework plays, nothing of it is due yet
       const later = e.due === false;
       const unsent = hws.filter((h) => !(mk[h.id] && mk[h.id].s)).length;
       const bars = {
@@ -281,8 +281,16 @@
     const r = d && d.ruta;
     if (!r || !r.who) return null;
     const list = (r.hws || []).map((h) => Object.assign({ level: r.slug }, (r.media || {})[h.id] || {}, h));
+    // (2026-10-21) the kid's own pace, from the same plan as «Hoy» (js/papas-plan.js paceOf, this phone's marks too):
+    // js/ruta.js's folders read it as the module's `cur`
+    let cur = null;
+    try {
+      const Plan = window.DralyPapasPlan;
+      const rr = window.DralyPapas && window.DralyPapas.withPhone ? window.DralyPapas.withPhone(r) : r;
+      cur = Plan ? Plan.plan(rr).pace : null;
+    } catch (_) { cur = null; }
     return {
-      ruta: { ok: true, student: true, teacher: false, who: r.who, home: r.slug, modules: [{ slug: r.slug, id: d.level, cur: r.cur, tareas: Object.assign({}, r.marks || {}) }] },
+      ruta: { ok: true, student: true, teacher: false, who: r.who, home: r.slug, modules: [{ slug: r.slug, id: d.level, cur, tareas: Object.assign({}, r.marks || {}) }] },
       homeworksOf: (slug) => (slug === r.slug ? list : []),
       refresh: () => load(true),
     };
@@ -355,7 +363,7 @@
   const nb = (x) => String(x).replace(/(\d) %/g, '$1 %');
   // the three little bars, in the ladder's order (palabras · tarea · práctica, 2026-10-21): green done, gold started, grey
   // to do; an experience whose homework hasn't come yet shows its tarea bar dotted («pronto»), a level with no homework
-  // audio at all only two (later: an experience after the class's pace, 2026-10-21: its homework is «de más adelante»,
+  // audio at all only two (later: an experience after the kid's pace, 2026-10-21: its homework is «de más adelante»,
   // never «por mandar»)
   const barsHtml = (b, n, later) => '<span class="md-bars" data-bars="' + n + '" aria-label="' + esc(barsSay(b, later)) + '" role="img">' +
     ladder().map((s) => s.kind).filter((k) => k !== 'tarea' || b.tarea !== 'na' || (M && M.anyHw)).map((k) => '<i class="is-' + b[k] + '"></i>').join('') + '</span>';
@@ -541,7 +549,7 @@
   // Aileen's line in «Tu tarea» (voseo): what to do, or, once every homework of the experience is sent, the praise
   // (2026-10-21) an experience after the class's: «¡Vas adelantado!», listen now, send it when the class gets there
   const aileenText = (e) => (e.hws.length && !e.unsent ? '«¡Qué crack! Tu profe ya tiene tus videos.»'
-    : e.later ? '«¡Vas adelantado! Ya podés escuchar el audio. La mandás cuando tu clase llegue a esta experiencia.»'
+    : e.later ? '«¡Vas adelantado! Ya podés escuchar el audio. La mandás cuando llegues a esta experiencia.»'
       : '«¡Dale! Escuchá el audio, grabá tu video y mandáselo a tu profe por WhatsApp. Después tocá <b>¡Ya la mandé!</b>»');
   function expHtml(e, mode) {
     const page = mode === 'page';

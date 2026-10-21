@@ -31,8 +31,8 @@
 //       · «Tus tareas» (right column on a laptop, below on a phone; a red «Tareas: N por mandar» in the phone's hero jumps
 //         to #tareas): BY EXPERIENCE, LIKE FOLDERS (his rule 2026-10-18): one folder card per experience of the module
 //         (the server's `exps`: the curriculum pack's worlds, Experiencia 1…8, a pack picture each) with «N por mandar» /
-//         «✓ Mandadas» / «Pronto» / «Más adelante»; the class's experience glows «Esta semana» (2026-10-21, the class's
-//         pace `cur`: only homework up to it is due and counted; later ones play); a tap opens its 2-3
+//         «✓ Mandadas» / «Pronto» / «Más adelante»; the kid's experience glows «Esta semana» (2026-10-21, the kid's own
+//         pace: only homework up to it is due and counted; later ones play); a tap opens its 2-3
 //         homeworks with «← Volver a las experiencias» (the open folder is kept per tab: sessionStorage
 //         draly_tareas_exp). Aileen says what to do on each view. Inside a folder: «Escuchar» plays its three audios
 //         right there, «¡Ya la mandé!» = sent. «Nueva» / «Escuchada ✓» / «✓ Mandada». A module with no homework audio
@@ -460,12 +460,27 @@
     return tApply(o.phone, null);
   }
   const unsentOf = (hws, marks) => hws.filter((h) => !(marks[h.id] && marks[h.id].s)).length;
-  // 🗓️ 2026-10-21 «The class's pace decides this week's homework» (his picks: «Each teacher, per class» + «Visible, can
-  // listen ahead»): the server's `m.cur` = the experience the kid's class is on (its teacher's «Experiencia actual» in
-  // /maestro; a teacher's own class for the preview; else the level's default). Homework up to it is DUE (the red «N por
-  // mandar», the folder that glows «Esta semana»); later experiences stay visible and play, never counted («Más adelante»).
-  const paceOf = (m) => { const c = m ? Number(m.cur) : NaN; return Number.isInteger(c) && c > 0 ? c : null; };
-  const dueOf = (m, hws) => { const c = paceOf(m); return c == null ? hws : hws.filter((h) => (Number(h.exp) || 0) <= c); };
+  // 🗓️ 2026-10-21 «Each kid's own progress decides this week's homework» (his final pick, «Automatic by each kid»; the
+  // class's pace set in /maestro was removed the same day): the kid's experience = the first one whose words they have
+  // not all marked, the last one once every word is marked (js/papas-plan.js paceOf, the same rule as the home and
+  // Papás), read from this page's own seals (progressOf). Homework up to it is DUE (the red «N por mandar», the folder
+  // that glows «Esta semana»); later experiences stay visible and play, never counted («Más adelante»). A teacher's
+  // preview shows experience 1; the kid's home hands its own (`m.cur`, from the same plan: js/mi-dralingo.js).
+  const firstExpOf = (m) => {
+    const ns = (Array.isArray(m && m.exps) ? m.exps : []).map((e) => Number(e && e.n)).filter((n) => Number.isInteger(n) && n > 0);
+    return ns.length ? Math.min.apply(null, ns) : null;
+  };
+  const paceOf = (ctx, m) => {
+    if (!m) return null;
+    const c = Number(m.cur);
+    if (Number.isInteger(c) && c > 0) return c;
+    if (ctx && ctx.ruta && ctx.ruta.teacher) return firstExpOf(m);
+    const Plan = window.DralyPapasPlan;
+    const pr = ctx ? progressOf(ctx, m) : null;
+    const n = pr && Plan && Plan.paceOf ? Plan.paceOf(pr.worlds) : null;
+    return n != null ? n : firstExpOf(m);
+  };
+  const dueOf = (ctx, m, hws) => { const c = paceOf(ctx, m); return c == null ? hws : hws.filter((h) => (Number(h.exp) || 0) <= c); };
 
   // ── the band at the top of both screens: the way back, always visible ──
   // me (2026-10-18): the logged-in kid (their own login, or the phone's automatic account) gets «Mi código» on the right:
@@ -551,7 +566,7 @@
       if (!hws.length || !mineOf(ctx, m)) return 0;
       const marks = tMarksFor(ctx.ruta, m.tareas);
       if (!ctx.ruta.student && !hws.some((h) => marks[h.id] && (marks[h.id].h || marks[h.id].s))) return 0;
-      return unsentOf(dueOf(m, hws), marks);
+      return unsentOf(dueOf(ctx, m, hws), marks);
     };
     const friend = window.DralingoCast ? window.DralingoCast.pick(1)[0] : null;
     main.innerHTML = bandHtml(back, null, ctx.ruta.me) +
@@ -969,7 +984,6 @@
         return { n: w.n, name: names[w.n] || w.short || 'Experiencia ' + w.n, count: w.count, sealed: w.sealed, best: t ? t.best : null, open: !!(t && t.open) };
       }),
       hws: ctx.homeworksOf(m.slug).map((h) => ({ id: h.id, exp: h.exp, round: h.round, title: h.title, sent: !!(marks[h.id] && marks[h.id].s) })),
-      cur: paceOf(m),   // (2026-10-21) the class's pace: the same due homework as the kid's home and Papás
       sim: m.simLast || null,
     };
     try { return Plan.today(Plan.plan(raw)); } catch (_) { return null; }
@@ -1158,7 +1172,7 @@
   const openExpOf = (m) => { const v = store.get(OPEN_KEY) || ''; const p = v.split(':'); return p[0] === m.slug ? Number(p[1]) || 0 : 0; };
   const setOpenExp = (m, n) => store.set(OPEN_KEY, n ? m.slug + ':' + n : '');
   // a folder's tag: «N por mandar» (red), «✓ Mandadas» (green, all sent), «N tareas» (only plays), «Pronto» (none yet),
-  // «Más adelante» (calm: an experience after the class's, `cur`; its homework plays already and is never counted)
+  // «Más adelante» (calm: an experience after the kid's own, `cur`; its homework plays already and is never counted)
   function expTag(e, marks, mine, preview, cur) {
     if (!e.hws.length) return { cls: 'is-soon', html: 'Pronto', say: 'pronto' };
     if (!mine && !preview) return { cls: 'is-other', html: e.hws.length + (e.hws.length === 1 ? ' tarea' : ' tareas'), say: e.hws.length + (e.hws.length === 1 ? ' tarea' : ' tareas') };
@@ -1250,8 +1264,8 @@
       '<div class="rp-hw-body">' + actsHtml(state) + '</div></li>';
   }
   // «Tus tareas» = every experience of the module as a folder (picture, name, its tag); a tap opens that experience's
-  // 2-3 homeworks with «← Volver a las experiencias». The CLASS'S experience glows «Esta semana» (2026-10-21, the class's
-  // pace `m.cur`; it used to be the newest experience with homework, always the last one once every storybook
+  // 2-3 homeworks with «← Volver a las experiencias». The KID'S experience glows «Esta semana» (2026-10-21, the kid's
+  // own pace, paceOf; it used to be the newest experience with homework, always the last one once every storybook
   // arrived): this week's homework is one tap away; later experiences say «Más adelante» and play. Folders keep the
   // curriculum's order (Experiencia 1, 2, 3…) so a kid always finds theirs in the same place. A module with no homework
   // audio at all keeps no column (never an empty box).
@@ -1259,10 +1273,10 @@
   function tareasHtml(ctx, m, hws, marks, mine) {
     if (!hws.length) return '';
     const preview = !mine && !!ctx.ruta.teacher;
-    const toSend = mine ? unsentOf(dueOf(m, hws), marks) : 0;
+    const toSend = mine ? unsentOf(dueOf(ctx, m, hws), marks) : 0;
     const showLogin = !ctx.ruta.student && !ctx.ruta.teacher;
     const exps = expsOf(m, hws);
-    const cur = paceOf(m);
+    const cur = paceOf(ctx, m);
     const open = exps.some((e) => e.n === openExpOf(m) && e.hws.length) ? openExpOf(m) : 0;
     const stateOf = (h) => { const e = (mine && marks[h.id]) || {}; return preview ? 'preview' : !mine ? 'other' : e.s ? 'sent' : e.h ? 'heard' : 'new'; };
     const folders = exps.map((e) => {
@@ -1280,7 +1294,7 @@
         ? '<button type="button" class="rp-exp ' + tag.cls + (isLatest ? ' is-latest' : '') + '" data-open-exp="' + e.n + '" aria-label="' + esc(label) + '">' + inner + '</button>'
         : '<div class="rp-exp is-soon" role="group" aria-label="' + esc(label) + '">' + inner + '</div>') + '</li>';
     }).join('');
-    // (2026-10-21) a folder after the class's pace: calm cards (no red frame), Aileen's «¡Vas adelantado!» line
+    // (2026-10-21) a folder after the kid's pace: calm cards (no red frame), Aileen's «¡Vas adelantado!» line
     const laterN = (n) => cur != null && n > cur && (mine || preview);
     const views = exps.filter((e) => e.hws.length).map((e) =>
       '<section class="rp-exp-view' + (laterN(e.n) ? ' rp-later' : '') + '" data-exp-view="' + e.n + '" aria-labelledby="rp-exp-t-' + e.n + '"' + (e.n === open ? '' : ' hidden') + '>' +
@@ -1293,7 +1307,7 @@
     const sayHw = mine || preview ? '«¡Dale! Escuchá el audio, grabá tu video y mandáselo a tu profe por WhatsApp. Después tocá <b>¡Ya la mandé!</b>»'
       : '«Estas son las tareas de ' + esc(m.name) + '. ¡Escuchá el audio cuando quieras!»';
     const sayFolders = mine || preview ? '«¡Dale! Tocá tu experiencia y hacé sus tareas.»' : '«Tocá una experiencia para escuchar sus tareas.»';
-    const sayLater = '«¡Vas adelantado! Ya podés escuchar el audio. La mandás cuando tu clase llegue a esta experiencia.»';
+    const sayLater = '«¡Vas adelantado! Ya podés escuchar el audio. La mandás cuando llegues a esta experiencia.»';
     const openLater = !!open && laterN(open);
     return '<aside class="rp-tareas' + (mine ? '' : ' is-other') + (preview ? ' is-preview' : '') + (open ? ' is-open' : '') + '" id="tareas" aria-labelledby="rp-tareas-t" tabindex="-1">' +
       '<div class="rp-tareas-head"><h2 class="rp-tareas-t" id="rp-tareas-t">' + (mine ? 'Tus tareas' : 'Tareas de ' + esc(m.name)) + '</h2>' +
@@ -1396,7 +1410,7 @@
     tSeed(ctx.ruta, idsOfCtx(ctx));
     const marks = tMarksFor(ctx.ruta, m.tareas);
     const mine = mineOf(ctx, m);
-    const toSend = mine ? unsentOf(dueOf(m, hws), marks) : 0;
+    const toSend = mine ? unsentOf(dueOf(ctx, m, hws), marks) : 0;
     const cb = L.cb;
     const facts = [worldCount(cb) ? worldCount(cb) + ' mundos' : '', m.base ? m.base.words + ' palabras' : '', m.simCount ? 'el examen al final' : ''].filter(Boolean).join(' · ');
     const hero = '<section class="rp-hero' + (m.name.length > 6 ? ' is-long' : '') + '" style="--hero-rgb:' + rgbOf(look[2]) + '">' +
@@ -1469,7 +1483,7 @@
       box.querySelectorAll('.rp-hw').forEach((li) => {
         if (paintHw(li, hwStateOf(marks, li.getAttribute('data-hw'))) && !(hwNow && hwNow.li === li)) hwReset(li);
       });
-      const n = unsentOf(dueOf(m, hws), marks);
+      const n = unsentOf(dueOf(ctx, m, hws), marks);
       const badge = box.querySelector('[data-tosend]');
       if (badge) { badge.hidden = !n; badge.textContent = n + ' por mandar'; }
       const heroTag = main.querySelector('.rp-hero-tareas');
@@ -1478,7 +1492,7 @@
       exps.forEach((e) => {
         const b = box.querySelector('[data-open-exp="' + e.n + '"]');
         if (!b) return;
-        const t = expTag(e, marks, mine, false, paceOf(m));
+        const t = expTag(e, marks, mine, false, paceOf(ctx, m));
         const tag = b.querySelector('[data-exp-tag]');
         b.classList.remove('is-todo', 'is-done', 'is-later');
         b.classList.add(t.cls);
@@ -1497,7 +1511,7 @@
       box.querySelectorAll('[data-exp-view]').forEach((v) => { v.hidden = Number(v.getAttribute('data-exp-view')) !== n; });
       const sf = box.querySelector('[data-say-folders]'), sh = box.querySelector('[data-say-hw]'), sl = box.querySelector('[data-say-later]');
       const lv = box.querySelector('[data-exp-view="' + n + '"]');
-      const later = !!(n && lv && lv.classList.contains('rp-later'));   // (2026-10-21) a folder after the class's pace
+      const later = !!(n && lv && lv.classList.contains('rp-later'));   // (2026-10-21) a folder after the kid's pace
       if (sf) sf.hidden = !!n;
       if (sh) sh.hidden = !n || later;
       if (sl) sl.hidden = !later;
@@ -1590,7 +1604,7 @@
     const marks0 = tMarksFor(ctx.ruta, m.tareas);
     const stateOf = (h) => { const e = (mine && marks0[h.id]) || {}; return !mine ? 'other' : e.s ? 'sent' : e.h ? 'heard' : 'new'; };
     hwStop();
-    // (o.later, 2026-10-21: an experience after the class's pace: calm cards, its homework plays, nothing due)
+    // (o.later, 2026-10-21: an experience after the kid's pace: calm cards, its homework plays, nothing due)
     box.innerHTML = '<ul class="rp-hw-list' + (o.later ? ' rp-later' : '') + '">' + hws.map((h) => hwCardHtml(m, h, stateOf(h), o.pic, o.link)).join('') + '</ul>';
     const byId = new Map(hws.map((h) => [h.id, h]));
     const paint = () => {

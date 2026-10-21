@@ -313,9 +313,10 @@ same source as the printed book (`../study/lib/examweb.py`): fix a line in the s
   if you keep them all scroll down in the list then it's going to become messy"): every experience of the module is a
   folder card (Experiencia 1…8 of New HSK 1 and HSK 1, the names of the level's curriculum pack, each with one of that
   experience's own pack pictures and its number on the corner), with a red «N por mandar», a green «✓ Mandadas» when
-  all its homework is sent, or a calm «Pronto» when it has no homework audio yet (never an empty box). The newest
-  homework's experience glows gold with «La más nueva» (this week's homework is one tap away; the folders keep the
-  curriculum's order so a kid always finds theirs in the same place). A tap opens that experience's 2-3 homeworks with
+  all its homework is sent, or a calm «Pronto» when it has no homework audio yet (never an empty box). The kid's own
+  experience glows gold with «Esta semana» (since 2026-10-21 each kid's own pace: the first experience whose words they
+  have not all marked; homework up to it is due, later folders say «Más adelante» and play; js/papas-plan.js paceOf;
+  the folders keep the curriculum's order so a kid always finds theirs in the same place). A tap opens that experience's 2-3 homeworks with
   «← Volver a las experiencias»; Aileen says «¡Dale! Tocá tu experiencia y hacé sus tareas.» on the folders and «¡Dale!
   Escuchá el audio, grabá tu video y mandáselo a tu profe por WhatsApp. Después tocá ¡Ya la mandé!» inside one. The open
   folder stays open for that tab (a trip to the homework's own page and back finds it open). «Hacer mis tareas» on

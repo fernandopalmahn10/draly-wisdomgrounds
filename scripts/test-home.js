@@ -46,8 +46,9 @@ const Plan = require('../public/js/papas-plan.js');
 const W = (n, best, open) => ({ n, name: 'Mundo ' + n, pic: null, first: (n - 1) * 10 + 1, count: 10, best: best == null ? null : best, open: !!open });
 const range = (a, b) => Array.from({ length: b - a + 1 }, (_, i) => a + i);
 const HW = (s3, s1) => [{ id: 'x-e03-r1', exp: 3, round: 1, title: 'Tres', sent: !!s3 }, { id: 'x-e01-r1', exp: 1, round: 1, title: 'Uno', sent: !!s1 }];
-// (2026-10-21) cur = the class's pace: homework up to experience 3 is due here, «this week» = experience 3 (test-class-pace.js)
-const raw = (o) => Object.assign({ pct: 70, words: 40, seals: [], worlds: [W(1), W(2), W(3), W(4)], hws: HW(false, false), cur: 3, sim: null }, o);
+// (2026-10-21, «Automatic by each kid») the kid's own pace = the first experience whose words are not all marked: no
+// seals = experience 1 (only its homework is due), words of 1-2 marked = experience 3 (both due) (test-kid-pace.js)
+const raw = (o) => Object.assign({ pct: 70, words: 40, seals: [], worlds: [W(1), W(2), W(3), W(4)], hws: HW(false, false), sim: null }, o);
 function todayTests() {
   section('«Hoy» = the kid\'s ladder (review 2026-10-18): the current experience, the LADDER of js/papas-plan.js; Papás keeps homework first');
   // (his priority, 2026-10-21: «the most important thing is marcar las palabras and do the homework… after that comes the
@@ -57,11 +58,14 @@ function todayTests() {
   const S = { words: Plan.stepOf('words'), tarea: Plan.stepOf('tarea'), practice: Plan.stepOf('practice') };
   const T = (r) => { const p = Plan.plan(r); return { p, t: Plan.today(p) }; };
   let { p, t } = T(raw({}));
-  ok(p.focus.kind === 'tarea' && p.focus.exp === 3, 'Papás («Lo más importante», the parents): the homework to send comes first');
+  ok(p.focus.kind === 'tarea' && p.focus.exp === 1, 'Papás («Lo más importante», the parents): the homework to send comes first (the due one: experience 1)');
   ok(t.kind === 'words' && t.exp === 1 && t.step === S.words && !t.dorado && t.go === 'Repasar o marcar mis palabras',
     'the kid: experience 1, words untouched → step ' + S.words + ', the green «Repasar o marcar mis palabras» (a homework due is never the start step)');
   ok(t.text === '¡Hoy toca la Experiencia 1! Empieza por marcar sus palabras.', '… «' + t.text + '»');
-  ok(t.remind && t.remind.left === 2 && t.remind.exp === 3 && t.remind.id === 'x-e03-r1' && t.remind.text === 'Y tienes 2 tareas por mandar.', '… the homework due rides along: «' + (t.remind && t.remind.text) + '» (opens the newest, experience 3)');
+  ok(t.remind && t.remind.left === 1 && t.remind.exp === 1 && t.remind.id === 'x-e01-r1' && t.remind.text === 'Y tu tarea de esta semana: 1 por mandar.', '… the homework due rides along: «' + (t.remind && t.remind.text) + '» (experience 1\'s; experience 3\'s is later, never in it)');
+  ({ p, t } = T(raw({ seals: range(1, 20) })));
+  ok(p.pace === 3 && t.kind === 'tarea' && t.exp === 1 && t.remind && t.remind.exp === 3 && t.remind.left === 1,
+    'the words of 1-2 marked: the kid is on experience 3, both homeworks due: experience 1\'s on the ladder, experience 3\'s as the reminder');
   ({ p, t } = T(raw({ hws: HW(true, true), seals: range(1, 10), worlds: [W(1, 55), W(2), W(3), W(4)] })));
   ok(p.focus.kind === 'practice' && t.kind === 'practice' && t.exp === 1 && t.step === S.practice && t.go === 'Practicar aquí' && !t.remind, 'words done, homework sent, practice below the goal: step ' + S.practice + ' «Practicar aquí»');
   ok(t.text === '¡Hoy toca la Experiencia 1! Practica Mundo 1 hasta llegar al 70 %.', '… «' + t.text + '»');
@@ -70,13 +74,14 @@ function todayTests() {
   const before = S.tarea < S.practice ? 'tarea' : 'practice';
   ok(t.kind === before && t.exp === 1 && t.step === S[before] && (before !== 'tarea' || (t.id === 'x-e01-r1' && t.go === 'Mandar mi tarea')),
     'words done, practice at 55 % and its homework due: «Hoy» = the ladder\'s next step (' + before + ', «' + t.go + '»), never practice before the homework');
-  ({ p, t } = T(raw({ hws: [{ id: 'x-e02-r1', exp: 2, round: 1, title: 'Dos', sent: false }], cur: 1, seals: range(1, 20), worlds: [W(1, 80), W(2, 50), W(3), W(4)] })));
-  ok(p.current === 2 && t.kind === 'practice' && t.exp === 2, 'a kid ahead of the class (experience 2\'s homework not due yet): its practice, the homework waits');
+  ({ p, t } = T(raw({ hws: [{ id: 'x-e03-r1', exp: 3, round: 1, title: 'Tres', sent: false }], seals: range(1, 10), worlds: [W(1, 80), W(2, 50), W(3), W(4)] })));
+  ok(p.pace === 2 && p.current === 2 && t.kind === 'words' && t.exp === 2 && !t.remind && p.tareas.of === 0 && p.tareas.later === 1,
+    'a later experience\'s homework (3, the kid on 2) never jumps in: its words, no reminder, nothing due');
   ({ p, t } = T(raw({ hws: HW(true, true), seals: range(1, 6) })));
   ok(t.kind === 'words' && t.text === '¡Hoy toca la Experiencia 1! Marca sus palabras: te faltan 4.', 'some marked: «te faltan 4»');
   ({ p, t } = T(raw({ hws: HW(true, true), seals: range(1, 9) })));
   ok(t.text === '¡Hoy toca la Experiencia 1! Marca sus palabras: te falta 1.', 'one left: «te falta 1» (singular)');
-  ({ p, t } = T(raw({ hws: HW(false, false), seals: range(1, 10), worlds: [W(1, 80), W(2), W(3), W(4)] })));
+  ({ p, t } = T(raw({ hws: HW(false, false), seals: range(1, 20), worlds: [W(1, 80), W(2), W(3), W(4)] })));
   ok(t.kind === 'tarea' && t.exp === 1 && t.step === S.tarea && t.id === 'x-e01-r1' && t.go === 'Mandar mi tarea' && t.text === '¡Hoy toca la Experiencia 1! Manda tu tarea de Mundo 1.',
     'words and practice done: step ' + S.tarea + ' «Mandar mi tarea» of the same experience');
   ok(t.remind && t.remind.exp === 3 && t.remind.left === 1 && t.remind.text === 'Y tu tarea de esta semana: 1 por mandar.', '… and this week\'s homework (experience 3) as the reminder: «' + (t.remind && t.remind.text) + '»');
@@ -131,10 +136,10 @@ const hwOf = (folder) => CAT.homeworks.filter((h) => h.level === folder).sort((a
 const NEWHW = hwOf('newhsk1');
 const OLDHW = hwOf('hsk1');
 const YCTHW = hwOf('yct1');
-// (2026-10-21) the class's pace: these made-up classes never chose «Experiencia actual», so each level's default decides
-// which homework is due (core/levels.js, read from where it lives); today's catalog decides which experiences have homework
-const PACE = { hsk2: require('../core/levels.js').info('hsk2').paceDefault };
-const NEWDUE = NEWHW.filter((h) => h.exp <= PACE.hsk2);
+// (2026-10-21, «Automatic by each kid») a new kid (no words marked) is on experience 1: only its homework is due; the
+// halfway kid's pace is read from their own experiences as the server counted them; today's catalog decides the rest
+const NEWDUE = NEWHW.filter((h) => h.exp <= 1);
+const paceFrom = (exps) => { const o = exps.find((e) => e.count > 0 && e.sealed < e.count); return o ? o.n : exps.length ? exps[exps.length - 1].n : null; };
 const DATA = fs.mkdtempSync(path.join(os.tmpdir(), 'draly-home-'));
 const rnd = (n) => crypto.randomBytes(n).toString('hex').toUpperCase();
 const LEGACY = 'legacy-' + rnd(12);
@@ -369,7 +374,8 @@ async function serverTests() {
     ok(/<a class="md-words is-hoy" href="[^"]+" data-out>/.test(html) && /<span>Repasar o marcar mis palabras<\/span>/.test(html), k + ': «Hoy» shows the green «Repasar o marcar mis palabras»');
   }
   let m = H.model(R.NEWK.json, ST.NEWK, null);
-  ok(R.NEWK.json.ruta.plan.focus.kind === 'tarea' && m.hoy.kind === 'words' && m.hoy.exp === 1 && m.hoy.step === Plan.stepOf('words') && m.hoy.remind && m.hoy.remind.exp === NEWDUE[0].exp,
+  ok(R.NEWK.json.ruta.plan.pace === 1 && (NEWDUE.length ? R.NEWK.json.ruta.plan.focus.kind === 'tarea' && m.hoy.remind && m.hoy.remind.exp === 1 : !m.hoy.remind) &&
+    m.hoy.kind === 'words' && m.hoy.exp === 1 && m.hoy.step === Plan.stepOf('words'),
     'new kid: Papás says «the homework first»; the kid starts at experience 1, its words, the homework as the reminder line');
   ok(!/data-act="today"/.test(H.htmlFor(R.NEWK.json, ST.NEWK, '', false).split('md-hoy-acts')[1].split('</div>')[0]) &&
     !!R.NEWK.json.ruta.base && H.htmlFor(R.NEWK.json, ST.NEWK, '', false).includes('class="md-words is-hoy" href="' + R.NEWK.json.ruta.base.href + '?from=homework#mundo-1"'),
@@ -452,9 +458,11 @@ async function serverTests() {
   ok(!/<section[^>]*md-pr-sec[^>]*>(?:(?!<\/section>)[^])*<section/.test(o1p) && !/md-tp-box|<details/.test(o1p), '… nothing nested: no box around the boxes, no folder');
   const h1 = H.htmlFor(R.HALF.json, ST.HALF, '#exp-1', false);
   ok(/¡Qué crack! Tu profe ya tiene tus videos/.test(h1), 'every homework of the experience sent: Aileen «¡Qué crack! Tu profe ya tiene tus videos»');
-  // (today's catalog: an experience with no homework yet, if there is one; else one after the class's pace)
+  // (today's catalog: an experience with no homework yet, if there is one; else one after the kid's own pace)
+  const HALFPACE = paceFrom(R.HALF.json.ruta.plan.exps);
+  ok(R.HALF.json.ruta.plan.pace === HALFPACE, 'the halfway kid\'s pace = experience ' + HALFPACE + ', the first with words left to mark (2026-10-21)');
   const NOHW = [1, 2, 3, 4, 5, 6, 7, 8].find((n) => !NEWHW.some((h) => h.exp === n)) || null;
-  const LATER = [1, 2, 3, 4, 5, 6, 7, 8].find((n) => n > PACE.hsk2 && NEWHW.some((h) => h.exp === n)) || null;
+  const LATER = [1, 2, 3, 4, 5, 6, 7, 8].find((n) => n > HALFPACE && NEWHW.some((h) => h.exp === n)) || null;
   if (NOHW) {
     const h5 = H.htmlFor(R.HALF.json, ST.HALF, '#exp-' + NOHW, false);
     ok(/md-step-n is-soon/.test(h5) && /Sin tarea todavía/.test(h5), 'no homework yet (experience ' + NOHW + '): «Tu tarea» says «Sin tarea todavía» (dotted), never under a green ✓ without saying so');
@@ -462,7 +470,7 @@ async function serverTests() {
   if (LATER) {
     const hL = H.htmlFor(R.HALF.json, ST.HALF, '#exp-' + LATER, false);
     ok(/>Más adelante</.test(hL) && /Ya puedes escucharla/.test(hL) && !hL.includes('class="md-step is-next" id="md-step-' + sT + '"'),
-      'experience ' + LATER + ' (after the class\'s pace, ' + PACE.hsk2 + '): its homework plays, «Más adelante», never «¡Empieza aquí!» (2026-10-21)');
+      'experience ' + LATER + ' (after the kid\'s pace, ' + HALFPACE + '): its homework plays, «Más adelante», never «¡Empieza aquí!» (2026-10-21)');
   }
   const hHome = H.htmlFor(R.HALF.json, ST.HALF, '', false);
   ok((NOHW ? /<i class="is-na"><\/i>sin tarea todavía/.test(hHome) : !/sin tarea todavía/.test(hHome)) && /\d+ de \d+ listas/.test(hHome),
@@ -498,8 +506,8 @@ async function serverTests() {
   ok(e1.done && same(e1.bars, { words: 'done', practice: 'done', tarea: 'done' }), 'halfway kid: experience 1 done (three green bars)');
   ok(same(e3.bars, { words: 'done', practice: 'half', tarea: 'half' }) && !e3.done && e3.left >= 1, '… experience 3: words done, practice started (55 %), homework heard not sent');
   const e5 = m.exps[4];
-  ok(e5.bars.words === 'none' && !e5.started && (e5.hws.length ? e5.bars.tarea === 'none' && e5.left === 0 && e5.later : e5.bars.tarea === 'na'),
-    '… experience 5: not started, ' + (e5.hws.length ? 'its homework after the class\'s pace (never «por mandar»)' : 'no homework yet (its third bar «pronto»)'));
+  ok(e5.bars.words === 'none' && !e5.started && (e5.hws.length ? e5.bars.tarea === 'none' && (5 > HALFPACE ? e5.left === 0 && e5.later : !e5.later) : e5.bars.tarea === 'na'),
+    '… experience 5: not started, ' + (e5.hws.length ? 'its homework after the kid\'s pace (never «por mandar»)' : 'no homework yet (its third bar «pronto»)'));
   const yPath = H.htmlFor(R.YCTK.json, ST.YCTK, '', false);
   const yOl = yPath.slice(yPath.indexOf('<ol class="md-path"'), yPath.indexOf('</ol>', yPath.indexOf('<ol class="md-path"')));
   ok((yOl.match(/<i class="is-/g) || []).length === 6 * (YCTHW.length ? 3 : 2), 'YCT 1: ' + (YCTHW.length ? 'three bars per experience (its homework audio arrived)' : 'two bars per experience (no homework audio yet)'));

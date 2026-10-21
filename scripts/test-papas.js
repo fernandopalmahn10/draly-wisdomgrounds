@@ -46,24 +46,25 @@ const Plan = require('../public/js/papas-plan.js');
 const W = (n, best, open) => ({ n, name: 'Mundo ' + n, pic: null, first: (n - 1) * 10 + 1, count: 10, best: best == null ? null : best, open: !!open });
 const range = (a, b) => Array.from({ length: b - a + 1 }, (_, i) => a + i);
 const HW = (sent3, sent1) => [{ id: 'x-e03-r1', exp: 3, round: 1, title: 'Tres', sent: !!sent3 }, { id: 'x-e01-r1', exp: 1, round: 1, title: 'Uno', sent: !!sent1 }];
-// (2026-10-21) cur = the class's pace: homework up to experience 3 is due here (both homeworks), «this week» = experience 3
-const raw = (o) => Object.assign({ pct: 70, words: 40, seals: [], worlds: [W(1), W(2), W(3), W(4)], hws: HW(false, false), cur: 3, sim: null }, o);
+// (2026-10-21, «Automatic by each kid») the kid's own pace: the first experience whose words are not all marked (no
+// seals = experience 1: only its homework is due; experience 3's waits, «más adelante»)
+const raw = (o) => Object.assign({ pct: 70, words: 40, seals: [], worlds: [W(1), W(2), W(3), W(4)], hws: HW(false, false), sim: null }, o);
 function planTests() {
   section('the plan: a new kid');
   let p = Plan.plan(raw({}));
   ok(p.sealed === 0 && p.words === 40 && p.complete === 0 && p.of === 4 && p.current === 1, 'nothing yet: 0 of 40 words, 0 of 4 experiences, it is on experience 1');
   ok(same(p.exps.map((e) => e.state), ['current', 'later', 'later', 'later']), '… experience 1 current, the rest later');
-  ok(p.focus.kind === 'tarea' && p.focus.id === 'x-e03-r1' && p.focus.exp === 3 && p.focus.name === 'Mundo 3', '«Lo más importante»: the NEWEST homework not sent (experience 3), before anything else');
-  ok(same(p.tareas, { of: 2, sent: 0, later: 0, ahead: 0, week: { exp: 3, of: 1, left: 1 } }), 'tareas: 0 of 2 sent, this week = the class\'s experience (3), 1 left');
-  p = Plan.plan(raw({ cur: 2 }));
-  ok(p.tareas.of === 1 && p.tareas.later === 1 && p.tareas.week === null && p.focus.kind === 'tarea' && p.focus.id === 'x-e01-r1',
-    'the class on experience 2: experience 3\'s homework is later (never counted); Papás asks for experience 1\'s (the class\'s pace, test-class-pace.js)');
+  ok(p.pace === 1 && p.focus.kind === 'tarea' && p.focus.id === 'x-e01-r1' && p.focus.exp === 1 && p.focus.name === 'Mundo 1', '«Lo más importante»: the newest DUE homework (the kid\'s pace = experience 1), before anything else');
+  ok(same(p.tareas, { of: 1, sent: 0, later: 1, ahead: 0, week: { exp: 1, of: 1, left: 1 } }), 'tareas: 0 of 1 due, experience 3\'s is later (never counted), this week = the kid\'s experience (1)');
+  p = Plan.plan(raw({ seals: range(1, 20) }));
+  ok(p.pace === 3 && p.tareas.of === 2 && p.tareas.later === 0 && p.tareas.week && p.tareas.week.exp === 3 && p.focus.kind === 'tarea' && p.focus.id === 'x-e03-r1',
+    'the words of experiences 1-2 all marked: the kid is on experience 3, its homework is this week\'s and Papás asks for it first (test-kid-pace.js)');
   p = Plan.plan(raw({}));
   ok(p.sim === null && p.trainDone === false, 'no simulation, El Entrenamiento not done');
 
   section('the plan: the order of «Lo más importante»');
-  p = Plan.plan(raw({ hws: HW(false, true) }));
-  ok(p.focus.kind === 'tarea' && p.focus.id === 'x-e03-r1', 'a homework waiting beats everything (experience 1 sent, 3 not)');
+  p = Plan.plan(raw({ hws: HW(false, true), seals: range(1, 20) }));
+  ok(p.focus.kind === 'tarea' && p.focus.id === 'x-e03-r1', 'a homework waiting beats everything (experience 1 sent, 3 not; the kid on experience 3)');
   p = Plan.plan(raw({ hws: HW(true, false) }));
   ok(p.focus.kind === 'tarea' && p.focus.id === 'x-e01-r1', '… the newest NOT SENT: experience 3 sent → experience 1\'s');
   p = Plan.plan(raw({ hws: HW(true, true), seals: range(1, 6) }));
@@ -115,13 +116,12 @@ const hwOf = (folder) => CAT.homeworks.filter((h) => h.level === folder).sort((a
 const NEWHW = hwOf('newhsk1');
 const OLDHW = hwOf('hsk1');
 const YCTHW = hwOf('yct1');
-// (2026-10-21) the class's pace: these made-up kids' classes never chose «Experiencia actual» in /maestro, so each level's
-// default (core/levels.js paceDefault, read from where it lives) decides which homework is due; today's catalog decides the rest
-const Levels = require('../core/levels.js');
-const PACE = { hsk2: Levels.info('hsk2').paceDefault, hsk1: Levels.info('hsk1').paceDefault, yct1: Levels.info('yct1').paceDefault };
-const NEWDUE = NEWHW.filter((h) => h.exp <= PACE.hsk2);
-const OLDDUE = OLDHW.filter((h) => h.exp <= PACE.hsk1);
-const YCTDUE = YCTHW.filter((h) => h.exp <= PACE.yct1);
+// (2026-10-21, «Automatic by each kid») each made-up kid's own pace decides which homework is due: the first experience
+// whose words they have not all marked (the last one once all are), read from their experiences as the server counted
+// them (paceFrom, written here apart from js/papas-plan.js); today's catalog decides which experiences have homework
+const paceFrom = (exps) => { const o = exps.find((e) => e.count > 0 && e.sealed < e.count); return o ? o.n : exps.length ? exps[exps.length - 1].n : null; };
+const dueTo = (list, n) => list.filter((h) => n == null || h.exp <= n);
+let PACE = {}, NEWDUE = [], OLDDUE = [], YCTDUE = [];
 const DATA = fs.mkdtempSync(path.join(os.tmpdir(), 'draly-papas-'));
 const rnd = (n) => crypto.randomBytes(n).toString('hex').toUpperCase();
 const LEGACY = 'legacy-' + rnd(12);
@@ -272,26 +272,33 @@ async function serverTests() {
   section('the numbers and «Lo más importante» of each made-up kid');
   const P = (k) => R[k].json.ruta.plan;
   const T = (k) => texts(R[k].json);
+  for (const k of ['NEWK', 'HALF', 'PRAC', 'WORD', 'DONE', 'GOLD', 'YCTK', 'OLDK']) {
+    PACE[k] = paceFrom(P(k).exps);
+    ok(P(k).pace === PACE[k] && P(k).exps.every((e) => e.due === (e.n <= PACE[k])), k + ': its own pace, experience ' + PACE[k] + ' (the first with words left to mark), decides which homework is due');
+  }
+  NEWDUE = dueTo(NEWHW, PACE.NEWK); OLDDUE = dueTo(OLDHW, PACE.OLDK); YCTDUE = dueTo(YCTHW, PACE.YCTK);
   let p = P('NEWK');
-  ok(p.sealed === 0 && p.words === 300 && p.complete === 0 && p.of === 8 && p.current === 1, 'new kid: 0 of 300 words, 0 of 8 experiences, on experience 1');
-  ok(p.focus.kind === 'tarea' && p.focus.id === NEWDUE[0].id && p.focus.exp === NEWDUE[0].exp, 'new kid: send the newest DUE homework (' + NEWDUE[0].id + ', the class on ' + PACE.hsk2 + ')');
+  ok(p.sealed === 0 && p.words === 300 && p.complete === 0 && p.of === 8 && p.current === 1 && p.pace === 1, 'new kid: 0 of 300 words, 0 of 8 experiences, on experience 1 (its pace too)');
+  ok(NEWDUE.length ? p.focus.kind === 'tarea' && p.focus.id === NEWDUE[0].id && p.focus.exp === NEWDUE[0].exp : p.focus.kind === 'words',
+    'new kid: send the newest DUE homework (' + (NEWDUE[0] ? NEWDUE[0].id : 'none yet') + ', experience 1\'s)');
   ok(p.tareas.of === NEWDUE.length && p.tareas.later === NEWHW.length - NEWDUE.length && p.tareas.sent === 0 &&
-    (NEWHW.some((h) => h.exp === PACE.hsk2) ? p.tareas.week && p.tareas.week.exp === PACE.hsk2 && p.tareas.week.left >= 1 : p.tareas.week === null), '… 0 homework sent, «Falta» this week\'s');
+    (NEWDUE.length ? p.tareas.week && p.tareas.week.exp === 1 && p.tareas.week.left >= 1 : p.tareas.week === null), '… 0 homework sent, «Falta» this week\'s (experience 1), later ones never counted');
   ok(p.sim === null, '… no simulation: «Aún no»');
   let t = T('NEWK');
   ok(/^Ayúdale a mandar la tarea de la Experiencia \d+, .+: graben juntos su video y mándenlo a la profe por WhatsApp\.$/.test(t.focus.text) && t.focus.btn === 'Ver la tarea' &&
-    t.focus.href === '/audios/' + NEWDUE[0].id, '… «' + t.focus.text + '» → «Ver la tarea» opens that homework');
+    t.focus.href === '/audios/' + (NEWDUE[0] || {}).id, '… «' + t.focus.text + '» → «Ver la tarea» opens that homework');
   p = P('HALF');
   ok(p.sealed === 123 && p.complete === 2 && p.current === 3, 'halfway: 123 of 300 words, experiences 1-2 complete (words + practice + homework), on 3');
   ok(same(p.exps.map((e) => e.state), ['done', 'done', 'current', 'later', 'later', 'later', 'later', 'later']), '… the strip: done, done, current, later…');
-  // (2026-10-21: «this week» = the class's experience, its pace: these classes never chose, so the level's default. It was
-  // the newest experience with homework in the catalog, always the last one once every storybook arrived. The kid's own
-  // experience 3 homework is only heard, so only experiences 1-2's count as sent)
-  const WEEK = PACE.hsk2;
+  // (2026-10-21: «this week» = the kid's own experience, their pace. It was the newest experience with homework in the
+  // catalog, always the last one once every storybook arrived. The kid's experience 3 homework is only heard, so only
+  // experiences 1-2's count as sent)
+  const WEEK = PACE.HALF;
+  const HALFDUE = dueTo(NEWHW, PACE.HALF);
   const HALFSENT = (h) => !!(KIDS.HALF.tareas[h.id] && KIDS.HALF.tareas[h.id].s);
   const WEEK_LEFT = NEWHW.filter((h) => h.exp === WEEK && !HALFSENT(h)).length;
-  const HALF_NEXT = NEWDUE.find((h) => !HALFSENT(h));
-  const HALF_SENT = NEWDUE.filter(HALFSENT).length;
+  const HALF_NEXT = HALFDUE.find((h) => !HALFSENT(h));
+  const HALF_SENT = HALFDUE.filter(HALFSENT).length;
   ok(p.tareas.sent === HALF_SENT && (WEEK_LEFT ? p.tareas.week.exp === WEEK && p.tareas.week.left === WEEK_LEFT : !p.tareas.week || !p.tareas.week.left) &&
     p.focus.kind === 'tarea' && p.focus.exp === HALF_NEXT.exp,
     '… ' + HALF_SENT + ' homework sent (heard is not sent), the newest due homework waits: «Ayúdale a mandar la tarea de la Experiencia ' + HALF_NEXT.exp + '»');
@@ -327,10 +334,12 @@ async function serverTests() {
   } else {
     ok(p.of === 6 && p.words === 83 && p.sealed === 17 && p.complete === 0 && p.current === 1 && p.tareas.of === YCTDUE.length && p.tareas.later === YCTHW.length - YCTDUE.length,
       'YCT 1: 6 experiences, 17 of 83 words, experience 1 waits for its homework (due: ' + YCTDUE.length + ', later: ' + (YCTHW.length - YCTDUE.length) + ')');
-    ok(p.focus.kind === 'tarea' && p.focus.id === YCTDUE[0].id, '… «Lo más importante»: experience 1\'s homework');
+    ok(p.focus.kind === 'tarea' && p.focus.id === YCTDUE.find((h) => true).id, '… «Lo más importante»: the newest homework up to the kid\'s experience (' + PACE.YCTK + ')');
   }
   p = P('OLDK');
-  ok(p.of === 8 && p.words === 150 && p.tareas.of === OLDDUE.length && p.tareas.sent === 1 && p.focus.kind === 'tarea' && p.focus.id === OLDDUE[0].id, 'HSK 1: the newest DUE homework not sent (one older one sent)');
+  const OLDNEXT = OLDDUE.find((h) => !(KIDS.OLDK.tareas[h.id] && KIDS.OLDK.tareas[h.id].s));
+  ok(p.of === 8 && p.words === 150 && p.tareas.of === OLDDUE.length && p.tareas.sent === 1 && (OLDNEXT ? p.focus.kind === 'tarea' && p.focus.id === OLDNEXT.id : p.focus.kind !== 'tarea'),
+    'HSK 1 (no words marked: experience 1): the newest DUE homework not sent (one older one sent), never a later one');
 
   section('only the kid\'s own record');
   const other = await insights(phones.HALF, KIDS.OTHR);

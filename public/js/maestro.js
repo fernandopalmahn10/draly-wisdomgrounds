@@ -199,7 +199,6 @@
         }
         pw = v;
         try { localStorage.setItem(STORAGE_PW, pw); } catch (_) {}
-        paceReset();   // (2026-10-21: a teacher who signs in on this tab never sees the previous one's classes)
         showDashboard();
         renderRoster(data.students || [], data.self || null, data.archived);
       })
@@ -223,7 +222,6 @@
   $('m-refresh').addEventListener('click', () => {
     _authStopped = false;   // a manual refresh may try again after a «code not accepted»
     fetchRoster();
-    paceMaybe(true);
   });
   // 🎯 Modo Maestro en vivo — invite only currently-ONLINE students to a
   // live warmup session. User feedback 2026-05-27: "select from the list
@@ -325,289 +323,119 @@
 
   // ── 📖 LECTURA EN CLASE — folder picker of stories by HSK1 experience.
   // ════════════════════════════════════════════════════════════════
-  // 🚀 UNIVERSAL LAUNCHER — Fernando 2026-06-04
-  //
-  // Pick any host page, pick online kids, kids get force-imposed when
-  // the host page's PIN appears. Uses sessionStorage + ?autohost=1 +
-  // the shared /js/auto-host.js runner.
-  //
-  // Each game card describes:
-  //   id          — internal slug (for analytics later)
-  //   label       — what the teacher sees on the card
-  //   emoji       — big icon on the card
-  //   hostUrl     — host page to open (no PIN in URL — host creates one)
-  //   kidUrlTpl   — template for the kid's URL, '{PIN}' substituted
-  //                 by auto-host.js when the host page's PIN appears
-  //   blurb       — one-line description shown on the card
+  // 🚀 LAUNCH A GAME (remade 2026-10-21, his ask: "I want to launch the game and just launch the game, like a shortcut
+  // of the home screen… without me having to pick someone"; CLAUDE.md «launching a game never asks to pick kids").
+  // One tap on a game = its projector page opens at once (the plain host page, like /games): the PIN shows on the
+  // screen and the kids join with it. Calling in the kids who are online right now is an extra, a checkbox that
+  // starts OFF; when it is on, the kids are pulled in the old way (?livegame=1 + sessionStorage dralyLiveGame,
+  // /js/live-game.js on every host page; the warm-up through ?livemaster=1).
+  //   id     — the card's id (dralyLastLaunchGame remembers the last one)
+  //   host   — the projector page it opens
+  //   label / emoji / blurb — what the card shows
+  //   official — opens the «Official tests» window instead (the exam rooms have their own flow)
   // ════════════════════════════════════════════════════════════════
-  // 🆕 2026-06-04 v3 (Fernando bug fix): kidUrlTpl MUST include
-  // &autojoin=1 — without it, player.html just fills the PIN input
-  // and shows the join screen. With it, the kid auto-joins as soon
-  // as &name= is also present (the homework client splices that in
-  // before redirect). Bug was: kids saw "Tu maestra te llama" but
-  // then landed on the join screen instead of being pulled in.
-  // hsk-sim.html has its own auto-join path and doesn't need it.
-  // 🆕 2026-06-04 v4 (Fernando: "force games doesn't bring anyone in"):
-  // Rewritten to use the PROVEN per-game patterns instead of a generic
-  // autohost script. Each entry's `launch` function does what's known
-  // to work for THAT game.
-  //   - warmup: ?livemaster=1 + sessionStorage.dralyLiveMaster
-  //     (the proven Modo Maestro flow — already in use for weeks)
-  //   - hsksim: ?access=&sim= (the proven HSK button flow)
-  //   - others: open the host page; teacher sees the PIN and we send
-  //     a soft "Tu maestra te llama" notification when kids click in.
-  //     Honest about what works vs what doesn't.
-  // Also expanded to include ALL 18 host pages so Fernando can see
-  // the full game catalog.
   const LAUNCHER_GAMES = [
-    {
-      id: 'warmup', label: 'Teacher Mode', emoji: '✏️',
-      blurb: 'Build HSK1 sentences live · ★ Auto-force',
-      launch: (ctx) => {
+    { id: 'warmup',  label: 'Live Teacher Mode', emoji: '✏️', host: '/host-warmup.html', blurb: 'Build sentences with the class on the projector',
+      // (calling kids in: the proven Modo Maestro flow, same tab)
+      call: (ctx) => {
         try {
-          sessionStorage.setItem('dralyLiveMaster', JSON.stringify({
-            codes: ctx.codes, pw: ctx.pw, text: 'Join Live Teacher Mode now!', ts: Date.now(),
-          }));
-        } catch (_) { alert('Could not save the session.'); return; }
-        // 🆕 v4: SAME tab navigation (was window.open). Mobile browsers
-        // throttle background tabs, breaking the force flow. Proven
-        // path matches the existing Modo Maestro button.
+          sessionStorage.setItem('dralyLiveMaster', JSON.stringify({ codes: ctx.codes, pw: ctx.pw, text: 'Join Live Teacher Mode now!', ts: Date.now() }));
+        } catch (_) { notify('Could not save the session.'); return false; }
         location.href = '/host-warmup.html?livemaster=1';
-      },
-    },
-    {
-      id: 'reading', label: 'Class Reading', emoji: '📖',
-      blurb: 'Guided reading with karaoke + quiz at the end',
-      launch: (ctx) => _genericLaunch(ctx, '/host-reading.html', '/player.html'),
-    },
-    {
-      id: 'hsksim', label: 'HSK Simulation', emoji: '🏆',
-      blurb: 'Official HSK1 exam — Sim 1, 2 or 3 · ★ Auto-force',
-      launch: (ctx) => {
-        // Reuse the existing HSK button's proven pattern. Default to Sim 1.
-        const simId = ctx.simId || 'hsk1-sim1';
-        const accessCode = (new URLSearchParams(location.search)).get('access')
-          || localStorage.getItem('mochi.accessCode') || '';
-        adminFetch('/api/admin/broadcast-selected', ctx.pw, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            studentCodes: ctx.codes,
-            text: '🏆 Your teacher is opening the HSK simulation now. Get ready.',
-            actionType: 'force',
-            actionUrl: '/hsk-sim.html?access=' + encodeURIComponent(accessCode) + '&sim=' + encodeURIComponent(simId),
-            actionLabel: 'Enter the exam →',
-          }),
-        })
-          .then((r) => r.json())
-          .then((res) => {
-            if (res && res.ok) {
-              const monitorUrl = withHskCode('/host-hsk.html'
-                + '?sim=' + encodeURIComponent(simId)
-                + '&access=' + encodeURIComponent(accessCode), ctx.pw);
-              // 🆕 2026-06-16 (Fernando): SAME-TAB nav (mobile popup-block fix).
-              location.href = monitorUrl;
-            } else {
-              alert('Error: ' + ((res && res.error) || 'could not send'));
-            }
-          });
-      },
-    },
+        return true;
+      } },
+    { id: 'reading', label: 'Class Reading', emoji: '📖', host: '/host-reading.html', blurb: 'Read a story together, with a quiz at the end' },
+    { id: 'hsksim',  label: 'Official tests', emoji: '🏆', official: true, blurb: 'YCT, New HSK and Old HSK exam rooms' },
     // Las Trampillas (2026-10-17): Mario Party's trapdoor platform
-    { id: 'trapdoor',  label: 'Las Trampillas',      emoji: '🕳️', blurb: 'Whole class on a round platform: pink trapdoors open at 0; right answers give wings (Mario Party)', launch: (ctx) => _genericLaunch(ctx, '/host-trapdoor.html', '/player.html') },
+    { id: 'trapdoor', label: 'Las Trampillas', emoji: '🕳️', host: '/host-trapdoor.html', blurb: 'Whole class on a round platform: pink trapdoors open at 0; right answers give wings (Mario Party)' },
     // Ojos de Halcón (2026-10-13) replaced the first «Ojo de Halcón» (`look`, retired 2026-10-14)
-    { id: 'halcon',   label: 'Ojos de Halcón',      emoji: '🦅', blurb: 'Look at the right window first, boards of 4 (Mario Party)', launch: (ctx) => _genericLaunch(ctx, '/host-halcon.html', '/player.html') },
-    { id: 'escape',    label: 'La Gran Fuga de Dubái', emoji: '🚀', blurb: 'Whole class runs from Robotín: Dubai or China route', launch: (ctx) => _genericLaunch(ctx, '/host-escape.html', '/player.html') },
-    { id: 'snow',      label: 'Batalla de Nieve',   emoji: '❄️', blurb: 'Walk Dubai, snowball fight', launch: (ctx) => _genericLaunch(ctx, '/host-snow.html', '/player.html') },
-    { id: 'paint',     label: 'Dragones Pintores',  emoji: '🎨', blurb: 'Tap to fly, paint the sky, win the wonders', launch: (ctx) => _genericLaunch(ctx, '/host-paint.html', '/player.html') },
-    { id: 'kingdoms',  label: 'Reinos de Colores',  emoji: '🏰', blurb: 'Plant flags, conquer the map', launch: (ctx) => _genericLaunch(ctx, '/host-kingdoms.html', '/player.html') },
-    { id: 'sixseven',  label: '6-7 Swing',          emoji: '🤙', blurb: 'Sums that are always 6 or 7, digits or pinyin, fill your team balance (Mario Party)', launch: (ctx) => _genericLaunch(ctx, '/host-sixseven.html', '/player.html') },
-    { id: 'monopoly',  label: 'Dàfùwēng · Monopolio', emoji: '🎲', blurb: 'Dubai board night in boards of 4: answer, roll the dice, buy landmarks, collect stars (Mario Party)', launch: (ctx) => _genericLaunch(ctx, '/host-monopoly.html', '/player.html') },
-    { id: 'mochi',     label: 'Mochi Mash',         emoji: '🍡', blurb: 'Answer, tap fast, feed your team dragon (Mario Party)', launch: (ctx) => _genericLaunch(ctx, '/host.html',          '/player.html') },
-    { id: 'pinata',    label: 'Piñata Tigre',       emoji: '🐯', blurb: 'Answer, stop the arrow on gold, break your team piñata (Mario Party)', launch: (ctx) => _genericLaunch(ctx, '/host-pinata.html',   '/player.html') },
-    { id: 'dragon',    label: 'Vuelo del Dragón',   emoji: '🐉', blurb: 'Sky race over Dubai in races of 4: answer, swipe up to flap, win Dralingo\'s stars (Mario Party)', launch: (ctx) => _genericLaunch(ctx, '/host-dragon.html',   '/player.html') },
+    { id: 'halcon',   label: 'Ojos de Halcón', emoji: '🦅', host: '/host-halcon.html', blurb: 'Look at the right window first, boards of 4 (Mario Party)' },
+    { id: 'escape',   label: 'La Gran Fuga de Dubái', emoji: '🚀', host: '/host-escape.html', blurb: 'Whole class runs from Robotín: Dubai or China route' },
+    { id: 'snow',     label: 'Batalla de Nieve', emoji: '❄️', host: '/host-snow.html', blurb: 'Walk Dubai, snowball fight' },
+    { id: 'paint',    label: 'Dragones Pintores', emoji: '🎨', host: '/host-paint.html', blurb: 'Tap to fly, paint the sky, win the wonders' },
+    { id: 'kingdoms', label: 'Reinos de Colores', emoji: '🏰', host: '/host-kingdoms.html', blurb: 'Plant flags, conquer the map' },
+    { id: 'sixseven', label: '6-7 Swing', emoji: '🤙', host: '/host-sixseven.html', blurb: 'Sums that are always 6 or 7, digits or pinyin, fill your team balance (Mario Party)' },
+    { id: 'monopoly', label: 'Dàfùwēng · Monopolio', emoji: '🎲', host: '/host-monopoly.html', blurb: 'Dubai board night in boards of 4: answer, roll the dice, buy landmarks, collect stars (Mario Party)' },
+    { id: 'mochi',    label: 'Mochi Mash', emoji: '🍡', host: '/host.html', blurb: 'Answer, tap fast, feed your team dragon (Mario Party)' },
+    { id: 'pinata',   label: 'Piñata Tigre', emoji: '🐯', host: '/host-pinata.html', blurb: 'Answer, stop the arrow on gold, break your team piñata (Mario Party)' },
+    { id: 'dragon',   label: 'Vuelo del Dragón', emoji: '🐉', host: '/host-dragon.html', blurb: 'Sky race over Dubai in races of 4: answer, swipe up to flap, win Dralingo\'s stars (Mario Party)' },
   ];
-  // 🆕 2026-06-04 v4 — universal force launch using ?livegame=1.
-  // Same pattern as ?livemaster=1 for warmup, generalized for non-gated
-  // host pages. Stashes payload, opens host page with the flag, and
-  // /js/live-game.js (loaded on every host page) monitors for the PIN
-  // and force-imposes the selected kids the moment it appears.
-  // Kid URL is /player.html?pin=PIN&autojoin=1 — player.js auto-joins.
-  function _genericLaunch(ctx, hostUrl /*, kidLandingUrl */) {
+  // the old force-launch (kept for the checkbox): stash the kids, open the host page with ?livegame=1, and
+  // /js/live-game.js calls them in the moment the PIN appears. SAME tab on purpose (2026-06-04: mobile browsers
+  // throttle background tabs and the PIN watch stalled).
+  function _genericLaunch(ctx, hostUrl) {
     try {
-      sessionStorage.setItem('dralyLiveGame', JSON.stringify({
-        codes: ctx.codes,
-        pw: ctx.pw,
-        label: ctx.label,
-        ts: Date.now(),
-      }));
-    } catch (_) { notify('Could not save the session.'); return; }
-    const url = hostUrl + (hostUrl.includes('?') ? '&' : '?') + 'livegame=1';
-    // 🆕 v4 (Fernando bug — mobile background-tab throttling):
-    // SAME tab navigation, not window.open. Mobile browsers throttle
-    // setInterval in background tabs, so live-game.js's PIN polling
-    // can stall for minutes. Matches the PROVEN Modo Maestro pattern
-    // (location.href = '/host-warmup.html?livemaster=1'). Teacher can
-    // go back to /maestro via browser back button if they need to.
-    location.href = url;
+      sessionStorage.setItem('dralyLiveGame', JSON.stringify({ codes: ctx.codes, pw: ctx.pw, label: ctx.label, ts: Date.now() }));
+    } catch (_) { notify('Could not save the session.'); return false; }
+    location.href = hostUrl + (hostUrl.includes('?') ? '&' : '?') + 'livegame=1';
+    return true;
   }
   function openUniversalLauncher() {
-    // Pull the most-recent online students. Reuse the existing roster API.
-    adminFetch('/api/admin/students', pw)
-      .then((r) => r.json())
-      .then((data) => {
-        if (!data || !data.ok) { notify('Could not load the student list. Check the connection and try again.'); return; }
-        const students = (data.students || []).slice().sort((a, b) => {
-          const an = (a.displayName || a.code || '').toLowerCase();
-          const bn = (b.displayName || b.code || '').toLowerCase();
-          return an < bn ? -1 : an > bn ? 1 : 0;
+    let overlay = document.getElementById('m-launch-modal');
+    if (overlay) overlay.remove();
+    overlay = document.createElement('div');
+    overlay.id = 'm-launch-modal';
+    overlay.className = 'm-modal';
+    let lastGame = '';
+    try { lastGame = localStorage.getItem('dralyLastLaunchGame') || ''; } catch (_) {}
+    const gameCard = (g) =>
+      '<button class="m-launch-game' + (g.id === lastGame ? ' is-last' : '') + '" data-id="' + escapeHtml(g.id) + '" type="button">' +
+        (g.id === lastGame ? '<span class="m-launch-last">Last time</span>' : '') +
+        '<span class="m-launch-game-emoji" aria-hidden="true">' + g.emoji + '</span>' +
+        '<span class="m-launch-game-label">' + escapeHtml(g.label) + '</span>' +
+        '<span class="m-launch-game-blurb">' + escapeHtml(g.blurb) + '</span>' +
+      '</button>';
+    // 2026-10-13: the class tools and the games in two short groups (11 cards in one grid was a wall);
+    // any new LAUNCHER_GAMES entry lands under Games by itself.
+    const TOOL_IDS = ['warmup', 'reading', 'hsksim'];
+    overlay.innerHTML =
+      '<div class="m-modal-card m-modal-card--wide m-launch-card" role="dialog" aria-modal="true" aria-labelledby="m-launch-title">' +
+        '<button class="m-modal-close" type="button" aria-label="Close">✕</button>' +
+        '<h2 id="m-launch-title">🚀 Launch a game</h2>' +
+        '<p class="m-modal-sub">Tap a game: it opens on the projector right away. The kids join with the PIN on the screen.</p>' +
+        '<label class="m-launch-call"><input type="checkbox" id="m-lc-call">' +
+          '<span><b>Also call in the kids who are online now</b> <span class="m-launch-call-n" id="m-lc-call-n"></span>' +
+          '<small>Their phones jump into the game by themselves. Optional.</small></span></label>' +
+        '<p class="m-launch-group">Games</p>' +
+        '<div class="m-launch-games">' + LAUNCHER_GAMES.filter((g) => !TOOL_IDS.includes(g.id)).map(gameCard).join('') + '</div>' +
+        '<p class="m-launch-group">Class tools</p>' +
+        '<div class="m-launch-games">' + LAUNCHER_GAMES.filter((g) => TOOL_IDS.includes(g.id)).map(gameCard).join('') + '</div>' +
+      '</div>';
+    document.body.appendChild(overlay);
+    const close = () => { try { overlay.remove(); } catch (_) {} };
+    overlay.querySelector('.m-modal-close').addEventListener('click', close);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+    const call = overlay.querySelector('#m-lc-call');
+    const callN = overlay.querySelector('#m-lc-call-n');
+    // who is online: asked only for the checkbox's count (never needed to launch)
+    let online = null;
+    const onlineCodes = () => adminFetch('/api/admin/students', pw).then((r) => r.json()).then((d) => {
+      online = d && d.ok ? (d.students || []).filter((s) => isOnlineNow(s)).map((s) => s.code).filter(Boolean) : null;
+      if (callN && online) callN.textContent = '(' + online.length + ')';
+      return online;
+    });
+    onlineCodes().catch(() => {});
+    let going = false;
+    overlay.querySelectorAll('.m-launch-game').forEach((card) => {
+      card.addEventListener('click', () => {
+        const g = LAUNCHER_GAMES.find((x) => x.id === card.dataset.id);
+        if (!g || going) return;
+        try { localStorage.setItem('dralyLastLaunchGame', g.id); } catch (_) {}
+        if (g.official) { close(); const b = $('m-hsk-btn'); if (b) b.click(); return; }
+        going = true;
+        card.classList.add('is-going');
+        card.setAttribute('aria-busy', 'true');
+        const plain = () => { location.href = g.host; };
+        if (!call || !call.checked) { plain(); return; }
+        // the extra: call in the online kids; nobody online (or no answer) = the game opens anyway
+        (online ? Promise.resolve(online) : onlineCodes()).catch(() => null).then((codes) => {
+          if (!codes || !codes.length) { notify('Nobody is online right now: the kids join with the PIN.'); plain(); return; }
+          const ctx = { pw, codes, label: g.label };
+          const ok = g.call ? g.call(ctx) : _genericLaunch(ctx, g.host);
+          if (!ok) plain();
         });
-        let overlay = document.getElementById('m-launch-modal');
-        if (overlay) overlay.remove();
-        overlay = document.createElement('div');
-        overlay.id = 'm-launch-modal';
-        overlay.className = 'm-modal';
-        const gameCard = (g) =>
-          '<button class="m-launch-game" data-id="' + escapeHtml(g.id) + '" type="button">' +
-            '<span class="m-launch-game-emoji">' + g.emoji + '</span>' +
-            '<span class="m-launch-game-label">' + escapeHtml(g.label) + '</span>' +
-            '<span class="m-launch-game-blurb">' + escapeHtml(g.blurb) + '</span>' +
-          '</button>';
-        // 2026-10-13: the class tools and the games in two short groups (11 cards in one grid was a wall);
-        // any new LAUNCHER_GAMES entry lands under Games by itself.
-        const TOOL_IDS = ['warmup', 'reading', 'hsksim'];
-        const gameCardsHtml =
-          '<p class="m-launch-group">Class tools</p>' +
-          '<div class="m-launch-games">' + LAUNCHER_GAMES.filter((g) => TOOL_IDS.includes(g.id)).map(gameCard).join('') + '</div>' +
-          '<p class="m-launch-group">Games</p>' +
-          '<div class="m-launch-games">' + LAUNCHER_GAMES.filter((g) => !TOOL_IDS.includes(g.id)).map(gameCard).join('') + '</div>';
-        // 🆕 2026-06-04 v2 (Fernando): Default view is "🟢 En línea
-        // ahora" as its OWN tab (not just a button), so the teacher
-        // sees the relevant kids immediately. Toggle to "📋 Todos" to
-        // see the full roster.
-        // the badge and the list share ONLINE_MS (the badge used 60 s and disagreed with the list)
-        const onlineCount = students.filter((s) => isOnlineNow(s)).length;
-        overlay.innerHTML =
-          '<div class="m-modal-card m-modal-card--wide">' +
-            '<button class="m-modal-close" type="button" aria-label="Close">✕</button>' +
-            '<h2>🚀 Launch a game</h2>' +
-            '<p class="m-modal-sub">Pick a game and the students. They join by themselves as soon as the PIN appears.</p>' +
-            '<h3 class="m-launch-section-h">1. Pick the game</h3>' +
-            gameCardsHtml +
-            '<h3 class="m-launch-section-h">2. Pick the students</h3>' +
-            '<div class="m-launch-stu-tabs" role="tablist" aria-label="Which students">' +
-              '<button class="m-launch-stu-tab is-active" data-stu="online" type="button" role="tab" aria-selected="true">🟢 Online now <span class="m-launch-stu-n">' + onlineCount + '</span></button>' +
-              '<button class="m-launch-stu-tab" data-stu="all" type="button" role="tab" aria-selected="false">📋 All <span class="m-launch-stu-n">' + students.length + '</span></button>' +
-            '</div>' +
-            '<div class="m-force-actions">' +
-              '<button class="btn btn-ghost btn-sm" id="m-lc-all" type="button">Select all</button>' +
-              '<button class="btn btn-ghost btn-sm" id="m-lc-none" type="button">Clear</button>' +
-            '</div>' +
-            '<div class="m-force-students" id="m-lc-list"></div>' +
-            '<button class="btn btn-gold btn-xl" id="m-lc-go" type="button" disabled>🚀 Pick a game first</button>' +
-          '</div>';
-        document.body.appendChild(overlay);
-        const list = overlay.querySelector('#m-lc-list');
-        let stuFilter = 'online';   // 'online' | 'all'
-        function renderStudents() {
-          list.innerHTML = '';
-          let shown = students;
-          if (stuFilter === 'online') {
-            shown = students.filter((s) => isOnlineNow(s));
-          }
-          if (!shown.length) {
-            list.innerHTML = '<div class="m-launch-empty">' +
-              (stuFilter === 'online'
-                ? 'Nobody is online right now. Switch to 📋 All to pick from the whole group, or launch with the PIN on the projector.'
-                : 'No students yet.') +
-              '</div>';
-            return;
-          }
-          shown.forEach((s) => {
-            // 🆕 2026-06-04 v3 (Fernando: "Solo en línea displays everything"): 60 s let half-stale records
-            // through, so this list used 30 s. 2026-10-13: every screen now shares ONLINE_MS (45 s, see the top).
-            const isOnline = isOnlineNow(s);
-            const row = document.createElement('label');
-            row.className = 'm-force-row';
-            row.dataset.online = isOnline ? '1' : '0';
-            // Default checked = on (when in online tab); off in "all" tab
-            row.innerHTML =
-              '<input type="checkbox" data-code="' + escapeHtml(s.code) + (stuFilter === 'online' ? '" checked>' : '">') +
-              '<span class="m-force-row-dot' + (isOnline ? '' : ' is-offline') + '" title="' + (isOnline ? 'Online' : 'Offline') + '"></span>' +
-              '<span class="m-force-row-name">' + escapeHtml(s.displayName || 'Anon') + '</span>' +
-              '<span class="m-force-row-code">' + escapeHtml(s.code) + '</span>';
-            list.appendChild(row);
-          });
-        }
-        renderStudents();
-        overlay.querySelectorAll('.m-launch-stu-tab').forEach((t) => {
-          t.addEventListener('click', () => {
-            overlay.querySelectorAll('.m-launch-stu-tab').forEach((x) => { x.classList.remove('is-active'); x.setAttribute('aria-selected', 'false'); });
-            t.classList.add('is-active');
-            t.setAttribute('aria-selected', 'true');
-            stuFilter = t.dataset.stu;
-            renderStudents();
-            updateGo();
-          });
-        });
-        let chosen = null;
-        const goBtn = overlay.querySelector('#m-lc-go');
-        function updateGo() {
-          if (!chosen) { goBtn.disabled = true; goBtn.textContent = '🚀 Pick a game first'; return; }
-          const n = list.querySelectorAll('input[type=checkbox]:checked').length;
-          goBtn.disabled = !n;
-          goBtn.textContent = n
-            ? '🚀 Launch ' + chosen.label + ' · ' + n + ' student' + (n === 1 ? '' : 's')
-            : 'Pick at least one student';
-        }
-        const pickGame = (card) => {
-          overlay.querySelectorAll('.m-launch-game').forEach((c) => { c.classList.remove('is-active'); c.setAttribute('aria-pressed', 'false'); });
-          card.classList.add('is-active');
-          card.setAttribute('aria-pressed', 'true');
-          chosen = LAUNCHER_GAMES.find((g) => g.id === card.dataset.id);
-          updateGo();
-        };
-        overlay.querySelectorAll('.m-launch-game').forEach((card) => {
-          card.setAttribute('aria-pressed', 'false');
-          card.addEventListener('click', () => {
-            pickGame(card);
-            try { localStorage.setItem('dralyLastLaunchGame', card.dataset.id); } catch (_) {}
-          });
-        });
-        // 2026-10-13: the last game launched is already picked, so a repeat launch is one tap
-        let lastGame = '';
-        try { lastGame = localStorage.getItem('dralyLastLaunchGame') || ''; } catch (_) {}
-        const lastCard = lastGame && Array.from(overlay.querySelectorAll('.m-launch-game')).find((c) => c.dataset.id === lastGame);
-        if (lastCard) pickGame(lastCard);
-        list.addEventListener('change', updateGo);
-        const close = () => { try { overlay.remove(); } catch (_) {} };
-        overlay.querySelector('.m-modal-close').addEventListener('click', close);
-        overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
-        overlay.querySelector('#m-lc-all').addEventListener('click', () => {
-          list.querySelectorAll('input[type=checkbox]').forEach((cb) => { cb.checked = true; });
-          updateGo();
-        });
-        overlay.querySelector('#m-lc-none').addEventListener('click', () => {
-          list.querySelectorAll('input[type=checkbox]').forEach((cb) => { cb.checked = false; });
-          updateGo();
-        });
-        goBtn.addEventListener('click', () => {
-          if (!chosen) return;
-          const codes = Array.from(list.querySelectorAll('input[type=checkbox]:checked'))
-            .map((cb) => cb.dataset.code).filter(Boolean);
-          if (!codes.length) return;
-          // 🆕 v4: each game's `launch` function does what's known to
-          // work for THAT game. No more generic autohost script.
-          if (typeof chosen.launch !== 'function') {
-            notify('This game does not have a launch path yet.');
-            return;
-          }
-          goBtn.disabled = true;
-          goBtn.textContent = '🚀 Opening ' + chosen.label + '…';
-          chosen.launch({ pw, codes, label: chosen.label });
-          close();
-        });
-      })
-      .catch(() => notify('Could not load the student list. Check the connection and try again.'));
+      });
+    });
   }
   const launchBtn = $('m-launch-btn');
   if (launchBtn) launchBtn.addEventListener('click', openUniversalLauncher);
@@ -2707,7 +2535,6 @@
       sel.disabled = false;
       if (!d || !d.ok) { notify('Error: ' + (d && d.error || '')); fetchTeachers(true); return; }
       sel.closest('.m-code-chip').classList.add('is-saved');
-      paceMaybe(true);   // (2026-10-21: another level = that level's default experience, until its teacher chooses)
       setTimeout(() => { const c = sel.closest('.m-code-chip'); if (c) c.classList.remove('is-saved'); }, 1200);
     }).catch(() => { sel.disabled = false; notify('Sin conexión. Vuelve a intentarlo.', 'error'); });
   }
@@ -2718,7 +2545,6 @@
     }).then((r) => r.json()).then((d) => {
       if (!d || !d.ok) { notify('Error: ' + (d && d.error || '')); return; }
       notify('✓ Código de clase nuevo: ' + d.code + ' (' + levelLabel(level) + ')');
-      paceMaybe(true);
       fetchTeachers(true);
     }).catch(() => notify('Sin conexión. Vuelve a intentarlo.', 'error'));
   }
@@ -3293,7 +3119,6 @@
       _ccTo = '';
       fetchTeachers(true);
       fetchRoster();
-      paceMaybe(true);   // (2026-10-21: the class's «Experiencia actual» card follows its new code)
     }).catch(() => { busyBtn(btn); $('m-cc-msg2').textContent = 'Sin conexión. Vuelve a intentarlo.'; });
   });
   $('m-cc-copy').addEventListener('click', () => copyBtn($('m-cc-copy'), $('m-cc-final').textContent));
@@ -3344,205 +3169,6 @@
       });
   });
 
-  // ── 🗓️ 2026-10-21 «Experiencia actual» per class (his picks: «Each teacher, per class» + «Visible, can listen ahead»;
-  // CLAUDE.md «The class's pace decides this week's homework») ────────────────────────────────────────────────────────
-  // Every teacher sees, per class code, the experience the class is on (its picture and name, «3 de 8») with big ‹ ›
-  // and «Elegir» (a window with every experience's picture): one tap saves, a toast «Ahora tu clase está en la
-  // Experiencia 3 · El Mercado» with «Deshacer» for 8 s. Kids and parents are reminded only about homework up to it
-  // (js/papas-plan.js); later experiences stay visible and play. A class that never chose says «Elige en qué experiencia
-  // va tu clase» with one tap to keep the default. The super admin sees every class (his own first, the others folded).
-  // GET / POST /api/admin/class-pace (server.js): class codes only in the JSON body, never in an address.
-  let _pace = null;            // { classes: [{ code, level, teacher, mine, cur, set }], levels: { id: { name, slug, def, exps } } }
-  let _paceAt = 0;             // when it was last asked for (the roster's 15 s refresh asks again after a minute)
-  let _paceBusy = false;       // a save in flight: one at a time, and the cards are not redrawn under the teacher's finger
-  let _paceToast = null;       // the pace toast on screen (a new change replaces it)
-  let _paceOthersOpen = false; // the super admin's «Clases de otras maestras» fold, kept open across redraws
-  let _paceSaves = 0;          // saves so far: a list asked for before a save is older than it and is dropped (review)
-  function paceMaybe(force) {
-    if (!pw || _paceBusy) return;
-    if (!force && _pace && Date.now() - _paceAt < 60000) return;
-    _paceAt = Date.now();
-    const seq = _paceSaves, who = pw;
-    adminFetch('/api/admin/class-pace', pw).then((r) => r.json()).then((d) => {
-      if (!d || !d.ok || !Array.isArray(d.classes) || seq !== _paceSaves || who !== pw) return;
-      _pace = d;
-      if (!_paceBusy && !$('m-pace-modal')) renderPace();
-    }).catch(() => {});   // (offline: the cards keep what they showed; the next refresh asks again)
-  }
-  // a new sign-in on this tab (another teacher on a shared laptop): the previous one's classes never show
-  function paceReset() {
-    _pace = null; _paceAt = 0; _paceSaves++;
-    const sec = $('m-pace');
-    if (sec) sec.hidden = true;
-  }
-  const _paceLevel = (c) => (_pace && _pace.levels && c ? _pace.levels[c.level] : null) || null;
-  const _paceExp = (c, n) => { const L = _paceLevel(c); return (L && L.exps.find((e) => e.n === n)) || null; };
-  const _paceClass = (code) => (_pace ? _pace.classes.find((x) => x.code === code) : null) || null;
-  // the experience before / after the class's (by the level's own list: its numbers come from the curriculum)
-  const _paceNeighbour = (c, step) => { const L = _paceLevel(c); const i = L ? L.exps.findIndex((e) => e.n === c.cur) : -1; const x = i >= 0 ? L.exps[i + step] : null; return x ? x.n : null; };
-  function paceCardHtml(c) {
-    const L = _paceLevel(c);
-    if (!L || !L.exps.length) return '';
-    const of = L.exps.length;
-    const pos = (L.exps.findIndex((x) => x.n === c.cur) + 1) || c.cur;   // («3 de 8»: its place in the level's list)
-    const e = _paceExp(c, c.cur) || { n: c.cur, name: '', pic: '' };
-    const dots = L.exps.map((x) => '<i class="' + (x.n < c.cur ? 'is-past' : x.n === c.cur ? 'is-now' : '') + '"></i>').join('');
-    return '<article class="m-pace-card' + (c.set ? '' : ' is-unset') + '" data-code="' + escapeHtml(c.code) + '">' +
-      (c.set ? '' : '<p class="m-pace-nudge">' + (c.mine ? 'Elige en qué experiencia va tu clase' : 'Su maestra aún no eligió la experiencia') + '</p>') +
-      '<div class="m-pace-main">' +
-        '<span class="m-pace-art">' + (e.pic ? '<img src="' + escapeHtml(e.pic) + '" alt="" width="200" height="200" loading="lazy" decoding="async">' : '') + '<b>' + e.n + '</b></span>' +
-        '<div class="m-pace-txt">' +
-          '<p class="m-pace-k">' + (c.mine ? '' : '<span class="m-pace-who">' + escapeHtml(c.teacher || 'Sin nombre') + '</span> · ') +
-            'Clase <span translate="no">' + escapeHtml(c.code) + '</span> · ' + escapeHtml(L.name) + '</p>' +
-          '<p class="m-pace-t"><span class="m-pace-t-k">Experiencia ' + e.n + '</span> ' + escapeHtml(e.name) + '</p>' +
-          '<p class="m-pace-dots" role="img" aria-label="Experiencia ' + e.n + ', la ' + pos + ' de ' + of + '">' + dots + '<span aria-hidden="true">' + pos + ' de ' + of + '</span></p>' +
-        '</div>' +
-      '</div>' +
-      '<div class="m-pace-ctrl">' +
-        '<button class="m-pace-step" type="button" data-pace-step="-1"' + (_paceNeighbour(c, -1) == null ? ' disabled' : '') + ' aria-label="Una experiencia atrás">‹</button>' +
-        (c.set ? '<button class="btn btn-sm m-pace-pick" type="button" data-pace-pick>Elegir</button>'
-          : '<button class="btn btn-sm btn-gold m-pace-pick" type="button" data-pace-keep>Sí, va en la ' + e.n + '</button>') +
-        '<button class="m-pace-step" type="button" data-pace-step="1"' + (_paceNeighbour(c, 1) == null ? ' disabled' : '') + ' aria-label="Una experiencia adelante">›</button>' +
-      '</div>' +
-      '<div class="m-pace-foot">' +
-        (c.set ? '' : '<button class="m-pace-link" type="button" data-pace-pick>Va en otra</button>') +
-        // («Teachers see what kids see»: the module page in a teacher's preview follows this teacher's own class)
-        (c.mine && L.slug ? '<a class="m-pace-link" href="/audios/' + encodeURIComponent(L.slug) + '#tareas" target="_blank" rel="noopener">Ver como alumno</a>' : '') +
-      '</div></article>';
-  }
-  function renderPace() {
-    const sec = $('m-pace'), list = $('m-pace-list');
-    if (!sec || !list) return;
-    const all = _pace ? _pace.classes.filter((c) => _paceLevel(c)) : [];
-    if (!all.length) { sec.hidden = true; return; }
-    // the control that had the keyboard comes back on the same class's card
-    const act = document.activeElement;
-    const actCard = act && list.contains(act) ? act.closest('.m-pace-card') : null;
-    const actSel = !actCard ? null : act.hasAttribute('data-pace-step') ? '[data-pace-step="' + act.getAttribute('data-pace-step') + '"]'
-      : act.hasAttribute('data-pace-keep') || act.hasAttribute('data-pace-pick') ? '.m-pace-pick' : null;
-    const mine = all.filter((c) => c.mine), others = all.filter((c) => !c.mine);
-    const grid = (arr) => '<div class="m-pace-grid">' + arr.map(paceCardHtml).join('') + '</div>';
-    const unsetOthers = others.filter((c) => !c.set).length;
-    let h = mine.length ? grid(mine) : '';
-    if (others.length && !mine.length) h += grid(others);
-    else if (others.length) {
-      h += '<details class="m-pace-more"' + (_paceOthersOpen ? ' open' : '') + '><summary><span>Clases de otras maestras</span> <span class="m-chip-n">' + others.length + '</span>' +
-        (unsetOthers ? '<span class="m-pace-more-note">' + unsetOthers + (unsetOthers === 1 ? ' sin elegir' : ' sin elegir') + '</span>' : '') + '</summary>' + grid(others) + '</details>';
-    }
-    $('m-pace-title').textContent = all.length > 1 ? '¿En qué experiencia va cada clase?' : '¿En qué experiencia va tu clase?';
-    list.innerHTML = h;
-    sec.hidden = false;
-    const more = list.querySelector('.m-pace-more');
-    if (more) more.addEventListener('toggle', () => { _paceOthersOpen = more.open; });
-    if (actCard && actSel) {
-      const card = list.querySelector('.m-pace-card[data-code="' + CSS.escape(actCard.dataset.code) + '"]');
-      const el = card && (card.querySelector(actSel + ':not([disabled])') || card.querySelector('.m-pace-pick'));
-      if (el) { try { el.focus({ preventScroll: true }); } catch (_) {} }
-    }
-  }
-  // a pace change: { code, n } (n = null: back to the level's default, the undo of a first choice)
-  function paceSave(code, n, isUndo) {
-    if (!_paceClass(code) || _paceBusy) return;
-    _paceBusy = true;
-    _paceSaves++;
-    const card = document.querySelector('#m-pace-list .m-pace-card[data-code="' + CSS.escape(code) + '"]');
-    if (card) card.classList.add('is-busy');
-    // (a stalled request gives up after 12 s, like the roster's: the card never stays locked)
-    const ctl = window.AbortController ? new AbortController() : null;
-    const timer = ctl ? setTimeout(() => ctl.abort(), 12000) : null;
-    const fail = (msg) => { _paceBusy = false; if (card && card.isConnected) card.classList.remove('is-busy'); notify(msg, 'error'); };
-    adminFetch('/api/admin/class-pace', pw, Object.assign({
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code, n }),
-    }, ctl ? { signal: ctl.signal } : {})).then((r) => r.json().catch(() => null)).then((d) => {
-      if (timer) clearTimeout(timer);
-      if (!d || !d.ok) { fail((d && d.error) || 'No se pudo guardar. Vuelve a intentarlo.'); return; }
-      _paceBusy = false;
-      _paceSaves++;
-      // (the list may have been replaced while this was saving: the class is looked up again, never an old copy)
-      const c = _paceClass(code);
-      if (!c) { renderPace(); return; }
-      c.cur = d.cur;
-      c.set = !!d.set;
-      renderPace();
-      const e = _paceExp(c, d.cur);
-      const where = 'la Experiencia ' + d.cur + (e ? ' · ' + e.name : '');
-      const who = c.mine ? 'tu clase' : 'la clase ' + code + ' de ' + (c.teacher || 'otra maestra');
-      if (isUndo) { paceToast('Listo: ' + who + ' sigue en ' + where + '.', null); return; }
-      paceToast('Ahora ' + who + ' está en ' + where, () => paceSave(code, d.prev == null ? null : d.prev, true));
-    }).catch(() => { if (timer) clearTimeout(timer); fail('Sin conexión. Vuelve a intentarlo.'); });
-  }
-  // the change's toast, with «Deshacer» for 8 s (notify() has no button; same look, same box)
-  function paceToast(text, undo) {
-    const box = $('m-toasts');
-    if (!box) return;
-    if (_paceToast && _paceToast.isConnected) _paceToast.remove();
-    const el = document.createElement('div');
-    el.className = 'm-toast is-ok m-pace-toast';
-    el.setAttribute('role', 'status');
-    el.innerHTML = '<span class="m-toast-text"></span>' + (undo ? '<button class="m-toast-act" type="button">Deshacer</button>' : '') +
-      '<button class="m-toast-x" type="button" aria-label="Cerrar">✕</button>';
-    el.querySelector('.m-toast-text').textContent = '✓ ' + text;
-    const kill = () => {
-      if (!el.isConnected) return;
-      el.classList.add('is-leaving');
-      setTimeout(() => { try { el.remove(); } catch (_) {} }, 170);
-    };
-    el.querySelector('.m-toast-x').addEventListener('click', kill);
-    // («Deshacer» while another change is still saving waits for it, never lost; at most ~12 s)
-    const run = (tries) => { if (_paceBusy && tries < 50) { setTimeout(() => run(tries + 1), 250); return; } undo(); };
-    if (undo) el.querySelector('.m-toast-act').addEventListener('click', () => { kill(); run(0); });
-    box.appendChild(el);
-    while (box.children.length > 3) box.firstChild.remove();
-    _paceToast = el;
-    setTimeout(kill, 8000);
-  }
-  // «Elegir»: every experience of the level as a picture tile, the class's one marked; one tap saves and closes
-  function pacePick(code) {
-    const c = _paceClass(code);
-    const L = _paceLevel(c);
-    if (!c || !L) return;
-    let overlay = $('m-pace-modal');
-    if (overlay) overlay.remove();
-    overlay = document.createElement('div');
-    overlay.id = 'm-pace-modal';
-    overlay.className = 'm-modal';
-    overlay.innerHTML = '<div class="m-modal-card m-modal-card--wide m-pace-modal-card">' +
-      '<button class="m-modal-close" type="button" aria-label="Cerrar">✕</button>' +
-      '<h2>' + (c.mine ? '¿En qué experiencia va tu clase?' : '¿En qué experiencia va la clase de ' + escapeHtml(c.teacher || 'otra maestra') + '?') + '</h2>' +
-      '<p class="m-modal-sub">Clase <span translate="no">' + escapeHtml(code) + '</span> · ' + escapeHtml(L.name) + '. Sus tareas de esta semana son las de la experiencia que elijas (y las anteriores que falten); las siguientes se ven y se escuchan, sin aviso.</p>' +
-      '<div class="m-pace-tiles">' + L.exps.map((x) => {
-        const now = x.n === c.cur;
-        return '<button class="m-pace-tile' + (now ? ' is-now' : '') + '" type="button" data-n="' + x.n + '"' + (now ? ' aria-current="true"' : '') +
-          ' aria-label="Experiencia ' + x.n + ', ' + escapeHtml(x.name) + (now ? (c.set ? ', ahora' : ', ahora sin elegir') : '') + '">' +
-          '<span class="m-pace-tile-art">' + (x.pic ? '<img src="' + escapeHtml(x.pic) + '" alt="" width="200" height="200" loading="lazy" decoding="async">' : '') + '<b>' + x.n + '</b></span>' +
-          '<span class="m-pace-tile-name">' + escapeHtml(x.name) + '</span>' +
-          (now ? '<small>' + (c.set ? 'Ahora' : 'Ahora, sin elegir') + '</small>' : '') + '</button>';
-      }).join('') + '</div></div>';
-    document.body.appendChild(overlay);
-    overlay.addEventListener('click', (ev) => {
-      if (ev.target === overlay || ev.target.closest('.m-modal-close')) { overlay.remove(); return; }
-      const t = ev.target.closest('[data-n]');
-      if (!t) return;
-      const n = Number(t.getAttribute('data-n'));
-      overlay.remove();
-      if (n !== c.cur || !c.set) paceSave(code, n);
-    });
-  }
-  (function wirePace() {
-    const list = $('m-pace-list');
-    if (!list) return;
-    list.addEventListener('click', (e) => {
-      const card = e.target.closest('.m-pace-card');
-      const c = card ? _paceClass(card.getAttribute('data-code')) : null;
-      const L = _paceLevel(c);
-      if (!c || !L) return;
-      const st = e.target.closest('[data-pace-step]');
-      if (st) { const n = _paceNeighbour(c, Number(st.getAttribute('data-pace-step'))); if (n != null) paceSave(c.code, n); return; }
-      if (e.target.closest('[data-pace-keep]')) { paceSave(c.code, c.cur); return; }
-      if (e.target.closest('[data-pace-pick]')) pacePick(c.code);
-    });
-  })();
-
   // 🆕 2026-06-16 — persisted roster search term (survives auto-refresh).
   let _rosterSearch = '';
   // 2026-10-13 remake: filter chips + class select also survive the 15 s refresh
@@ -3562,7 +3188,6 @@
       else if (act.classList.contains('m-online-kid') && act.dataset.code) focusSel = '#m-online-list .m-online-kid[data-code="' + CSS.escape(act.dataset.code) + '"]';
     }
     _renderRoster(students, self, archived);
-    paceMaybe();   // (2026-10-21) the classes' «Experiencia actual»: asked with the first roster, then at most once a minute
     const strip = document.querySelector('.m-online');
     if (strip) strip.classList.remove('is-stale');
     if (focusSel) {
