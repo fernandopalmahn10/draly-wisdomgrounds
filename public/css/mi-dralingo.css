@@ -23,6 +23,9 @@
   --md-soft: #6b5d4f;        /* 5.9:1 on Crema */
   --md-green: #1f6b45;       /* done = green ✓ (gold never means done) */
   --md-green-pale: #eef6f0;
+  --md-words: #24804f;       /* ✅ the green words button, «Hoy» and the experience's step 1 (4.9:1 under white) */
+  --md-words-deep: #17573a;
+  --md-words-hover: #1f7346;
   --md-red: #c62828;
   --md-wash: #efe4c9;
   --md-warm: #fbf6ea;
@@ -91,6 +94,18 @@ body.md-in { height: auto; min-height: 100vh; min-height: 100dvh; overflow: visi
 #screen-list.md .md-btn.is-gold:active, #screen-list.md .md-go:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--md-oro); }
 #screen-list.md .md-btn:not(.is-gold):active { transform: scale(.97); }
 #screen-list.md .md-btn-wide { width: 100%; min-height: 52px; font-size: 16px; white-space: normal; }
+/* ✅ the green words button (his words 2026-10-21: "always in green… «Repasar o marcar mis palabras»… «Marcar las palabras
+   de la experiencia»"): ONE look, on «Hoy» and on the experience's step 1, always a link to La Base */
+#screen-list.md .md-words {
+  display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 50px; padding: 8px 18px;
+  border: 0; border-radius: 14px; background: var(--md-words); color: #fff; box-shadow: 0 4px 0 var(--md-words-deep);
+  font: 800 15px/1.2 var(--md-body); text-decoration: none; text-align: left; cursor: pointer;
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+  transition: transform .14s var(--md-ease), box-shadow .14s var(--md-ease), background-color .14s var(--md-ease);
+}
+#screen-list.md .md-words svg { width: 20px; height: 20px; }
+#screen-list.md .md-words:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--md-words-deep); }
+@media (hover: hover) and (pointer: fine) { #screen-list.md .md-words:hover { background: var(--md-words-hover); } }
 #screen-list.md .md-back {
   display: inline-flex; align-items: center; gap: 6px; min-height: 48px; padding: 0 14px 0 10px; border-radius: 14px;
   font: 800 15px/1 var(--md-body); text-decoration: none; color: var(--md-rojo);
@@ -148,6 +163,9 @@ body.md-in { height: auto; min-height: 100vh; min-height: 100dvh; overflow: visi
 }
 #screen-list.md .md-hoy-acts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: auto; }
 #screen-list.md .md-hoy .md-go { font-size: 16px; min-height: 50px; padding: 0 18px; box-shadow: 0 5px 0 var(--md-oro); }
+/* (on the dark scene the green keeps a thin light edge, so it reads as a button and never as a shadow) */
+#screen-list.md .md-hoy .md-words { box-shadow: 0 5px 0 var(--md-words-deep), 0 0 0 2px rgba(255, 253, 248, .22); }
+#screen-list.md .md-hoy .md-words:active { box-shadow: 0 1px 0 var(--md-words-deep), 0 0 0 2px rgba(255, 253, 248, .22); }
 /* the homework due outside today's step: one reminder line («Y tu tarea de esta semana: 1 por mandar») */
 #screen-list.md .md-hoy-rem {
   display: inline-flex; align-items: center; gap: 6px; min-height: 48px; padding: 6px 12px; border: 0; border-radius: 14px; cursor: pointer;
@@ -201,12 +219,6 @@ body.md-in { height: auto; min-height: 100vh; min-height: 100dvh; overflow: visi
 #screen-list.md .md-done-list summary { display: inline-flex; align-items: center; gap: 6px; min-height: 48px; cursor: pointer; list-style: none; font-size: 14px; font-weight: 800; color: var(--md-green); }
 #screen-list.md .md-done-list summary::-webkit-details-marker { display: none; }
 #screen-list.md .md-done-list summary svg { width: 15px; height: 15px; }
-#screen-list.md .md-tp-box { display: grid; gap: 8px; padding: 10px; border-radius: 16px; background: var(--md-warm); }
-#screen-list.md .md-tp-box .md-tp { background: var(--md-paper); }
-#screen-list.md .md-tp-box .md-tp.is-done { background: var(--md-green-pale); }
-#screen-list.md .md-tp-k { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 800; color: var(--md-oro-ink); }
-#screen-list.md .md-tp-k img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; object-position: top; background: var(--md-sand); }
-#screen-list.md .md-tp-k .md-tp-chip { margin-left: auto; }
 #screen-list.md .md-tp-lock { grid-area: chip; color: var(--md-soft); }
 #screen-list.md .md-tp-lock svg { width: 18px; height: 18px; }
 #screen-list.md a.md-tp-go { display: inline-flex; align-items: center; text-decoration: none; }
@@ -322,7 +334,8 @@ body.md-in { height: auto; min-height: 100vh; min-height: 100dvh; overflow: visi
 #screen-list.md .md-step.is-locked .md-step-n, #screen-list.md .md-step.is-closed .md-step-n { background: var(--md-line); color: var(--md-soft); }
 #screen-list.md .md-step-n.is-soon { background: transparent; color: var(--md-soft); box-shadow: inset 0 0 0 2px var(--md-line); }
 /* each step's action: its own full-width line under its words (review 2026-10-18: never squeezed beside them) */
-#screen-list.md .md-step > .md-btn { width: 100%; }
+#screen-list.md .md-step > .md-btn, #screen-list.md .md-step > .md-words { width: 100%; }
+#screen-list.md .md-step > .md-words { justify-content: center; text-align: center; }
 #screen-list.md .md-step-tag { position: absolute; top: -13px; left: 16px; padding: 4px 12px; border-radius: 999px; background: var(--md-red); color: #fff; font-size: 13px; font-weight: 900; }
 #screen-list.md .md-step-row { display: flex; align-items: center; gap: 12px; }
 #screen-list.md .md-step-n {
@@ -345,7 +358,47 @@ body.md-in { height: auto; min-height: 100vh; min-height: 100dvh; overflow: visi
 #screen-list.md .md-step.is-done .md-meter i { background: var(--md-green); }
 #screen-list.md .md-peek { display: flex; flex-wrap: wrap; gap: 8px; padding-left: 48px; }
 #screen-list.md .md-peek img { width: 50px; height: 50px; border-radius: 14px; object-fit: cover; background: #fff; box-shadow: 0 0 0 2px #cfe5d6; }
-#screen-list.md .md-also { display: inline-flex; align-items: center; min-height: 48px; align-self: flex-start; color: var(--md-rojo); font-size: 14px; font-weight: 800; text-decoration: underline; text-underline-offset: 3px; }
+#screen-list.md .md-step-l svg { width: 15px; height: 15px; vertical-align: -2px; }
+/* «Practicar más» (2026-10-21): ONE calm card under the two steps, to the practice view; it glows like a step when the
+   practice is today's step, green once the practice is at the goal */
+#screen-list.md .md-more {
+  position: relative; display: flex; align-items: center; gap: 12px; min-height: 76px; padding: 10px 14px 10px 10px;
+  border-radius: 20px; background: var(--md-paper); box-shadow: inset 0 0 0 2px var(--md-line); color: var(--md-ink); text-decoration: none;
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation; transition: transform .14s var(--md-ease), box-shadow .14s var(--md-ease);
+}
+#screen-list.md .md-more.is-next { margin-top: 6px; padding-top: 18px; background: var(--md-glow); box-shadow: 0 0 0 4px var(--md-oro-claro), 0 12px 24px rgba(90, 16, 16, .15); }
+#screen-list.md .md-more.is-done { background: var(--md-green-pale); box-shadow: inset 0 0 0 2px #cfe5d6; }
+#screen-list.md .md-more-art { width: 54px; height: 58px; object-fit: contain; object-position: bottom; flex: none; }
+#screen-list.md .md-more-t { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+#screen-list.md .md-more-t b { font: 900 17px/1.2 var(--md-body); color: var(--md-rojo); }
+#screen-list.md .md-more-t small { font-size: 13px; font-weight: 700; line-height: 1.3; color: var(--md-soft); }
+#screen-list.md .md-more .md-tp-chip { flex: none; }
+#screen-list.md .md-more-ok, #screen-list.md .md-pr-ok { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; flex: none; border-radius: 50%; background: var(--md-green); color: #fff; }
+#screen-list.md .md-more-ok svg, #screen-list.md .md-pr-ok svg { width: 16px; height: 16px; }
+#screen-list.md .md-more-go { display: flex; flex: none; color: var(--md-rojo); }
+#screen-list.md .md-more-go svg { width: 20px; height: 20px; }
+#screen-list.md .md-more:active { transform: scale(.98); }
+@media (hover: hover) and (pointer: fine) { #screen-list.md .md-more:not(.is-next):hover { box-shadow: inset 0 0 0 2px var(--md-oro-line); } }
+/* the practice view (#exp-N/practica): a short scene, then one section per kind (El Entrenamiento's card, «Preguntas de tu
+   profe», «Preguntas del simulacro», Pinyin básico), each a title and its cards: no box around the boxes */
+#screen-list.md .md-pr-hero { height: 170px; }
+#screen-list.md .md-pr-hero .md-exp-t { left: 16px; right: 16px; }
+#screen-list.md .md-pr-hero .md-back-glass { max-width: calc(100% - 24px); line-height: 1.2; }
+#screen-list.md .md-pr-body { gap: 20px; padding-top: 18px; }
+#screen-list.md .md-pr-art { width: 52px; height: 56px; object-fit: contain; object-position: bottom; flex: none; }
+#screen-list.md .md-pr-sec { display: grid; gap: 10px; }
+#screen-list.md .md-pr-h { display: flex; align-items: center; gap: 10px; font: 800 19px/1.15 var(--md-head); color: var(--md-rojo); }
+#screen-list.md .md-pr-h img { width: 36px; height: 36px; flex: none; border-radius: 50%; object-fit: cover; object-position: top; background: var(--md-sand); }
+#screen-list.md .md-pr-h .md-tp-chip { margin-left: auto; font-family: var(--md-body); }
+/* (one line per question set: its name and mark on the left, its button on the right: a list you read at a glance) */
+#screen-list.md .md-pr-sec .md-tp {
+  grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 't acts' 'chip acts'; gap: 4px 12px; padding: 10px 10px 10px 14px;
+  background: var(--md-paper); box-shadow: inset 0 0 0 2px var(--md-line);
+}
+#screen-list.md .md-pr-sec .md-tp-chip { justify-self: start; }
+#screen-list.md .md-pr-sec .md-tp-acts { flex-direction: column; align-items: stretch; align-self: center; gap: 6px; }
+#screen-list.md .md-pr-sec .md-tp.is-new { background: var(--md-glow); box-shadow: inset 0 0 0 2px var(--md-oro-claro); }
+#screen-list.md .md-pr-sec .md-tp.is-done { background: var(--md-green-pale); box-shadow: inset 0 0 0 2px #cfe5d6; }
 #screen-list.md .md-badge { margin-left: auto; padding: 3px 10px; border-radius: 999px; background: var(--md-red); color: #fff; font-size: 12px; font-weight: 900; white-space: nowrap; }
 /* 🗓️ 2026-10-21 the homework of an experience after the class's: calm, never red (it plays already) */
 #screen-list.md .md-later { margin-left: auto; padding: 3px 10px; border-radius: 999px; background: #fff; color: var(--md-soft); box-shadow: inset 0 0 0 1.5px var(--md-line); font-size: 12px; font-weight: 900; white-space: nowrap; }
@@ -615,6 +668,11 @@ body.md-in { height: auto; min-height: 100vh; min-height: 100dvh; overflow: visi
   #screen-list.md .md-exp.is-aside .md-peek { padding-left: 48px; }
   #screen-list.md .md-exp.is-aside .md-peek img { width: 40px; height: 40px; border-radius: 11px; }
   #screen-list.md .md-exp.is-aside .md-exp-sum p { font-size: 14px; }
+  /* (the practice view beside the path: no word sticker, the title on the left) */
+  #screen-list.md .md-exp.md-pr.is-aside .md-pr-hero { height: 140px; }
+  #screen-list.md .md-exp.md-pr.is-aside .md-exp-t { left: 16px; }
+  #screen-list.md .md-exp.md-pr.is-aside .md-exp-body { gap: 16px; padding-top: 16px; }
+  #screen-list.md .md-exp.is-aside .md-more { min-height: 68px; }
   #screen-list.md .md-aside .md-view-body { padding: 10px 16px 18px; max-width: none; }
   #screen-list.md .md-aside .md-des-hero { height: 260px; }
 }
@@ -633,7 +691,8 @@ body.md-in { height: auto; min-height: 100vh; min-height: 100dvh; overflow: visi
 
 @media (prefers-reduced-motion: reduce) {
   #screen-list.md *, #screen-settings.md-pf * { transition: none !important; animation: none !important; }
-  #screen-list.md .md-btn:active, #screen-list.md .md-go:active, #screen-list.md .md-node:active .md-node-scene { transform: none !important; }
+  #screen-list.md .md-btn:active, #screen-list.md .md-go:active, #screen-list.md .md-node:active .md-node-scene,
+  #screen-list.md .md-words:active, #screen-list.md .md-more:active { transform: none !important; }
 }
 
 /* ═══ Mi perfil (was «Ajustes»; his approved design «Perfil») ═══ */

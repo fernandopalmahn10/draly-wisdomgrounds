@@ -917,7 +917,9 @@
     // (review 2026-10-18) a kid's open module says what «Hoy» says on their home (js/papas-plan.js today(): the current
     // experience's ladder), so the two pages never disagree; the step that glows follows it
     const T = kidToday(ctx, m, pr, tw, need);
-    if (T) cur = T.step === 1 ? 1 : T.step === 2 ? 2 : T.dorado ? 3 : null;
+    // (by kind, never by the experience's step number: the module's 1 La Base = words, 2 El Entrenamiento = practice;
+    // homework lights its «Tus tareas» column instead, 2026-10-21 his ladder 1 Palabras → 2 Tu tarea → 3 Práctica)
+    if (T) cur = T.kind === 'words' ? 1 : T.kind === 'practice' ? 2 : T.dorado ? 3 : null;
     const steps = [s1, s2, s3];
     steps.forEach((s) => { s.current = s.n === cur; });
     // the one instruction, for this kid now
@@ -1575,7 +1577,7 @@
     }
   }
   // 🏠 2026-10-18 («Mi Dralingo» part 3, the kid's home on /homework, js/mi-dralingo.js): ONE experience's homework cards
-  // («3 · Tu tarea»), with the SAME cards, marks, «Deshacer», player and account mirror as «Tus tareas» above (one code).
+  // («2 · Tu tarea» since 2026-10-21), with the SAME cards, marks, «Deshacer», player and account mirror as «Tus tareas» above (one code).
   //   box   where they go (its content is replaced)
   //   ctx   { ruta: { student, who, teacher, home, modules: [{ slug, tareas }] }, homeworksOf(slug), refresh() }
   //   m     the module ({ slug, tareas }) · hws: that experience's homeworks (catalog entries: id, title, round, tracks…)

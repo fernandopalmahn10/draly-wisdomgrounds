@@ -318,7 +318,7 @@ async function run() {
   // its homework, with the SAME cards and marks as «Tus tareas», js/ruta.js Ruta.hwCards)
   const md = fs.readFileSync(path.join(ROOT, 'public', 'js', 'mi-dralingo.js'), 'utf8');
   ok(/data-hw-mount/.test(md) && /Ruta\.hwCards\(/.test(md) && /window\.DralyHome\.render\(HOME\)/.test(hw) && /function hwCards\(/.test(page),
-    '/homework: each experience\'s «3 · Tu tarea» holds its homework (js/ruta.js\'s cards and marks)');
+    '/homework: each experience\'s «Tu tarea» holds its homework (js/ruta.js\'s cards and marks)');
   const i18n = fs.readFileSync(path.join(ROOT, 'public', 'js', 'hw-i18n.js'), 'utf8');
   ok(/Hacer mis tareas/.test(i18n) && /por mandar/.test(i18n), '… and has its English');
 }

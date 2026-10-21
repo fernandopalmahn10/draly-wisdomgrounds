@@ -625,10 +625,22 @@ the checklist for any new game mode.
   - `node scripts/test-entrada.js` and `node scripts/test-papas.js` must pass.
 - **The kid's home** (part 3, built 2026-10-18: /homework = «Mi Dralingo», `public/js/mi-dralingo.js`):
   - «Hoy» always comes from `papas-plan.js`, never its own logic. The kid's `today()` follows the ladder inside the
-    current experience (1 Palabras → 2 Práctica → 3 Tu tarea). A homework that is due shows as the red «N por mandar»
+    current experience (1 Palabras → 2 Tu tarea → 3 Práctica, his priority 2026-10-21; `LADDER` in papas-plan.js is
+    the one list the home, the map's bars and the tests read). A homework that is due shows as the red «N por mandar»
     badge plus a reminder line, never as the start step while words are untouched. Papás' «Lo más importante» puts
-    homework first for parents. Both read one plan, so their facts never contradict (design review 2026-10-18: a new kid
-    was told to send homework before learning a word).
+    homework first for parents, then words, then practice. Both read one plan, so their facts never contradict (design
+    review 2026-10-18: a new kid was told to send homework before learning a word). «Done» still needs all three.
+  - **An experience = two clear things: mark its words, send its homework** (his words 2026-10-21: "it's too many
+    things… not easy to read… the most important thing is marcar las palabras and do the homework… after that comes the
+    training, but it shouldn't be all over the place… the rest can be a separate interface of the practices"). Tapping
+    an experience shows 1 «Tus palabras» (the green button, always the same green: «Marcar las palabras de la
+    experiencia» / «Repasar mis palabras») and 2 «Tu tarea» (send it by WhatsApp, «¡Ya la mandé!»); everything else of
+    that experience (El Entrenamiento's round, «Preguntas de tu profe», the simulacro questions, Pinyin básico) lives in
+    ONE separate practice view reached from one calm «Practicar más» card. Changes to the kid home stay small: he has
+    already shown families this interface.
+    - Built 2026-10-21: the shared green button is `.md-words` in css/mi-dralingo.css («Hoy» always shows it as
+      «Repasar o marcar mis palabras» while the level is open); the practice view is `#exp-N/practica` with its
+      «← Volver a <experiencia>».
   - Done is green ✓ only when it is true everywhere: no «¡Experiencia lista!» while new teacher work for it is listed.
     A locked step shows a lock and one line, never a button.
   - Homework cards are made only through `Ruta.hwCards`.

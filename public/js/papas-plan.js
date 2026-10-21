@@ -32,12 +32,18 @@
 // homework that is not due yet never holds a kid back (2026-10-21, the class's pace: a kid ahead of the class who has
 // marked an experience's words and reached its practice goal moves on to the next one; its homework waits, it plays
 // already, and it becomes due when the class gets there). COMPLETE (the green ✓, «¡Experiencia lista!») stays strict.
-// «Lo más importante esta semana» (focus), in this order (his picks for the design, 2026-10-18):
+// «Lo más importante esta semana» (focus), in this order (his picks for the design, 2026-10-18; words before practice
+// since his priority of 2026-10-21, LADDER below):
 //   1. tarea     a homework to send: the newest DUE one not sent (up to the class's experience, never a later one)
-//   2. practice  the current experience's practice is open and below the goal
-//   3. words     the current experience has words to mark
+//   2. words     the current experience has words to mark
+//   3. practice  the current experience's practice is open and below the goal
 //   4. teacher   every practice is at the goal (El Entrenamiento done) and no simulation passed yet: tell the teacher
 //   5. fine      «¡Va muy bien!»
+//
+// THE LADDER of an experience (his priority 2026-10-21: «the most important thing is marcar las palabras and do the
+// homework… after that comes the training»): 1 Palabras → 2 Tu tarea → 3 Práctica. ONE list: today() walks it, the
+// kid's home numbers its steps and orders the map's three bars from it, and the tests read it (never a copy).
+// What COMPLETE means does not change: all three.
 (function (root, factory) {
   const api = factory();
   if (typeof module === 'object' && module.exports) module.exports = api;
@@ -45,6 +51,9 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   const num = (v) => (v == null || v === '' || !Number.isFinite(Number(v)) ? null : Number(v));
+  // the ladder (see above): kind → its step number
+  const LADDER = Object.freeze([Object.freeze({ kind: 'words', step: 1 }), Object.freeze({ kind: 'tarea', step: 2 }), Object.freeze({ kind: 'practice', step: 3 })]);
+  const stepOf = (kind) => { const s = LADDER.find((x) => x.kind === kind); return s ? s.step : null; };
 
   function plan(raw) {
     const r = raw && typeof raw === 'object' ? raw : {};
@@ -90,8 +99,8 @@
     let focus;
     const nextHw = due.find((h) => !h.sent);
     if (nextHw) focus = { kind: 'tarea', id: nextHw.id, exp: Number(nextHw.exp) || null, name: expName(nextHw.exp) || String(nextHw.title || '') };
-    else if (cur && cur.open && !(cur.best != null && cur.best >= goal)) focus = { kind: 'practice', exp: cur.n, name: cur.name, best: cur.best, goal, train: cur.train };
     else if (cur && cur.sealed < cur.count) focus = { kind: 'words', exp: cur.n, name: cur.name, left: cur.count - cur.sealed };
+    else if (cur && cur.open && !(cur.best != null && cur.best >= goal)) focus = { kind: 'practice', exp: cur.n, name: cur.name, best: cur.best, goal, train: cur.train };
     else if (trainDone && !(sim && sim.passed)) focus = { kind: 'teacher' };
     else focus = { kind: 'fine', sim: sim && sim.passed ? sim : null };
 
@@ -101,11 +110,13 @@
 
   // «Hoy» on the kid's home and the bubble of La Ruta Dorada's module page (js/ruta.js): ONE next step for the kid
   // (review 2026-10-18: «one next-step rule, following the ladder»). The current experience (the first one not done;
-  // `current` above) and, inside it, its ladder: 1 Palabras → 2 Práctica → 3 Tu tarea, the first step not done. A
-  // homework due elsewhere never jumps the ladder: it rides along as a reminder line (`remind`) and the red «N por
-  // mandar» badges. Papás keeps «homework to send» first (`focus`, for the parents): the same numbers, a parent's order.
-  //   today(plan) → { kind: 'words' | 'practice' | 'tarea' | 'teacher' | 'fine', exp (the experience it opens, or null),
-  //                   step (1 · 2 · 3, or null), dorado (true: it opens El Simulacro Dorado), id (the homework, 'tarea'),
+  // `current` above) and, inside it, its LADDER: 1 Palabras → 2 Tu tarea → 3 Práctica (his priority 2026-10-21), the
+  // first step not done. A homework due elsewhere never jumps the ladder: it rides along as a reminder line (`remind`)
+  // and the red «N por mandar» badges. Papás keeps «homework to send» first (`focus`, for the parents): the same
+  // numbers, a parent's order. «Tu tarea» is a step only for homework that is DUE: a kid ahead of the class goes on to
+  // the practice (the homework of a later experience plays already and waits for the class).
+  //   today(plan) → { kind: 'words' | 'tarea' | 'practice' | 'teacher' | 'fine', exp (the experience it opens, or null),
+  //                   step (stepOf(kind), or null), dorado (true: it opens El Simulacro Dorado), id (the homework, 'tarea'),
   //                   go (the button: what it does), text, remind: null | { exp, id (the newest due), left, text } }
   function today(p) {
     const P = p && typeof p === 'object' ? p : plan({});
@@ -117,16 +128,19 @@
     if (cur) {
       const wordsDone = cur.count > 0 && cur.sealed >= cur.count;
       const practiceDone = cur.best != null && cur.best >= goal;
-      if (!wordsDone && cur.count > 0) {
+      const hw = (Array.isArray(P.hws) ? P.hws : []).find((h) => Number(h.exp) === cur.n && !h.sent && h.due !== false) || null;
+      const need = { words: !wordsDone && cur.count > 0, tarea: !!hw, practice: !practiceDone };
+      // (the first step of the ladder not done; nothing left can't hold `current`, the homework is the safe last word)
+      const k = (LADDER.find((s) => need[s.kind]) || { kind: 'tarea' }).kind;
+      if (k === 'words') {
         const left = cur.count - cur.sealed;
-        t = { kind: 'words', exp: cur.n, step: 1, dorado: false, go: 'Marcar mis palabras',
+        // (the button is the home's green one, always the same words: «Repasar o marcar mis palabras», his 2026-10-21)
+        t = { kind: 'words', exp: cur.n, step: stepOf('words'), dorado: false, go: 'Repasar o marcar mis palabras',
           text: hoy(cur.n) + (cur.sealed === 0 ? ' Empieza por marcar sus palabras.' : left === 1 ? ' Marca sus palabras: te falta 1.' : ' Marca sus palabras: te faltan ' + left + '.') };
-      } else if (!practiceDone) {
-        t = { kind: 'practice', exp: cur.n, step: 2, dorado: false, go: 'Practicar aquí', text: hoy(cur.n) + ' Practica ' + cur.name + ' hasta llegar al ' + goal + ' %.' };
+      } else if (k === 'tarea') {
+        t = { kind: 'tarea', exp: cur.n, step: stepOf('tarea'), dorado: false, id: hw ? hw.id : null, go: 'Mandar mi tarea', text: hoy(cur.n) + ' Manda tu tarea de ' + cur.name + '.' };
       } else {
-        // (the current experience's homework is always due here: one that is not due never holds `current`, see plan())
-        const hw = (Array.isArray(P.hws) ? P.hws : []).find((h) => Number(h.exp) === cur.n && !h.sent) || null;
-        t = { kind: 'tarea', exp: cur.n, step: 3, dorado: false, id: hw ? hw.id : null, go: 'Mandar mi tarea', text: hoy(cur.n) + ' Manda tu tarea de ' + cur.name + '.' };
+        t = { kind: 'practice', exp: cur.n, step: stepOf('practice'), dorado: false, go: 'Practicar aquí', text: hoy(cur.n) + ' Practica ' + cur.name + ' hasta llegar al ' + goal + ' %.' };
       }
     } else if (P.trainDone && !(P.sim && P.sim.passed)) {
       t = { kind: 'teacher', exp: null, step: null, dorado: true, go: 'Avisar a mi profe', text: '¡Terminaste El Entrenamiento! Avísale a tu profe: ya puedes hacer El Simulacro Dorado.' };
@@ -149,5 +163,5 @@
     return t;
   }
 
-  return { plan, today };
+  return { plan, today, LADDER, stepOf };
 });

@@ -445,6 +445,30 @@
     } });
   })();
 
+  // ✅ 2026-10-21 · an experience = two clear things (his words: "the most important thing is marcar las palabras and do
+  // the homework… the rest can be a separate interface of the practices"): the green words button on «Hoy» and step 1,
+  // «Practicar más» and the practice view #exp-N/practica, the ladder's new order in the bars (palabras · tarea ·
+  // práctica). Kept apart like the blocks above; every English line is settled (translated again, it stays the same).
+  (function () {
+    var M = {
+      'Repasar o marcar mis palabras': 'Review or mark my words', 'Marcar las palabras de la experiencia': 'Mark the words of the experience',
+      'Repasar mis palabras': 'Review my words', 'Tus palabras': 'Your words', 'Practicar más': 'Practice more',
+      'El Entrenamiento y las preguntas de tu profe': 'The Training and your teacher\'s questions', 'Rondas de El Entrenamiento': 'Rounds of the Training',
+      'Los sonidos y los tonos': 'The sounds and the tones', 'Una ronda de 10 preguntas': 'A round of 10 questions',
+      'Volver a las experiencias': 'Back to the experiences', 'Práctica lista': 'Practice done',
+    };
+    for (var k in M) if (DICT.map[k] === undefined) DICT.map[k] = M[k];
+    // «Volver a Mi Familia» (the practice view's way back to its experience): only an experience the map knows («Volver a
+    // intentar» & co. are map entries of their own and never reach this line)
+    PATTERNS.push({ re: /^Volver a (.+)$/, en: function (all, x) { return DICT.map[x] !== undefined ? 'Back to ' + DICT.map[x] : all; } });
+    // the three bars in the ladder's order: «Palabras listas, tarea mandada, práctica lista»
+    PATTERNS.push({ re: /^Palabras (listas|empezadas|por hacer)(?:, tarea (mandada|escuchada|por mandar|de más adelante))?, práctica (lista|empezada|por hacer)$/, en: function (_, w, t, p) {
+      var W = { listas: 'done', empezadas: 'started', 'por hacer': 'to do' }, Pr = { lista: 'done', empezada: 'started', 'por hacer': 'to do' };
+      var Tt = { mandada: 'sent', escuchada: 'listened', 'por mandar': 'to send', 'de más adelante': 'for later on' };
+      return 'Words ' + W[w] + (t ? ', homework ' + Tt[t] : '') + ', practice ' + Pr[p];
+    } });
+  })();
+
   // Quick reject: nothing to translate unless the text has latin
   // letters (hanzi-only, pinyin-only-with-tones still passes but
   // simply won't match the dictionary).

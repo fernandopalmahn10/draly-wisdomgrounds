@@ -76,8 +76,13 @@ function planTests() {
   t = Plan.today(p);
   ok(p.complete === 3 && !p.exps[3].done && p.exps[3].passed && !p.exps[3].due && p.current === 5,
     'experiences 1-3 complete; 4\'s words and practice done, its homework not due: not complete (no ✓), and the kid moves on to 5');
-  ok(t.kind === 'words' && t.exp === 5 && t.step === 1 && !t.remind, '«Hoy»: the words of experience 5 («' + t.text + '»), no reminder: never «Manda tu tarea» for homework that is not due');
+  ok(t.kind === 'words' && t.exp === 5 && t.step === Plan.stepOf('words') && !t.remind, '«Hoy»: the words of experience 5 («' + t.text + '»), no reminder: never «Manda tu tarea» for homework that is not due');
   ok(p.focus.kind === 'words' && p.focus.exp === 5, '… Papás: the words of experience 5, never experience 4\'s homework');
+  // (2026-10-21, his ladder 1 Palabras → 2 Tu tarea → 3 Práctica: «Tu tarea» is a step only for homework that is due)
+  p = Plan.plan(raw({ hws: HW8(upTo3), seals: range(1, 40), worlds: range(1, 8).map((n) => W(n, n <= 3 ? 90 : null)) }));
+  t = Plan.today(p);
+  ok(p.current === 4 && t.kind === 'practice' && t.exp === 4 && t.step === Plan.stepOf('practice'),
+    'experience 4\'s words marked, its homework not due yet: «Hoy» goes on to its practice (the homework waits for the class)');
   const texts = pageWords();
   const tips = texts({ ruta: raw({ hws: HW8(upTo3), seals: range(1, 50), worlds: range(1, 8).map((n) => W(n, n <= 5 ? 90 : null)) }) }).tips;
   ok(tips.length === 3 && !/video/.test(tips[2]), '… nor do the tips ask for a video of later homework («' + tips[2] + '»)');
@@ -359,8 +364,10 @@ async function kidTests() {
   const lx = m.exps.find((e) => e.n > 3 && e.hws.length);
   if (lx) {
     const page = H.htmlFor(home, s, '#exp-' + lx.n, false);
-    ok(/class="md-later" data-later="\d+">Más adelante</.test(page) && /Ya puedes escucharla/.test(page) && !/id="md-step-3"[^>]*>\s*<span class="md-step-tag"/.test(page) &&
-      !/class="md-step is-next" id="md-step-3"/.test(page) && /data-hw-mount/.test(page), 'experience ' + lx.n + ': its homework plays («Ya puedes escucharla», «Más adelante»), never «¡Empieza aquí!» or a red badge');
+    // («Tu tarea»'s step number read from js/papas-plan.js LADDER)
+    const sT = Plan.stepOf('tarea');
+    ok(/class="md-later" data-later="\d+">Más adelante</.test(page) && /Ya puedes escucharla/.test(page) && !new RegExp('id="md-step-' + sT + '"[^>]*>\\s*<span class="md-step-tag"').test(page) &&
+      !new RegExp('class="md-step is-next" id="md-step-' + sT + '"').test(page) && /data-hw-mount/.test(page), 'experience ' + lx.n + ': its homework plays («Ya puedes escucharla», «Más adelante»), never «¡Empieza aquí!» or a red badge');
   } else ok(true, '(today\'s catalog has no homework after experience 3: nothing later to show)');
   const e3 = m.exps.find((e) => e.n === 3);
   if (e3 && e3.hws.length) ok(/class="md-badge" data-left="3">/.test(H.htmlFor(home, s, '#exp-3', false)) && e3.left === e3.hws.length, 'experience 3 (this week): its red «N por mandar»');

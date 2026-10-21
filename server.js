@@ -3082,8 +3082,8 @@ function _papasPrompts(insights, level) {
 }
 // 🏠 2026-10-18 · «Mi Dralingo» part 3: THE KID'S HOME (/homework, public/js/mi-dralingo.js, his approved design
 // .claude/handoff/kidhome-design: Main, Phone, Experiencia…). La Ruta Dorada as a path of the level's experiences, «Hoy»
-// (js/papas-plan.js today(): the same decision as Papás' «Lo más importante»), each experience = 1 Palabras → 2 Práctica
-// → 3 Tu tarea, El Simulacro Dorado at the end. GET /api/homework/home?accessCode=&studentCode= (the homework doors:
+// (js/papas-plan.js today(): the same decision as Papás' «Lo más importante»), each experience = 1 Palabras → 2 Tu tarea
+// → 3 Práctica (papas-plan.js LADDER, 2026-10-21; the practice in its own view), El Simulacro Dorado at the end. GET /api/homework/home?accessCode=&studentCode= (the homework doors:
 // _hwCheckAccess + _hwKid, so an unknown code and «not yours» get the same 403) →
 //   { ok, level, slug, levelName, family, streak: { days, today }, ruta: null | {…} }
 // `ruta` only when the /homework session on this phone is this same kid (like Papás: a class code + a code never shows

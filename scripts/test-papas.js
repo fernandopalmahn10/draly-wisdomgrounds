@@ -72,8 +72,11 @@ function planTests() {
   ok(p.focus.kind === 'practice' && p.focus.exp === 1 && p.focus.best === null && p.focus.goal === 70, 'every word marked, never practised: practise experience 1 (goal 70 %)');
   p = Plan.plan(raw({ hws: HW(true, true), seals: range(1, 10), worlds: [W(1, 55), W(2), W(3), W(4)] }));
   ok(p.focus.kind === 'practice' && p.focus.best === 55, '… practised below the goal: «va en 55 %»');
+  // (after the homework, the parents' order follows the kid's ladder, js/papas-plan.js LADDER: his priority of 2026-10-21
+  // puts the words before the practice, read from where it lives)
+  const first = Plan.stepOf('words') < Plan.stepOf('practice') ? 'words' : 'practice';
   p = Plan.plan(raw({ hws: HW(true, true), seals: range(1, 4), worlds: [W(1, 40, true), W(2), W(3), W(4)] }));
-  ok(p.focus.kind === 'practice' && p.focus.exp === 1, 'a practice a teacher opened (words still missing) and below the goal: practice comes before words');
+  ok(p.focus.kind === first && p.focus.exp === 1, 'a practice a teacher opened (words still missing) and below the goal: the ladder\'s order decides (' + first + ' first)');
   p = Plan.plan(raw({ hws: HW(true, true), seals: range(1, 4), worlds: [W(1, 90, true), W(2), W(3), W(4)] }));
   ok(p.focus.kind === 'words' && p.focus.left === 6, '… at the goal already: then the words left');
   p = Plan.plan(raw({ hws: HW(true, true), seals: range(1, 10), worlds: [W(1, 70), W(2), W(3), W(4)] }));

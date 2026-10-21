@@ -476,34 +476,48 @@ homework and the teacher's tareas are one story (`public/js/mi-dralingo.js` + `c
   `streakOf`). The XP and swords are no longer shown on the home; they stay on the account.
 - **«Hoy»**: the experience's scene, Dralingo pointing and ONE direct line from `js/papas-plan.js` `today()`. Since the
   review of 18 October 2026 it follows the kid's ladder: the current experience (the first one not done) and, inside it,
-  1 Palabras → 2 Práctica → 3 Tu tarea, e.g. «¡Hoy toca la Experiencia 3! Practica El Restaurante Chino hasta llegar al
-  70 %.». A homework due elsewhere never jumps the ladder: it rides along as one reminder line («Y tu tarea de esta
-  semana: 1 por mandar.», a tap opens it) and the red «N por mandar» badges. Papás reads the SAME plan in a parent's order
-  (`focus`: homework to send first), and La Ruta Dorada's module page (`/audios/<level>`, js/ruta.js) says the same as
-  «Hoy» in its bubble. The button says what it does: «Marcar mis palabras», «Practicar aquí», «Mandar mi tarea», «Avisar a
-  mi profe» (the WhatsApp message), «Ver mi libro dorado». A level this phone can't open yet asks for its key first.
+  1 Palabras → 2 Tu tarea → 3 Práctica (your priority of 21 October 2026: «the most important thing is marcar las
+  palabras and do the homework… after that comes the training»; `LADDER` in papas-plan.js is the one list), e.g. «¡Hoy
+  toca la Experiencia 3! Manda tu tarea de El Restaurante Chino.». A homework of a later experience than the class's never
+  holds a kid back: they go on to the practice. A homework due elsewhere never jumps the ladder: it rides along as one
+  reminder line («Y tu tarea de esta semana: 1 por mandar.», a tap opens it) and the red «N por mandar» badges. Papás
+  reads the SAME plan in a parent's order (`focus`: homework to send first, then words, then practice), and La Ruta
+  Dorada's module page (`/audios/<level>`, js/ruta.js) says the same as «Hoy» in its bubble. The button says what it
+  does: «Mandar mi tarea», «Practicar aquí», «Avisar a mi profe» (the WhatsApp message), «Ver mi libro dorado»; next to
+  it, always, the green **«Repasar o marcar mis palabras»** (straight to La Base at today's experience; it is today's
+  button when today's step is the words). A level this phone can't open yet asks for its key first.
   Right under it, **«De tu profe»** in one line: your custom tareas for that kid (no experience), «Hacer» right there,
   «Ver» when there are several.
 - **La Ruta Dorada as a path**: one scene card per experience (8 for New HSK 1 and HSK 1, 6 for YCT 1: the same scenes
   as Papás; none of them shows the trapdoor arenas' black pit), its number, its word sticker and three little bars
-  (palabras · práctica · tarea mandada; green done, gold started, grey to do; an experience whose homework hasn't come
-  yet shows the third one dotted, «sin tarea todavía» in the legend; YCT 1 only two) and «N de M listas». Done = green ✓,
+  (in the ladder's order: palabras · tarea mandada · práctica; green done, gold started, grey to do; an experience whose
+  homework hasn't come yet shows its tarea bar dotted, «sin tarea todavía» in the legend; a level with no homework audio
+  only two) and «N de M listas». Done = green ✓,
   today's glows gold with «¡Empieza aquí!», later ones are calm. It ends at **El Simulacro Dorado** («En clase, con tu
   profe»; ✓ «Aprobado» once passed, «Avisa a tu profe» when ready). The module page of every level is in Mi perfil («Ver
   todos los niveles de La Ruta Dorada»). A laptop (1000 px or more) shows the path as a grid with the chosen experience
   beside it, «Hoy», the path's two rows and the dock on the first screen at 1366×768; a phone shows a zig-zag, and a card
   opens the experience's own page.
-- **An experience** (#exp-N): **1 Palabras** (its world of La Base: «31 de 31 marcadas», a few word pictures, the button
-  to La Base at that world) → **2 Práctica** (its world of El Entrenamiento: best % against the goal, «Practicar aquí»)
-  → **3 Tu tarea** (its homework audios with «Escuchar», «¡Ya la mandé!», «Deshacer»: the SAME cards and marks as La Ruta
-  Dorada's «Tus tareas», `js/ruta.js` `Ruta.hwCards`; Aileen says it in voseo, and «¡Qué crack! Tu profe ya tiene tus
-  videos» once every one is sent; «Sin tarea todavía» until the teacher sends it; no step 3 at all in a level with no
-  homework audio, YCT 1). Each number once, in its circle; each step's button on its own full-width line; a step that
-  can't open yet is a lock and one plain line, no button. After the steps, **«Preguntas de tu profe»**: your tareas of
-  THAT experience (YCT 1's game rounds of its world, HSK 1's sentence tarea and its «Preguntas del simulacro»), each with
-  «Nueva» / its % / ✓ and «Ver mis errores» (never «Tier 1» or «EXP1»; homework rounds read «Tarea 1», «Tarea 2»).
-  Everything done and nothing new from you: Aileen and Dralingo celebrate («¡Qué crack!»), once per phone; with new work
-  from you it says «Hiciste los 3 pasos. Tu profe te dejó N más.» instead.
+- **An experience** (#exp-N) = two clear things (your words of 21 October 2026: "the most important thing is marcar las
+  palabras and do the homework… the rest can be a separate interface of the practices"): **1 Tus palabras** (its world
+  of La Base: «31 de 31 marcadas», a few word pictures, and the green button, the same green as on «Hoy»: «Marcar las
+  palabras de la experiencia», or «Repasar mis palabras» once all are marked) → **2 Tu tarea** (its homework audios with
+  «Escuchar», «¡Ya la mandé!», «Deshacer»: the SAME cards and marks as La Ruta Dorada's «Tus tareas», `js/ruta.js`
+  `Ruta.hwCards`; Aileen says it in voseo, and «¡Qué crack! Tu profe ya tiene tus videos» once every one is sent; «Sin
+  tarea todavía» until the teacher sends it; no «Tu tarea» at all in a level with no homework audio). Each number once,
+  in its circle; each step's button on its own full-width line; a step that can't open yet is a lock and one plain line,
+  no button. Under them ONE calm card **«Practicar más»** (Dralingo in his power pose, «El Entrenamiento y las preguntas
+  de tu profe», a red «N nuevas» while your new questions wait, a green ✓ once the practice is at the goal; it glows
+  «¡Empieza aquí!» when the practice is today's step). Everything done and nothing new from you: Aileen and Dralingo
+  celebrate («¡Qué crack!»), once per phone; with new work from you it says «Hiciste los 3 pasos. Tu profe te dejó N
+  más.» instead.
+- **Its practice view** (#exp-N/practica, «← Volver a <experiencia>» on top and at the foot): **El Entrenamiento**'s
+  round of that experience (step 3 of the ladder: best % against the goal, «Empezar» / «Otra ronda»; a lock and one line
+  until its words are all marked), **«Preguntas de tu profe»** (your tareas of THAT experience: YCT 1's game rounds of its
+  world, HSK 1's sentence tarea), **«Preguntas del simulacro»** (HSK 1's Sim-Trainer parts of that experience: «Palabras y
+  Audio», «Oraciones», «Lectura Profunda»), and **Pinyin básico** (HSK 1, experience 1). One section per kind, each
+  question set one line with «Nueva» / its % / ✓ and its one button (and «Ver mis errores» once tried); never «Tier 1» or
+  «EXP1».
 - **El Simulacro Dorado** (#dorado), one clean list: ✓ «Aprobado» on top once passed, or «¡Ya estás listo!» + «Avisar a
   mi profe» (WhatsApp, no number) and «Copiar mensaje» once El Entrenamiento is done; **«Tus simulacros»** (each
   simulation taken in class: its latest try's % and its «Libro dorado» with that try's mistakes); ONE folder **«De tu
