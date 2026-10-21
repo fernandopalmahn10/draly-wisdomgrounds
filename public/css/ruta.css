@@ -530,13 +530,16 @@ body.au-is-pick .dorado, body.au-is-path .dorado { display: none !important; }
 .rp-exp-tag.is-done { background: var(--green); color: #fff; }
 .rp-exp-tag.is-other { background: var(--oro-palido); color: var(--rojo); }
 .rp-exp-tag.is-soon { background: transparent; color: var(--ink-mid); box-shadow: inset 0 0 0 1.5px var(--linea); }
+/* 🗓️ 2026-10-21 an experience after the class's (its pace): its homework plays already, nothing is due: calm, never red */
+.rp-exp-tag.is-later { background: var(--crema-2); color: var(--tinta-2); box-shadow: inset 0 0 0 1.5px var(--linea); }
 .rp-exp.is-todo { box-shadow: inset 0 0 0 2px var(--red), 0 3px 0 rgba(198, 40, 40, .18); background: #fff6f2; }
 .rp-exp.is-done { box-shadow: inset 0 0 0 2px var(--green), 0 3px 0 rgba(31, 107, 69, .14); background: var(--green-pale); }
 /* an experience with no homework yet: calm, never an empty box (its picture and name, «Pronto») */
 .rp-exp.is-soon { cursor: default; background: var(--crema); box-shadow: inset 0 0 0 1.5px var(--linea); }
 .rp-exp.is-soon .rp-exp-pic { filter: saturate(.35); opacity: .7; }
 .rp-exp.is-soon .rp-exp-name { color: var(--ink-mid); }
-/* the newest homework's experience: this week's homework, one tap away */
+/* the class's experience («Esta semana», its pace since 2026-10-21; was the newest homework's): this week's homework,
+   one tap away */
 .rp-exp.is-latest { box-shadow: 0 0 0 3px var(--gold-btn), inset 0 0 0 2px var(--red), 0 8px 18px -10px rgba(90, 16, 16, .45); }
 .rp-exp.is-latest.is-done { box-shadow: 0 0 0 3px var(--gold-btn), inset 0 0 0 2px var(--green), 0 8px 18px -10px rgba(31, 107, 69, .4); }
 .rp-exp.is-latest { padding-top: 13px; }

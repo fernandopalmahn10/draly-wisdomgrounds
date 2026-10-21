@@ -222,6 +222,7 @@
   $('m-refresh').addEventListener('click', () => {
     _authStopped = false;   // a manual refresh may try again after a «code not accepted»
     fetchRoster();
+    paceMaybe(true);
   });
   // 🎯 Modo Maestro en vivo — invite only currently-ONLINE students to a
   // live warmup session. User feedback 2026-05-27: "select from the list
@@ -2705,6 +2706,7 @@
       sel.disabled = false;
       if (!d || !d.ok) { notify('Error: ' + (d && d.error || '')); fetchTeachers(true); return; }
       sel.closest('.m-code-chip').classList.add('is-saved');
+      paceMaybe(true);   // (2026-10-21: another level = that level's default experience, until its teacher chooses)
       setTimeout(() => { const c = sel.closest('.m-code-chip'); if (c) c.classList.remove('is-saved'); }, 1200);
     }).catch(() => { sel.disabled = false; notify('Sin conexión. Vuelve a intentarlo.', 'error'); });
   }
@@ -2715,6 +2717,7 @@
     }).then((r) => r.json()).then((d) => {
       if (!d || !d.ok) { notify('Error: ' + (d && d.error || '')); return; }
       notify('✓ Código de clase nuevo: ' + d.code + ' (' + levelLabel(level) + ')');
+      paceMaybe(true);
       fetchTeachers(true);
     }).catch(() => notify('Sin conexión. Vuelve a intentarlo.', 'error'));
   }
@@ -3289,6 +3292,7 @@
       _ccTo = '';
       fetchTeachers(true);
       fetchRoster();
+      paceMaybe(true);   // (2026-10-21: the class's «Experiencia actual» card follows its new code)
     }).catch(() => { busyBtn(btn); $('m-cc-msg2').textContent = 'Sin conexión. Vuelve a intentarlo.'; });
   });
   $('m-cc-copy').addEventListener('click', () => copyBtn($('m-cc-copy'), $('m-cc-final').textContent));
@@ -3339,6 +3343,184 @@
       });
   });
 
+  // ── 🗓️ 2026-10-21 «Experiencia actual» per class (his picks: «Each teacher, per class» + «Visible, can listen ahead»;
+  // CLAUDE.md «The class's pace decides this week's homework») ────────────────────────────────────────────────────────
+  // Every teacher sees, per class code, the experience the class is on (its picture and name, «3 de 8») with big ‹ ›
+  // and «Elegir» (a window with every experience's picture): one tap saves, a toast «Ahora tu clase está en la
+  // Experiencia 3 · El Mercado» with «Deshacer» for 8 s. Kids and parents are reminded only about homework up to it
+  // (js/papas-plan.js); later experiences stay visible and play. A class that never chose says «Elige en qué experiencia
+  // va tu clase» with one tap to keep the default. The super admin sees every class (his own first, the others folded).
+  // GET / POST /api/admin/class-pace (server.js): class codes only in the JSON body, never in an address.
+  let _pace = null;            // { classes: [{ code, level, teacher, mine, cur, set }], levels: { id: { name, slug, def, exps } } }
+  let _paceAt = 0;             // when it was last asked for (the roster's 15 s refresh asks again after a minute)
+  let _paceBusy = false;       // a save in flight: one at a time, and the cards are not redrawn under the teacher's finger
+  let _paceToast = null;       // the pace toast on screen (a new change replaces it)
+  let _paceOthersOpen = false; // the super admin's «Clases de otras maestras» fold, kept open across redraws
+  function paceMaybe(force) {
+    if (!pw || _paceBusy) return;
+    if (!force && _pace && Date.now() - _paceAt < 60000) return;
+    _paceAt = Date.now();
+    adminFetch('/api/admin/class-pace', pw).then((r) => r.json()).then((d) => {
+      if (!d || !d.ok || !Array.isArray(d.classes)) return;
+      _pace = d;
+      if (!_paceBusy && !$('m-pace-modal')) renderPace();
+    }).catch(() => {});   // (offline: the cards keep what they showed; the next refresh asks again)
+  }
+  const _paceLevel = (c) => (_pace && _pace.levels && c ? _pace.levels[c.level] : null) || null;
+  const _paceExp = (c, n) => { const L = _paceLevel(c); return (L && L.exps.find((e) => e.n === n)) || null; };
+  const _paceClass = (code) => (_pace ? _pace.classes.find((x) => x.code === code) : null) || null;
+  function paceCardHtml(c) {
+    const L = _paceLevel(c);
+    if (!L || !L.exps.length) return '';
+    const of = L.exps.length;
+    const e = _paceExp(c, c.cur) || { n: c.cur, name: '', pic: '' };
+    const dots = L.exps.map((x) => '<i class="' + (x.n < c.cur ? 'is-past' : x.n === c.cur ? 'is-now' : '') + '"></i>').join('');
+    return '<article class="m-pace-card' + (c.set ? '' : ' is-unset') + '" data-code="' + escapeHtml(c.code) + '">' +
+      (c.set ? '' : '<p class="m-pace-nudge">Elige en qué experiencia va tu clase</p>') +
+      '<div class="m-pace-main">' +
+        '<span class="m-pace-art">' + (e.pic ? '<img src="' + escapeHtml(e.pic) + '" alt="" width="200" height="200" loading="lazy" decoding="async">' : '') + '<b>' + e.n + '</b></span>' +
+        '<div class="m-pace-txt">' +
+          '<p class="m-pace-k">' + (c.mine ? '' : '<span class="m-pace-who">' + escapeHtml(c.teacher || 'Sin nombre') + '</span> · ') +
+            'Clase <span translate="no">' + escapeHtml(c.code) + '</span> · ' + escapeHtml(L.name) + '</p>' +
+          '<p class="m-pace-t"><span class="m-pace-t-k">Experiencia ' + e.n + '</span> ' + escapeHtml(e.name) + '</p>' +
+          '<p class="m-pace-dots" role="img" aria-label="Experiencia ' + e.n + ' de ' + of + '">' + dots + '<span aria-hidden="true">' + e.n + ' de ' + of + '</span></p>' +
+        '</div>' +
+      '</div>' +
+      '<div class="m-pace-ctrl">' +
+        '<button class="m-pace-step" type="button" data-pace-step="-1"' + (c.cur <= 1 ? ' disabled' : '') + ' aria-label="Una experiencia atrás">‹</button>' +
+        (c.set ? '<button class="btn btn-sm m-pace-pick" type="button" data-pace-pick>Elegir</button>'
+          : '<button class="btn btn-sm btn-gold m-pace-pick" type="button" data-pace-keep>Sí, va en la ' + e.n + '</button>') +
+        '<button class="m-pace-step" type="button" data-pace-step="1"' + (c.cur >= of ? ' disabled' : '') + ' aria-label="Una experiencia adelante">›</button>' +
+      '</div>' +
+      '<div class="m-pace-foot">' +
+        (c.set ? '' : '<button class="m-pace-link" type="button" data-pace-pick>Va en otra</button>') +
+        // («Teachers see what kids see»: the module page in a teacher's preview follows this teacher's own class)
+        (c.mine && L.slug ? '<a class="m-pace-link" href="/audios/' + encodeURIComponent(L.slug) + '#tareas" target="_blank" rel="noopener">Ver como alumno</a>' : '') +
+      '</div></article>';
+  }
+  function renderPace() {
+    const sec = $('m-pace'), list = $('m-pace-list');
+    if (!sec || !list) return;
+    const all = _pace ? _pace.classes.filter((c) => _paceLevel(c)) : [];
+    if (!all.length) { sec.hidden = true; return; }
+    // the control that had the keyboard comes back on the same class's card
+    const act = document.activeElement;
+    const actCard = act && list.contains(act) ? act.closest('.m-pace-card') : null;
+    const actSel = !actCard ? null : act.hasAttribute('data-pace-step') ? '[data-pace-step="' + act.getAttribute('data-pace-step') + '"]'
+      : act.hasAttribute('data-pace-keep') || act.hasAttribute('data-pace-pick') ? '.m-pace-pick' : null;
+    const mine = all.filter((c) => c.mine), others = all.filter((c) => !c.mine);
+    const grid = (arr) => '<div class="m-pace-grid">' + arr.map(paceCardHtml).join('') + '</div>';
+    const unsetOthers = others.filter((c) => !c.set).length;
+    let h = mine.length ? grid(mine) : '';
+    if (others.length && !mine.length) h += grid(others);
+    else if (others.length) {
+      h += '<details class="m-pace-more"' + (_paceOthersOpen ? ' open' : '') + '><summary><span>Clases de otras maestras</span> <span class="m-chip-n">' + others.length + '</span>' +
+        (unsetOthers ? '<span class="m-pace-more-note">' + unsetOthers + (unsetOthers === 1 ? ' sin elegir' : ' sin elegir') + '</span>' : '') + '</summary>' + grid(others) + '</details>';
+    }
+    $('m-pace-title').textContent = all.length > 1 ? '¿En qué experiencia va cada clase?' : '¿En qué experiencia va tu clase?';
+    list.innerHTML = h;
+    sec.hidden = false;
+    const more = list.querySelector('.m-pace-more');
+    if (more) more.addEventListener('toggle', () => { _paceOthersOpen = more.open; });
+    if (actCard && actSel) {
+      const card = list.querySelector('.m-pace-card[data-code="' + CSS.escape(actCard.dataset.code) + '"]');
+      const el = card && (card.querySelector(actSel + ':not([disabled])') || card.querySelector('.m-pace-pick'));
+      if (el) { try { el.focus({ preventScroll: true }); } catch (_) {} }
+    }
+  }
+  // a pace change: { code, n } (n = null: back to the level's default, the undo of a first choice)
+  function paceSave(code, n, isUndo) {
+    const c = _paceClass(code);
+    if (!c || _paceBusy) return;
+    _paceBusy = true;
+    const card = document.querySelector('#m-pace-list .m-pace-card[data-code="' + CSS.escape(code) + '"]');
+    if (card) card.classList.add('is-busy');
+    const fail = (msg) => { _paceBusy = false; if (card) card.classList.remove('is-busy'); notify(msg, 'error'); };
+    adminFetch('/api/admin/class-pace', pw, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code, n }),
+    }).then((r) => r.json().catch(() => null)).then((d) => {
+      if (!d || !d.ok) { fail((d && d.error) || 'No se pudo guardar. Vuelve a intentarlo.'); return; }
+      _paceBusy = false;
+      c.cur = d.cur;
+      c.set = !!d.set;
+      renderPace();
+      const e = _paceExp(c, d.cur);
+      const where = 'la Experiencia ' + d.cur + (e ? ' · ' + e.name : '');
+      const who = c.mine ? 'tu clase' : 'la clase ' + code + ' de ' + (c.teacher || 'otra maestra');
+      if (isUndo) { paceToast('Listo: ' + who + ' sigue en ' + where + '.', null); return; }
+      paceToast('Ahora ' + who + ' está en ' + where, () => paceSave(code, d.prev == null ? null : d.prev, true));
+    }).catch(() => fail('Sin conexión. Vuelve a intentarlo.'));
+  }
+  // the change's toast, with «Deshacer» for 8 s (notify() has no button; same look, same box)
+  function paceToast(text, undo) {
+    const box = $('m-toasts');
+    if (!box) return;
+    if (_paceToast && _paceToast.isConnected) _paceToast.remove();
+    const el = document.createElement('div');
+    el.className = 'm-toast is-ok m-pace-toast';
+    el.setAttribute('role', 'status');
+    el.innerHTML = '<span class="m-toast-text"></span>' + (undo ? '<button class="m-toast-act" type="button">Deshacer</button>' : '') +
+      '<button class="m-toast-x" type="button" aria-label="Cerrar">✕</button>';
+    el.querySelector('.m-toast-text').textContent = '✓ ' + text;
+    const kill = () => {
+      if (!el.isConnected) return;
+      el.classList.add('is-leaving');
+      setTimeout(() => { try { el.remove(); } catch (_) {} }, 170);
+    };
+    el.querySelector('.m-toast-x').addEventListener('click', kill);
+    if (undo) el.querySelector('.m-toast-act').addEventListener('click', () => { kill(); undo(); });
+    box.appendChild(el);
+    while (box.children.length > 3) box.firstChild.remove();
+    _paceToast = el;
+    setTimeout(kill, 8000);
+  }
+  // «Elegir»: every experience of the level as a picture tile, the class's one marked; one tap saves and closes
+  function pacePick(code) {
+    const c = _paceClass(code);
+    const L = _paceLevel(c);
+    if (!c || !L) return;
+    let overlay = $('m-pace-modal');
+    if (overlay) overlay.remove();
+    overlay = document.createElement('div');
+    overlay.id = 'm-pace-modal';
+    overlay.className = 'm-modal';
+    overlay.innerHTML = '<div class="m-modal-card m-modal-card--wide m-pace-modal-card">' +
+      '<button class="m-modal-close" type="button" aria-label="Cerrar">✕</button>' +
+      '<h2>' + (c.mine ? '¿En qué experiencia va tu clase?' : '¿En qué experiencia va la clase de ' + escapeHtml(c.teacher || 'otra maestra') + '?') + '</h2>' +
+      '<p class="m-modal-sub">Clase <span translate="no">' + escapeHtml(code) + '</span> · ' + escapeHtml(L.name) + '. Sus tareas de esta semana son las de la experiencia que elijas (y las anteriores que falten); las siguientes se ven y se escuchan, sin aviso.</p>' +
+      '<div class="m-pace-tiles">' + L.exps.map((x) => {
+        const now = x.n === c.cur;
+        return '<button class="m-pace-tile' + (now ? ' is-now' : '') + '" type="button" data-n="' + x.n + '"' + (now ? ' aria-current="true"' : '') +
+          ' aria-label="Experiencia ' + x.n + ', ' + escapeHtml(x.name) + (now ? (c.set ? ', ahora' : ', ahora sin elegir') : '') + '">' +
+          '<span class="m-pace-tile-art">' + (x.pic ? '<img src="' + escapeHtml(x.pic) + '" alt="" width="200" height="200" loading="lazy" decoding="async">' : '') + '<b>' + x.n + '</b></span>' +
+          '<span class="m-pace-tile-name">' + escapeHtml(x.name) + '</span>' +
+          (now ? '<small>' + (c.set ? 'Ahora' : 'Ahora, sin elegir') + '</small>' : '') + '</button>';
+      }).join('') + '</div></div>';
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', (ev) => {
+      if (ev.target === overlay || ev.target.closest('.m-modal-close')) { overlay.remove(); return; }
+      const t = ev.target.closest('[data-n]');
+      if (!t) return;
+      const n = Number(t.getAttribute('data-n'));
+      overlay.remove();
+      if (n !== c.cur || !c.set) paceSave(code, n);
+    });
+  }
+  (function wirePace() {
+    const list = $('m-pace-list');
+    if (!list) return;
+    list.addEventListener('click', (e) => {
+      const card = e.target.closest('.m-pace-card');
+      const c = card ? _paceClass(card.getAttribute('data-code')) : null;
+      const L = _paceLevel(c);
+      if (!c || !L) return;
+      const st = e.target.closest('[data-pace-step]');
+      if (st) { const n = c.cur + Number(st.getAttribute('data-pace-step')); if (n >= 1 && n <= L.exps.length) paceSave(c.code, n); return; }
+      if (e.target.closest('[data-pace-keep]')) { paceSave(c.code, c.cur); return; }
+      if (e.target.closest('[data-pace-pick]')) pacePick(c.code);
+    });
+  })();
+
   // 🆕 2026-06-16 — persisted roster search term (survives auto-refresh).
   let _rosterSearch = '';
   // 2026-10-13 remake: filter chips + class select also survive the 15 s refresh
@@ -3358,6 +3540,7 @@
       else if (act.classList.contains('m-online-kid') && act.dataset.code) focusSel = '#m-online-list .m-online-kid[data-code="' + CSS.escape(act.dataset.code) + '"]';
     }
     _renderRoster(students, self, archived);
+    paceMaybe();   // (2026-10-21) the classes' «Experiencia actual»: asked with the first roster, then at most once a minute
     const strip = document.querySelector('.m-online');
     if (strip) strip.classList.remove('is-stale');
     if (focusSel) {

@@ -526,6 +526,12 @@ the checklist for any new game mode.
   only plays. `node scripts/test-ruta-tareas.js` must pass. Not built yet: the /maestro view and the teacher undo.
 - **Design first**: a clickable design of the new module page (laptop + phone) for him to try and approve before it is
   built into the platform.
+- **The class's pace decides «this week's homework»** (his picks 2026-10-21, the day the storybooks of every
+  experience of the three modules arrived at once): each teacher sets «Experiencia actual» for each of their classes in
+  /maestro and moves it on as the class goes. Kids and parents are reminded only about homework up to that experience
+  (the red «N por mandar», the glowing folder, Papás' «Lo más importante», the reminder under the kid's «Hoy»); later
+  experiences stay visible and their audio plays (listen ahead), but they are never counted as due or shown as this
+  week's. Never «the newest experience that has homework» again: with every storybook built, that is always the last one.
 - **Homework by experience, like folders** (his rule 2026-10-18: "basing everything on experiences is so good and we
   should keep following the same rule… if you keep them all, scroll down in the list then it's going to become messy"):
   - «Tus tareas» shows every experience of the module (Experiencia 1…8, and more when a module has more), as folders.

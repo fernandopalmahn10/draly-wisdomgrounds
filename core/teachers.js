@@ -472,9 +472,43 @@ function setCodeLevel(teacherId, code, level) {
   const c = String(code || '').trim().toUpperCase();
   if (!t || !lvl || !(t.accessCodes || []).includes(c)) return null;
   t.codeLevels = (t.codeLevels && typeof t.codeLevels === 'object') ? t.codeLevels : {};
+  // (2026-10-21) a class that moves to another level starts that level at its default experience: the old level's
+  // «Experiencia actual» means nothing there (its teacher sets the new one in /maestro)
+  if ((Levels.normalize(t.codeLevels[c]) || Levels.DEFAULT) !== lvl && t.codeExps && typeof t.codeExps === 'object') delete t.codeExps[c];
   t.codeLevels[c] = lvl;
   scheduleSave();
   return row(t);
+}
+// ── 🗓️ 2026-10-21 «The class's pace decides this week's homework» (his picks: «Each teacher, per class» + «Visible, can
+// listen ahead») ──────────────────────────────────────────────────────────────────────────────────────────────────────
+// Each class code carries «Experiencia actual» (`codeExps`: { code: n }, beside `codeLevels`): the experience the class
+// is on, set and moved on by its teacher in /maestro. Kids and parents are reminded only about homework up to it.
+// Missing = never set: server.js uses the level's default (core/levels.js paceDefault) and /maestro nudges the teacher.
+// A class-code rename carries it (commitClassCodeRename), a level change clears it (setCodeLevel).
+function expForAccessCode(code) {
+  const norm = normClassCode(code);
+  const t = norm ? getByAccessCode(norm) : null;
+  const v = t && t.codeExps && typeof t.codeExps === 'object' ? Number(t.codeExps[norm]) : NaN;
+  return Number.isInteger(v) && v >= 1 ? v : null;
+}
+// n: a whole number 1-99 (server.js checks it against the level's experiences), or null = back to the level's default
+// (the «Deshacer» of a first choice). Written at once; undone when the disk refuses.
+// → { ok: true, code, n, prev (the stored value before: a number or null) } | { ok: false, error }
+function setCodeExp(code, n) {
+  const c = normClassCode(code);
+  const t = c ? getByAccessCode(c) : null;
+  if (!t) return { ok: false, error: 'Ese código de clase ya no existe. Abre /maestro otra vez.' };
+  const v = n == null ? null : Number(n);
+  if (v != null && !(Number.isInteger(v) && v >= 1 && v <= 99)) return { ok: false, error: 'Esa experiencia no existe.' };
+  if (!t.codeExps || typeof t.codeExps !== 'object' || Array.isArray(t.codeExps)) t.codeExps = {};
+  const prev = expForAccessCode(c);
+  if (prev === v) return { ok: true, code: c, n: v, prev };
+  if (v == null) delete t.codeExps[c]; else t.codeExps[c] = v;
+  if (!persistNow()) {
+    if (prev == null) delete t.codeExps[c]; else t.codeExps[c] = prev;
+    return { ok: false, error: 'No se pudo guardar. Vuelve a intentarlo.' };
+  }
+  return { ok: true, code: c, n: v, prev };
 }
 // 🆕 2026-10-15 «Cambiar mi código». The rules for a new teacher code: 8-24 characters after normalizing (letters,
 // numbers and dashes), at least one letter and one number, not a class code, not another teacher's code, not a code
@@ -597,12 +631,21 @@ function commitClassCodeRename(uid, fromRaw, toRaw, keepOnFail) {
   const c = checkClassCodeRename(uid, fromRaw, toRaw, true);
   if (!c.ok) return c;
   const { teacher: t, from, to } = c;
-  const before = { accessCodes: t.accessCodes.slice(), codeLevels: Object.assign({}, t.codeLevels || {}), retiredClass: meta.retiredClass.slice() };
-  const undo = () => { t.accessCodes = before.accessCodes; t.codeLevels = before.codeLevels; meta.retiredClass = before.retiredClass; };
+  const before = { accessCodes: t.accessCodes.slice(), codeLevels: Object.assign({}, t.codeLevels || {}),
+    codeExps: t.codeExps && typeof t.codeExps === 'object' ? Object.assign({}, t.codeExps) : undefined, retiredClass: meta.retiredClass.slice() };
+  const undo = () => {
+    t.accessCodes = before.accessCodes; t.codeLevels = before.codeLevels; meta.retiredClass = before.retiredClass;
+    if (before.codeExps === undefined) delete t.codeExps; else t.codeExps = before.codeExps;
+  };
   t.accessCodes = t.accessCodes.map((x) => (x === from ? to : x));
   if (t.codeLevels && typeof t.codeLevels === 'object' && Object.prototype.hasOwnProperty.call(t.codeLevels, from)) {
     t.codeLevels[to] = t.codeLevels[from];
     delete t.codeLevels[from];
+  }
+  // (2026-10-21) the class's «Experiencia actual» moves with its code: renaming never sends a class back to the default
+  if (t.codeExps && typeof t.codeExps === 'object' && Object.prototype.hasOwnProperty.call(t.codeExps, from)) {
+    t.codeExps[to] = t.codeExps[from];
+    delete t.codeExps[from];
   }
   const toHash = classHash(to);
   meta.retiredClass = meta.retiredClass.filter((r) => r && r.h !== toHash);      // taken back by its own teacher
@@ -652,6 +695,7 @@ function row(t) {
     country: t.country,
     accessCodes: (t.accessCodes || []).slice(),
     codeLevels: Object.assign({}, t.codeLevels || {}),
+    codeExps: Object.assign({}, t.codeExps && typeof t.codeExps === 'object' ? t.codeExps : {}),   // (2026-10-21) «Experiencia actual»
     isSuperAdmin: !!t.isSuperAdmin,
     createdAt: t.createdAt,
     lastSeen: t.lastSeen,
@@ -675,6 +719,8 @@ module.exports = {
   getByAccessCode,
   isAccessCodeValid,
   levelForAccessCode,
+  expForAccessCode,
+  setCodeExp,
   createTeacher,
   addAccessCode,
   setCodeLevel,

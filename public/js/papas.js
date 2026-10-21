@@ -147,11 +147,15 @@
     const wordPic = (cur && cur.pic) || A + 'dralingo/point.webp';
     const t = P.tareas;
     let tareas;
-    if (!t.of) tareas = num(A + 'cast/aileen-hello.webp', 'is-face', esc('Pronto'), '', 'tareas por WhatsApp', esc('La profe las manda pronto'), '', 'is-soft');
+    if (!t.of && !t.later) tareas = num(A + 'cast/aileen-hello.webp', 'is-face', esc('Pronto'), '', 'tareas por WhatsApp', esc('La profe las manda pronto'), '', 'is-soft');
     else {
-      const left = t.week && t.week.left;
-      tareas = num(A + 'cast/aileen-hello.webp', 'is-face', String(t.sent), 'mandadas', 'tareas por WhatsApp',
-        left ? esc(left === 1 ? 'Falta 1 de esta semana' : 'Faltan ' + left + ' de esta semana') : '<i class="pp-ok">' + CHECK + '</i>' + esc('Al día'),
+      // (2026-10-21, the class's pace) only homework up to the class's experience is due: this week's first, then any
+      // older one still waiting; a later experience's homework never counts as missing (sent ahead, it counts as sent)
+      const week = t.week && t.week.left;
+      const left = t.of - t.sent;
+      tareas = num(A + 'cast/aileen-hello.webp', 'is-face', String(t.sent + (t.ahead || 0)), 'mandadas', 'tareas por WhatsApp',
+        week ? esc(week === 1 ? 'Falta 1 de esta semana' : 'Faltan ' + week + ' de esta semana')
+          : left ? esc(left === 1 ? 'Falta 1 por mandar' : 'Faltan ' + left + ' por mandar') : '<i class="pp-ok">' + CHECK + '</i>' + esc('Al día'),
         left ? 'is-red' : 'is-green', 'is-green');
     }
     let sim;
@@ -215,7 +219,7 @@
     return [
       e ? 'Pídele que te enseñe 3 palabras de ' + e.name + ', con su dibujo.' : 'Pídele que te enseñe 3 palabras de hoy, con su dibujo.',
       ask || (conv.length ? conv[conv.length - 1].prompt : 'Pregúntale «Ni hao ma?» y celebra su respuesta, aunque no sea perfecta.'),
-      (p && p.focus.kind === 'tarea') || (e && e.hw.sent < e.hw.of) ? 'Graben juntos el video de la tarea y mándenlo el mismo día.'
+      (p && p.focus.kind === 'tarea') || (e && e.due !== false && e.hw.sent < e.hw.of) ? 'Graben juntos el video de la tarea y mándenlo el mismo día.'
         : 'Que lo diga EN VOZ ALTA: 5 minutos al día valen más que una hora a la semana.',
     ];
   }

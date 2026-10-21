@@ -18,7 +18,7 @@
   <!-- 2026-10-13 remake: the teacher's control room in the platform's sticker world (spec docs/specs/maestro-remake.md).
        teacher-dashboard.css is this page's only stylesheet; maestro.css stays for host-hsk.html. -->
   <link rel="stylesheet" href="/css/back.css?v=20261018a">
-  <link rel="stylesheet" href="/css/teacher-dashboard.css?v=20261019te">
+  <link rel="stylesheet" href="/css/teacher-dashboard.css?v=20261021cp">
 </head>
 <body class="m-app">
 
@@ -110,6 +110,15 @@
     <div class="m-work">
       <!-- STUDENTS TAB -->
       <div class="m-tabpanel" id="m-tabpanel-students" role="tabpanel" aria-labelledby="m-tab-students">
+        <!-- 🗓️ 2026-10-21 «Experiencia actual» per class (his picks: each teacher, per class; kids can listen ahead):
+             the homework up to it is this week's for the class's kids and parents (js/maestro.js renderPace) -->
+        <section class="m-panel m-pace" id="m-pace" aria-labelledby="m-pace-title" hidden>
+          <div class="m-pace-head">
+            <h2 class="m-h2" id="m-pace-title">¿En qué experiencia va tu clase?</h2>
+            <p class="m-pace-help">Tus alumnos y sus papás ven como tareas de esta semana las de esa experiencia (y las anteriores que falten). Las siguientes se ven y se escuchan, sin aviso.</p>
+          </div>
+          <div class="m-pace-list" id="m-pace-list"></div>
+        </section>
         <section class="m-panel m-students" aria-labelledby="m-students-title">
           <div class="m-panel-head">
             <h2 class="m-h2" id="m-students-title">Students</h2>
@@ -593,7 +602,7 @@
   <script src="/js/warmup-vocab.js?v=20260706a"></script>
   <script src="/js/saga.js?v=20261020z3d3"></script>
   <script src="/js/cast.js?v=20261017td"></script>
-  <script src="/js/maestro.js?v=20261019te"></script>
+  <script src="/js/maestro.js?v=20261021cp"></script>
   <script src="/js/pwa.js?v=20261012a" defer></script>
 </body>
 </html>

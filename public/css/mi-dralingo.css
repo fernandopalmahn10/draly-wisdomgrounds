@@ -347,6 +347,9 @@ body.md-in { height: auto; min-height: 100vh; min-height: 100dvh; overflow: visi
 #screen-list.md .md-peek img { width: 50px; height: 50px; border-radius: 14px; object-fit: cover; background: #fff; box-shadow: 0 0 0 2px #cfe5d6; }
 #screen-list.md .md-also { display: inline-flex; align-items: center; min-height: 48px; align-self: flex-start; color: var(--md-rojo); font-size: 14px; font-weight: 800; text-decoration: underline; text-underline-offset: 3px; }
 #screen-list.md .md-badge { margin-left: auto; padding: 3px 10px; border-radius: 999px; background: var(--md-red); color: #fff; font-size: 12px; font-weight: 900; white-space: nowrap; }
+/* 🗓️ 2026-10-21 the homework of an experience after the class's: calm, never red (it plays already) */
+#screen-list.md .md-later { margin-left: auto; padding: 3px 10px; border-radius: 999px; background: #fff; color: var(--md-soft); box-shadow: inset 0 0 0 1.5px var(--md-line); font-size: 12px; font-weight: 900; white-space: nowrap; }
+#screen-list.md .md-later[hidden], #screen-list.md .md-badge[hidden] { display: none; }
 #screen-list.md .md-say { display: flex; align-items: flex-end; gap: 8px; }
 #screen-list.md .md-say img { width: 54px; height: 70px; object-fit: contain; object-position: bottom; flex: none; }
 #screen-list.md .md-say p { flex: 1; min-width: 0; padding: 9px 12px; border-radius: 14px 14px 14px 4px; background: var(--md-sand); font-size: 14px; font-weight: 700; line-height: 1.35; }

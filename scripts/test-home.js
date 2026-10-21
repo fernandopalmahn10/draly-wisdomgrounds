@@ -45,7 +45,8 @@ const Plan = require('../public/js/papas-plan.js');
 const W = (n, best, open) => ({ n, name: 'Mundo ' + n, pic: null, first: (n - 1) * 10 + 1, count: 10, best: best == null ? null : best, open: !!open });
 const range = (a, b) => Array.from({ length: b - a + 1 }, (_, i) => a + i);
 const HW = (s3, s1) => [{ id: 'x-e03-r1', exp: 3, round: 1, title: 'Tres', sent: !!s3 }, { id: 'x-e01-r1', exp: 1, round: 1, title: 'Uno', sent: !!s1 }];
-const raw = (o) => Object.assign({ pct: 70, words: 40, seals: [], worlds: [W(1), W(2), W(3), W(4)], hws: HW(false, false), sim: null }, o);
+// (2026-10-21) cur = the class's pace: homework up to experience 3 is due here, «this week» = experience 3 (test-class-pace.js)
+const raw = (o) => Object.assign({ pct: 70, words: 40, seals: [], worlds: [W(1), W(2), W(3), W(4)], hws: HW(false, false), cur: 3, sim: null }, o);
 function todayTests() {
   section('«Hoy» = the kid\'s ladder (review 2026-10-18): the current experience, 1 Palabras → 2 Práctica → 3 Tu tarea; Papás keeps homework first');
   const T = (r) => { const p = Plan.plan(r); return { p, t: Plan.today(p) }; };
@@ -115,6 +116,11 @@ const CAT = JSON.parse(read('public/assets/audios/catalog.json'));
 const hwOf = (folder) => CAT.homeworks.filter((h) => h.level === folder).sort((a, b) => (b.exp - a.exp) || (b.round - a.round));
 const NEWHW = hwOf('newhsk1');
 const OLDHW = hwOf('hsk1');
+const YCTHW = hwOf('yct1');
+// (2026-10-21) the class's pace: these made-up classes never chose «Experiencia actual», so each level's default decides
+// which homework is due (core/levels.js, read from where it lives); today's catalog decides which experiences have homework
+const PACE = { hsk2: require('../core/levels.js').info('hsk2').paceDefault };
+const NEWDUE = NEWHW.filter((h) => h.exp <= PACE.hsk2);
 const DATA = fs.mkdtempSync(path.join(os.tmpdir(), 'draly-home-'));
 const rnd = (n) => crypto.randomBytes(n).toString('hex').toUpperCase();
 const LEGACY = 'legacy-' + rnd(12);
@@ -132,7 +138,9 @@ const P8 = { 1: 80, 2: 85, 3: 90, 4: 75, 5: 70, 6: 95, 7: 88, 8: 100 };
 const KIDS = {
   NEWK: { level: 'hsk2', name: 'Sofía Prueba', avatar: 'aileen' },
   HALF: { level: 'hsk2', name: 'Mateo Prueba', avatar: 'adric', ruta: { s: '1-123', at: NOW - DAY, p: { 1: 92, 2: 74, 3: 55 } },
-    tareas: { [NEWHW.find((h) => h.exp === 1).id]: { h: NOW - 2 * DAY, s: NOW - 2 * DAY }, [NEWHW.find((h) => h.exp === 3).id]: { h: NOW - DAY } },
+    // (every homework of experiences 1-2 in today's catalog sent, experience 3's heard)
+    tareas: Object.assign(Object.fromEntries(NEWHW.filter((h) => h.exp <= 2).map((h) => [h.id, { h: NOW - 2 * DAY, s: NOW - 2 * DAY }])),
+      { [NEWHW.find((h) => h.exp === 3).id]: { h: NOW - DAY } }),
     extra: { streak: 4, dayDate: utcDay(NOW - DAY),
       inbox: [{ id: 'm-a1', fromName: 'Profe Fer', text: '¡Hola! Mañana jugamos en clase. Ten tu teléfono listo.', actionType: 'link', actionUrl: '/?pin=' + (100 + crypto.randomInt(800)), actionLabel: 'Entrar', ts: NOW - 3600e3, readAt: null },
         { id: 'm-a2', fromName: 'Profe Fer', text: 'Esta semana: Experiencia 3, El Restaurante Chino.', ts: NOW - 3 * DAY, readAt: NOW - 2 * DAY }],
@@ -144,7 +152,8 @@ const KIDS = {
     extra: { hskResults: [{ simId: 'newhsk1-sim2', score: 170, total: 200, percent: 85, ts: NOW - DAY, answeredCount: 40, questions: 40, wrongQs: [] }] } },
   YCTK: { level: 'yct1', name: 'Emma Prueba', avatar: 'aileen', ruta: { s: '1-17', at: NOW - DAY, p: { 1: 80 } } },
   OLDK: { level: 'hsk1', name: 'Tomás Prueba', avatar: 'adric', ruta: { s: '1-40', at: NOW - DAY, p: { 1: 75, 2: 40, pinyin: 60 } },
-    tareas: { [OLDHW[OLDHW.length - 1].id]: { h: NOW - DAY, s: NOW - DAY } }, extra: { testResults: [{ storyId: 'pinpin', score: 60, total: 100, ts: NOW - DAY }] } },
+    // (2026-10-21: every homework of experience 1 in today's catalog sent: its Ronda 2 arrived with the storybooks)
+    tareas: allSent(OLDHW.filter((h) => h.exp === 1)), extra: { testResults: [{ storyId: 'pinpin', score: 60, total: 100, ts: NOW - DAY }] } },
   GAPK: { level: 'hsk2', name: 'Pablo Prueba', avatar: 'oryx', extra: { streak: 9, dayDate: utcDay(NOW - 3 * DAY) } },
   OTHR: { level: 'hsk2', name: 'Clara Prueba', avatar: 'oryx', ruta: { s: '1-50', at: NOW - DAY, p: { 1: 99 } } },
   // (review 2026-10-18) kids far from UTC who studied «yesterday» on their own calendar: a step today keeps the streak.
@@ -340,7 +349,7 @@ async function serverTests() {
     }
   }
   let m = H.model(R.NEWK.json, ST.NEWK, null);
-  ok(R.NEWK.json.ruta.plan.focus.kind === 'tarea' && m.hoy.kind === 'words' && m.hoy.exp === 1 && m.hoy.step === 1 && m.hoy.remind && m.hoy.remind.exp === NEWHW[0].exp,
+  ok(R.NEWK.json.ruta.plan.focus.kind === 'tarea' && m.hoy.kind === 'words' && m.hoy.exp === 1 && m.hoy.step === 1 && m.hoy.remind && m.hoy.remind.exp === NEWDUE[0].exp,
     'new kid: Papás says «the homework first»; the kid starts at experience 1, step 1, the homework as the reminder line');
   m = H.model(R.PRAC.json, ST.PRAC, null);
   ok(m.hoy.kind === 'practice' && m.hoy.exp === 3 && m.hoy.step === 2 && m.hoy.go === 'Practicar aquí', 'homework all sent: practice experience 3 (step 2, «Practicar aquí»)');
@@ -379,17 +388,30 @@ async function serverTests() {
   ok(/md-step is-closed/.test(nE1) && !/class="md-btn/.test(li2) && /Se abre cuando marques todas sus palabras/.test(li2), 'a locked step: a lock and one plain line, no button');
   ok(!/class="md-step-t">\d · /.test(nE1) && (nE1.match(/class="md-step-n/g) || []).length === 3, 'each step\'s number once (its circle; never «1 · Palabras» too)');
   const y2 = H.htmlFor(R.YCTK.json, ST.YCTK, '#exp-2', false);
-  ok(!/id="md-step-3"/.test(y2) && (y2.match(/class="md-step-n/g) || []).length === 2, 'YCT 1 (no homework audio): no step 3');
+  // (today's catalog: YCT 1's homework audio, once its storybooks arrive, brings step 3)
+  ok(YCTHW.length ? /id="md-step-3"/.test(y2) && (y2.match(/class="md-step-n/g) || []).length === 3
+    : !/id="md-step-3"/.test(y2) && (y2.match(/class="md-step-n/g) || []).length === 2, 'YCT 1 ' + (YCTHW.length ? '(its homework audio arrived): step 3 «Tu tarea»' : '(no homework audio): no step 3'));
   ok(y2.indexOf('md-exp-profe') > y2.indexOf('</ol>') && /Preguntas de tu profe/.test(y2), '… the teacher\'s rounds after the steps («Preguntas de tu profe»), never inside a locked card');
   const o1 = H.htmlFor(R.OLDK.json, ST.OLDK, '#exp-1', false);
   ok(/Tu profe te dejó \d+ más/.test(o1) && !/data-party/.test(o1) && !/¡Experiencia lista!/.test(o1), 'HSK 1 experience 1 (3 steps done, new teacher work listed): «Tu profe te dejó N más», no celebration');
   ok(!/\bTier\b|\bEXP\s?\d/.test(o1) && /Preguntas del simulacro · /.test(o1), '… words a parent reads: «Preguntas del simulacro», never «Tier 1» or «EXP1»');
   const h1 = H.htmlFor(R.HALF.json, ST.HALF, '#exp-1', false);
   ok(/¡Qué crack! Tu profe ya tiene tus videos/.test(h1), 'every homework of the experience sent: Aileen «¡Qué crack! Tu profe ya tiene tus videos»');
-  const h5 = H.htmlFor(R.HALF.json, ST.HALF, '#exp-5', false);
-  ok(/md-step-n is-soon/.test(h5) && /Sin tarea todavía/.test(h5), 'no homework yet: step 3 «Sin tarea todavía» (dotted), never under a green ✓ without saying so');
+  // (today's catalog: an experience with no homework yet, if there is one; else one after the class's pace)
+  const NOHW = [1, 2, 3, 4, 5, 6, 7, 8].find((n) => !NEWHW.some((h) => h.exp === n)) || null;
+  const LATER = [1, 2, 3, 4, 5, 6, 7, 8].find((n) => n > PACE.hsk2 && NEWHW.some((h) => h.exp === n)) || null;
+  if (NOHW) {
+    const h5 = H.htmlFor(R.HALF.json, ST.HALF, '#exp-' + NOHW, false);
+    ok(/md-step-n is-soon/.test(h5) && /Sin tarea todavía/.test(h5), 'no homework yet (experience ' + NOHW + '): step 3 «Sin tarea todavía» (dotted), never under a green ✓ without saying so');
+  }
+  if (LATER) {
+    const hL = H.htmlFor(R.HALF.json, ST.HALF, '#exp-' + LATER, false);
+    ok(/>Más adelante</.test(hL) && /Ya puedes escucharla/.test(hL) && !/class="md-step is-next" id="md-step-3"/.test(hL),
+      'experience ' + LATER + ' (after the class\'s pace, ' + PACE.hsk2 + '): its homework plays, «Más adelante», never «¡Empieza aquí!» (2026-10-21)');
+  }
   const hHome = H.htmlFor(R.HALF.json, ST.HALF, '', false);
-  ok(/<i class="is-na"><\/i>sin tarea todavía/.test(hHome) && /\d+ de \d+ listas/.test(hHome), 'the path: the dotted bar explained («sin tarea todavía»), a short count («N de M listas»)');
+  ok((NOHW ? /<i class="is-na"><\/i>sin tarea todavía/.test(hHome) : !/sin tarea todavía/.test(hHome)) && /\d+ de \d+ listas/.test(hHome),
+    'the path: the dotted bar explained («sin tarea todavía») when an experience has no homework yet, a short count («N de M listas»)');
   ok(!/md-ruta-all|Ver toda La Ruta Dorada/.test(hHome + H.htmlFor(R.HALF.json, ST.HALF, '', true)), 'no «Ver toda La Ruta Dorada» (the home IS the route)');
   const strip = hHome.slice(hHome.indexOf('class="md-strip"') - 10, hHome.indexOf('</section>', hHome.indexOf('class="md-strip"')));
   ok(/md-strip/.test(hHome) && strip.includes('data-assignment-id="' + CUSTOM_ID + '"') && hHome.indexOf('md-strip') < hHome.indexOf('md-ruta'), '«De tu profe»: one line right under «Hoy», its «Hacer» there');
@@ -409,10 +431,12 @@ async function serverTests() {
   const e1 = m.exps[0], e3 = m.exps[2];
   ok(e1.done && same(e1.bars, { words: 'done', practice: 'done', tarea: 'done' }), 'halfway kid: experience 1 done (three green bars)');
   ok(same(e3.bars, { words: 'done', practice: 'half', tarea: 'half' }) && !e3.done && e3.left >= 1, '… experience 3: words done, practice started (55 %), homework heard not sent');
-  ok(m.exps[4].bars.words === 'none' && m.exps[4].bars.tarea === 'na' && !m.exps[4].started, '… experience 5: not started, no homework yet (its third bar «pronto»)');
+  const e5 = m.exps[4];
+  ok(e5.bars.words === 'none' && !e5.started && (e5.hws.length ? e5.bars.tarea === 'none' && e5.left === 0 && e5.later : e5.bars.tarea === 'na'),
+    '… experience 5: not started, ' + (e5.hws.length ? 'its homework after the class\'s pace (never «por mandar»)' : 'no homework yet (its third bar «pronto»)'));
   const yPath = H.htmlFor(R.YCTK.json, ST.YCTK, '', false);
   const yOl = yPath.slice(yPath.indexOf('<ol class="md-path"'), yPath.indexOf('</ol>', yPath.indexOf('<ol class="md-path"')));
-  ok((yOl.match(/<i class="is-/g) || []).length === 6 * 2, 'YCT 1 (no homework audio yet): two bars per experience');
+  ok((yOl.match(/<i class="is-/g) || []).length === 6 * (YCTHW.length ? 3 : 2), 'YCT 1: ' + (YCTHW.length ? 'three bars per experience (its homework audio arrived)' : 'two bars per experience (no homework audio yet)'));
 
   section('«N días seguidos» on the kid\'s own calendar (the phone\'s time zone, review 2026-10-18)');
   for (const k of ['TZMX', 'TZKI', 'TZPP']) {

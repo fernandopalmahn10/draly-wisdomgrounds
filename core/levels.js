@@ -11,16 +11,19 @@ const LEVELS = [
   // base: its vocabulary base on /audios («La base · Empieza aquí», /audios/<base>), linked from the /homework home
   // golden: its golden book on the web («El libro dorado», /audios/<level>/libro/<n>, content/golden/<golden>.json,
   // exported from ../study/<golden> by ../study/lib/examweb.py; core/golden.js)
+  // paceDefault: the experience a class is on until its teacher sets «Experiencia actual» in /maestro (his picks
+  // 2026-10-21, «The class's pace decides this week's homework»: the highest experience that had homework live before
+  // the storybooks of every experience arrived; a new level starts at 1). Homework up to it is due, later ones play.
   { id: 'yct1', name: 'YCT 1', teacherName: 'YCT 1', family: 'yct', emoji: '🧒', pack: 'yct1', packTareas: true,
-    words: 83, packWords: true, exam: 'YCT', next: 'YCT 2', daily: false, base: 'yct1-base', golden: 'yct1sim' },
+    words: 83, packWords: true, exam: 'YCT', next: 'YCT 2', daily: false, base: 'yct1-base', golden: 'yct1sim', paceDefault: 1 },
   // New HSK 1 homework = only what prepares the exam (his ask 2026-10-12): the Simulacro rounds built from the two
   // platform simulations (the mother file), nothing else — packWorlds limits the pack, onlyPackTareas hides the old
   // «Bolsa de palabras» tareas
   { id: 'hsk2', name: 'New HSK 1', teacherName: 'New HSK 1', family: 'newhsk', emoji: '🆕', pack: 'newhsk1', words: 300,
     packTareas: true, packWorlds: ['simulacro'], onlyPackTareas: true, packWords: true, exam: 'New HSK',
-    next: 'New HSK 2', base: 'newhsk1-base', golden: 'newhsk1sim' },   // the base takes the curriculum name (/audios/newhsk1-base)
+    next: 'New HSK 2', base: 'newhsk1-base', golden: 'newhsk1sim', paceDefault: 4 },   // the base takes the curriculum name (/audios/newhsk1-base)
   { id: 'hsk1', name: 'HSK 1', teacherName: 'Old HSK 1', family: 'hsk', emoji: '📘', pack: 'hsk1', words: 150,
-    exam: 'HSK', next: 'New HSK 1', base: 'hsk1-base', golden: 'hsk1sim' },
+    exam: 'HSK', next: 'New HSK 1', base: 'hsk1-base', golden: 'hsk1sim', paceDefault: 4 },
 ];
 const DEFAULT = 'hsk1';                      // codes without a level (every code made before 2026-09-15)
 const ALIASES = { newhsk1: 'hsk2' };         // the curriculum name of the stored id

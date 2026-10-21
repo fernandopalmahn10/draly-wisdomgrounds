@@ -301,8 +301,11 @@ async function run() {
   ok(!noFolder.length, 'every homework audio of the catalog has its experience folder (' + (noFolder.map((h) => h.id).join(', ') || 'all') + ')');
   ok(!JSON.stringify(st0.modules.map((m) => m.exps)).match(/[㐀-鿿]/), 'the folders carry no hanzi');
   const rjs = fs.readFileSync(path.join(ROOT, 'public', 'js', 'ruta.js'), 'utf8');
-  ok(/data-open-exp/.test(rjs) && /Volver a las experiencias/.test(rjs) && /La más nueva/.test(rjs) && /Pronto/.test(rjs) && !/Ver todas mis tareas/.test(rjs),
-    'js/ruta.js draws the folders («Volver a las experiencias», «La más nueva», «Pronto»), never the old long list («Ver todas mis tareas»)');
+  // (2026-10-21, the class's pace: the class's experience glows «Esta semana», later ones say «Más adelante»; «La más
+  // nueva», the newest experience with homework, is gone: with every storybook built it was always the last one)
+  ok(/data-open-exp/.test(rjs) && /Volver a las experiencias/.test(rjs) && /Esta semana/.test(rjs) && /Más adelante/.test(rjs) && /Pronto/.test(rjs) &&
+    !/La más nueva/.test(rjs) && !/Ver todas mis tareas/.test(rjs),
+    'js/ruta.js draws the folders («Volver a las experiencias», «Esta semana», «Más adelante», «Pronto»), never «La más nueva» or the old long list («Ver todas mis tareas»)');
 
   section('the pages that draw it');
   const page = fs.readFileSync(path.join(ROOT, 'public', 'js', 'ruta.js'), 'utf8');

@@ -212,6 +212,9 @@
       const x = (r.exps || []).find((y) => Number(y.n) === e.n) || {};
       const hws = hwsAll.filter((h) => Number(h.exp) === e.n).sort((a, b) => (a.round || 0) - (b.round || 0));
       const heard = hws.some((h) => mk[h.id] && (mk[h.id].h || mk[h.id].s));
+      // (2026-10-21, the class's pace) an experience after the class's: its homework plays, nothing of it is due yet
+      const later = e.due === false;
+      const unsent = hws.filter((h) => !(mk[h.id] && mk[h.id].s)).length;
       const bars = {
         words: e.count > 0 && e.sealed >= e.count ? 'done' : e.sealed > 0 ? 'half' : 'none',
         practice: e.best != null && e.best >= p.goal ? 'done' : e.best != null ? 'half' : 'none',
@@ -223,7 +226,8 @@
       const teacher = tareas.byExp[e.n] || [];
       return { n: e.n, name: e.name, pic: x.pic || e.pic || '', peek: Array.isArray(x.peek) ? x.peek : [], scene: sceneOf(slug, e.n),
         sealed: e.sealed, count: e.count, best: e.best, open: !!e.open, train: e.train || null, hws, bars, next,
-        left: hws.filter((h) => !(mk[h.id] && mk[h.id].s)).length, done: !!e.done,
+        // left = the red «N por mandar» (due homework only); unsent = every homework not sent yet, later ones too
+        left: later ? 0 : unsent, unsent, later: later && hws.length > 0, done: !!e.done,
         today: !!(t && !t.dorado && t.exp === e.n), started: bars.words !== 'none' || bars.practice !== 'none' || bars.tarea === 'half' || bars.tarea === 'done',
         teacher, teacherNew: teacher.filter((x) => x.status !== 'done').length };
     });
@@ -261,7 +265,7 @@
     if (!r || !r.who) return null;
     const list = (r.hws || []).map((h) => Object.assign({ level: r.slug }, (r.media || {})[h.id] || {}, h));
     return {
-      ruta: { ok: true, student: true, teacher: false, who: r.who, home: r.slug, modules: [{ slug: r.slug, id: d.level, tareas: Object.assign({}, r.marks || {}) }] },
+      ruta: { ok: true, student: true, teacher: false, who: r.who, home: r.slug, modules: [{ slug: r.slug, id: d.level, cur: r.cur, tareas: Object.assign({}, r.marks || {}) }] },
       homeworksOf: (slug) => (slug === r.slug ? list : []),
       refresh: () => load(true),
     };
@@ -331,12 +335,13 @@
   const nb = (x) => String(x).replace(/(\d) %/g, '$1 %');
   // the three little bars (palabras · práctica · tarea): green done, gold started, grey to do; an experience whose homework
   // hasn't come yet shows its third bar dotted («pronto»), a level with no homework audio at all (YCT 1) only two
-  const barsHtml = (b, n, label) => '<span class="md-bars" data-bars="' + n + '" aria-label="' + esc(label || barsSay(b)) + '" role="img">' +
+  // (later: an experience after the class's pace, 2026-10-21: its homework is «de más adelante», never «por mandar»)
+  const barsHtml = (b, n, later) => '<span class="md-bars" data-bars="' + n + '" aria-label="' + esc(barsSay(b, later)) + '" role="img">' +
     ['words', 'practice', 'tarea'].filter((k) => k !== 'tarea' || b.tarea !== 'na' || (M && M.anyHw)).map((k) => '<i class="is-' + b[k] + '"></i>').join('') + '</span>';
-  function barsSay(b) {
+  function barsSay(b, later) {
     const w = { done: 'listas', half: 'empezadas', none: 'por hacer', na: 'pronto' };
     return 'Palabras ' + w[b.words] + ', práctica ' + (b.practice === 'done' ? 'lista' : b.practice === 'half' ? 'empezada' : 'por hacer') +
-      (b.tarea === 'na' ? '' : ', tarea ' + (b.tarea === 'done' ? 'mandada' : b.tarea === 'half' ? 'escuchada' : 'por mandar'));
+      (b.tarea === 'na' ? '' : ', tarea ' + (b.tarea === 'done' ? 'mandada' : b.tarea === 'half' ? 'escuchada' : later ? 'de más adelante' : 'por mandar'));
   }
 
   // ── the band ──
@@ -440,7 +445,7 @@
         (e.pic ? '<img class="md-node-pic" src="' + esc(e.pic) + '" alt="" width="200" height="200" loading="lazy" decoding="async">' : '') +
         '<b class="md-node-n">' + e.n + '</b>' +
         (e.done ? '<span class="md-node-ok">' + I.check + '</span>' : e.today ? '<span class="md-node-tag">¡Empieza aquí!</span>' : '') + '</span>' +
-      '<span class="md-node-name">' + esc(e.name) + '</span>' + barsHtml(e.bars, e.n) + '</a></li>';
+      '<span class="md-node-name">' + esc(e.name) + '</span>' + barsHtml(e.bars, e.n, e.later) + '</a></li>';
   }
   // El Simulacro Dorado at the end of the path (review 2026-10-18): passed = green ✓ «Aprobado» (never «¡Empieza
   // aquí!»), ready = «Avisa a tu profe», else calm
@@ -474,8 +479,10 @@
     const left = [];
     if (e.bars.words !== 'done') left.push('las palabras');
     if (e.bars.practice !== 'done') left.push('la práctica');
-    if (e.bars.tarea !== 'done' && e.bars.tarea !== 'na') left.push('tu tarea');
+    if (e.bars.tarea !== 'done' && e.bars.tarea !== 'na' && !e.later) left.push('tu tarea');
     if (left.length) return 'Te falta: ' + (left.length === 1 ? left[0] : left.slice(0, -1).join(', ') + ' y ' + left[left.length - 1]) + '.';
+    // (2026-10-21) a homework of an experience after the class's: not missing, it is for later (it plays already)
+    if (e.later && e.unsent) return 'Palabras y práctica listas. Tu tarea es para más adelante: ya puedes escucharla.';
     // (review 2026-10-18: never «¡Experiencia lista!» while the teacher's new work for it is listed below)
     if (e.teacherNew) return 'Hiciste los ' + (M.anyHw ? '3' : '2') + ' pasos. Tu profe te dejó ' + (e.teacherNew === 1 ? '1 más' : e.teacherNew + ' más') + '.';
     if (e.bars.tarea === 'na' && M.anyHw) return 'Palabras y práctica listas. Tu tarea llega cuando tu clase llegue a esta experiencia.';
@@ -487,13 +494,17 @@
   }
   const baseHref = (n) => (M.base ? M.base.href + '?from=homework#mundo-' + n : M.route + '?from=homework');
   // Aileen's line in «Tu tarea» (voseo): what to do, or, once every homework of the experience is sent, the praise
-  const aileenText = (e) => (e.hws.length && !e.left ? '«¡Qué crack! Tu profe ya tiene tus videos.»'
-    : '«¡Dale! Escuchá el audio, grabá tu video y mandáselo a tu profe por WhatsApp. Después tocá <b>¡Ya la mandé!</b>»');
+  // (2026-10-21) an experience after the class's: «¡Vas adelantado!», listen now, send it when the class gets there
+  const aileenText = (e) => (e.hws.length && !e.unsent ? '«¡Qué crack! Tu profe ya tiene tus videos.»'
+    : e.later ? '«¡Vas adelantado! Ya podés escuchar el audio. La mandás cuando tu clase llegue a esta experiencia.»'
+      : '«¡Dale! Escuchá el audio, grabá tu video y mandáselo a tu profe por WhatsApp. Después tocá <b>¡Ya la mandé!</b>»');
   function expHtml(e, mode) {
     const page = mode === 'page';
     const s1 = !M.open ? 'locked' : stepState(e, 1, e.bars.words === 'done');
     const s2 = !M.open ? 'locked' : !e.open ? 'closed' : stepState(e, 2, e.bars.practice === 'done');
-    const s3 = !e.hws.length ? 'soon' : stepState(e, 3, e.bars.tarea === 'done');
+    // (2026-10-21) a later experience's homework is never «¡Empieza aquí!» (it waits calmly, «Más adelante», and plays),
+    // unless «Hoy» itself sends a kid who is ahead of the class there («¡Vas adelantado! Ya puedes escuchar…»)
+    const s3 = !e.hws.length ? 'soon' : e.later && e.bars.tarea !== 'done' && !(e.today && e.next === 3) ? 'todo' : stepState(e, 3, e.bars.tarea === 'done');
     const tag = (st) => (st === 'next' ? '<span class="md-step-tag">¡Empieza aquí!</span>' : '');
     // (each step's number once: in its circle, never again in its title; a lock for a step that can't open yet)
     const num = (st, k) => '<span class="md-step-n' + (st === 'soon' ? ' is-soon' : '') + '">' + (st === 'done' ? I.check : st === 'locked' || st === 'closed' ? I.lock : k) + '</span>';
@@ -514,8 +525,9 @@
       (s2 === 'locked' || s2 === 'closed' ? '' : btn(s2, e.train || M.route + '/entrenamiento', e.bars.practice === 'done' ? 'Otra ronda' : 'Practicar aquí')) + '</li>';
     // 3 · Tu tarea: none at all in a level with no homework audio (YCT 1); «sin tarea todavía» until the teacher sends it
     const step3 = !M.anyHw ? '' : '<li class="md-step is-' + s3 + '" id="md-step-3" data-step="3">' + tag(s3) +
-      '<div class="md-step-row">' + num(s3, 3) + '<div class="md-step-txt"><h3 class="md-step-t">Tu tarea <small>' + (e.hws.length ? 'Mándala por WhatsApp' : 'Sin tarea todavía') + '</small></h3></div>' +
-        '<span class="md-badge" data-left="' + e.n + '"' + (e.left && e.hws.length ? '' : ' hidden') + '>' + (e.left === 1 ? '1 por mandar' : e.left + ' por mandar') + '</span></div>' +
+      '<div class="md-step-row">' + num(s3, 3) + '<div class="md-step-txt"><h3 class="md-step-t">Tu tarea <small>' + (!e.hws.length ? 'Sin tarea todavía' : e.later ? 'Ya puedes escucharla' : 'Mándala por WhatsApp') + '</small></h3></div>' +
+        '<span class="md-badge" data-left="' + e.n + '"' + (e.left && e.hws.length ? '' : ' hidden') + '>' + (e.left === 1 ? '1 por mandar' : e.left + ' por mandar') + '</span>' +
+        (e.later ? '<span class="md-later" data-later="' + e.n + '"' + (e.unsent ? '' : ' hidden') + '>Más adelante</span>' : '') + '</div>' +
       (e.hws.length ? '<div class="md-say"><img src="' + ART.aileenTalk + '" alt="Aileen" width="312" height="480" loading="lazy" decoding="async">' +
           '<p data-aileen="' + e.n + '">' + aileenText(e) + '</p></div>' +
           '<div class="md-hw" data-hw-mount="' + e.n + '"></div>'
@@ -535,7 +547,7 @@
       (e.pic ? '<img class="md-exp-pic" src="' + esc(e.pic) + '" alt="" width="200" height="200" decoding="async">' : '') +
       '<div class="md-exp-t"><p>Experiencia ' + e.n + '</p><h2 class="md-exp-h" id="md-exp-h" tabindex="-1">' + esc(e.name) + '</h2></div></header>';
     return '<section class="md-exp' + (page ? ' is-page' : ' is-aside') + (e.done ? ' is-done' : '') + '" aria-labelledby="md-exp-h">' + hero +
-      '<div class="md-exp-body"><div class="md-exp-sum"><p id="md-exp-sum">' + esc(missingText(e)) + '</p>' + barsHtml(e.bars, 'x' + e.n) + '</div>' +
+      '<div class="md-exp-body"><div class="md-exp-sum"><p id="md-exp-sum">' + esc(missingText(e)) + '</p>' + barsHtml(e.bars, 'x' + e.n, e.later) + '</div>' +
       '<ol class="md-steps">' + step1 + step2 + step3 + '</ol>' + prof + also + party +
       (page ? '<a class="md-back md-back-foot" href="#">' + I.back + '<span>Volver a La Ruta Dorada</span></a>' : '') + '</div></section>';
   }
@@ -1339,9 +1351,11 @@
     if (!H || !D) return;
     M = model(D, H.state(), marksNow());
     M.exps.forEach((e) => {
-      document.querySelectorAll('#md-app [data-bars="' + e.n + '"], #md-app [data-bars="x' + e.n + '"]').forEach((b) => { b.outerHTML = barsHtml(e.bars, b.getAttribute('data-bars')); });
+      document.querySelectorAll('#md-app [data-bars="' + e.n + '"], #md-app [data-bars="x' + e.n + '"]').forEach((b) => { b.outerHTML = barsHtml(e.bars, b.getAttribute('data-bars'), e.later); });
       const left = document.querySelector('#md-app [data-left="' + e.n + '"]');
       if (left) { left.hidden = !e.left; left.textContent = e.left === 1 ? '1 por mandar' : e.left + ' por mandar'; }
+      const later = document.querySelector('#md-app [data-later="' + e.n + '"]');
+      if (later) later.hidden = !e.unsent;
       const node = document.querySelector('#md-app [data-node="' + e.n + '"]');
       if (node) { node.classList.toggle('is-done', e.done); }
     });

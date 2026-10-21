@@ -31,7 +31,8 @@
 //       · «Tus tareas» (right column on a laptop, below on a phone; a red «Tareas: N por mandar» in the phone's hero jumps
 //         to #tareas): BY EXPERIENCE, LIKE FOLDERS (his rule 2026-10-18): one folder card per experience of the module
 //         (the server's `exps`: the curriculum pack's worlds, Experiencia 1…8, a pack picture each) with «N por mandar» /
-//         «✓ Mandadas» / «Pronto»; the newest homework's experience glows («La más nueva»); a tap opens its 2-3
+//         «✓ Mandadas» / «Pronto» / «Más adelante»; the class's experience glows «Esta semana» (2026-10-21, the class's
+//         pace `cur`: only homework up to it is due and counted; later ones play); a tap opens its 2-3
 //         homeworks with «← Volver a las experiencias» (the open folder is kept per tab: sessionStorage
 //         draly_tareas_exp). Aileen says what to do on each view. Inside a folder: «Escuchar» plays its three audios
 //         right there, «¡Ya la mandé!» = sent. «Nueva» / «Escuchada ✓» / «✓ Mandada». A module with no homework audio
@@ -459,6 +460,12 @@
     return tApply(o.phone, null);
   }
   const unsentOf = (hws, marks) => hws.filter((h) => !(marks[h.id] && marks[h.id].s)).length;
+  // 🗓️ 2026-10-21 «The class's pace decides this week's homework» (his picks: «Each teacher, per class» + «Visible, can
+  // listen ahead»): the server's `m.cur` = the experience the kid's class is on (its teacher's «Experiencia actual» in
+  // /maestro; a teacher's own class for the preview; else the level's default). Homework up to it is DUE (the red «N por
+  // mandar», the folder that glows «Esta semana»); later experiences stay visible and play, never counted («Más adelante»).
+  const paceOf = (m) => { const c = m ? Number(m.cur) : NaN; return Number.isInteger(c) && c > 0 ? c : null; };
+  const dueOf = (m, hws) => { const c = paceOf(m); return c == null ? hws : hws.filter((h) => (Number(h.exp) || 0) <= c); };
 
   // ── the band at the top of both screens: the way back, always visible ──
   // me (2026-10-18): the logged-in kid (their own login, or the phone's automatic account) gets «Mi código» on the right:
@@ -544,7 +551,7 @@
       if (!hws.length || !mineOf(ctx, m)) return 0;
       const marks = tMarksFor(ctx.ruta, m.tareas);
       if (!ctx.ruta.student && !hws.some((h) => marks[h.id] && (marks[h.id].h || marks[h.id].s))) return 0;
-      return unsentOf(hws, marks);
+      return unsentOf(dueOf(m, hws), marks);
     };
     const friend = window.DralingoCast ? window.DralingoCast.pick(1)[0] : null;
     main.innerHTML = bandHtml(back, null, ctx.ruta.me) +
@@ -960,6 +967,7 @@
         return { n: w.n, name: names[w.n] || w.short || 'Experiencia ' + w.n, count: w.count, sealed: w.sealed, best: t ? t.best : null, open: !!(t && t.open) };
       }),
       hws: ctx.homeworksOf(m.slug).map((h) => ({ id: h.id, exp: h.exp, round: h.round, title: h.title, sent: !!(marks[h.id] && marks[h.id].s) })),
+      cur: paceOf(m),   // (2026-10-21) the class's pace: the same due homework as the kid's home and Papás
       sim: m.simLast || null,
     };
     try { return Plan.today(Plan.plan(raw)); } catch (_) { return null; }
@@ -1147,10 +1155,15 @@
   const OPEN_KEY = 'draly_tareas_exp';
   const openExpOf = (m) => { const v = store.get(OPEN_KEY) || ''; const p = v.split(':'); return p[0] === m.slug ? Number(p[1]) || 0 : 0; };
   const setOpenExp = (m, n) => store.set(OPEN_KEY, n ? m.slug + ':' + n : '');
-  // a folder's tag: «N por mandar» (red), «✓ Mandadas» (green, all sent), «N tareas» (only plays), «Pronto» (none yet)
-  function expTag(e, marks, mine, preview) {
+  // a folder's tag: «N por mandar» (red), «✓ Mandadas» (green, all sent), «N tareas» (only plays), «Pronto» (none yet),
+  // «Más adelante» (calm: an experience after the class's, `cur`; its homework plays already and is never counted)
+  function expTag(e, marks, mine, preview, cur) {
     if (!e.hws.length) return { cls: 'is-soon', html: 'Pronto', say: 'pronto' };
     if (!mine && !preview) return { cls: 'is-other', html: e.hws.length + (e.hws.length === 1 ? ' tarea' : ' tareas'), say: e.hws.length + (e.hws.length === 1 ? ' tarea' : ' tareas') };
+    if (cur != null && e.n > cur) {
+      if (!preview && !unsentOf(e.hws, marks)) return { cls: 'is-done', html: I.check + 'Mandadas', say: 'todas mandadas' };   // (sent ahead)
+      return { cls: 'is-later', html: 'Más adelante', say: 'más adelante, ya puedes escucharlas' };
+    }
     const n = preview ? e.hws.length : unsentOf(e.hws, marks);
     if (n) return { cls: 'is-todo', html: n + ' por mandar', say: n + (n === 1 ? ' tarea por mandar' : ' tareas por mandar') };
     return { cls: 'is-done', html: I.check + 'Mandadas', say: 'todas mandadas' };
@@ -1235,29 +1248,32 @@
       '<div class="rp-hw-body">' + actsHtml(state) + '</div></li>';
   }
   // «Tus tareas» = every experience of the module as a folder (picture, name, its tag); a tap opens that experience's
-  // 2-3 homeworks with «← Volver a las experiencias». The newest homework's experience glows («La más nueva»): this
-  // week's homework is one tap away. Folders keep the curriculum's order (Experiencia 1, 2, 3…) so a kid always finds
-  // theirs in the same place. A module with no homework audio at all (YCT 1 today) keeps no column (never an empty box).
+  // 2-3 homeworks with «← Volver a las experiencias». The CLASS'S experience glows «Esta semana» (2026-10-21, the class's
+  // pace `m.cur`; it used to be the newest experience with homework, always the last one once every storybook
+  // arrived): this week's homework is one tap away; later experiences say «Más adelante» and play. Folders keep the
+  // curriculum's order (Experiencia 1, 2, 3…) so a kid always finds theirs in the same place. A module with no homework
+  // audio at all keeps no column (never an empty box).
+  // (the glow keeps its old class names, .is-latest / .rp-exp-new, in css/ruta.css)
   function tareasHtml(ctx, m, hws, marks, mine) {
     if (!hws.length) return '';
     const preview = !mine && !!ctx.ruta.teacher;
-    const toSend = mine ? unsentOf(hws, marks) : 0;
+    const toSend = mine ? unsentOf(dueOf(m, hws), marks) : 0;
     const showLogin = !ctx.ruta.student && !ctx.ruta.teacher;
     const exps = expsOf(m, hws);
-    const latest = Number(hws[0].exp) || 0;                        // (homeworksOf: the newest first)
+    const cur = paceOf(m);
     const open = exps.some((e) => e.n === openExpOf(m) && e.hws.length) ? openExpOf(m) : 0;
     const stateOf = (h) => { const e = (mine && marks[h.id]) || {}; return preview ? 'preview' : !mine ? 'other' : e.s ? 'sent' : e.h ? 'heard' : 'new'; };
     const folders = exps.map((e) => {
-      const tag = expTag(e, marks, mine, preview);
-      const isLatest = e.n === latest && e.hws.length;
+      const tag = expTag(e, marks, mine, preview, cur);
+      const isLatest = cur != null && e.n === cur && e.hws.length;
       // (the picture carries the experience's number, like card 2's coins: «Experiencia 3» in full for a screen reader
       // and on the open folder; a compact card keeps all 8 folders on a short laptop's first screen)
       const inner = '<span class="rp-exp-art" aria-hidden="true"><img class="rp-exp-pic" src="' + esc(e.pic) + '" alt="" width="200" height="200" loading="lazy" decoding="async">' +
           '<b class="rp-exp-num">' + e.n + '</b></span>' +
         '<span class="rp-exp-name">' + esc(e.name) + '</span>' +
         '<span class="rp-exp-tag ' + tag.cls + '" data-exp-tag>' + tag.html + '</span>' +
-        (isLatest ? '<span class="rp-exp-new">La más nueva</span>' : '');
-      const label = 'Experiencia ' + e.n + ', ' + e.name + ': ' + tag.say + (isLatest ? ', la más nueva' : '');
+        (isLatest ? '<span class="rp-exp-new">Esta semana</span>' : '');
+      const label = 'Experiencia ' + e.n + ', ' + e.name + ': ' + tag.say + (isLatest ? ', esta semana' : '');
       return '<li>' + (e.hws.length
         ? '<button type="button" class="rp-exp ' + tag.cls + (isLatest ? ' is-latest' : '') + '" data-open-exp="' + e.n + '" aria-label="' + esc(label) + '">' + inner + '</button>'
         : '<div class="rp-exp is-soon" role="group" aria-label="' + esc(label) + '">' + inner + '</div>') + '</li>';
@@ -1373,7 +1389,7 @@
     tSeed(ctx.ruta, idsOfCtx(ctx));
     const marks = tMarksFor(ctx.ruta, m.tareas);
     const mine = mineOf(ctx, m);
-    const toSend = mine ? unsentOf(hws, marks) : 0;
+    const toSend = mine ? unsentOf(dueOf(m, hws), marks) : 0;
     const cb = L.cb;
     const facts = [worldCount(cb) ? worldCount(cb) + ' mundos' : '', m.base ? m.base.words + ' palabras' : '', m.simCount ? 'el examen al final' : ''].filter(Boolean).join(' · ');
     const hero = '<section class="rp-hero' + (m.name.length > 6 ? ' is-long' : '') + '" style="--hero-rgb:' + rgbOf(look[2]) + '">' +
@@ -1446,7 +1462,7 @@
       box.querySelectorAll('.rp-hw').forEach((li) => {
         if (paintHw(li, hwStateOf(marks, li.getAttribute('data-hw'))) && !(hwNow && hwNow.li === li)) hwReset(li);
       });
-      const n = unsentOf(hws, marks);
+      const n = unsentOf(dueOf(m, hws), marks);
       const badge = box.querySelector('[data-tosend]');
       if (badge) { badge.hidden = !n; badge.textContent = n + ' por mandar'; }
       const heroTag = main.querySelector('.rp-hero-tareas');
@@ -1455,12 +1471,12 @@
       exps.forEach((e) => {
         const b = box.querySelector('[data-open-exp="' + e.n + '"]');
         if (!b) return;
-        const t = expTag(e, marks, mine, false);
+        const t = expTag(e, marks, mine, false, paceOf(m));
         const tag = b.querySelector('[data-exp-tag]');
-        b.classList.remove('is-todo', 'is-done');
+        b.classList.remove('is-todo', 'is-done', 'is-later');
         b.classList.add(t.cls);
         if (tag) { tag.className = 'rp-exp-tag ' + t.cls; tag.innerHTML = t.html; }
-        b.setAttribute('aria-label', 'Experiencia ' + e.n + ', ' + e.name + ': ' + t.say + (b.classList.contains('is-latest') ? ', la más nueva' : ''));
+        b.setAttribute('aria-label', 'Experiencia ' + e.n + ', ' + e.name + ': ' + t.say + (b.classList.contains('is-latest') ? ', esta semana' : ''));
       });
     };
     // a folder opens in place (its 2-3 homeworks), «← Volver a las experiencias» closes it; the open one is kept for

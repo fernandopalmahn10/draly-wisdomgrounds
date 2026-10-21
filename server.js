@@ -2567,6 +2567,66 @@ app.put('/api/admin/teacher/:uid/class-code', (req, res) => {
   res.json({ ok: true, teacher: done.teacher, from: c.from, to: c.to, kids: { live: s.live, archived: s.archived }, classrooms, guides });
 });
 
+// ── 🗓️ 2026-10-21 «Experiencia actual» per class (his picks: «Each teacher, per class» + «Visible, can listen ahead») ──
+// /maestro's «Tus clases» card: every teacher sees their own class codes, the super admin every class. Each class says
+// which experience it is on (its teacher's choice, or the level's default until one is chosen: `set: false` = the
+// gentle «Elige en qué experiencia va tu clase»). Kids and parents are reminded only about homework up to it.
+//   GET  /api/admin/class-pace            → { ok, classes: [{ code, level, teacher, mine, cur, set }], levels: { id: { name, def, exps } } }
+//   POST /api/admin/class-pace { code, n } → { ok, code, level, cur, set, prev, name } (n = null: back to the level's default)
+// Class codes travel only in the JSON (never in an address or a log line). A teacher changes only their own classes (an
+// unknown code and another teacher's get the same answer); a page of ours (_autoSameSite), the edit rate (_editRateOk).
+function _paceLevels() {
+  const out = {};
+  Levels.LEVELS.forEach((l) => {
+    const exps = _rutaExps(l.id);
+    if (exps.length) out[l.id] = { name: l.name, slug: l.pack || l.id, def: _paceDefault(l.id), exps: exps.map((e) => ({ n: e.n, name: e.name, pic: e.pic })) };
+  });
+  return out;
+}
+app.get('/api/admin/class-pace', (req, res) => {
+  res.set('Cache-Control', 'private, no-store');
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  const mine = session.teacher ? session.teacher.uid : null;
+  const rows = session.isSuperAdmin ? Teachers.listAll() : (session.teacher ? [Teachers.listAll().find((t) => t.uid === mine)].filter(Boolean) : []);
+  const levels = _paceLevels();
+  const classes = [];
+  // (his own classes first, then every other teacher's by name: the super admin sees all)
+  rows.slice().sort((a, b) => ((b.uid === mine) - (a.uid === mine)) || String(a.displayName || '').localeCompare(String(b.displayName || '')))
+    .forEach((t) => (t.accessCodes || []).forEach((c) => {
+      const level = Levels.normalize((t.codeLevels || {})[c]) || Levels.DEFAULT;
+      if (!levels[level]) return;
+      classes.push({ code: c, level, teacher: String(t.displayName || ''), mine: t.uid === mine, cur: _paceOf(level, c), set: Teachers.expForAccessCode(c) != null });
+    }));
+  res.json({ ok: true, classes, levels });
+});
+app.post('/api/admin/class-pace', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  if (!_autoSameSite(req)) return res.status(403).json({ ok: false, error: 'Abre /maestro y cámbialo desde ahí.' });
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  if (!_editRateOk(req, session)) return res.status(429).json({ ok: false, error: 'Muchos cambios seguidos. Espera unos minutos.' });
+  const b = req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body : {};
+  const code = typeof b.code === 'string' || typeof b.code === 'number' ? String(b.code).replace(/\s+/g, '').toUpperCase().slice(0, 12) : '';
+  const owner = code ? Teachers.getByAccessCode(code) : null;
+  // (a regular teacher: an unknown code and another teacher's class get the same answer, so nobody learns which codes exist)
+  if (!owner || !(session.isSuperAdmin || (session.teacher && session.teacher.uid === owner.uid))) {
+    return res.status(session.isSuperAdmin ? 404 : 403).json({ ok: false, error: session.isSuperAdmin ? 'Ese código de clase ya no existe. Abre /maestro otra vez.' : 'Esa clase no es tuya. Abre /maestro otra vez.' });
+  }
+  const level = Teachers.levelForAccessCode(code);
+  const exps = _rutaExps(level);
+  // (a whole number of the level's experiences, or null = back to the default; a missing `n` is never a reset)
+  const n = b.n === null ? null : typeof b.n === 'number' ? b.n : NaN;
+  if (!exps.length || !Object.prototype.hasOwnProperty.call(b, 'n') || (n != null && !(Number.isInteger(n) && n >= 1 && n <= exps.length))) {
+    return res.status(400).json({ ok: false, error: 'Esa experiencia no existe en ' + Levels.info(level).name + '.' });
+  }
+  const out = Teachers.setCodeExp(code, n);
+  if (!out.ok) return res.status(503).json(out);
+  const cur = _paceOf(level, code);
+  const e = exps.find((x) => x.n === cur);
+  res.json({ ok: true, code: out.code, level, cur, set: n != null, prev: out.prev, name: e ? e.name : '' });
+});
+
 // ── 🔑 2026-10-15 «Claves de nivel» (super-admin): see, set and change each level's key (core/level-keys.js) ──────
 app.get('/api/admin/level-keys', (req, res) => {
   res.set('Cache-Control', 'no-store');
@@ -2930,6 +2990,33 @@ function _lastSimOf(books) {
   const last = (books || []).reduce((m, x) => (!m || x.at >= m.at ? x : m), null);
   return last ? { n: last.n, percent: last.percent, passed: last.passed, at: last.at } : null;
 }
+// 🗓️ 2026-10-21 «The class's pace decides this week's homework» (his picks: «Each teacher, per class» + «Visible, can
+// listen ahead»; the storybooks of every experience arrived at once, so «the newest experience with homework» would
+// always be the last one). `cur` = the experience the class is on: its teacher's «Experiencia actual» in /maestro
+// (core/teachers.js codeExps), else the level's default (core/levels.js paceDefault), never above the level's
+// experiences. Homework up to `cur` is due (the red «N por mandar», the glowing folder «Esta semana», Papás' «Lo más
+// importante», the reminder under «Hoy»); later experiences stay visible and play, never counted (js/papas-plan.js).
+function _paceDefault(lvl) {
+  const l = Levels.normalize(lvl);
+  const n = l ? _rutaExps(l).length : 0;
+  if (!n) return null;
+  return Math.max(1, Math.min(n, Number(Levels.info(l).paceDefault) || 1));
+}
+// a class code's pace for level `lvl` (a code of another level, or no code: the level's default) → n | null (no experiences)
+function _paceOf(lvl, classCode) {
+  const l = Levels.normalize(lvl);
+  const d = _paceDefault(l);
+  if (d == null) return null;
+  const v = classCode && Teachers.levelForAccessCode(classCode) === l ? Teachers.expForAccessCode(classCode) : null;
+  return v == null ? d : Math.max(1, Math.min(_rutaExps(l).length, v));
+}
+// a teacher's preview (La Ruta Dorada as a kid sees it): the teacher's own class of that level (the first that set its
+// pace, else the first), else the level's default. t = _teacherOf(req) (a code session or a remembered device)
+function _paceOfTeacher(t, lvl) {
+  const l = Levels.normalize(lvl);
+  const own = t && t.teacher && Array.isArray(t.teacher.accessCodes) ? t.teacher.accessCodes.filter((c) => Teachers.levelForAccessCode(c) === l) : [];
+  return _paceOf(l, own.find((c) => Teachers.expForAccessCode(c) != null) || own[0] || null);
+}
 function _papasRuta(rec, level) {
   const lvl = level.id;
   const slug = level.pack || lvl;
@@ -2958,6 +3045,8 @@ function _papasRuta(rec, level) {
         best: w.practiced, open: !!w.train, train: k ? '/audios/' + slug + '/entrenamiento/' + k.key : null };
     }),
     hws: ids.map((id) => { const i = info.get(id) || {}; return { id, exp: i.exp || null, round: i.round || null, title: i.title || '', sent: !!(marks[id] && marks[id].s) }; }),
+    // (2026-10-21) the class's pace: homework up to this experience is due, later ones only play
+    cur: _paceOf(lvl, rec.classroomCode),
     sim: last,
     books: books.sort((x, y) => x.n - y.n),
   };
@@ -6465,7 +6554,8 @@ function _rutaSimsOf(level) {
 // rule in force: while El Entrenamiento is not live the key opens it; once it is live the sims are listed only to whoever
 // has earned it (a teacher, or the kid's practice / «Desbloquear»). A locked module carries none of it.
 function _rutaState(req) {
-  const teacher = !!_teacherOf(req);
+  const tobj = _teacherOf(req);
+  const teacher = !!tobj;
   const superAdmin = _superOf(req);   // 🔒 2026-10-18: the golden book's PDF link is only theirs
   const rec = _studentOf(req);
   const bases = _loadAudioBases();
@@ -6534,6 +6624,9 @@ function _rutaState(req) {
       // 🗂️ the module's experiences, the folders of «Tus tareas» (public: the curriculum's names and pack pictures, served
       // under neutral names by /ruta-exp/<level>/<n>.webp)
       exps: _rutaExps(l.id),
+      // 🗓️ 2026-10-21 the class's pace (homework up to it is due; the folder of `cur` glows «Esta semana»): the kid's class,
+      // a teacher's own class of this level (the preview shows what that class's kids see), else the level's default
+      cur: teacher ? _paceOfTeacher(tobj, l.id) : _paceOf(l.id, rec ? rec.classroomCode : null),
       progress: prog ? {
         sealed: prog.sealed, words: prog.words,
         worlds: prog.worlds.map((w) => ({ n: w.n, short: w.short, count: w.count, sealed: w.sealed, train: w.train, teacher: w.teacher })),
