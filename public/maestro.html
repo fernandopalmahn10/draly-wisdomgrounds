@@ -18,7 +18,7 @@
   <!-- 2026-10-13 remake: the teacher's control room in the platform's sticker world (spec docs/specs/maestro-remake.md).
        teacher-dashboard.css is this page's only stylesheet; maestro.css stays for host-hsk.html. -->
   <link rel="stylesheet" href="/css/back.css?v=20261018a">
-  <link rel="stylesheet" href="/css/teacher-dashboard.css?v=20261021cp">
+  <link rel="stylesheet" href="/css/teacher-dashboard.css?v=20261021ms">
 </head>
 <body class="m-app">
 
@@ -70,17 +70,18 @@
       <section class="m-start" aria-labelledby="m-start-title">
         <h2 class="m-h2" id="m-start-title">Start the class</h2>
         <div class="m-start-grid">
-          <button class="m-start-tile is-primary" id="m-launch-btn" type="button">
+          <!-- 2026-10-21 (his priority): Official tests is the big yellow tile; Launch a game opens a game at once -->
+          <button class="m-start-tile is-primary" id="m-hsk-btn" type="button">
+            <span class="m-start-icon" aria-hidden="true">🏆</span>
+            <span class="m-start-text"><b>Official tests</b><small>YCT, New HSK and Old HSK exams. The kids join with the PIN.</small></span>
+          </button>
+          <button class="m-start-tile" id="m-launch-btn" type="button">
             <span class="m-start-icon" aria-hidden="true">🚀</span>
-            <span class="m-start-text"><b>Launch a game</b><small>Pick a game. The kids you choose join by themselves.</small></span>
+            <span class="m-start-text"><b>Launch a game</b><small>Tap a game and it opens on the projector</small></span>
           </button>
           <button class="m-start-tile" id="m-live-master-btn" type="button">
             <span class="m-start-icon" aria-hidden="true">✏️</span>
             <span class="m-start-text"><b>Live Teacher Mode</b><small>Build sentences with the online kids</small></span>
-          </button>
-          <button class="m-start-tile" id="m-hsk-btn" type="button">
-            <span class="m-start-icon" aria-hidden="true">🏆</span>
-            <span class="m-start-text"><b>Official tests</b><small>YCT, New HSK and Old HSK rooms</small></span>
           </button>
         </div>
         <div class="m-start-more">
@@ -110,15 +111,6 @@
     <div class="m-work">
       <!-- STUDENTS TAB -->
       <div class="m-tabpanel" id="m-tabpanel-students" role="tabpanel" aria-labelledby="m-tab-students">
-        <!-- 🗓️ 2026-10-21 «Experiencia actual» per class (his picks: each teacher, per class; kids can listen ahead):
-             the homework up to it is this week's for the class's kids and parents (js/maestro.js renderPace) -->
-        <section class="m-panel m-pace" id="m-pace" aria-labelledby="m-pace-title" hidden>
-          <div class="m-pace-head">
-            <h2 class="m-h2" id="m-pace-title">¿En qué experiencia va tu clase?</h2>
-            <p class="m-pace-help">Tus alumnos y sus papás ven como tareas de esta semana las de esa experiencia (y las anteriores que falten). Las siguientes se ven y se escuchan, sin aviso.</p>
-          </div>
-          <div class="m-pace-list" id="m-pace-list"></div>
-        </section>
         <section class="m-panel m-students" aria-labelledby="m-students-title">
           <div class="m-panel-head">
             <h2 class="m-h2" id="m-students-title">Students</h2>
@@ -602,7 +594,7 @@
   <script src="/js/warmup-vocab.js?v=20260706a"></script>
   <script src="/js/saga.js?v=20261020z3d3"></script>
   <script src="/js/cast.js?v=20261017td"></script>
-  <script src="/js/maestro.js?v=20261021cp"></script>
+  <script src="/js/maestro.js?v=20261021ms"></script>
   <script src="/js/pwa.js?v=20261012a" defer></script>
 </body>
 </html>

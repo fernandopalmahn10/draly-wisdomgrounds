@@ -428,14 +428,14 @@
       en: 'Each day pays up to $1 words, $2 homework tasks, $3 games and $4 stars.' });
   })();
 
-  // 🗓️ 2026-10-21 · the class's pace («Experiencia actual» in /maestro): homework up to the class's experience is due
+  // 🗓️ 2026-10-21 · the kid's own pace (js/papas-plan.js paceOf): homework up to the kid's experience is due
   // («Esta semana»), later ones play («Más adelante»). Kept apart like the Zoco block; every English line is settled.
   (function () {
     var M = {
       'Esta semana': 'This week', 'Más adelante': 'Later on', 'Ya puedes escucharla': 'You can listen to it already',
       'Falta 1 por mandar': '1 left to send',
       'Palabras y práctica listas. Tu tarea es para más adelante: ya puedes escucharla.': 'Words and practice done. Your homework is for later on: you can listen to it already.',
-      '«¡Vas adelantado! Ya podés escuchar el audio. La mandás cuando tu clase llegue a esta experiencia.»': '«You are ahead! You can listen to the audio already. Send it when your class reaches this experience.»',
+      '«¡Vas adelantado! Ya podés escuchar el audio. La mandás cuando llegues a esta experiencia.»': '«You are ahead! You can listen to the audio already. Send it when you reach this experience.»',
     };
     for (var k in M) if (DICT.map[k] === undefined) DICT.map[k] = M[k];
     PATTERNS.push({ re: /^Faltan (\d+) por mandar$/, en: '$1 left to send' });

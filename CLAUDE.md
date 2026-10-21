@@ -100,7 +100,11 @@ the checklist for any new game mode.
 - **/maestro (remade 2026-10-13, `docs/specs/maestro-remake.md`)** loads only `css/teacher-dashboard.css` (style new
   dashboard parts there; `maestro.css` now serves `host-hsk.html` only). Messages use `notify()` toasts, never
   `alert()`; new windows are `.m-modal` + `.m-modal-card` (Esc, focus and scroll lock come for free); the start
-  actions stay at the top, nothing class-critical goes deeper than 2 taps.
+  actions stay at the top, nothing class-critical goes deeper than 2 taps. **Official tests is the big yellow start
+  tile** (his priority 2026-10-21: "official tests in yellow, the big one… launch a game has the priority and I don't
+  even use it enough"), and **launching a game never asks to pick kids**: a game tile opens its projector at once, like
+  the home screen's games (calling online kids in is an extra, never a required step). Every label a teacher reads says
+  plainly what it means (2026-10-21: «Open their seals», «best 100», «Unlock» were not understood).
 - Question packs follow the curriculum (`core/packs.js` → picker `/packs.html?game=…`): test family → level → world →
   round. Content lives in `core/packs/<level>.js` (words + exam-style items; built into questions by `core/packs.js`).
   Pictures come from Higgsfield (Nano Banana Pro, Unlimited ON) in his Chrome, saved to `assets-library/higgsfield/`,
@@ -526,12 +530,14 @@ the checklist for any new game mode.
   only plays. `node scripts/test-ruta-tareas.js` must pass. Not built yet: the /maestro view and the teacher undo.
 - **Design first**: a clickable design of the new module page (laptop + phone) for him to try and approve before it is
   built into the platform.
-- **The class's pace decides «this week's homework»** (his picks 2026-10-21, the day the storybooks of every
-  experience of the three modules arrived at once): each teacher sets «Experiencia actual» for each of their classes in
-  /maestro and moves it on as the class goes. Kids and parents are reminded only about homework up to that experience
-  (the red «N por mandar», the glowing folder, Papás' «Lo más importante», the reminder under the kid's «Hoy»); later
-  experiences stay visible and their audio plays (listen ahead), but they are never counted as due or shown as this
-  week's. Never «the newest experience that has homework» again: with every storybook built, that is always the last one.
+- **Each kid's own progress decides «this week's homework»** (his picks 2026-10-21, the day the storybooks of every
+  experience of the three modules arrived at once; first «each teacher sets Experiencia actual per class», then the same
+  day, asked about scalability, «Automatic by each kid»: no teacher setting at all). A kid's current experience = the
+  first experience whose words they have not all marked (the last one once all are marked). Kids and parents are
+  reminded only about homework up to that experience (the red «N por mandar», the glowing «Esta semana» folder, Papás'
+  «Lo más importante», the reminder under the kid's «Hoy»); later experiences stay visible and their audio plays
+  (listen ahead), but they are never counted as due. Never «the newest experience that has homework» again: with every
+  storybook built, that is always the last one. A kid who marks no words stays on experience 1's homework (his call).
 - **Homework by experience, like folders** (his rule 2026-10-18: "basing everything on experiences is so good and we
   should keep following the same rule… if you keep them all, scroll down in the list then it's going to become messy"):
   - «Tus tareas» shows every experience of the module (Experiencia 1…8, and more when a module has more), as folders.
@@ -539,11 +545,12 @@ the checklist for any new game mode.
   - Never one long list of homeworks. Anything new that holds a level's content follows the same experience folders.
   - Built 2026-10-18:
     - The folders come from each module's `exps` (server.js `_rutaExps`), in curriculum order.
-    - The class's experience glows «Esta semana»; later ones say «Más adelante» and play (2026-10-21, the class's pace:
-      it was the newest homework's folder, «La más nueva»). Built 2026-10-21: `codeExps` on the class code
-      (core/teachers.js; a rename carries it, a level change clears it), defaults `paceDefault` in core/levels.js, `cur`
-      in the route / home / Papás payloads (server.js `_paceOf`), due logic in js/papas-plan.js, /maestro's card
-      «¿En qué experiencia va tu clase?» (GET/POST /api/admin/class-pace). `node scripts/test-class-pace.js` must pass.
+    - The kid's own experience glows «Esta semana»; later ones say «Más adelante» and play (2026-10-21, each kid's own
+      pace: it was the newest homework's folder, «La más nueva»). Built 2026-10-21: ONE rule, `paceOf` in
+      js/papas-plan.js (plan() → `pace`), read by the home and Papás (the server's plan too) and by La Ruta Dorada's
+      module page from its own seals (js/ruta.js; a teacher's preview shows experience 1). The class pace built that
+      morning is gone (/maestro's card, /api/admin/class-pace, `paceDefault`); a `codeExps` already saved on a teacher
+      record stays on the disk, unused. `node scripts/test-kid-pace.js` must pass.
     - A level with no homework audio yet (YCT 1) shows no column.
 - **A practice that's done shows it** (his words 2026-10-18: "whenever I finish a practice on the training it's not
   recorded… if I already finished it it should be green"): in El Entrenamiento a world played shows its result, and at

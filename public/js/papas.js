@@ -149,7 +149,7 @@
     let tareas;
     if (!t.of && !t.later) tareas = num(A + 'cast/aileen-hello.webp', 'is-face', esc('Pronto'), '', 'tareas por WhatsApp', esc('La profe las manda pronto'), '', 'is-soft');
     else {
-      // (2026-10-21, the class's pace) only homework up to the class's experience is due: this week's first, then any
+      // (2026-10-21, the kid's own pace) only homework up to the kid's experience is due: this week's first, then any
       // older one still waiting; a later experience's homework never counts as missing (sent ahead, it counts as sent)
       const week = t.week && t.week.left;
       const left = t.of - t.sent;
