@@ -539,7 +539,11 @@ the checklist for any new game mode.
   - Never one long list of homeworks. Anything new that holds a level's content follows the same experience folders.
   - Built 2026-10-18:
     - The folders come from each module's `exps` (server.js `_rutaExps`), in curriculum order.
-    - The newest homework's folder glows «La más nueva».
+    - The class's experience glows «Esta semana»; later ones say «Más adelante» and play (2026-10-21, the class's pace:
+      it was the newest homework's folder, «La más nueva»). Built 2026-10-21: `codeExps` on the class code
+      (core/teachers.js; a rename carries it, a level change clears it), defaults `paceDefault` in core/levels.js, `cur`
+      in the route / home / Papás payloads (server.js `_paceOf`), due logic in js/papas-plan.js, /maestro's card
+      «¿En qué experiencia va tu clase?» (GET/POST /api/admin/class-pace). `node scripts/test-class-pace.js` must pass.
     - A level with no homework audio yet (YCT 1) shows no column.
 - **A practice that's done shows it** (his words 2026-10-18: "whenever I finish a practice on the training it's not
   recorded… if I already finished it it should be green"): in El Entrenamiento a world played shows its result, and at

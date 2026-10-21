@@ -1278,8 +1278,10 @@
         ? '<button type="button" class="rp-exp ' + tag.cls + (isLatest ? ' is-latest' : '') + '" data-open-exp="' + e.n + '" aria-label="' + esc(label) + '">' + inner + '</button>'
         : '<div class="rp-exp is-soon" role="group" aria-label="' + esc(label) + '">' + inner + '</div>') + '</li>';
     }).join('');
+    // (2026-10-21) a folder after the class's pace: calm cards (no red frame), Aileen's «¡Vas adelantado!» line
+    const laterN = (n) => cur != null && n > cur && (mine || preview);
     const views = exps.filter((e) => e.hws.length).map((e) =>
-      '<section class="rp-exp-view" data-exp-view="' + e.n + '" aria-labelledby="rp-exp-t-' + e.n + '"' + (e.n === open ? '' : ' hidden') + '>' +
+      '<section class="rp-exp-view' + (laterN(e.n) ? ' rp-later' : '') + '" data-exp-view="' + e.n + '" aria-labelledby="rp-exp-t-' + e.n + '"' + (e.n === open ? '' : ' hidden') + '>' +
         '<button type="button" class="dw-back rp-exp-back" data-close-exp>Volver a las experiencias</button>' +
         '<div class="rp-exp-head"><img class="rp-exp-hpic" src="' + esc(e.pic) + '" alt="" width="200" height="200" loading="lazy" decoding="async">' +
           '<div><span class="rp-exp-k">Experiencia ' + e.n + '</span><h3 class="rp-exp-t" id="rp-exp-t-' + e.n + '" tabindex="-1">' + esc(e.name) + '</h3></div></div>' +
@@ -1289,12 +1291,15 @@
     const sayHw = mine || preview ? '«¡Dale! Escuchá el audio, grabá tu video y mandáselo a tu profe por WhatsApp. Después tocá <b>¡Ya la mandé!</b>»'
       : '«Estas son las tareas de ' + esc(m.name) + '. ¡Escuchá el audio cuando quieras!»';
     const sayFolders = mine || preview ? '«¡Dale! Tocá tu experiencia y hacé sus tareas.»' : '«Tocá una experiencia para escuchar sus tareas.»';
+    const sayLater = '«¡Vas adelantado! Ya podés escuchar el audio. La mandás cuando tu clase llegue a esta experiencia.»';
+    const openLater = !!open && laterN(open);
     return '<aside class="rp-tareas' + (mine ? '' : ' is-other') + (preview ? ' is-preview' : '') + (open ? ' is-open' : '') + '" id="tareas" aria-labelledby="rp-tareas-t" tabindex="-1">' +
       '<div class="rp-tareas-head"><h2 class="rp-tareas-t" id="rp-tareas-t">' + (mine ? 'Tus tareas' : 'Tareas de ' + esc(m.name)) + '</h2>' +
         (mine ? '<span class="rp-badge" data-tosend' + (toSend ? '' : ' hidden') + '>' + toSend + ' por mandar</span>' : '') + '</div>' +
       (preview ? '<p class="rp-preview-note">' + I.eye + '<span><b>Vista de alumno:</b> así lo ven tus alumnos. Aquí «¡Ya la mandé!» no marca nada.</span></p>' : '') +
       '<div class="rp-aileen"><img src="/assets/cast/aileen-talk.webp" alt="Aileen" width="312" height="480" loading="lazy" decoding="async">' +
-        '<p class="rp-aileen-say"><span data-say-folders' + (open ? ' hidden' : '') + '>' + sayFolders + '</span><span data-say-hw' + (open ? '' : ' hidden') + '>' + sayHw + '</span></p></div>' +
+        '<p class="rp-aileen-say"><span data-say-folders' + (open ? ' hidden' : '') + '>' + sayFolders + '</span><span data-say-hw' + (open && !openLater ? '' : ' hidden') + '>' + sayHw + '</span>' +
+          '<span data-say-later' + (openLater ? '' : ' hidden') + '>' + sayLater + '</span></p></div>' +
       '<ul class="rp-exps" aria-label="Las experiencias de ' + esc(m.name) + '"' + (open ? ' hidden' : '') + '>' + folders + '</ul>' +
       views +
       (showLogin && mine ? '<p class="rp-hw-login">Tus marcas quedan en este teléfono. <a href="/homework.html?next=' + encodeURIComponent('/audios/' + m.slug) + '">Entra con tu código</a> para guardarlas en tu cuenta.</p>' : '') +
@@ -1488,9 +1493,12 @@
       const grid = box.querySelector('.rp-exps');
       if (grid) grid.hidden = !!n;
       box.querySelectorAll('[data-exp-view]').forEach((v) => { v.hidden = Number(v.getAttribute('data-exp-view')) !== n; });
-      const sf = box.querySelector('[data-say-folders]'), sh = box.querySelector('[data-say-hw]');
+      const sf = box.querySelector('[data-say-folders]'), sh = box.querySelector('[data-say-hw]'), sl = box.querySelector('[data-say-later]');
+      const lv = box.querySelector('[data-exp-view="' + n + '"]');
+      const later = !!(n && lv && lv.classList.contains('rp-later'));   // (2026-10-21) a folder after the class's pace
       if (sf) sf.hidden = !!n;
-      if (sh) sh.hidden = !n;
+      if (sh) sh.hidden = !n || later;
+      if (sl) sl.hidden = !later;
       // (a phone: the opened folder (or the folders again) comes into view when part of it is off the screen; the focus
       // goes where the eyes go, for a screen reader too)
       const shownEl = n ? box.querySelector('[data-exp-view="' + n + '"]') : box.querySelector('.rp-exps');
@@ -1580,7 +1588,8 @@
     const marks0 = tMarksFor(ctx.ruta, m.tareas);
     const stateOf = (h) => { const e = (mine && marks0[h.id]) || {}; return !mine ? 'other' : e.s ? 'sent' : e.h ? 'heard' : 'new'; };
     hwStop();
-    box.innerHTML = '<ul class="rp-hw-list">' + hws.map((h) => hwCardHtml(m, h, stateOf(h), o.pic, o.link)).join('') + '</ul>';
+    // (o.later, 2026-10-21: an experience after the class's pace: calm cards, its homework plays, nothing due)
+    box.innerHTML = '<ul class="rp-hw-list' + (o.later ? ' rp-later' : '') + '">' + hws.map((h) => hwCardHtml(m, h, stateOf(h), o.pic, o.link)).join('') + '</ul>';
     const byId = new Map(hws.map((h) => [h.id, h]));
     const paint = () => {
       if (!mine || !box.isConnected) return;

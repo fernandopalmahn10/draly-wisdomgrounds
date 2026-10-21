@@ -3376,7 +3376,7 @@
     const e = _paceExp(c, c.cur) || { n: c.cur, name: '', pic: '' };
     const dots = L.exps.map((x) => '<i class="' + (x.n < c.cur ? 'is-past' : x.n === c.cur ? 'is-now' : '') + '"></i>').join('');
     return '<article class="m-pace-card' + (c.set ? '' : ' is-unset') + '" data-code="' + escapeHtml(c.code) + '">' +
-      (c.set ? '' : '<p class="m-pace-nudge">Elige en qué experiencia va tu clase</p>') +
+      (c.set ? '' : '<p class="m-pace-nudge">' + (c.mine ? 'Elige en qué experiencia va tu clase' : 'Su maestra aún no eligió la experiencia') + '</p>') +
       '<div class="m-pace-main">' +
         '<span class="m-pace-art">' + (e.pic ? '<img src="' + escapeHtml(e.pic) + '" alt="" width="200" height="200" loading="lazy" decoding="async">' : '') + '<b>' + e.n + '</b></span>' +
         '<div class="m-pace-txt">' +

@@ -474,6 +474,9 @@ body.au-is-pick .dorado, body.au-is-path .dorado { display: none !important; }
 .rp-hw.is-new .rp-hw-state { background: var(--red); color: #fff; }
 .rp-hw.is-heard .rp-hw-state { background: var(--oro-palido); color: var(--rojo); }
 .rp-hw.is-sent .rp-hw-state { background: var(--green); color: #fff; }
+/* 🗓️ 2026-10-21 a later experience's homework (after the class's pace): it plays, nothing is due: no red frame or chip */
+.rp-later .rp-hw.is-new { background: var(--papel); box-shadow: inset 0 0 0 2px var(--linea); }
+.rp-later .rp-hw.is-new .rp-hw-state { background: var(--crema-2); color: var(--tinta-2); }
 .rp-hw-acts { display: flex; gap: 8px; margin-top: 8px; }
 .rp-hw-acts button {
   flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 48px; padding: 8px 10px; border: 0; border-radius: 16px;
@@ -500,7 +503,7 @@ body.au-is-pick .dorado, body.au-is-path .dorado { display: none !important; }
 /* 🗂️ the experiences as folders (his rule 2026-10-18 «Homework by experience, like folders»): two columns of picture
    cards (Experiencia 1…8), a tag each («1 por mandar» red · «✓ Mandadas» green · «Pronto» calm), the newest glows */
 .rp-exps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-.rp-exps[hidden], .rp-exp-view[hidden], [data-say-folders][hidden], [data-say-hw][hidden] { display: none; }
+.rp-exps[hidden], .rp-exp-view[hidden], [data-say-folders][hidden], [data-say-hw][hidden], [data-say-later][hidden] { display: none; }
 .rp-exp {
   position: relative; width: 100%; min-height: 64px; display: grid; grid-template-columns: 46px minmax(0, 1fr); grid-template-rows: 1fr auto; column-gap: 9px; row-gap: 4px;
   align-items: center; padding: 9px 9px 9px 10px; border: 0; border-radius: 16px; text-align: left; cursor: pointer;

@@ -376,6 +376,9 @@ body.md-in { height: auto; min-height: 100vh; min-height: 100dvh; overflow: visi
 #screen-list.md .md-hw .rp-hw.is-new .rp-hw-state { background: var(--md-red); color: #fff; }
 #screen-list.md .md-hw .rp-hw.is-heard .rp-hw-state { background: var(--md-sand); color: var(--md-rojo); }
 #screen-list.md .md-hw .rp-hw.is-sent .rp-hw-state { background: var(--md-green); color: #fff; }
+/* 🗓️ 2026-10-21 a later experience's homework (after the class's pace): it plays, nothing is due: no red frame or chip */
+#screen-list.md .md-hw .rp-later .rp-hw.is-new { background: #fff; box-shadow: inset 0 0 0 2px var(--md-line); }
+#screen-list.md .md-hw .rp-later .rp-hw.is-new .rp-hw-state { background: var(--md-sand); color: var(--md-soft); }
 #screen-list.md .md-hw .rp-hw-body { display: grid; gap: 6px; }
 #screen-list.md .md-hw .rp-hw-acts { display: flex; gap: 8px; }
 #screen-list.md .md-hw .rp-hw-acts button {

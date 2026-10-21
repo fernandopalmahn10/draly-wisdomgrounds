@@ -1313,7 +1313,7 @@
     const e = box ? M.exps.find((x) => x.n === Number(box.getAttribute('data-hw-mount'))) : null;
     const m = modOf();
     if (box && e && ctxR && m && window.Ruta && window.Ruta.hwCards) {
-      try { cards = window.Ruta.hwCards(box, ctxR, m, e.hws, { pic: e.pic, link: '?from=homework', onChange: soft }); } catch (err) { console.error('[home] the homework cards', err); }
+      try { cards = window.Ruta.hwCards(box, ctxR, m, e.hws, { pic: e.pic, link: '?from=homework', later: e.later, onChange: soft }); } catch (err) { console.error('[home] the homework cards', err); }
     }
     // (asked again when the kid opens them, at most every 30 s: a redraw for a new message never refetches them)
     const sm = document.querySelector('#md-app [data-sent-mount]');

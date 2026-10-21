@@ -153,8 +153,9 @@
       // older one still waiting; a later experience's homework never counts as missing (sent ahead, it counts as sent)
       const week = t.week && t.week.left;
       const left = t.of - t.sent;
+      // («de esta semana» only when every one missing is this week's: an older one waiting counts in «por mandar»)
       tareas = num(A + 'cast/aileen-hello.webp', 'is-face', String(t.sent + (t.ahead || 0)), 'mandadas', 'tareas por WhatsApp',
-        week ? esc(week === 1 ? 'Falta 1 de esta semana' : 'Faltan ' + week + ' de esta semana')
+        week && week === left ? esc(week === 1 ? 'Falta 1 de esta semana' : 'Faltan ' + week + ' de esta semana')
           : left ? esc(left === 1 ? 'Falta 1 por mandar' : 'Faltan ' + left + ' por mandar') : '<i class="pp-ok">' + CHECK + '</i>' + esc('Al día'),
         left ? 'is-red' : 'is-green', 'is-green');
     }
