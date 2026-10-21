@@ -2617,7 +2617,7 @@ app.post('/api/admin/class-pace', (req, res) => {
   const exps = _rutaExps(level);
   // (a whole number of the level's experiences, or null = back to the default; a missing `n` is never a reset)
   const n = b.n === null ? null : typeof b.n === 'number' ? b.n : NaN;
-  if (!exps.length || !Object.prototype.hasOwnProperty.call(b, 'n') || (n != null && !(Number.isInteger(n) && n >= 1 && n <= exps.length))) {
+  if (!exps.length || !Object.prototype.hasOwnProperty.call(b, 'n') || (n != null && !(Number.isInteger(n) && exps.some((e) => e.n === n)))) {
     return res.status(400).json({ ok: false, error: 'Esa experiencia no existe en ' + Levels.info(level).name + '.' });
   }
   const out = Teachers.setCodeExp(code, n);
@@ -2996,11 +2996,18 @@ function _lastSimOf(books) {
 // (core/teachers.js codeExps), else the level's default (core/levels.js paceDefault), never above the level's
 // experiences. Homework up to `cur` is due (the red «N por mandar», the glowing folder «Esta semana», Papás' «Lo más
 // importante», the reminder under «Hoy»); later experiences stay visible and play, never counted (js/papas-plan.js).
+// (an experience's number comes from its pack world's «EXP N ·» name: always one of the level's own numbers, never 1..N
+// assumed; a stored or default number that is not one of them = the nearest one below, else the first)
+function _paceSnap(lvl, v) {
+  const ns = _rutaExps(lvl).map((e) => e.n).sort((a, b) => a - b);
+  if (!ns.length) return null;
+  if (ns.includes(v)) return v;
+  const below = ns.filter((x) => x <= v);
+  return below.length ? below[below.length - 1] : ns[0];
+}
 function _paceDefault(lvl) {
   const l = Levels.normalize(lvl);
-  const n = l ? _rutaExps(l).length : 0;
-  if (!n) return null;
-  return Math.max(1, Math.min(n, Number(Levels.info(l).paceDefault) || 1));
+  return l ? _paceSnap(l, Number(Levels.info(l).paceDefault) || 1) : null;
 }
 // a class code's pace for level `lvl` (a code of another level, or no code: the level's default) → n | null (no experiences)
 function _paceOf(lvl, classCode) {
@@ -3008,7 +3015,7 @@ function _paceOf(lvl, classCode) {
   const d = _paceDefault(l);
   if (d == null) return null;
   const v = classCode && Teachers.levelForAccessCode(classCode) === l ? Teachers.expForAccessCode(classCode) : null;
-  return v == null ? d : Math.max(1, Math.min(_rutaExps(l).length, v));
+  return v == null ? d : _paceSnap(l, v);
 }
 // a teacher's preview (La Ruta Dorada as a kid sees it): the teacher's own class of that level (the first that set its
 // pace, else the first), else the level's default. t = _teacherOf(req) (a code session or a remembered device)

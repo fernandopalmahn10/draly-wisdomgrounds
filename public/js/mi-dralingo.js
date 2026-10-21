@@ -502,9 +502,8 @@
     const page = mode === 'page';
     const s1 = !M.open ? 'locked' : stepState(e, 1, e.bars.words === 'done');
     const s2 = !M.open ? 'locked' : !e.open ? 'closed' : stepState(e, 2, e.bars.practice === 'done');
-    // (2026-10-21) a later experience's homework is never «¡Empieza aquí!» (it waits calmly, «Más adelante», and plays),
-    // unless «Hoy» itself sends a kid who is ahead of the class there («¡Vas adelantado! Ya puedes escuchar…»)
-    const s3 = !e.hws.length ? 'soon' : e.later && e.bars.tarea !== 'done' && !(e.today && e.next === 3) ? 'todo' : stepState(e, 3, e.bars.tarea === 'done');
+    // (2026-10-21) a later experience's homework is never «¡Empieza aquí!»: it waits calmly («Más adelante») and plays
+    const s3 = !e.hws.length ? 'soon' : e.later && e.bars.tarea !== 'done' ? 'todo' : stepState(e, 3, e.bars.tarea === 'done');
     const tag = (st) => (st === 'next' ? '<span class="md-step-tag">¡Empieza aquí!</span>' : '');
     // (each step's number once: in its circle, never again in its title; a lock for a step that can't open yet)
     const num = (st, k) => '<span class="md-step-n' + (st === 'soon' ? ' is-soon' : '') + '">' + (st === 'done' ? I.check : st === 'locked' || st === 'closed' ? I.lock : k) + '</span>';

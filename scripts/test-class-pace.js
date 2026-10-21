@@ -70,20 +70,21 @@ function planTests() {
   ok(p.tareas.sent === 6 && p.tareas.ahead === 2, 'homework sent ahead (experience 6) counts as ahead, never as due');
 
   section('the plan: a kid ahead of the class');
+  // (review 2026-10-21: homework that is not due never holds a kid back; the green ✓ stays strict)
   const best8 = range(1, 8).map((n) => W(n, n <= 4 ? 90 : null));
   p = Plan.plan(raw({ hws: HW8(upTo3), seals: range(1, 40), worlds: best8 }));
   t = Plan.today(p);
-  ok(p.complete === 3 && p.current === 4 && !p.exps[3].due, 'experiences 1-3 complete, the kid is on 4 (after the class\'s)');
-  ok(t.kind === 'tarea' && t.exp === 4 && t.step === 3 && t.ahead === true && t.go === 'Escuchar mi tarea' &&
-    t.text === '¡Vas adelantado! Ya puedes escuchar la tarea de Mundo 4. La mandas cuando tu clase llegue a la Experiencia 4.' && !t.remind,
-    '«Hoy»: «' + t.text + '» (listen, never «Manda tu tarea»), no reminder');
-  ok(p.focus.kind !== 'tarea', '… Papás never asks to send it');
+  ok(p.complete === 3 && !p.exps[3].done && p.exps[3].passed && !p.exps[3].due && p.current === 5,
+    'experiences 1-3 complete; 4\'s words and practice done, its homework not due: not complete (no ✓), and the kid moves on to 5');
+  ok(t.kind === 'words' && t.exp === 5 && t.step === 1 && !t.remind, '«Hoy»: the words of experience 5 («' + t.text + '»), no reminder: never «Manda tu tarea» for homework that is not due');
+  ok(p.focus.kind === 'words' && p.focus.exp === 5, '… Papás: the words of experience 5, never experience 4\'s homework');
   const texts = pageWords();
-  const tips = texts({ ruta: raw({ hws: HW8(upTo3), seals: range(1, 40), worlds: best8 }) }).tips;
-  ok(tips.length === 3 && !/video/.test(tips[2]), '… nor do the tips («' + tips[2] + '»)');
+  const tips = texts({ ruta: raw({ hws: HW8(upTo3), seals: range(1, 50), worlds: range(1, 8).map((n) => W(n, n <= 5 ? 90 : null)) }) }).tips;
+  ok(tips.length === 3 && !/video/.test(tips[2]), '… nor do the tips ask for a video of later homework («' + tips[2] + '»)');
   p = Plan.plan(raw({ hws: HW8(upTo3), seals: range(1, 40), worlds: best8, cur: 4 }));
   t = Plan.today(p);
-  ok(t.kind === 'tarea' && !t.ahead && t.go === 'Mandar mi tarea' && p.focus.kind === 'tarea' && p.focus.exp === 4, 'the teacher moves the class to 4: now it is «Mandar mi tarea» and Papás asks for it');
+  ok(p.current === 4 && t.kind === 'tarea' && t.exp === 4 && t.go === 'Mandar mi tarea' && p.focus.kind === 'tarea' && p.focus.exp === 4,
+    'the teacher moves the class to 4: the kid is back on 4, «Mandar mi tarea», and Papás asks for it');
 
   section('the plan: the edges');
   p = Plan.plan(raw({ cur: 8 }));
@@ -153,7 +154,7 @@ const SECRET = 'test-' + rnd(24);
 const NOW = Date.now(), DAY = 86400e3;
 // made-up class codes (random, distinct, never the port, never a real one)
 const CLS = new Set();
-while (CLS.size < 8) { const c = String(2000 + crypto.randomInt(7999)); if (c !== String(PORT)) CLS.add(c); }
+while (CLS.size < 8) { const c = String(2101 + crypto.randomInt(7899)); if (c !== String(PORT)) CLS.add(c); }
 const [S_NEW, S_YCT, S_OLD, A_NEW, A_OLD, B_NEW, A_RENAMED, SPARE] = [...CLS];
 const UID = { S: 'u' + rnd(6), A: 'u' + rnd(6), B: 'u' + rnd(6) };
 const teacher = (code, uid, name, codes, levels, sup) => ({ teacherId: code, uid, codeGen: 0, displayName: name, email: null, country: 'MX',
@@ -222,6 +223,7 @@ const enter = async (ph, kid) => (await post('/api/homework/enter', { accessCode
 
 let srv = null;
 let allLog = '';
+let bootLog = '';   // (the first boot's log: numbers it printed are not leaks)
 async function startServer() {
   try { await get('/health'); console.error('port ' + PORT + ' is busy: stop that server first'); process.exit(2); } catch (_) { /* free */ }
   srv = spawn(process.execPath, ['server.js'], {
@@ -259,9 +261,12 @@ async function teacherTests() {
   const cA = (d, code) => (d.json.classes || []).find((c) => c.code === code) || {};
   ok(cA(a0, A_NEW).cur === DEF.hsk2 && cA(a0, A_NEW).level === 'hsk2' && cA(a0, A_OLD).cur === DEF.hsk1, 'never chosen = the level\'s default (New HSK 1 ' + DEF.hsk2 + ', Old HSK 1 ' + DEF.hsk1 + ')');
   const L = a0.json.levels || {};
-  ok(L.hsk2 && L.hsk2.exps.length === 8 && L.hsk1 && L.hsk1.exps.length === 8 && L.yct1 && L.yct1.exps.length === 6 && L.hsk2.slug === 'newhsk1',
-    'each level\'s experiences come along (8 · 8 · 6), with the module page\'s address');
-  ok(L.hsk2.exps.every((e, i) => e.n === i + 1 && e.name && /^\/ruta-exp\/newhsk1\/\d+\.webp\?v=/.test(e.pic || '')), '… each with its name and its picture (by a neutral address)');
+  // (today's curriculum: the counts and numbers come from the server's experiences, never written here)
+  ok(Levels.LEVELS.every((l) => L[l.id] && L[l.id].exps.length >= 1 && L[l.id].slug === (l.pack || l.id)),
+    'each level\'s experiences come along (' + Levels.LEVELS.map((l) => (L[l.id] ? L[l.id].exps.length : 0)).join(' · ') + '), with the module page\'s address');
+  ok(Object.values(L).every((x) => x.exps.every((e, i) => Number.isInteger(e.n) && (i === 0 || e.n > x.exps[i - 1].n) && e.name &&
+    /^\/ruta-exp\/[a-z0-9]+\/\d+\.webp\?v=/.test(e.pic || ''))), '… in order, each with its number, its name and its picture (by a neutral address)');
+  ok(L.hsk2.exps.length >= 6 && [3, 4, 6].every((n) => L.hsk2.exps.some((e) => e.n === n)), '(this test moves New HSK 1 classes to experiences 3, 4 and 6: they exist)');
   ok(DEF.hsk2 === 4 && DEF.hsk1 === 4 && DEF.yct1 === 1, 'the defaults his decision named: Old HSK 1 = 4, New HSK 1 = 4, YCT 1 = 1');
   const s0 = await pace(SA());
   const sCodes = (s0.json.classes || []).map((c) => c.code);
@@ -297,8 +302,12 @@ async function teacherTests() {
   ok(notYours.status === 403 && unknown.status === 403 && notYours.text === unknown.text, 'another teacher\'s class and an unknown code: the same 403');
   ok((await setPace(A_NEW, 2, TB())).status === 403, 'Bea can\'t move Ana\'s class');
   ok((await setPace(SPARE, 2, SA())).status === 404, 'the super admin: an unknown code is «ya no existe»');
-  for (const bad of [0, 9, -1, 2.5, 'x', true]) ok((await setPace(A_NEW, bad, TA())).status === 400, 'experience ' + JSON.stringify(bad) + ' of New HSK 1: refused');
-  ok((await setPace(S_YCT, 7, SA())).status === 400 && (await setPace(S_YCT, 6, SA())).json.ok, 'YCT 1 has 6 experiences: 7 refused, 6 fine');
+  const lastOf = (id) => Math.max.apply(null, L[id].exps.map((e) => e.n));
+  for (const bad of [0, lastOf('hsk2') + 1, -1, 2.5, 'x', '3', true, {}]) ok((await setPace(A_NEW, bad, TA())).status === 400, 'experience ' + JSON.stringify(bad) + ' of New HSK 1: refused');
+  ok((await post('/api/admin/class-pace', { code: A_NEW }, TA())).status === 400, 'no `n` at all: refused (never a reset to the default)');
+  ok((await setPace('__proto__', 2, TA())).status === 403 && (await setPace('constructor', 2, TA())).status === 403, 'a code like «__proto__» or «constructor»: refused like any unknown code');
+  const lastY = lastOf('yct1');
+  ok((await setPace(S_YCT, lastY + 1, SA())).status === 400 && (await setPace(S_YCT, lastY, SA())).json.ok, 'YCT 1 ends at experience ' + lastY + ': ' + (lastY + 1) + ' refused, ' + lastY + ' fine');
   ok((await setPace(S_YCT, null, SA())).json.ok, '(back to never chosen)');
   ok((await setPace(A_NEW, 2, T('A', CODE_A, { 'Sec-Fetch-Site': 'cross-site' }))).status === 403, 'from another site: refused');
   ok((await post('/api/admin/class-pace', { code: A_NEW, n: 2 }, { headers: { 'CF-Connecting-IP': '203.0.113.42' } })).status === 401, 'no teacher code: refused');
@@ -338,7 +347,9 @@ async function kidTests() {
   const wk = NEWHW.filter((h) => h.exp === 3);
   ok(wk.length ? same(p.tareas.week, { exp: 3, of: wk.length, left: wk.length }) : p.tareas.week === null, '«this week» = experience 3\'s homework');
   const t = Plan.today(p);
-  ok(!t.remind || (t.remind.left === due.length && (t.remind.exp || 0) <= 3), 'the kid\'s reminder counts the due ones only' + (t.remind ? ' («' + t.remind.text + '»)' : ''));
+  // (the kid has no seals: «Hoy» is experience 1's words, so every due homework rides along as the reminder)
+  ok(due.length ? !!t.remind && t.remind.left === due.length && (t.remind.exp || 0) <= 3 : !t.remind,
+    'the kid\'s reminder counts the due ones only' + (t.remind ? ' («' + t.remind.text + '»)' : ' (none due)'));
   const H = homeSandbox();
   const s = { code: KIDS.KA.code, accessCode: A_NEW, keyMode: false, name: KIDS.KA.name, avatar: 'aileen', avatarUrl: '/assets/saga/avatars/aileen.webp',
     level: 'hsk2', levelName: 'New HSK 1', folders: null, assignments: [], submissions: [], custom: [], readings: [], trainer: null, inbox: [], unread: 0, daily: false };
@@ -400,30 +411,30 @@ function pageTests() {
     .every((f) => new RegExp('/' + f.replace('.', '\\.') + '\\?v=').test(html)), 'every changed file is asked for with a ?v=');
   const en = english();
   const missing = [];
-  ['Esta semana', 'Más adelante', 'Ya puedes escucharla', 'Escuchar mi tarea', 'Falta 1 por mandar', 'Faltan 3 por mandar',
+  ['Esta semana', 'Más adelante', 'Ya puedes escucharla', 'Falta 1 por mandar', 'Faltan 3 por mandar',
     'Palabras y práctica listas. Tu tarea es para más adelante: ya puedes escucharla.',
     '«¡Vas adelantado! Ya podés escuchar el audio. La mandás cuando tu clase llegue a esta experiencia.»',
-    '¡Vas adelantado! Ya puedes escuchar la tarea de El Restaurante Chino. La mandas cuando tu clase llegue a la Experiencia 3.',
     'Palabras listas, práctica lista, tarea de más adelante'].forEach((s) => {
     const e = en(s);
     if (!e || e === s || /[áéíóúñ¿¡]/i.test(e)) missing.push(s);
     else if (en(e) !== e) missing.push(s + ' (its English is not settled)');
   });
   ok(!missing.length, 'every new phrase of the kid\'s home and Papás has its English' + (missing.length ? ': missing ' + missing.map((x) => '«' + x + '»').join(', ') : ''));
-  ok(en('¡Vas adelantado! Ya puedes escuchar la tarea de El Restaurante Chino. La mandas cuando tu clase llegue a la Experiencia 3.') ===
-    'You are ahead! You can listen to the homework of The Chinese Restaurant already. Send it when your class reaches Experience 3.', '… the experience\'s name translated inside the sentence');
 }
 
 (async () => {
   let crashed = false;
   try { planTests(); pageTests(); } catch (e) { crashed = true; failed++; console.log('  ✖ crashed: ' + (e && e.stack || e)); }
   await startServer();
+  bootLog = allLog;
   try { await teacherTests(); await kidTests(); await restartTests(); } catch (e) { crashed = true; failed++; console.log('  ✖ crashed: ' + (e && e.stack || e)); }
   if (!KEEP) await stopServer();
   else console.log('(server left running on port ' + PORT + ', data in a temp folder)');
   if (!crashed) {
     ok(![SEED, CODE_A, CODE_B, LEGACY].some((c) => allLog.includes(c)), 'no teacher code in the server log');
-    const codeInLog = [S_NEW, S_YCT, S_OLD, A_NEW, A_OLD, B_NEW, A_RENAMED].filter((c) => new RegExp('(^|[^0-9])' + c + '([^0-9]|$)').test(allLog));
+    // (a made-up 4-digit code may also be any number the first boot printed: only what came after the boot counts)
+    const hit = (c, s) => new RegExp('(^|[^0-9])' + c + '([^0-9]|$)').test(s);
+    const codeInLog = [S_NEW, S_YCT, S_OLD, A_NEW, A_OLD, B_NEW, A_RENAMED].filter((c) => !hit(c, bootLog) && hit(c, allLog.slice(bootLog.length)));
     ok(!codeInLog.length, 'no class code in the server log' + (codeInLog.length ? ' (' + codeInLog.length + ' found)' : ''));
   }
   if (!KEEP) { try { fs.rmSync(DATA, { recursive: true, force: true }); } catch (_) {} }

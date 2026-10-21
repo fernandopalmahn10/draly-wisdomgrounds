@@ -199,6 +199,7 @@
         }
         pw = v;
         try { localStorage.setItem(STORAGE_PW, pw); } catch (_) {}
+        paceReset();   // (2026-10-21: a teacher who signs in on this tab never sees the previous one's classes)
         showDashboard();
         renderRoster(data.students || [], data.self || null, data.archived);
       })
@@ -3356,23 +3357,34 @@
   let _paceBusy = false;       // a save in flight: one at a time, and the cards are not redrawn under the teacher's finger
   let _paceToast = null;       // the pace toast on screen (a new change replaces it)
   let _paceOthersOpen = false; // the super admin's «Clases de otras maestras» fold, kept open across redraws
+  let _paceSaves = 0;          // saves so far: a list asked for before a save is older than it and is dropped (review)
   function paceMaybe(force) {
     if (!pw || _paceBusy) return;
     if (!force && _pace && Date.now() - _paceAt < 60000) return;
     _paceAt = Date.now();
+    const seq = _paceSaves, who = pw;
     adminFetch('/api/admin/class-pace', pw).then((r) => r.json()).then((d) => {
-      if (!d || !d.ok || !Array.isArray(d.classes)) return;
+      if (!d || !d.ok || !Array.isArray(d.classes) || seq !== _paceSaves || who !== pw) return;
       _pace = d;
       if (!_paceBusy && !$('m-pace-modal')) renderPace();
     }).catch(() => {});   // (offline: the cards keep what they showed; the next refresh asks again)
   }
+  // a new sign-in on this tab (another teacher on a shared laptop): the previous one's classes never show
+  function paceReset() {
+    _pace = null; _paceAt = 0; _paceSaves++;
+    const sec = $('m-pace');
+    if (sec) sec.hidden = true;
+  }
   const _paceLevel = (c) => (_pace && _pace.levels && c ? _pace.levels[c.level] : null) || null;
   const _paceExp = (c, n) => { const L = _paceLevel(c); return (L && L.exps.find((e) => e.n === n)) || null; };
   const _paceClass = (code) => (_pace ? _pace.classes.find((x) => x.code === code) : null) || null;
+  // the experience before / after the class's (by the level's own list: its numbers come from the curriculum)
+  const _paceNeighbour = (c, step) => { const L = _paceLevel(c); const i = L ? L.exps.findIndex((e) => e.n === c.cur) : -1; const x = i >= 0 ? L.exps[i + step] : null; return x ? x.n : null; };
   function paceCardHtml(c) {
     const L = _paceLevel(c);
     if (!L || !L.exps.length) return '';
     const of = L.exps.length;
+    const pos = (L.exps.findIndex((x) => x.n === c.cur) + 1) || c.cur;   // («3 de 8»: its place in the level's list)
     const e = _paceExp(c, c.cur) || { n: c.cur, name: '', pic: '' };
     const dots = L.exps.map((x) => '<i class="' + (x.n < c.cur ? 'is-past' : x.n === c.cur ? 'is-now' : '') + '"></i>').join('');
     return '<article class="m-pace-card' + (c.set ? '' : ' is-unset') + '" data-code="' + escapeHtml(c.code) + '">' +
@@ -3383,14 +3395,14 @@
           '<p class="m-pace-k">' + (c.mine ? '' : '<span class="m-pace-who">' + escapeHtml(c.teacher || 'Sin nombre') + '</span> · ') +
             'Clase <span translate="no">' + escapeHtml(c.code) + '</span> · ' + escapeHtml(L.name) + '</p>' +
           '<p class="m-pace-t"><span class="m-pace-t-k">Experiencia ' + e.n + '</span> ' + escapeHtml(e.name) + '</p>' +
-          '<p class="m-pace-dots" role="img" aria-label="Experiencia ' + e.n + ' de ' + of + '">' + dots + '<span aria-hidden="true">' + e.n + ' de ' + of + '</span></p>' +
+          '<p class="m-pace-dots" role="img" aria-label="Experiencia ' + e.n + ', la ' + pos + ' de ' + of + '">' + dots + '<span aria-hidden="true">' + pos + ' de ' + of + '</span></p>' +
         '</div>' +
       '</div>' +
       '<div class="m-pace-ctrl">' +
-        '<button class="m-pace-step" type="button" data-pace-step="-1"' + (c.cur <= 1 ? ' disabled' : '') + ' aria-label="Una experiencia atrás">‹</button>' +
+        '<button class="m-pace-step" type="button" data-pace-step="-1"' + (_paceNeighbour(c, -1) == null ? ' disabled' : '') + ' aria-label="Una experiencia atrás">‹</button>' +
         (c.set ? '<button class="btn btn-sm m-pace-pick" type="button" data-pace-pick>Elegir</button>'
           : '<button class="btn btn-sm btn-gold m-pace-pick" type="button" data-pace-keep>Sí, va en la ' + e.n + '</button>') +
-        '<button class="m-pace-step" type="button" data-pace-step="1"' + (c.cur >= of ? ' disabled' : '') + ' aria-label="Una experiencia adelante">›</button>' +
+        '<button class="m-pace-step" type="button" data-pace-step="1"' + (_paceNeighbour(c, 1) == null ? ' disabled' : '') + ' aria-label="Una experiencia adelante">›</button>' +
       '</div>' +
       '<div class="m-pace-foot">' +
         (c.set ? '' : '<button class="m-pace-link" type="button" data-pace-pick>Va en otra</button>') +
@@ -3430,17 +3442,25 @@
   }
   // a pace change: { code, n } (n = null: back to the level's default, the undo of a first choice)
   function paceSave(code, n, isUndo) {
-    const c = _paceClass(code);
-    if (!c || _paceBusy) return;
+    if (!_paceClass(code) || _paceBusy) return;
     _paceBusy = true;
+    _paceSaves++;
     const card = document.querySelector('#m-pace-list .m-pace-card[data-code="' + CSS.escape(code) + '"]');
     if (card) card.classList.add('is-busy');
-    const fail = (msg) => { _paceBusy = false; if (card) card.classList.remove('is-busy'); notify(msg, 'error'); };
-    adminFetch('/api/admin/class-pace', pw, {
+    // (a stalled request gives up after 12 s, like the roster's: the card never stays locked)
+    const ctl = window.AbortController ? new AbortController() : null;
+    const timer = ctl ? setTimeout(() => ctl.abort(), 12000) : null;
+    const fail = (msg) => { _paceBusy = false; if (card && card.isConnected) card.classList.remove('is-busy'); notify(msg, 'error'); };
+    adminFetch('/api/admin/class-pace', pw, Object.assign({
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code, n }),
-    }).then((r) => r.json().catch(() => null)).then((d) => {
+    }, ctl ? { signal: ctl.signal } : {})).then((r) => r.json().catch(() => null)).then((d) => {
+      if (timer) clearTimeout(timer);
       if (!d || !d.ok) { fail((d && d.error) || 'No se pudo guardar. Vuelve a intentarlo.'); return; }
       _paceBusy = false;
+      _paceSaves++;
+      // (the list may have been replaced while this was saving: the class is looked up again, never an old copy)
+      const c = _paceClass(code);
+      if (!c) { renderPace(); return; }
       c.cur = d.cur;
       c.set = !!d.set;
       renderPace();
@@ -3449,7 +3469,7 @@
       const who = c.mine ? 'tu clase' : 'la clase ' + code + ' de ' + (c.teacher || 'otra maestra');
       if (isUndo) { paceToast('Listo: ' + who + ' sigue en ' + where + '.', null); return; }
       paceToast('Ahora ' + who + ' está en ' + where, () => paceSave(code, d.prev == null ? null : d.prev, true));
-    }).catch(() => fail('Sin conexión. Vuelve a intentarlo.'));
+    }).catch(() => { if (timer) clearTimeout(timer); fail('Sin conexión. Vuelve a intentarlo.'); });
   }
   // the change's toast, with «Deshacer» for 8 s (notify() has no button; same look, same box)
   function paceToast(text, undo) {
@@ -3468,7 +3488,9 @@
       setTimeout(() => { try { el.remove(); } catch (_) {} }, 170);
     };
     el.querySelector('.m-toast-x').addEventListener('click', kill);
-    if (undo) el.querySelector('.m-toast-act').addEventListener('click', () => { kill(); undo(); });
+    // («Deshacer» while another change is still saving waits for it, never lost; at most ~12 s)
+    const run = (tries) => { if (_paceBusy && tries < 50) { setTimeout(() => run(tries + 1), 250); return; } undo(); };
+    if (undo) el.querySelector('.m-toast-act').addEventListener('click', () => { kill(); run(0); });
     box.appendChild(el);
     while (box.children.length > 3) box.firstChild.remove();
     _paceToast = el;
@@ -3515,7 +3537,7 @@
       const L = _paceLevel(c);
       if (!c || !L) return;
       const st = e.target.closest('[data-pace-step]');
-      if (st) { const n = c.cur + Number(st.getAttribute('data-pace-step')); if (n >= 1 && n <= L.exps.length) paceSave(c.code, n); return; }
+      if (st) { const n = _paceNeighbour(c, Number(st.getAttribute('data-pace-step'))); if (n != null) paceSave(c.code, n); return; }
       if (e.target.closest('[data-pace-keep]')) { paceSave(c.code, c.cur); return; }
       if (e.target.closest('[data-pace-pick]')) pacePick(c.code);
     });

@@ -433,15 +433,12 @@
   (function () {
     var M = {
       'Esta semana': 'This week', 'Más adelante': 'Later on', 'Ya puedes escucharla': 'You can listen to it already',
-      'Escuchar mi tarea': 'Listen to my homework', 'Falta 1 por mandar': '1 left to send',
+      'Falta 1 por mandar': '1 left to send',
       'Palabras y práctica listas. Tu tarea es para más adelante: ya puedes escucharla.': 'Words and practice done. Your homework is for later on: you can listen to it already.',
       '«¡Vas adelantado! Ya podés escuchar el audio. La mandás cuando tu clase llegue a esta experiencia.»': '«You are ahead! You can listen to the audio already. Send it when your class reaches this experience.»',
     };
     for (var k in M) if (DICT.map[k] === undefined) DICT.map[k] = M[k];
-    var nm = function (s) { return DICT.map[s] !== undefined ? DICT.map[s] : s; };
     PATTERNS.push({ re: /^Faltan (\d+) por mandar$/, en: '$1 left to send' });
-    PATTERNS.push({ re: /^¡Vas adelantado! Ya puedes escuchar la tarea de (.+)\. La mandas cuando tu clase llegue a la Experiencia (\d+)\.$/,
-      en: function (_, x, n) { return 'You are ahead! You can listen to the homework of ' + nm(x) + ' already. Send it when your class reaches Experience ' + n + '.'; } });
     PATTERNS.push({ re: /^Palabras (listas|empezadas|por hacer), práctica (lista|empezada|por hacer), tarea de más adelante$/, en: function (_, w, p) {
       var W = { listas: 'done', empezadas: 'started', 'por hacer': 'to do' }, Pr = { lista: 'done', empezada: 'started', 'por hacer': 'to do' };
       return 'Words ' + W[w] + ', practice ' + Pr[p] + ', homework for later on';

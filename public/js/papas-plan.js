@@ -19,7 +19,7 @@
 //           sim: { n, percent, passed, at } | null }   the latest simulation taken (in class, with a PIN)
 //
 //   plan(raw) → { goal, sealed, words, of, complete, current, trainDone, pace,
-//                 exps: [{ n, name, pic, sealed, count, best, open, train, hw: { of, sent }, due, done, state }],
+//                 exps: [{ n, name, pic, sealed, count, best, open, train, hw: { of, sent }, due, done, passed, state }],
 //                 tareas: { of, sent, later, ahead, week: { exp, of, left } | null }   (of / sent: DUE homework only;
 //                         later = homework of later experiences, ahead = those already sent),
 //                 sim, focus, hws: [{ id, exp, sent, due }] }
@@ -28,7 +28,10 @@
 //                 order, homework first): one file, one data source, so the two never contradict each other.
 //
 // An experience is COMPLETE when every word is marked, its practice is at the goal, and its homework is sent (every
-// homework of it, or it has none yet). `current` = the first experience not complete (null: all of them are).
+// homework of it, or it has none yet). `current` = the first experience not complete (null: all of them are), where
+// homework that is not due yet never holds a kid back (2026-10-21, the class's pace: a kid ahead of the class who has
+// marked an experience's words and reached its practice goal moves on to the next one; its homework waits, it plays
+// already, and it becomes due when the class gets there). COMPLETE (the green ✓, «¡Experiencia lista!») stays strict.
 // «Lo más importante esta semana» (focus), in this order (his picks for the design, 2026-10-18):
 //   1. tarea     a homework to send: the newest DUE one not sent (up to the class's experience, never a later one)
 //   2. practice  the current experience's practice is open and below the goal
@@ -64,11 +67,12 @@
       const hw = { of: mine.length, sent: mine.filter((h) => h.sent).length };
       const wordsDone = count > 0 && sealed >= count;
       const practiceDone = best != null && best >= goal;
+      // (passed: done as far as the kid can go today; a later experience's homework is not theirs to send yet)
       return { n, name: String(w.name || ''), pic: w.pic || null, sealed, count, best,
         open: !!w.open || wordsDone, train: w.train || null, hw, due: dueExp(n),
-        done: wordsDone && practiceDone && hw.sent >= hw.of, state: 'later' };
+        done: wordsDone && practiceDone && hw.sent >= hw.of, passed: wordsDone && practiceDone && (hw.sent >= hw.of || !dueExp(n)), state: 'later' };
     });
-    const cur = exps.find((e) => !e.done) || null;
+    const cur = exps.find((e) => !e.passed) || null;
     exps.forEach((e) => { e.state = e.done ? 'done' : (cur && e.n === cur.n ? 'current' : 'later'); });
     const sealed = exps.reduce((s, e) => s + e.sealed, 0);
     const words = Math.max(num(r.words) || 0, exps.reduce((s, e) => s + e.count, 0));
@@ -102,8 +106,7 @@
   // mandar» badges. Papás keeps «homework to send» first (`focus`, for the parents): the same numbers, a parent's order.
   //   today(plan) → { kind: 'words' | 'practice' | 'tarea' | 'teacher' | 'fine', exp (the experience it opens, or null),
   //                   step (1 · 2 · 3, or null), dorado (true: it opens El Simulacro Dorado), id (the homework, 'tarea'),
-  //                   go (the button: what it does), text, remind: null | { exp, id (the newest due), left, text },
-  //                   ahead (true: step 3 of an experience after the class's, whose homework only plays for now) }
+  //                   go (the button: what it does), text, remind: null | { exp, id (the newest due), left, text } }
   function today(p) {
     const P = p && typeof p === 'object' ? p : plan({});
     const exps = Array.isArray(P.exps) ? P.exps : [];
@@ -121,12 +124,9 @@
       } else if (!practiceDone) {
         t = { kind: 'practice', exp: cur.n, step: 2, dorado: false, go: 'Practicar aquí', text: hoy(cur.n) + ' Practica ' + cur.name + ' hasta llegar al ' + goal + ' %.' };
       } else {
+        // (the current experience's homework is always due here: one that is not due never holds `current`, see plan())
         const hw = (Array.isArray(P.hws) ? P.hws : []).find((h) => Number(h.exp) === cur.n && !h.sent) || null;
-        // (2026-10-21) a kid ahead of their class: every due homework is sent and this experience's comes later (its
-        // audio plays already): never «Manda tu tarea» for homework that is not due
-        if (cur.due === false && hw) t = { kind: 'tarea', exp: cur.n, step: 3, dorado: false, id: hw.id, ahead: true, go: 'Escuchar mi tarea',
-          text: '¡Vas adelantado! Ya puedes escuchar la tarea de ' + cur.name + '. La mandas cuando tu clase llegue a la Experiencia ' + cur.n + '.' };
-        else t = { kind: 'tarea', exp: cur.n, step: 3, dorado: false, id: hw ? hw.id : null, go: 'Mandar mi tarea', text: hoy(cur.n) + ' Manda tu tarea de ' + cur.name + '.' };
+        t = { kind: 'tarea', exp: cur.n, step: 3, dorado: false, id: hw ? hw.id : null, go: 'Mandar mi tarea', text: hoy(cur.n) + ' Manda tu tarea de ' + cur.name + '.' };
       }
     } else if (P.trainDone && !(P.sim && P.sim.passed)) {
       t = { kind: 'teacher', exp: null, step: null, dorado: true, go: 'Avisar a mi profe', text: '¡Terminaste El Entrenamiento! Avísale a tu profe: ya puedes hacer El Simulacro Dorado.' };
