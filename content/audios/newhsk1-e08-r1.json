@@ -1,0 +1,179 @@
+{
+ "id": "newhsk1-e08-r1",
+ "level": "newhsk1",
+ "exp": 8,
+ "round": 1,
+ "title": "Palabras Mágicas II",
+ "tagline": "Dralingo esconde siete palabritas mágicas por toda tu casa. Sin ellas, el Chino Mandarín suena como un robot. ¿Las encuentras?",
+ "pdf": "DRALINGO_NewHSK1_E08_R1_PalabrasMagicasII.pdf",
+ "tracks": [
+  {
+   "code": "EXP8.1",
+   "kind": "words",
+   "items": [
+    {
+     "py": "le",
+     "es": "ya (algo cambió)",
+     "zh": "了"
+    },
+    {
+     "py": "ne",
+     "es": "está…-ando",
+     "zh": "呢"
+    },
+    {
+     "py": "ba",
+     "es": "¡vamos a…! · ¿no?",
+     "zh": "吧"
+    },
+    {
+     "py": "hé",
+     "es": "y (entre cosas)",
+     "zh": "和"
+    },
+    {
+     "py": "dōu",
+     "es": "todos · los dos",
+     "zh": "都"
+    },
+    {
+     "py": "yě",
+     "es": "también",
+     "zh": "也"
+    },
+    {
+     "py": "zhèngzài",
+     "es": "estar haciendo",
+     "zh": "正在"
+    },
+    {
+     "py": "zhēn",
+     "es": "de verdad · ¡qué…!",
+     "zh": "真"
+    },
+    {
+     "py": "jīnnián",
+     "es": "este año",
+     "zh": "今年"
+    },
+    {
+     "py": "suì",
+     "es": "años (edad)",
+     "zh": "岁"
+    },
+    {
+     "py": "tóngxué",
+     "es": "compañero",
+     "zh": "同学"
+    },
+    {
+     "py": "zuò fàn",
+     "es": "cocinar",
+     "zh": "做饭"
+    },
+    {
+     "py": "chàng gē",
+     "es": "cantar",
+     "zh": "唱歌"
+    },
+    {
+     "py": "hǎotīng",
+     "es": "suena bonito",
+     "zh": "好听"
+    },
+    {
+     "py": "kàn diànshì",
+     "es": "ver la tele",
+     "zh": "看电视"
+    }
+   ]
+  },
+  {
+   "code": "EXP8.2",
+   "kind": "dialogue",
+   "items": [
+    {
+     "who": "profe",
+     "py": "nǐ jīnnián jǐ suì le?",
+     "es": "¿Cuántos años tienes este año?",
+     "zh": "你今年几岁了？"
+    },
+    {
+     "who": "tu",
+     "py": "wǒ jīnnián jiǔ suì le!",
+     "es": "¡Este año cumplo nueve!",
+     "zh": "我今年九岁了！"
+    },
+    {
+     "who": "profe",
+     "py": "bàba zài zuò shénme?",
+     "es": "¿Qué está haciendo papá?",
+     "zh": "爸爸在做什么？"
+    },
+    {
+     "who": "tu",
+     "py": "bàba zhèngzài zuò fàn ne. gēge zhèngzài kàn diànshì ne.",
+     "es": "Papá está cocinando. Mi hermano está viendo la tele.",
+     "zh": "爸爸正在做饭呢。哥哥正在看电视呢。"
+    },
+    {
+     "who": "profe",
+     "py": "jiějie chàng de gē zhēn hǎotīng!",
+     "es": "¡Qué bonito canta tu hermana!",
+     "zh": "姐姐唱的歌真好听！"
+    },
+    {
+     "who": "tu",
+     "py": "duì! wǒ hé jiějie dōu xǐhuan chàng gē.",
+     "es": "¡Sí! A mi hermana y a mí nos gusta cantar.",
+     "zh": "对！我和姐姐都喜欢唱歌。"
+    },
+    {
+     "who": "profe",
+     "py": "wǒ yě xǐhuan! wǒmen chàng ba!",
+     "es": "¡A mí también me gusta! ¡Cantemos!",
+     "zh": "我也喜欢！我们唱吧！"
+    }
+   ]
+  },
+  {
+   "code": "EXP8.3",
+   "kind": "video",
+   "items": [
+    {
+     "py": "dàjiā hǎo! wǒ jīnnián ___ suì le.",
+     "es": "¡Hola a todos! Este año cumplo ___ años.",
+     "zh": [
+      "大家好！我今年",
+      "岁了。"
+     ]
+    },
+    {
+     "py": "bàba zhèngzài zuò fàn ne.",
+     "es": "Papá está cocinando.",
+     "zh": "爸爸正在做饭呢。"
+    },
+    {
+     "py": "jiějie chàng de gē zhēn hǎotīng!",
+     "es": "¡Qué bonito canta mi hermana!",
+     "zh": "姐姐唱的歌真好听！"
+    },
+    {
+     "py": "wǒ hé tóngxué dōu xǐhuan Hànyǔ.",
+     "es": "A mi compañero y a mí nos gusta el Chino Mandarín.",
+     "zh": "我和同学都喜欢汉语。"
+    },
+    {
+     "py": "nǐ yě xǐhuan ma?",
+     "es": "¿A ti también te gusta?",
+     "zh": "你也喜欢吗？"
+    },
+    {
+     "py": "wǒmen shuō Hànyǔ ba! zàijiàn!",
+     "es": "¡Hablemos Chino Mandarín! ¡Adiós!",
+     "zh": "我们说汉语吧！再见！"
+    }
+   ]
+  }
+ ]
+}

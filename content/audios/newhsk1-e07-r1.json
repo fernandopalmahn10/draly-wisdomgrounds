@@ -1,0 +1,176 @@
+{
+ "id": "newhsk1-e07-r1",
+ "level": "newhsk1",
+ "exp": 7,
+ "round": 1,
+ "title": "Aventura por China",
+ "tagline": "Tu familia llega a China de vacaciones. Hay aviones, trenes y taxis, y una librería que no encuentras. ¿Sabes preguntar el camino?",
+ "pdf": "DRALINGO_NewHSK1_E07_R1_AventuraPorChina.pdf",
+ "tracks": [
+  {
+   "code": "EXP7.1",
+   "kind": "words",
+   "items": [
+    {
+     "py": "yuè · hào",
+     "es": "mes · día",
+     "zh": "月，号"
+    },
+    {
+     "py": "huǒchē",
+     "es": "tren",
+     "zh": "火车"
+    },
+    {
+     "py": "qǐngwèn",
+     "es": "disculpe",
+     "zh": "请问"
+    },
+    {
+     "py": "nǎlǐ?",
+     "es": "¿dónde?",
+     "zh": "哪里？"
+    },
+    {
+     "py": "shūdiàn",
+     "es": "librería",
+     "zh": "书店"
+    },
+    {
+     "py": "qiánbian",
+     "es": "delante",
+     "zh": "前边"
+    },
+    {
+     "py": "jiào le",
+     "es": "pedí (un taxi)",
+     "zh": "叫了"
+    },
+    {
+     "py": "néng",
+     "es": "poder",
+     "zh": "能"
+    },
+    {
+     "py": "hǎowánr",
+     "es": "divertido",
+     "zh": "好玩儿"
+    },
+    {
+     "py": "Běijīng",
+     "es": "Beijing",
+     "zh": "北京"
+    },
+    {
+     "py": "Zhōngguó",
+     "es": "China",
+     "zh": "中国"
+    },
+    {
+     "py": "fēijī",
+     "es": "avión",
+     "zh": "飞机"
+    },
+    {
+     "py": "chūzūchē",
+     "es": "taxi",
+     "zh": "出租车"
+    },
+    {
+     "py": "zhù",
+     "es": "quedarse · vivir",
+     "zh": "住"
+    },
+    {
+     "py": "xīngqīrì",
+     "es": "domingo",
+     "zh": "星期日"
+    }
+   ]
+  },
+  {
+   "code": "EXP7.2",
+   "kind": "dialogue",
+   "items": [
+    {
+     "who": "profe",
+     "py": "nǐ hǎo! nǐmen shì nǎ tiān lái Zhōngguó de?",
+     "es": "¡Hola! ¿Qué día llegaron a China?",
+     "zh": "你好！你们是哪天来中国的？"
+    },
+    {
+     "who": "tu",
+     "py": "wǒmen shì bā yuè qī hào lái Zhōngguó de.",
+     "es": "Llegamos a China el 7 de agosto.",
+     "zh": "我们是八月七号来中国的。"
+    },
+    {
+     "who": "profe",
+     "py": "nǐmen zěnme qù Běijīng?",
+     "es": "¿Cómo van a Beijing?",
+     "zh": "你们怎么去北京？"
+    },
+    {
+     "who": "tu",
+     "py": "wǒmen zuò huǒchē qù. qǐngwèn, shūdiàn zài nǎlǐ?",
+     "es": "Vamos en tren. Disculpe, ¿dónde está la librería?",
+     "zh": "我们坐火车去。请问，书店在哪里？"
+    },
+    {
+     "who": "profe",
+     "py": "zài zhōngxué qiánbian.",
+     "es": "Está delante de la escuela secundaria.",
+     "zh": "在中学前边。"
+    },
+    {
+     "who": "tu",
+     "py": "xièxie! wǒ jiào le chūzūchē.",
+     "es": "¡Gracias! Pedí un taxi.",
+     "zh": "谢谢！我叫了出租车。"
+    },
+    {
+     "who": "profe",
+     "py": "bú kèqi! Zhōngguó hěn hǎowánr!",
+     "es": "¡De nada! ¡China es muy divertida!",
+     "zh": "不客气！中国很好玩儿！"
+    }
+   ]
+  },
+  {
+   "code": "EXP7.3",
+   "kind": "video",
+   "items": [
+    {
+     "py": "dàjiā hǎo! wǒ bā yuè qī hào lái Zhōngguó!",
+     "es": "¡Hola a todos! ¡Llegué a China el 7 de agosto!",
+     "zh": "大家好！我八月七号来中国！"
+    },
+    {
+     "py": "wǒ zuò fēijī qù Běijīng.",
+     "es": "Voy a Beijing en avión.",
+     "zh": "我坐飞机去北京。"
+    },
+    {
+     "py": "xīngqīrì wǒmen zuò huǒchē.",
+     "es": "El domingo vamos en tren.",
+     "zh": "星期日我们坐火车。"
+    },
+    {
+     "py": "qǐngwèn, shūdiàn zài nǎlǐ?",
+     "es": "Disculpe, ¿dónde está la librería?",
+     "zh": "请问，书店在哪里？"
+    },
+    {
+     "py": "wǒ jiào le chūzūchē, liù diǎn bàn lái.",
+     "es": "Pedí un taxi, llega a las seis y media.",
+     "zh": "我叫了出租车，六点半来。"
+    },
+    {
+     "py": "Zhōngguó zhēn hǎowánr! zàijiàn!",
+     "es": "¡China es súper divertida! ¡Adiós!",
+     "zh": "中国真好玩儿！再见！"
+    }
+   ]
+  }
+ ]
+}

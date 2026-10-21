@@ -1,0 +1,179 @@
+{
+ "id": "yct1-e06-r1",
+ "level": "yct1",
+ "exp": 6,
+ "round": 1,
+ "title": "La Escuela",
+ "tagline": "Primer día de clases. El maestro Lǐ llega de China y quiere conocerte. ¿Sabes saludarlo y presentarte?",
+ "pdf": "DRALINGO_YCT1_E06_R1_LaEscuela.pdf",
+ "tracks": [
+  {
+   "code": "EXP6.1",
+   "kind": "words",
+   "items": [
+    {
+     "py": "lǎoshī",
+     "es": "maestro · maestra",
+     "zh": "老师"
+    },
+    {
+     "py": "xuéxiào",
+     "es": "escuela",
+     "zh": "学校"
+    },
+    {
+     "py": "Zhōngguórén",
+     "es": "persona china",
+     "zh": "中国人"
+    },
+    {
+     "py": "Zhōngguó",
+     "es": "China",
+     "zh": "中国"
+    },
+    {
+     "py": "rènshi",
+     "es": "conocer",
+     "zh": "认识"
+    },
+    {
+     "py": "míngzi",
+     "es": "nombre",
+     "zh": "名字"
+    },
+    {
+     "py": "zhèr",
+     "es": "aquí",
+     "zh": "这儿"
+    },
+    {
+     "py": "nàr",
+     "es": "allá",
+     "zh": "那儿"
+    },
+    {
+     "py": "zàijiàn",
+     "es": "adiós",
+     "zh": "再见"
+    },
+    {
+     "py": "nǐ hǎo",
+     "es": "hola",
+     "zh": "你好"
+    },
+    {
+     "py": "xièxie",
+     "es": "gracias",
+     "zh": "谢谢"
+    },
+    {
+     "py": "hěn gāoxìng",
+     "es": "muy contento",
+     "zh": "很高兴"
+    },
+    {
+     "py": "shéi?",
+     "es": "¿quién?",
+     "zh": "谁？"
+    },
+    {
+     "py": "xǐhuan",
+     "es": "gustar",
+     "zh": "喜欢"
+    },
+    {
+     "py": "jiào",
+     "es": "llamarse",
+     "zh": "叫"
+    }
+   ]
+  },
+  {
+   "code": "EXP6.2",
+   "kind": "dialogue",
+   "items": [
+    {
+     "who": "profe",
+     "py": "nǐ hǎo! wǒ shì Lǐ lǎoshī.",
+     "es": "¡Hola! Soy el maestro Lǐ.",
+     "zh": "你好！我是李老师。"
+    },
+    {
+     "who": "tu",
+     "py": "Lǐ lǎoshī hǎo! hěn gāoxìng rènshi nǐ.",
+     "es": "¡Hola, maestro Lǐ! Mucho gusto.",
+     "zh": "李老师好！很高兴认识你。"
+    },
+    {
+     "who": "profe",
+     "py": "nǐ jiào shénme míngzi?",
+     "es": "¿Cómo te llamas?",
+     "zh": "你叫什么名字？"
+    },
+    {
+     "who": "tu",
+     "py": "wǒ jiào Dani.",
+     "es": "Me llamo Dani.",
+     "zh": "我叫达妮。"
+    },
+    {
+     "who": "profe",
+     "py": "nǐ xǐhuan xiànzài de xuéxiào?",
+     "es": "¿Te gusta tu escuela de ahora?",
+     "zh": "你喜欢现在的学校？"
+    },
+    {
+     "who": "tu",
+     "py": "shì de, hěn xǐhuan!",
+     "es": "¡Sí, me gusta mucho!",
+     "zh": "是的，很喜欢！"
+    },
+    {
+     "who": "profe",
+     "py": "hǎo! zàijiàn, xīngqīyī jiàn!",
+     "es": "¡Muy bien! Adiós, ¡nos vemos el lunes!",
+     "zh": "好！再见，星期一见！"
+    }
+   ]
+  },
+  {
+   "code": "EXP6.3",
+   "kind": "video",
+   "items": [
+    {
+     "py": "nǐ hǎo! hěn gāoxìng rènshi nǐ!",
+     "es": "¡Hola! ¡Mucho gusto!",
+     "zh": "你好！很高兴认识你！"
+    },
+    {
+     "py": "wǒ jiào ___. nǐ jiào shénme míngzi?",
+     "es": "Me llamo ___. ¿Tú cómo te llamas?",
+     "zh": [
+      "我叫",
+      "。你叫什么名字？"
+     ]
+    },
+    {
+     "py": "zhè shì wǒ de lǎoshī, tā shì Zhōngguórén.",
+     "es": "Este es mi maestro, es de China.",
+     "zh": "这是我的老师，他是中国人。"
+    },
+    {
+     "py": "wǒ hěn xǐhuan wǒ de xuéxiào!",
+     "es": "¡Me gusta mucho mi escuela!",
+     "zh": "我很喜欢我的学校！"
+    },
+    {
+     "py": "Zhōngguó zài nǎr? zài zhèr!",
+     "es": "¿Dónde está China? ¡Aquí!",
+     "zh": "中国在哪儿？在这儿！"
+    },
+    {
+     "py": "lǎoshī, zàijiàn! xīngqīyī jiàn!",
+     "es": "¡Adiós, maestro! ¡Nos vemos el lunes!",
+     "zh": "老师，再见！星期一见！"
+    }
+   ]
+  }
+ ]
+}

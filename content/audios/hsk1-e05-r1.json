@@ -1,0 +1,179 @@
+{
+ "id": "hsk1-e05-r1",
+ "level": "hsk1",
+ "exp": 5,
+ "round": 1,
+ "title": "Viajando por China",
+ "tagline": "Hoy viajas a China con tu familia. En el aeropuerto te preguntan a dónde vas y cómo vas a llegar. ¿Sabes contestar?",
+ "pdf": "DRALINGO_HSK1_E05_R1_ViajandoPorChina.pdf",
+ "tracks": [
+  {
+   "code": "EXP5.1",
+   "kind": "words",
+   "items": [
+    {
+     "py": "qù",
+     "es": "ir",
+     "zh": "去"
+    },
+    {
+     "py": "lái",
+     "es": "venir",
+     "zh": "来"
+    },
+    {
+     "py": "huí",
+     "es": "regresar",
+     "zh": "回"
+    },
+    {
+     "py": "Zhōngguó",
+     "es": "China",
+     "zh": "中国"
+    },
+    {
+     "py": "Běijīng",
+     "es": "Beijing",
+     "zh": "北京"
+    },
+    {
+     "py": "zuò",
+     "es": "ir en (avión, taxi)",
+     "zh": "坐"
+    },
+    {
+     "py": "fēijī",
+     "es": "avión",
+     "zh": "飞机"
+    },
+    {
+     "py": "chūzūchē",
+     "es": "taxi",
+     "zh": "出租车"
+    },
+    {
+     "py": "zài",
+     "es": "en / estar en",
+     "zh": "在"
+    },
+    {
+     "py": "jīntiān",
+     "es": "hoy",
+     "zh": "今天"
+    },
+    {
+     "py": "míngtiān",
+     "es": "mañana",
+     "zh": "明天"
+    },
+    {
+     "py": "jiā",
+     "es": "casa",
+     "zh": "家"
+    },
+    {
+     "py": "xiǎng",
+     "es": "querer",
+     "zh": "想"
+    },
+    {
+     "py": "bàba",
+     "es": "papá",
+     "zh": "爸爸"
+    },
+    {
+     "py": "māma",
+     "es": "mamá",
+     "zh": "妈妈"
+    }
+   ]
+  },
+  {
+   "code": "EXP5.2",
+   "kind": "dialogue",
+   "items": [
+    {
+     "who": "profe",
+     "py": "nǐ hǎo! jīntiān nǐ qù nǎr?",
+     "es": "¡Hola! ¿A dónde vas hoy?",
+     "zh": "你好！今天你去哪儿？"
+    },
+    {
+     "who": "tu",
+     "py": "jīntiān wǒ qù Zhōngguó!",
+     "es": "¡Hoy voy a China!",
+     "zh": "今天我去中国！"
+    },
+    {
+     "who": "profe",
+     "py": "nǐ zěnme qù?",
+     "es": "¿Cómo vas?",
+     "zh": "你怎么去？"
+    },
+    {
+     "who": "tu",
+     "py": "wǒ zuò fēijī qù Běijīng.",
+     "es": "Voy a Beijing en avión.",
+     "zh": "我坐飞机去北京。"
+    },
+    {
+     "who": "profe",
+     "py": "zài Běijīng, nǐ zuò chūzūchē ma?",
+     "es": "En Beijing, ¿vas en taxi?",
+     "zh": "在北京，你坐出租车吗？"
+    },
+    {
+     "who": "tu",
+     "py": "shì! zài Běijīng wǒ zuò chūzūchē. míngtiān wǒ huí jiā.",
+     "es": "¡Sí! En Beijing voy en taxi. Mañana regreso a casa.",
+     "zh": "是！在北京我坐出租车。明天我回家。"
+    },
+    {
+     "who": "profe",
+     "py": "hěn hǎo! zàijiàn!",
+     "es": "¡Muy bien! ¡Adiós!",
+     "zh": "很好！再见！"
+    }
+   ]
+  },
+  {
+   "code": "EXP5.3",
+   "kind": "video",
+   "items": [
+    {
+     "py": "dàjiā hǎo! wǒ jiào ___.",
+     "es": "¡Hola a todos! Me llamo ___.",
+     "zh": [
+      "大家好！我叫",
+      ""
+     ]
+    },
+    {
+     "py": "jīntiān wǒ qù Zhōngguó!",
+     "es": "¡Hoy voy a China!",
+     "zh": "今天我去中国！"
+    },
+    {
+     "py": "wǒ zuò fēijī qù Běijīng.",
+     "es": "Voy a Beijing en avión.",
+     "zh": "我坐飞机去北京。"
+    },
+    {
+     "py": "zài Běijīng wǒ zuò chūzūchē.",
+     "es": "En Beijing voy en taxi.",
+     "zh": "在北京我坐出租车。"
+    },
+    {
+     "py": "míngtiān wǒ huí jiā.",
+     "es": "Mañana regreso a casa.",
+     "zh": "明天我回家。"
+    },
+    {
+     "py": "xièxie! zàijiàn!",
+     "es": "¡Gracias! ¡Adiós!",
+     "zh": "谢谢！再见！"
+    }
+   ]
+  }
+ ]
+}

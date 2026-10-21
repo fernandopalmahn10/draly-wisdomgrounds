@@ -1,0 +1,183 @@
+{
+ "id": "hsk1-e01-r2",
+ "level": "hsk1",
+ "exp": 1,
+ "round": 2,
+ "title": "Mi Familia",
+ "tagline": "Tu mejor amigo viene a tu casa con su perrito. La vecina quiere saber quién es él, de quién es el perrito y cuántos años tienes tú.",
+ "pdf": "DRALINGO_HSK1_E01_R2_MiFamilia.pdf",
+ "tracks": [
+  {
+   "code": "EXP1.4",
+   "kind": "words",
+   "items": [
+    {
+     "py": "tā",
+     "es": "él · ella",
+     "zh": "他"
+    },
+    {
+     "py": "péngyou",
+     "es": "amigo",
+     "zh": "朋友"
+    },
+    {
+     "py": "wǒmen",
+     "es": "nosotros",
+     "zh": "我们"
+    },
+    {
+     "py": "suì",
+     "es": "años (edad)",
+     "zh": "岁"
+    },
+    {
+     "py": "jǐ suì?",
+     "es": "¿cuántos años?",
+     "zh": "几岁？"
+    },
+    {
+     "py": "shéi de?",
+     "es": "¿de quién?",
+     "zh": "谁的？"
+    },
+    {
+     "py": "érzi",
+     "es": "hijo",
+     "zh": "儿子"
+    },
+    {
+     "py": "nǚ'ér",
+     "es": "hija",
+     "zh": "女儿"
+    },
+    {
+     "py": "ài",
+     "es": "querer · amar",
+     "zh": "爱"
+    },
+    {
+     "py": "wǒ jiào",
+     "es": "me llamo",
+     "zh": "我叫"
+    },
+    {
+     "py": "míngzi",
+     "es": "nombre",
+     "zh": "名字"
+    },
+    {
+     "py": "rènshi",
+     "es": "conocer",
+     "zh": "认识"
+    },
+    {
+     "py": "jiā",
+     "es": "casa · familia",
+     "zh": "家"
+    },
+    {
+     "py": "māma",
+     "es": "mamá",
+     "zh": "妈妈"
+    },
+    {
+     "py": "gǒu",
+     "es": "perro",
+     "zh": "狗"
+    }
+   ]
+  },
+  {
+   "code": "EXP1.5",
+   "kind": "dialogue",
+   "items": [
+    {
+     "who": "profe",
+     "py": "xiǎopéngyǒu, nǐ jiào shénme míngzi? nǐ jǐ suì le?",
+     "es": "Pequeño, ¿cómo te llamas? ¿Cuántos años tienes?",
+     "zh": "小朋友，你叫什么名字？你几岁了？"
+    },
+    {
+     "who": "tu",
+     "py": "wǒ jiào Dani, wǒ bā suì.",
+     "es": "Me llamo Dani, tengo ocho años.",
+     "zh": "我叫达妮，我八岁。"
+    },
+    {
+     "who": "profe",
+     "py": "tā shì shéi?",
+     "es": "¿Quién es él?",
+     "zh": "他是谁？"
+    },
+    {
+     "who": "tu",
+     "py": "zhè shì wǒ de péngyou, tā jiào Leo.",
+     "es": "Este es mi amigo, se llama Leo.",
+     "zh": "这是我的朋友，他叫利奥。"
+    },
+    {
+     "who": "profe",
+     "py": "nàge xiǎo gǒu shì shéi de?",
+     "es": "¿De quién es ese perrito?",
+     "zh": "那个小狗是谁的？"
+    },
+    {
+     "who": "tu",
+     "py": "shì wǒ péngyou de! wǒmen dōu ài tā.",
+     "es": "¡Es de mi amigo! Todos lo queremos.",
+     "zh": "是我朋友的！我们都爱它。"
+    },
+    {
+     "who": "profe",
+     "py": "hěn hǎo! rènshi nǐmen hěn gāoxìng!",
+     "es": "¡Qué bien! ¡Mucho gusto en conocerlos!",
+     "zh": "很好！认识你们很高兴！"
+    }
+   ]
+  },
+  {
+   "code": "EXP1.6",
+   "kind": "video",
+   "items": [
+    {
+     "py": "dàjiā hǎo! wǒ jiào ___, wǒ ___ suì.",
+     "es": "¡Hola a todos! Me llamo ___, tengo ___ años.",
+     "zh": [
+      "大家好！我叫",
+      "，我",
+      "岁。"
+     ]
+    },
+    {
+     "py": "zhè shì wǒ de péngyou, tā jiào ___.",
+     "es": "Este es mi amigo, se llama ___.",
+     "zh": [
+      "这是我的朋友，他叫",
+      ""
+     ]
+    },
+    {
+     "py": "wǒmen shì hǎo péngyou!",
+     "es": "¡Somos buenos amigos!",
+     "zh": "我们是好朋友！"
+    },
+    {
+     "py": "nàge xiǎo gǒu shì shéi de?",
+     "es": "¿De quién es ese perrito?",
+     "zh": "那个小狗是谁的？"
+    },
+    {
+     "py": "shì wǒ péngyou de!",
+     "es": "¡Es de mi amigo!",
+     "zh": "是我朋友的！"
+    },
+    {
+     "py": "māma, wǒ ài nǐ! zàijiàn!",
+     "es": "¡Mamá, te quiero! ¡Adiós!",
+     "zh": "妈妈，我爱你！再见！"
+    }
+   ]
+  }
+ ]
+}

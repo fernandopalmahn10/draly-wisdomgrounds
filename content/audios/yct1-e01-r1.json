@@ -1,0 +1,180 @@
+{
+ "id": "yct1-e01-r1",
+ "level": "yct1",
+ "exp": 1,
+ "round": 1,
+ "title": "Mi Familia",
+ "tagline": "Hoy le enseñas a tu nueva amiga la foto de tu familia. Ella quiere saber quién es quién. ¿Sabes presentarlos?",
+ "pdf": "DRALINGO_YCT1_E01_R1_MiFamilia.pdf",
+ "tracks": [
+  {
+   "code": "EXP1.1",
+   "kind": "words",
+   "items": [
+    {
+     "py": "bàba",
+     "es": "papá",
+     "zh": "爸爸"
+    },
+    {
+     "py": "māma",
+     "es": "mamá",
+     "zh": "妈妈"
+    },
+    {
+     "py": "gēge",
+     "es": "hermano mayor",
+     "zh": "哥哥"
+    },
+    {
+     "py": "jiějie",
+     "es": "hermana mayor",
+     "zh": "姐姐"
+    },
+    {
+     "py": "mèimei",
+     "es": "hermana menor",
+     "zh": "妹妹"
+    },
+    {
+     "py": "jiā",
+     "es": "casa · familia",
+     "zh": "家"
+    },
+    {
+     "py": "kǒu",
+     "es": "(para contar personas)",
+     "zh": "口"
+    },
+    {
+     "py": "suì",
+     "es": "años (edad)",
+     "zh": "岁"
+    },
+    {
+     "py": "wǒmen",
+     "es": "nosotros",
+     "zh": "我们"
+    },
+    {
+     "py": "nǐ hǎo",
+     "es": "hola",
+     "zh": "你好"
+    },
+    {
+     "py": "jiào",
+     "es": "llamarse",
+     "zh": "叫"
+    },
+    {
+     "py": "nǎge?",
+     "es": "¿cuál?",
+     "zh": "哪个？"
+    },
+    {
+     "py": "zhè shì",
+     "es": "este es",
+     "zh": "这是"
+    },
+    {
+     "py": "tóufa",
+     "es": "cabello",
+     "zh": "头发"
+    },
+    {
+     "py": "cháng",
+     "es": "largo",
+     "zh": "长"
+    }
+   ]
+  },
+  {
+   "code": "EXP1.2",
+   "kind": "dialogue",
+   "items": [
+    {
+     "who": "profe",
+     "py": "nǐ hǎo! nǐ jiào shénme míngzi?",
+     "es": "¡Hola! ¿Cómo te llamas?",
+     "zh": "你好！你叫什么名字？"
+    },
+    {
+     "who": "tu",
+     "py": "wǒ jiào Dani, wǒ bā suì.",
+     "es": "Me llamo Dani, tengo ocho años.",
+     "zh": "我叫达妮，我八岁。"
+    },
+    {
+     "who": "profe",
+     "py": "nǐ jiā yǒu jǐ kǒu rén?",
+     "es": "¿Cuántos son en tu familia?",
+     "zh": "你家有几口人？"
+    },
+    {
+     "who": "tu",
+     "py": "wǒ jiā yǒu wǔ kǒu rén.",
+     "es": "En mi familia somos cinco.",
+     "zh": "我家有五口人。"
+    },
+    {
+     "who": "profe",
+     "py": "nǎge shì nǐ jiějie?",
+     "es": "¿Cuál es tu hermana mayor?",
+     "zh": "哪个是你姐姐？"
+    },
+    {
+     "who": "tu",
+     "py": "cháng tóufa de nàge!",
+     "es": "¡La del cabello largo!",
+     "zh": "长头发的那个！"
+    },
+    {
+     "who": "profe",
+     "py": "hěn hǎo! xièxie, zàijiàn!",
+     "es": "¡Muy bien! ¡Gracias, adiós!",
+     "zh": "很好！谢谢，再见！"
+    }
+   ]
+  },
+  {
+   "code": "EXP1.3",
+   "kind": "video",
+   "items": [
+    {
+     "py": "nǐ hǎo! wǒ jiào ___. wǒ ___ suì.",
+     "es": "¡Hola! Me llamo ___. Tengo ___ años.",
+     "zh": [
+      "你好！我叫",
+      "。我",
+      "岁。"
+     ]
+    },
+    {
+     "py": "kàn, zhè shì wǒmen yì jiā rén!",
+     "es": "¡Mira, esta es mi familia!",
+     "zh": "看，这是我们一家人！"
+    },
+    {
+     "py": "zhè shì bàba, zhè shì māma.",
+     "es": "Este es papá, esta es mamá.",
+     "zh": "这是爸爸，这是妈妈。"
+    },
+    {
+     "py": "nǎge shì wǒ jiějie? cháng tóufa de nàge!",
+     "es": "¿Cuál es mi hermana? ¡La del cabello largo!",
+     "zh": "哪个是我姐姐？长头发的那个！"
+    },
+    {
+     "py": "wǒ jiā yǒu wǔ kǒu rén.",
+     "es": "En mi familia somos cinco.",
+     "zh": "我家有五口人。"
+    },
+    {
+     "py": "xièxie! zàijiàn!",
+     "es": "¡Gracias! ¡Adiós!",
+     "zh": "谢谢！再见！"
+    }
+   ]
+  }
+ ]
+}

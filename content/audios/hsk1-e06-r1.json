@@ -1,0 +1,176 @@
+{
+ "id": "hsk1-e06-r1",
+ "level": "hsk1",
+ "exp": 6,
+ "round": 1,
+ "title": "Mi Casa",
+ "tagline": "Tu amigo viene a visitarte por primera vez. Entra, mira todo y pregunta qué hay en tu casa. ¿Sabes enseñársela?",
+ "pdf": "DRALINGO_HSK1_E06_R1_MiCasa.pdf",
+ "tracks": [
+  {
+   "code": "EXP6.1",
+   "kind": "words",
+   "items": [
+    {
+     "py": "yǒu",
+     "es": "hay / tener",
+     "zh": "有"
+    },
+    {
+     "py": "méiyǒu",
+     "es": "no hay",
+     "zh": "没有"
+    },
+    {
+     "py": "lǐ",
+     "es": "dentro",
+     "zh": "里"
+    },
+    {
+     "py": "zhuōzi",
+     "es": "mesa",
+     "zh": "桌子"
+    },
+    {
+     "py": "yǐzi",
+     "es": "silla",
+     "zh": "椅子"
+    },
+    {
+     "py": "diànshì",
+     "es": "tele",
+     "zh": "电视"
+    },
+    {
+     "py": "diànnǎo",
+     "es": "computadora",
+     "zh": "电脑"
+    },
+    {
+     "py": "kāi",
+     "es": "prender / abrir",
+     "zh": "开"
+    },
+    {
+     "py": "dà · xiǎo",
+     "es": "grande · pequeño",
+     "zh": "大，小"
+    },
+    {
+     "py": "jiā",
+     "es": "casa",
+     "zh": "家"
+    },
+    {
+     "py": "shàng",
+     "es": "sobre / arriba",
+     "zh": "上"
+    },
+    {
+     "py": "māo",
+     "es": "gato",
+     "zh": "猫"
+    },
+    {
+     "py": "gǒu",
+     "es": "perro",
+     "zh": "狗"
+    },
+    {
+     "py": "kàn",
+     "es": "mirar",
+     "zh": "看"
+    },
+    {
+     "py": "zhè shì",
+     "es": "esto es",
+     "zh": "这是"
+    }
+   ]
+  },
+  {
+   "code": "EXP6.2",
+   "kind": "dialogue",
+   "items": [
+    {
+     "who": "profe",
+     "py": "nǐ hǎo! zhè shì nǐ de jiā ma?",
+     "es": "¡Hola! ¿Esta es tu casa?",
+     "zh": "你好！这是你的家吗？"
+    },
+    {
+     "who": "tu",
+     "py": "shì! zhè shì wǒ de jiā.",
+     "es": "¡Sí! Esta es mi casa.",
+     "zh": "是！这是我的家。"
+    },
+    {
+     "who": "profe",
+     "py": "nǐ jiā lǐ yǒu shénme?",
+     "es": "¿Qué hay en tu casa?",
+     "zh": "你家里有什么？"
+    },
+    {
+     "who": "tu",
+     "py": "jiā lǐ yǒu zhuōzi, yǒu yǐzi. zhuōzi shàng yǒu diànnǎo.",
+     "es": "Hay una mesa y sillas. Sobre la mesa hay una computadora.",
+     "zh": "家里有桌子，有椅子。桌子上有电脑。"
+    },
+    {
+     "who": "profe",
+     "py": "yǒu diànshì ma?",
+     "es": "¿Hay tele?",
+     "zh": "有电视吗？"
+    },
+    {
+     "who": "tu",
+     "py": "yǒu! wǒ kāi diànshì, wǒmen kàn diànshì!",
+     "es": "¡Sí! Prendo la tele, ¡vemos la tele!",
+     "zh": "有！我开电视，我们看电视！"
+    },
+    {
+     "who": "profe",
+     "py": "hǎo! nǐ de jiā hěn dà!",
+     "es": "¡Qué bien! ¡Tu casa es muy grande!",
+     "zh": "好！你的家很大！"
+    }
+   ]
+  },
+  {
+   "code": "EXP6.3",
+   "kind": "video",
+   "items": [
+    {
+     "py": "dàjiā hǎo! zhè shì wǒ de jiā!",
+     "es": "¡Hola a todos! ¡Esta es mi casa!",
+     "zh": "大家好！这是我的家！"
+    },
+    {
+     "py": "jiā lǐ yǒu zhuōzi, yǒu yǐzi.",
+     "es": "Hay una mesa y sillas.",
+     "zh": "家里有桌子，有椅子。"
+    },
+    {
+     "py": "zhuōzi shàng yǒu diànnǎo.",
+     "es": "Sobre la mesa hay una computadora.",
+     "zh": "桌子上有电脑。"
+    },
+    {
+     "py": "wǒ kāi diànshì, kàn diànshì!",
+     "es": "¡Prendo la tele y veo la tele!",
+     "zh": "我开电视，看电视！"
+    },
+    {
+     "py": "wǒ de māo hěn xiǎo, wǒ de gǒu hěn dà.",
+     "es": "Mi gato es pequeño, mi perro es grande.",
+     "zh": "我的猫很小，我的狗很大。"
+    },
+    {
+     "py": "xièxie! zàijiàn!",
+     "es": "¡Gracias! ¡Adiós!",
+     "zh": "谢谢！再见！"
+    }
+   ]
+  }
+ ]
+}

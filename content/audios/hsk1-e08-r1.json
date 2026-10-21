@@ -1,0 +1,180 @@
+{
+ "id": "hsk1-e08-r1",
+ "level": "hsk1",
+ "exp": 8,
+ "round": 1,
+ "title": "Números y Palabras Mágicas",
+ "tagline": "El jardín mágico de Dralingo tiene una puerta que solo se abre contando. El guardián te pregunta cuántos años tienes. ¿Sabes los números?",
+ "pdf": "DRALINGO_HSK1_E08_R1_NumerosYPalabrasMagicas.pdf",
+ "tracks": [
+  {
+   "code": "EXP8.1",
+   "kind": "words",
+   "items": [
+    {
+     "py": "yī",
+     "es": "uno",
+     "zh": "一"
+    },
+    {
+     "py": "èr",
+     "es": "dos",
+     "zh": "二"
+    },
+    {
+     "py": "sān",
+     "es": "tres",
+     "zh": "三"
+    },
+    {
+     "py": "sì",
+     "es": "cuatro",
+     "zh": "四"
+    },
+    {
+     "py": "wǔ",
+     "es": "cinco",
+     "zh": "五"
+    },
+    {
+     "py": "liù",
+     "es": "seis",
+     "zh": "六"
+    },
+    {
+     "py": "qī",
+     "es": "siete",
+     "zh": "七"
+    },
+    {
+     "py": "bā",
+     "es": "ocho",
+     "zh": "八"
+    },
+    {
+     "py": "jiǔ",
+     "es": "nueve",
+     "zh": "九"
+    },
+    {
+     "py": "shí",
+     "es": "diez",
+     "zh": "十"
+    },
+    {
+     "py": "suì",
+     "es": "años de edad",
+     "zh": "岁"
+    },
+    {
+     "py": "ge",
+     "es": "(para contar)",
+     "zh": "个"
+    },
+    {
+     "py": "kuài",
+     "es": "yuan",
+     "zh": "块"
+    },
+    {
+     "py": "píngguǒ",
+     "es": "manzana",
+     "zh": "苹果"
+    },
+    {
+     "py": "yǒu",
+     "es": "tener / hay",
+     "zh": "有"
+    }
+   ]
+  },
+  {
+   "code": "EXP8.2",
+   "kind": "dialogue",
+   "items": [
+    {
+     "who": "profe",
+     "py": "nǐ hǎo! nǐ jǐ suì?",
+     "es": "¡Hola! ¿Cuántos años tienes?",
+     "zh": "你好！你几岁？"
+    },
+    {
+     "who": "tu",
+     "py": "wǒ bā suì.",
+     "es": "Tengo ocho años.",
+     "zh": "我八岁。"
+    },
+    {
+     "who": "profe",
+     "py": "nǐ jiā yǒu jǐ ge rén?",
+     "es": "¿Cuántas personas hay en tu familia?",
+     "zh": "你家有几个人？"
+    },
+    {
+     "who": "tu",
+     "py": "wǒ jiā yǒu sì ge rén.",
+     "es": "En mi familia somos cuatro.",
+     "zh": "我家有四个人。"
+    },
+    {
+     "who": "profe",
+     "py": "zhèlǐ yǒu jǐ ge píngguǒ?",
+     "es": "¿Cuántas manzanas hay aquí?",
+     "zh": "这里有几个苹果？"
+    },
+    {
+     "who": "tu",
+     "py": "yī, èr, sān… yǒu sān ge píngguǒ!",
+     "es": "Uno, dos, tres… ¡hay tres manzanas!",
+     "zh": "一、二、三……有三个苹果！"
+    },
+    {
+     "who": "profe",
+     "py": "hěn hǎo! xièxie! zàijiàn!",
+     "es": "¡Muy bien! ¡Gracias! ¡Adiós!",
+     "zh": "很好！谢谢！再见！"
+    }
+   ]
+  },
+  {
+   "code": "EXP8.3",
+   "kind": "video",
+   "items": [
+    {
+     "py": "dàjiā hǎo! wǒ jiào ___, wǒ ___ suì.",
+     "es": "¡Hola a todos! Me llamo ___, tengo ___ años.",
+     "zh": [
+      "大家好！我叫",
+      "，我",
+      "岁。"
+     ]
+    },
+    {
+     "py": "yī, èr, sān, sì, wǔ!",
+     "es": "¡Uno, dos, tres, cuatro, cinco!",
+     "zh": "一、二、三、四、五！"
+    },
+    {
+     "py": "liù, qī, bā, jiǔ, shí!",
+     "es": "¡Seis, siete, ocho, nueve, diez!",
+     "zh": "六、七、八、九、十！"
+    },
+    {
+     "py": "wǒ jiā yǒu sì ge rén.",
+     "es": "En mi familia somos cuatro.",
+     "zh": "我家有四个人。"
+    },
+    {
+     "py": "wǒ yǒu sān ge píngguǒ.",
+     "es": "Tengo tres manzanas.",
+     "zh": "我有三个苹果。"
+    },
+    {
+     "py": "xièxie! zàijiàn!",
+     "es": "¡Gracias! ¡Adiós!",
+     "zh": "谢谢！再见！"
+    }
+   ]
+  }
+ ]
+}

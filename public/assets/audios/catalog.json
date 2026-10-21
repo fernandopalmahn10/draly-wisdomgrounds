@@ -1,5 +1,5 @@
 {
- "updated": "2026-10-19T11:55:11.656Z",
+ "updated": "2026-10-21T11:45:15.904Z",
  "levels": [
   {
    "id": "yct1",
@@ -199,6 +199,2982 @@
   }
  ],
  "homeworks": [
+  {
+   "id": "yct1-e01-r1",
+   "level": "yct1",
+   "levelName": "YCT 1",
+   "exp": 1,
+   "round": 1,
+   "title": "Mi Familia",
+   "tagline": "Hoy le enseñas a tu nueva amiga la foto de tu familia. Ella quiere saber quién es quién. ¿Sabes presentarlos?",
+   "cover": "/assets/audios/yct1-e01-r1/cover.jpg?v=17e81c18",
+   "tracks": [
+    {
+     "code": "EXP1.1",
+     "kind": "words",
+     "src": "/assets/audios/yct1-e01-r1/EXP1.1.mp3?v=d875ac47",
+     "dur": 58.7,
+     "parts": [
+      {
+       "at": 0,
+       "label": "Escucha y repite"
+      }
+     ],
+     "segs": [
+      [
+       0,
+       0.4,
+       1.03
+      ],
+      [
+       0,
+       1.83,
+       2.46
+      ],
+      [
+       1,
+       4.26,
+       4.93
+      ],
+      [
+       1,
+       5.73,
+       6.39
+      ],
+      [
+       2,
+       8.19,
+       8.82
+      ],
+      [
+       2,
+       9.62,
+       10.24
+      ],
+      [
+       3,
+       12.04,
+       12.77
+      ],
+      [
+       3,
+       13.57,
+       14.31
+      ],
+      [
+       4,
+       16.14,
+       16.82
+      ],
+      [
+       4,
+       17.62,
+       18.3
+      ],
+      [
+       5,
+       20.1,
+       20.63
+      ],
+      [
+       5,
+       21.43,
+       21.97
+      ],
+      [
+       6,
+       23.77,
+       24.47
+      ],
+      [
+       6,
+       25.27,
+       25.98
+      ],
+      [
+       7,
+       27.78,
+       28.31
+      ],
+      [
+       7,
+       29.11,
+       29.64
+      ],
+      [
+       8,
+       31.44,
+       32.02
+      ],
+      [
+       8,
+       32.82,
+       33.39
+      ],
+      [
+       9,
+       35.19,
+       35.97
+      ],
+      [
+       9,
+       36.77,
+       37.54
+      ],
+      [
+       10,
+       39.43,
+       39.9
+      ],
+      [
+       10,
+       40.7,
+       41.18
+      ],
+      [
+       11,
+       42.98,
+       43.61
+      ],
+      [
+       11,
+       44.41,
+       45.04
+      ],
+      [
+       12,
+       46.84,
+       47.48
+      ],
+      [
+       12,
+       48.28,
+       48.93
+      ],
+      [
+       13,
+       50.73,
+       51.45
+      ],
+      [
+       13,
+       52.25,
+       52.98
+      ],
+      [
+       14,
+       54.79,
+       55.45
+      ],
+      [
+       14,
+       56.25,
+       56.9
+      ]
+     ],
+     "items": [
+      {
+       "py": "bàba",
+       "es": "papá",
+       "clip": "/assets/audios/yct1-e01-r1/EXP1.1-1.mp3?v=2d2bdf6e"
+      },
+      {
+       "py": "māma",
+       "es": "mamá",
+       "clip": "/assets/audios/yct1-e01-r1/EXP1.1-2.mp3?v=284b8e93"
+      },
+      {
+       "py": "gēge",
+       "es": "hermano mayor",
+       "clip": "/assets/audios/yct1-e01-r1/EXP1.1-3.mp3?v=0751ea14"
+      },
+      {
+       "py": "jiějie",
+       "es": "hermana mayor",
+       "clip": "/assets/audios/yct1-e01-r1/EXP1.1-4.mp3?v=0fb8f731"
+      },
+      {
+       "py": "mèimei",
+       "es": "hermana menor",
+       "clip": "/assets/audios/yct1-e01-r1/EXP1.1-5.mp3?v=93d47a79"
+      },
+      {
+       "py": "jiā",
+       "es": "casa · familia",
+       "clip": "/assets/audios/yct1-e01-r1/EXP1.1-6.mp3?v=4f328b90"
+      },
+      {
+       "py": "kǒu",
+       "es": "(para contar personas)",
+       "clip": "/assets/audios/yct1-e01-r1/EXP1.1-7.mp3?v=ebf7c713"
+      },
+      {
+       "py": "suì",
+       "es": "años (edad)",
+       "clip": "/assets/audios/yct1-e01-r1/EXP1.1-8.mp3?v=f59ced84"
+      },
+      {
+       "py": "wǒmen",
+       "es": "nosotros",
+       "clip": "/assets/audios/yct1-e01-r1/EXP1.1-9.mp3?v=4150f1f8"
+      },
+      {
+       "py": "nǐ hǎo",
+       "es": "hola",
+       "clip": "/assets/audios/yct1-e01-r1/EXP1.1-10.mp3?v=c4910296"
+      },
+      {
+       "py": "jiào",
+       "es": "llamarse",
+       "clip": "/assets/audios/yct1-e01-r1/EXP1.1-11.mp3?v=2a5356da"
+      },
+      {
+       "py": "nǎge?",
+       "es": "¿cuál?",
+       "clip": "/assets/audios/yct1-e01-r1/EXP1.1-12.mp3?v=896d21de"
+      },
+      {
+       "py": "zhè shì",
+       "es": "este es",
+       "clip": "/assets/audios/yct1-e01-r1/EXP1.1-13.mp3?v=a5524b3b"
+      },
+      {
+       "py": "tóufa",
+       "es": "cabello",
+       "clip": "/assets/audios/yct1-e01-r1/EXP1.1-14.mp3?v=766f46de"
+      },
+      {
+       "py": "cháng",
+       "es": "largo",
+       "clip": "/assets/audios/yct1-e01-r1/EXP1.1-15.mp3?v=52e716eb"
+      }
+     ]
+    },
+    {
+     "code": "EXP1.2",
+     "kind": "dialogue",
+     "src": "/assets/audios/yct1-e01-r1/EXP1.2.mp3?v=e8158344",
+     "dur": 58,
+     "parts": [
+      {
+       "at": 0,
+       "label": "Escucha la conversación"
+      },
+      {
+       "at": 19.76,
+       "label": "Ahora repite cada frase"
+      }
+     ],
+     "segs": [
+      [
+       0,
+       0.4,
+       2.58
+      ],
+      [
+       1,
+       3.28,
+       5.59
+      ],
+      [
+       2,
+       6.29,
+       7.87
+      ],
+      [
+       3,
+       8.57,
+       10.19
+      ],
+      [
+       4,
+       10.89,
+       12.41
+      ],
+      [
+       5,
+       13.11,
+       14.71
+      ],
+      [
+       6,
+       15.41,
+       17.86
+      ],
+      [
+       0,
+       19.76,
+       21.94
+      ],
+      [
+       1,
+       25.86,
+       28.17
+      ],
+      [
+       2,
+       32.25,
+       33.84
+      ],
+      [
+       3,
+       37.02,
+       38.64
+      ],
+      [
+       4,
+       41.86,
+       43.39
+      ],
+      [
+       5,
+       46.49,
+       48.09
+      ],
+      [
+       6,
+       51.28,
+       53.73
+      ]
+     ],
+     "items": [
+      {
+       "py": "nǐ hǎo! nǐ jiào shénme míngzi?",
+       "es": "¡Hola! ¿Cómo te llamas?",
+       "clip": "/assets/audios/yct1-e01-r1/EXP1.2-1.mp3?v=d767c280",
+       "who": "profe"
+      },
+      {
+       "py": "wǒ jiào Dani, wǒ bā suì.",
+       "es": "Me llamo Dani, tengo ocho años.",
+       "clip": "/assets/audios/yct1-e01-r1/EXP1.2-2.mp3?v=a82cfe0a",
+       "who": "tu"
+      },
+      {
+       "py": "nǐ jiā yǒu jǐ kǒu rén?",
+       "es": "¿Cuántos son en tu familia?",
+       "clip": "/assets/audios/yct1-e01-r1/EXP1.2-3.mp3?v=bc3e5452",
+       "who": "profe"
+      },
+      {
+       "py": "wǒ jiā yǒu wǔ kǒu rén.",
+       "es": "En mi familia somos cinco.",
+       "clip": "/assets/audios/yct1-e01-r1/EXP1.2-4.mp3?v=2a625853",
+       "who": "tu"
+      },
+      {
+       "py": "nǎge shì nǐ jiějie?",
+       "es": "¿Cuál es tu hermana mayor?",
+       "clip": "/assets/audios/yct1-e01-r1/EXP1.2-5.mp3?v=d48849dc",
+       "who": "profe"
+      },
+      {
+       "py": "cháng tóufa de nàge!",
+       "es": "¡La del cabello largo!",
+       "clip": "/assets/audios/yct1-e01-r1/EXP1.2-6.mp3?v=a2c2edaa",
+       "who": "tu"
+      },
+      {
+       "py": "hěn hǎo! xièxie, zàijiàn!",
+       "es": "¡Muy bien! ¡Gracias, adiós!",
+       "clip": "/assets/audios/yct1-e01-r1/EXP1.2-7.mp3?v=1e9121f7",
+       "who": "profe"
+      }
+     ]
+    },
+    {
+     "code": "EXP1.3",
+     "kind": "video",
+     "src": "/assets/audios/yct1-e01-r1/EXP1.3.mp3?v=e1b4ac42",
+     "dur": 72.04,
+     "parts": [
+      {
+       "at": 0,
+       "label": "Repite cada frase"
+      },
+      {
+       "at": 51.25,
+       "label": "Ahora todo seguido, como tu video"
+      }
+     ],
+     "segs": [
+      [
+       0,
+       0.4,
+       5.97
+      ],
+      [
+       1,
+       15.26,
+       17.63
+      ],
+      [
+       2,
+       22.45,
+       24.8
+      ],
+      [
+       3,
+       29.61,
+       33.17
+      ],
+      [
+       4,
+       39.67,
+       41.28
+      ],
+      [
+       5,
+       45.04,
+       46.76
+      ],
+      [
+       0,
+       51.25,
+       56.82
+      ],
+      [
+       1,
+       57.42,
+       59.79
+      ],
+      [
+       2,
+       60.39,
+       62.75
+      ],
+      [
+       3,
+       63.35,
+       66.91
+      ],
+      [
+       4,
+       67.51,
+       69.13
+      ],
+      [
+       5,
+       69.73,
+       71.44
+      ]
+     ],
+     "items": [
+      {
+       "py": "nǐ hǎo! wǒ jiào ___. wǒ ___ suì.",
+       "es": "¡Hola! Me llamo ___. Tengo ___ años.",
+       "clip": "/assets/audios/yct1-e01-r1/EXP1.3-1.mp3?v=bbbf1056"
+      },
+      {
+       "py": "kàn, zhè shì wǒmen yì jiā rén!",
+       "es": "¡Mira, esta es mi familia!",
+       "clip": "/assets/audios/yct1-e01-r1/EXP1.3-2.mp3?v=1db963db"
+      },
+      {
+       "py": "zhè shì bàba, zhè shì māma.",
+       "es": "Este es papá, esta es mamá.",
+       "clip": "/assets/audios/yct1-e01-r1/EXP1.3-3.mp3?v=4e5cf8e4"
+      },
+      {
+       "py": "nǎge shì wǒ jiějie? cháng tóufa de nàge!",
+       "es": "¿Cuál es mi hermana? ¡La del cabello largo!",
+       "clip": "/assets/audios/yct1-e01-r1/EXP1.3-4.mp3?v=b82d51d2"
+      },
+      {
+       "py": "wǒ jiā yǒu wǔ kǒu rén.",
+       "es": "En mi familia somos cinco.",
+       "clip": "/assets/audios/yct1-e01-r1/EXP1.3-5.mp3?v=2a625853"
+      },
+      {
+       "py": "xièxie! zàijiàn!",
+       "es": "¡Gracias! ¡Adiós!",
+       "clip": "/assets/audios/yct1-e01-r1/EXP1.3-6.mp3?v=1f6baf5b"
+      }
+     ]
+    }
+   ],
+   "thumb": "/assets/audios/yct1-e01-r1/cover-s.webp?v=cf41a2f2"
+  },
+  {
+   "id": "yct1-e02-r1",
+   "level": "yct1",
+   "levelName": "YCT 1",
+   "exp": 2,
+   "round": 1,
+   "title": "El Espejo Mágico",
+   "tagline": "Dralingo encuentra un espejo mágico que solo habla Chino Mandarín. Te pregunta por tus ojos, tu nariz y tus manos. ¿Sabes contestarle?",
+   "cover": "/assets/audios/yct1-e02-r1/cover.jpg?v=e0d71b0c",
+   "tracks": [
+    {
+     "code": "EXP2.1",
+     "kind": "words",
+     "src": "/assets/audios/yct1-e02-r1/EXP2.1.mp3?v=b2fa7866",
+     "dur": 58.2,
+     "parts": [
+      {
+       "at": 0,
+       "label": "Escucha y repite"
+      }
+     ],
+     "segs": [
+      [
+       0,
+       0.4,
+       1.19
+      ],
+      [
+       0,
+       1.99,
+       2.79
+      ],
+      [
+       1,
+       4.69,
+       5.4
+      ],
+      [
+       1,
+       6.2,
+       6.91
+      ],
+      [
+       2,
+       8.71,
+       9.46
+      ],
+      [
+       2,
+       10.26,
+       11.01
+      ],
+      [
+       3,
+       12.86,
+       13.56
+      ],
+      [
+       3,
+       14.36,
+       15.07
+      ],
+      [
+       4,
+       16.87,
+       17.58
+      ],
+      [
+       4,
+       18.38,
+       19.1
+      ],
+      [
+       5,
+       20.91,
+       21.63
+      ],
+      [
+       5,
+       22.43,
+       23.16
+      ],
+      [
+       6,
+       24.97,
+       25.63
+      ],
+      [
+       6,
+       26.43,
+       27.08
+      ],
+      [
+       7,
+       28.88,
+       29.35
+      ],
+      [
+       7,
+       30.15,
+       30.62
+      ],
+      [
+       8,
+       32.42,
+       33
+      ],
+      [
+       8,
+       33.8,
+       34.37
+      ],
+      [
+       9,
+       36.17,
+       36.55
+      ],
+      [
+       9,
+       37.35,
+       37.72
+      ],
+      [
+       10,
+       39.52,
+       40.3
+      ],
+      [
+       10,
+       41.1,
+       41.87
+      ],
+      [
+       11,
+       43.75,
+       44.24
+      ],
+      [
+       11,
+       45.04,
+       45.52
+      ],
+      [
+       12,
+       47.32,
+       47.82
+      ],
+      [
+       12,
+       48.62,
+       49.11
+      ],
+      [
+       13,
+       50.91,
+       51.39
+      ],
+      [
+       13,
+       52.19,
+       52.66
+      ],
+      [
+       14,
+       54.46,
+       55.03
+      ],
+      [
+       14,
+       55.83,
+       56.4
+      ]
+     ],
+     "items": [
+      {
+       "py": "yǎnjing",
+       "es": "ojos",
+       "clip": "/assets/audios/yct1-e02-r1/EXP2.1-1.mp3?v=8d5f07a5"
+      },
+      {
+       "py": "bízi",
+       "es": "nariz",
+       "clip": "/assets/audios/yct1-e02-r1/EXP2.1-2.mp3?v=afcb4706"
+      },
+      {
+       "py": "ěrduo",
+       "es": "orejas",
+       "clip": "/assets/audios/yct1-e02-r1/EXP2.1-3.mp3?v=705f059a"
+      },
+      {
+       "py": "kǒu",
+       "es": "boca",
+       "clip": "/assets/audios/yct1-e02-r1/EXP2.1-4.mp3?v=ebf7c713"
+      },
+      {
+       "py": "shǒu",
+       "es": "mano",
+       "clip": "/assets/audios/yct1-e02-r1/EXP2.1-5.mp3?v=78da5aa1"
+      },
+      {
+       "py": "tóufa",
+       "es": "cabello",
+       "clip": "/assets/audios/yct1-e02-r1/EXP2.1-6.mp3?v=766f46de"
+      },
+      {
+       "py": "cháng",
+       "es": "largo",
+       "clip": "/assets/audios/yct1-e02-r1/EXP2.1-7.mp3?v=52e716eb"
+      },
+      {
+       "py": "gāo",
+       "es": "alto",
+       "clip": "/assets/audios/yct1-e02-r1/EXP2.1-8.mp3?v=f630f513"
+      },
+      {
+       "py": "gèzi",
+       "es": "estatura",
+       "clip": "/assets/audios/yct1-e02-r1/EXP2.1-9.mp3?v=57743cb7"
+      },
+      {
+       "py": "dà",
+       "es": "grande",
+       "clip": "/assets/audios/yct1-e02-r1/EXP2.1-10.mp3?v=3264ba71"
+      },
+      {
+       "py": "xiǎo",
+       "es": "pequeño",
+       "clip": "/assets/audios/yct1-e02-r1/EXP2.1-11.mp3?v=adc4bde6"
+      },
+      {
+       "py": "zhèr",
+       "es": "aquí",
+       "clip": "/assets/audios/yct1-e02-r1/EXP2.1-12.mp3?v=efc76197"
+      },
+      {
+       "py": "nǎr?",
+       "es": "¿dónde?",
+       "clip": "/assets/audios/yct1-e02-r1/EXP2.1-13.mp3?v=b4f5f8b5"
+      },
+      {
+       "py": "kàn",
+       "es": "mirar",
+       "clip": "/assets/audios/yct1-e02-r1/EXP2.1-14.mp3?v=929a6106"
+      },
+      {
+       "py": "wǒ de",
+       "es": "mi",
+       "clip": "/assets/audios/yct1-e02-r1/EXP2.1-15.mp3?v=9d2f5800"
+      }
+     ]
+    },
+    {
+     "code": "EXP2.2",
+     "kind": "dialogue",
+     "src": "/assets/audios/yct1-e02-r1/EXP2.2.mp3?v=d55c7dc7",
+     "dur": 53.17,
+     "parts": [
+      {
+       "at": 0,
+       "label": "Escucha la conversación"
+      },
+      {
+       "at": 18.28,
+       "label": "Ahora repite cada frase"
+      }
+     ],
+     "segs": [
+      [
+       0,
+       0.4,
+       2.13
+      ],
+      [
+       1,
+       2.83,
+       4.55
+      ],
+      [
+       2,
+       5.25,
+       6.34
+      ],
+      [
+       3,
+       7.04,
+       7.83
+      ],
+      [
+       4,
+       8.53,
+       9.89
+      ],
+      [
+       5,
+       10.59,
+       12.76
+      ],
+      [
+       6,
+       13.46,
+       16.38
+      ],
+      [
+       0,
+       18.28,
+       20.01
+      ],
+      [
+       1,
+       23.37,
+       25.08
+      ],
+      [
+       2,
+       28.43,
+       29.52
+      ],
+      [
+       3,
+       32.08,
+       32.87
+      ],
+      [
+       4,
+       35.06,
+       36.43
+      ],
+      [
+       5,
+       39.34,
+       41.5
+      ],
+      [
+       6,
+       45.41,
+       48.32
+      ]
+     ],
+     "items": [
+      {
+       "py": "nǐ kàn, zhè shì shénme?",
+       "es": "Mira, ¿qué es esto?",
+       "clip": "/assets/audios/yct1-e02-r1/EXP2.2-1.mp3?v=81a54e65",
+       "who": "profe"
+      },
+      {
+       "py": "zhè shì wǒ de dà bízi!",
+       "es": "¡Es mi nariz grande!",
+       "clip": "/assets/audios/yct1-e02-r1/EXP2.2-2.mp3?v=17be8594",
+       "who": "tu"
+      },
+      {
+       "py": "ěrduo zài nǎr?",
+       "es": "¿Dónde están las orejas?",
+       "clip": "/assets/audios/yct1-e02-r1/EXP2.2-3.mp3?v=b8a973fc",
+       "who": "profe"
+      },
+      {
+       "py": "zài zhèr!",
+       "es": "¡Aquí!",
+       "clip": "/assets/audios/yct1-e02-r1/EXP2.2-4.mp3?v=0f2b1c3b",
+       "who": "tu"
+      },
+      {
+       "py": "nǐ de yǎnjing xiǎo ma?",
+       "es": "¿Tus ojos son pequeños?",
+       "clip": "/assets/audios/yct1-e02-r1/EXP2.2-5.mp3?v=94c7fa2b",
+       "who": "profe"
+      },
+      {
+       "py": "bù xiǎo! wǒ de yǎnjing dà.",
+       "es": "¡No! Mis ojos son grandes.",
+       "clip": "/assets/audios/yct1-e02-r1/EXP2.2-6.mp3?v=097377ac",
+       "who": "tu"
+      },
+      {
+       "py": "hěn hǎo! nǐ kàn, nǐ de gèzi gāo!",
+       "es": "¡Muy bien! ¡Mira, eres alto!",
+       "clip": "/assets/audios/yct1-e02-r1/EXP2.2-7.mp3?v=1066e4e0",
+       "who": "profe"
+      }
+     ]
+    },
+    {
+     "code": "EXP2.3",
+     "kind": "video",
+     "src": "/assets/audios/yct1-e02-r1/EXP2.3.mp3?v=90ab8f47",
+     "dur": 63.67,
+     "parts": [
+      {
+       "at": 0,
+       "label": "Repite cada frase"
+      },
+      {
+       "at": 45.34,
+       "label": "Ahora todo seguido, como tu video"
+      }
+     ],
+     "segs": [
+      [
+       0,
+       0.4,
+       3.37
+      ],
+      [
+       1,
+       9.03,
+       12.18
+      ],
+      [
+       2,
+       18.1,
+       20.31
+      ],
+      [
+       3,
+       24.9,
+       27.51
+      ],
+      [
+       4,
+       32.65,
+       34.73
+      ],
+      [
+       5,
+       39.13,
+       40.84
+      ],
+      [
+       0,
+       45.34,
+       48.31
+      ],
+      [
+       1,
+       48.91,
+       52.06
+      ],
+      [
+       2,
+       52.66,
+       54.87
+      ],
+      [
+       3,
+       55.47,
+       58.08
+      ],
+      [
+       4,
+       58.68,
+       60.75
+      ],
+      [
+       5,
+       61.35,
+       63.07
+      ]
+     ],
+     "items": [
+      {
+       "py": "nǐ hǎo! wǒ jiào ___.",
+       "es": "¡Hola! Me llamo ___.",
+       "clip": "/assets/audios/yct1-e02-r1/EXP2.3-1.mp3?v=0fc27c17"
+      },
+      {
+       "py": "nǐ kàn, zhè shì wǒ de yǎnjing hé bízi!",
+       "es": "¡Mira, estos son mis ojos y mi nariz!",
+       "clip": "/assets/audios/yct1-e02-r1/EXP2.3-2.mp3?v=d958ac5c"
+      },
+      {
+       "py": "ěrduo zài nǎr? zài zhèr!",
+       "es": "¿Dónde están las orejas? ¡Aquí!",
+       "clip": "/assets/audios/yct1-e02-r1/EXP2.3-3.mp3?v=77aba77e"
+      },
+      {
+       "py": "wǒ de shǒu xiǎo, bàba de shǒu dà.",
+       "es": "Mi mano es pequeña, la de papá es grande.",
+       "clip": "/assets/audios/yct1-e02-r1/EXP2.3-4.mp3?v=ea089efb"
+      },
+      {
+       "py": "nǐ kàn, wǒ gèzi gāo ma?",
+       "es": "Mira, ¿soy alto?",
+       "clip": "/assets/audios/yct1-e02-r1/EXP2.3-5.mp3?v=d4bd65c3"
+      },
+      {
+       "py": "xièxie! zàijiàn!",
+       "es": "¡Gracias! ¡Adiós!",
+       "clip": "/assets/audios/yct1-e02-r1/EXP2.3-6.mp3?v=1f6baf5b"
+      }
+     ]
+    }
+   ],
+   "thumb": "/assets/audios/yct1-e02-r1/cover-s.webp?v=752d34a5"
+  },
+  {
+   "id": "yct1-e03-r1",
+   "level": "yct1",
+   "levelName": "YCT 1",
+   "exp": 3,
+   "round": 1,
+   "title": "Mis Mascotas",
+   "tagline": "Tu amiga viene a conocer a tus mascotas: un perrito, un gatito, un pájaro y muchos peces. ¿Sabes presentarlos?",
+   "cover": "/assets/audios/yct1-e03-r1/cover.jpg?v=f0754657",
+   "tracks": [
+    {
+     "code": "EXP3.1",
+     "kind": "words",
+     "src": "/assets/audios/yct1-e03-r1/EXP3.1.mp3?v=5356d9c0",
+     "dur": 60.4,
+     "parts": [
+      {
+       "at": 0,
+       "label": "Escucha y repite"
+      }
+     ],
+     "segs": [
+      [
+       0,
+       0.4,
+       1
+      ],
+      [
+       0,
+       1.8,
+       2.41
+      ],
+      [
+       1,
+       4.21,
+       4.71
+      ],
+      [
+       1,
+       5.51,
+       6.02
+      ],
+      [
+       2,
+       7.82,
+       8.59
+      ],
+      [
+       2,
+       9.39,
+       10.16
+      ],
+      [
+       3,
+       12.05,
+       12.61
+      ],
+      [
+       3,
+       13.41,
+       13.97
+      ],
+      [
+       4,
+       15.77,
+       16.38
+      ],
+      [
+       4,
+       17.18,
+       17.79
+      ],
+      [
+       5,
+       19.59,
+       20.36
+      ],
+      [
+       5,
+       21.16,
+       21.93
+      ],
+      [
+       6,
+       23.81,
+       24.58
+      ],
+      [
+       6,
+       25.38,
+       26.15
+      ],
+      [
+       7,
+       28.03,
+       28.67
+      ],
+      [
+       7,
+       29.47,
+       30.1
+      ],
+      [
+       8,
+       31.9,
+       32.65
+      ],
+      [
+       8,
+       33.45,
+       34.19
+      ],
+      [
+       9,
+       36.03,
+       36.78
+      ],
+      [
+       9,
+       37.58,
+       38.33
+      ],
+      [
+       10,
+       40.18,
+       40.83
+      ],
+      [
+       10,
+       41.63,
+       42.29
+      ],
+      [
+       11,
+       44.09,
+       44.81
+      ],
+      [
+       11,
+       45.61,
+       46.33
+      ],
+      [
+       12,
+       48.15,
+       48.75
+      ],
+      [
+       12,
+       49.55,
+       50.15
+      ],
+      [
+       13,
+       51.95,
+       52.82
+      ],
+      [
+       13,
+       53.62,
+       54.49
+      ],
+      [
+       14,
+       56.51,
+       57.16
+      ],
+      [
+       14,
+       57.96,
+       58.6
+      ]
+     ],
+     "items": [
+      {
+       "py": "gǒu",
+       "es": "perro",
+       "clip": "/assets/audios/yct1-e03-r1/EXP3.1-1.mp3?v=c474909e"
+      },
+      {
+       "py": "māo",
+       "es": "gato",
+       "clip": "/assets/audios/yct1-e03-r1/EXP3.1-2.mp3?v=c5d61511"
+      },
+      {
+       "py": "niǎo",
+       "es": "pájaro",
+       "clip": "/assets/audios/yct1-e03-r1/EXP3.1-3.mp3?v=e69b1701"
+      },
+      {
+       "py": "yú",
+       "es": "pez",
+       "clip": "/assets/audios/yct1-e03-r1/EXP3.1-4.mp3?v=7d65d958"
+      },
+      {
+       "py": "niú",
+       "es": "vaca",
+       "clip": "/assets/audios/yct1-e03-r1/EXP3.1-5.mp3?v=84cd7015"
+      },
+      {
+       "py": "xiǎo",
+       "es": "pequeño · -ito",
+       "clip": "/assets/audios/yct1-e03-r1/EXP3.1-6.mp3?v=adc4bde6"
+      },
+      {
+       "py": "ài chī",
+       "es": "le encanta comer",
+       "clip": "/assets/audios/yct1-e03-r1/EXP3.1-7.mp3?v=d032ebb2"
+      },
+      {
+       "py": "tāmen",
+       "es": "ellos",
+       "clip": "/assets/audios/yct1-e03-r1/EXP3.1-8.mp3?v=563c21fb"
+      },
+      {
+       "py": "hěn duō",
+       "es": "muchos",
+       "clip": "/assets/audios/yct1-e03-r1/EXP3.1-9.mp3?v=3ff3c033"
+      },
+      {
+       "py": "ěrduo",
+       "es": "orejas",
+       "clip": "/assets/audios/yct1-e03-r1/EXP3.1-10.mp3?v=705f059a"
+      },
+      {
+       "py": "cháng",
+       "es": "largo",
+       "clip": "/assets/audios/yct1-e03-r1/EXP3.1-11.mp3?v=52e716eb"
+      },
+      {
+       "py": "míngzi",
+       "es": "nombre",
+       "clip": "/assets/audios/yct1-e03-r1/EXP3.1-12.mp3?v=f07658f6"
+      },
+      {
+       "py": "shì de",
+       "es": "sí",
+       "clip": "/assets/audios/yct1-e03-r1/EXP3.1-13.mp3?v=2f3d90e9"
+      },
+      {
+       "py": "xǐhuan",
+       "es": "gustar",
+       "clip": "/assets/audios/yct1-e03-r1/EXP3.1-14.mp3?v=515a723c"
+      },
+      {
+       "py": "zhè shì",
+       "es": "este es",
+       "clip": "/assets/audios/yct1-e03-r1/EXP3.1-15.mp3?v=a5524b3b"
+      }
+     ]
+    },
+    {
+     "code": "EXP3.2",
+     "kind": "dialogue",
+     "src": "/assets/audios/yct1-e03-r1/EXP3.2.mp3?v=d42381da",
+     "dur": 50.83,
+     "parts": [
+      {
+       "at": 0,
+       "label": "Escucha la conversación"
+      },
+      {
+       "at": 17.55,
+       "label": "Ahora repite cada frase"
+      }
+     ],
+     "segs": [
+      [
+       0,
+       0.4,
+       1.56
+      ],
+      [
+       1,
+       2.26,
+       4.37
+      ],
+      [
+       2,
+       5.07,
+       6.5
+      ],
+      [
+       3,
+       7.2,
+       8.26
+      ],
+      [
+       4,
+       8.96,
+       10.55
+      ],
+      [
+       5,
+       11.25,
+       13.59
+      ],
+      [
+       6,
+       14.29,
+       15.65
+      ],
+      [
+       0,
+       17.55,
+       18.71
+      ],
+      [
+       1,
+       21.36,
+       23.47
+      ],
+      [
+       2,
+       27.31,
+       28.75
+      ],
+      [
+       3,
+       31.74,
+       32.79
+      ],
+      [
+       4,
+       35.32,
+       36.91
+      ],
+      [
+       5,
+       40.09,
+       42.43
+      ],
+      [
+       6,
+       46.55,
+       47.92
+      ]
+     ],
+     "items": [
+      {
+       "py": "zhè shì nǐ de gǒu?",
+       "es": "¿Este es tu perro?",
+       "clip": "/assets/audios/yct1-e03-r1/EXP3.2-1.mp3?v=3d12d5b6",
+       "who": "profe"
+      },
+      {
+       "py": "shì de! tā jiào Bobo.",
+       "es": "¡Sí! Se llama Bobo.",
+       "clip": "/assets/audios/yct1-e03-r1/EXP3.2-2.mp3?v=11cb52ca",
+       "who": "tu"
+      },
+      {
+       "py": "nǎge shì nǐ de māo?",
+       "es": "¿Cuál es tu gato?",
+       "clip": "/assets/audios/yct1-e03-r1/EXP3.2-3.mp3?v=a424661d",
+       "who": "profe"
+      },
+      {
+       "py": "xiǎo de zhège!",
+       "es": "¡Este, el pequeño!",
+       "clip": "/assets/audios/yct1-e03-r1/EXP3.2-4.mp3?v=56831e8f",
+       "who": "tu"
+      },
+      {
+       "py": "xiǎo māo ài chī shénme?",
+       "es": "¿Qué le encanta comer al gatito?",
+       "clip": "/assets/audios/yct1-e03-r1/EXP3.2-5.mp3?v=1547e057",
+       "who": "profe"
+      },
+      {
+       "py": "yú! zhèr yǒu hěn duō yú.",
+       "es": "¡Pescado! Aquí hay muchos peces.",
+       "clip": "/assets/audios/yct1-e03-r1/EXP3.2-6.mp3?v=ab144fb9",
+       "who": "tu"
+      },
+      {
+       "py": "wǒ hěn xǐhuan tāmen!",
+       "es": "¡Me gustan mucho!",
+       "clip": "/assets/audios/yct1-e03-r1/EXP3.2-7.mp3?v=5751a156",
+       "who": "profe"
+      }
+     ]
+    },
+    {
+     "code": "EXP3.3",
+     "kind": "video",
+     "src": "/assets/audios/yct1-e03-r1/EXP3.3.mp3?v=9bc04beb",
+     "dur": 60.01,
+     "parts": [
+      {
+       "at": 0,
+       "label": "Repite cada frase"
+      },
+      {
+       "at": 42.76,
+       "label": "Ahora todo seguido, como tu video"
+      }
+     ],
+     "segs": [
+      [
+       0,
+       0.4,
+       3.37
+      ],
+      [
+       1,
+       9.03,
+       10.59
+      ],
+      [
+       2,
+       14.27,
+       16.8
+      ],
+      [
+       3,
+       21.85,
+       24.38
+      ],
+      [
+       4,
+       29.42,
+       30.95
+      ],
+      [
+       5,
+       34.6,
+       37.12
+      ],
+      [
+       0,
+       42.76,
+       45.73
+      ],
+      [
+       1,
+       46.33,
+       47.89
+      ],
+      [
+       2,
+       48.49,
+       51.02
+      ],
+      [
+       3,
+       51.62,
+       54.15
+      ],
+      [
+       4,
+       54.75,
+       56.28
+      ],
+      [
+       5,
+       56.88,
+       59.41
+      ]
+     ],
+     "items": [
+      {
+       "py": "nǐ hǎo! wǒ jiào ___.",
+       "es": "¡Hola! Me llamo ___.",
+       "clip": "/assets/audios/yct1-e03-r1/EXP3.3-1.mp3?v=0fc27c17"
+      },
+      {
+       "py": "zhè shì wǒ de xiǎo gǒu!",
+       "es": "¡Este es mi perrito!",
+       "clip": "/assets/audios/yct1-e03-r1/EXP3.3-2.mp3?v=5829bd8d"
+      },
+      {
+       "py": "xiǎo gǒu, nǐ jiào shénme míngzi?",
+       "es": "Perrito, ¿cómo te llamas?",
+       "clip": "/assets/audios/yct1-e03-r1/EXP3.3-3.mp3?v=15fd2623"
+      },
+      {
+       "py": "nǐ kàn, tā de ěrduo hěn cháng!",
+       "es": "¡Mira, tiene las orejas muy largas!",
+       "clip": "/assets/audios/yct1-e03-r1/EXP3.3-4.mp3?v=6152355b"
+      },
+      {
+       "py": "xiǎo māo ài chī yú.",
+       "es": "Al gatito le encanta el pescado.",
+       "clip": "/assets/audios/yct1-e03-r1/EXP3.3-5.mp3?v=7d6f7ba1"
+      },
+      {
+       "py": "wǒ hěn xǐhuan tāmen! zàijiàn!",
+       "es": "¡Me gustan mucho! ¡Adiós!",
+       "clip": "/assets/audios/yct1-e03-r1/EXP3.3-6.mp3?v=b2d18a59"
+      }
+     ]
+    }
+   ],
+   "thumb": "/assets/audios/yct1-e03-r1/cover-s.webp?v=45b1a23c"
+  },
+  {
+   "id": "yct1-e04-r1",
+   "level": "yct1",
+   "levelName": "YCT 1",
+   "exp": 4,
+   "round": 1,
+   "title": "La Comida",
+   "tagline": "Es hora de comer y la abuela pregunta qué quieres. Hay fideos, arroz, pan, leche y manzanas. ¿Sabes pedirlo?",
+   "cover": "/assets/audios/yct1-e04-r1/cover.jpg?v=24efafad",
+   "tracks": [
+    {
+     "code": "EXP4.1",
+     "kind": "words",
+     "src": "/assets/audios/yct1-e04-r1/EXP4.1.mp3?v=4072146a",
+     "dur": 60.62,
+     "parts": [
+      {
+       "at": 0,
+       "label": "Escucha y repite"
+      }
+     ],
+     "segs": [
+      [
+       0,
+       0.4,
+       0.97
+      ],
+      [
+       0,
+       1.77,
+       2.34
+      ],
+      [
+       1,
+       4.14,
+       4.7
+      ],
+      [
+       1,
+       5.5,
+       6.06
+      ],
+      [
+       2,
+       7.86,
+       8.66
+      ],
+      [
+       2,
+       9.47,
+       10.27
+      ],
+      [
+       3,
+       12.2,
+       12.95
+      ],
+      [
+       3,
+       13.75,
+       14.5
+      ],
+      [
+       4,
+       16.35,
+       17.14
+      ],
+      [
+       4,
+       17.94,
+       18.73
+      ],
+      [
+       5,
+       20.64,
+       21.36
+      ],
+      [
+       5,
+       22.16,
+       22.88
+      ],
+      [
+       6,
+       24.68,
+       25.48
+      ],
+      [
+       6,
+       26.28,
+       27.08
+      ],
+      [
+       7,
+       29,
+       29.84
+      ],
+      [
+       7,
+       30.64,
+       31.47
+      ],
+      [
+       8,
+       33.44,
+       34.12
+      ],
+      [
+       8,
+       34.92,
+       35.61
+      ],
+      [
+       9,
+       37.41,
+       37.9
+      ],
+      [
+       9,
+       38.7,
+       39.2
+      ],
+      [
+       10,
+       41,
+       41.87
+      ],
+      [
+       10,
+       42.67,
+       43.54
+      ],
+      [
+       11,
+       45.56,
+       46.23
+      ],
+      [
+       11,
+       47.03,
+       47.7
+      ],
+      [
+       12,
+       49.5,
+       50.21
+      ],
+      [
+       12,
+       51.01,
+       51.71
+      ],
+      [
+       13,
+       53.51,
+       53.92
+      ],
+      [
+       13,
+       54.72,
+       55.12
+      ],
+      [
+       14,
+       56.92,
+       57.47
+      ],
+      [
+       14,
+       58.27,
+       58.82
+      ]
+     ],
+     "items": [
+      {
+       "py": "chī",
+       "es": "comer",
+       "clip": "/assets/audios/yct1-e04-r1/EXP4.1-1.mp3?v=e2600464"
+      },
+      {
+       "py": "hē",
+       "es": "beber · tomar",
+       "clip": "/assets/audios/yct1-e04-r1/EXP4.1-2.mp3?v=79285a3c"
+      },
+      {
+       "py": "miàntiáo",
+       "es": "fideos",
+       "clip": "/assets/audios/yct1-e04-r1/EXP4.1-3.mp3?v=a8d75976"
+      },
+      {
+       "py": "niúnǎi",
+       "es": "leche",
+       "clip": "/assets/audios/yct1-e04-r1/EXP4.1-4.mp3?v=b7909f36"
+      },
+      {
+       "py": "shuǐ",
+       "es": "agua",
+       "clip": "/assets/audios/yct1-e04-r1/EXP4.1-5.mp3?v=3bfe9326"
+      },
+      {
+       "py": "mǐfàn",
+       "es": "arroz",
+       "clip": "/assets/audios/yct1-e04-r1/EXP4.1-6.mp3?v=a0c8d340"
+      },
+      {
+       "py": "miànbāo",
+       "es": "pan",
+       "clip": "/assets/audios/yct1-e04-r1/EXP4.1-7.mp3?v=dd2dc04a"
+      },
+      {
+       "py": "píngguǒ",
+       "es": "manzana",
+       "clip": "/assets/audios/yct1-e04-r1/EXP4.1-8.mp3?v=9b962eec"
+      },
+      {
+       "py": "yì kǒu",
+       "es": "un bocado",
+       "clip": "/assets/audios/yct1-e04-r1/EXP4.1-9.mp3?v=ed7a19a4"
+      },
+      {
+       "py": "ài",
+       "es": "encantar",
+       "clip": "/assets/audios/yct1-e04-r1/EXP4.1-10.mp3?v=262bec87"
+      },
+      {
+       "py": "xǐhuan",
+       "es": "gustar",
+       "clip": "/assets/audios/yct1-e04-r1/EXP4.1-11.mp3?v=515a723c"
+      },
+      {
+       "py": "hǎo de",
+       "es": "¡está bien!",
+       "clip": "/assets/audios/yct1-e04-r1/EXP4.1-12.mp3?v=c017aa6d"
+      },
+      {
+       "py": "xièxie",
+       "es": "gracias",
+       "clip": "/assets/audios/yct1-e04-r1/EXP4.1-13.mp3?v=79658d6d"
+      },
+      {
+       "py": "bù",
+       "es": "no",
+       "clip": "/assets/audios/yct1-e04-r1/EXP4.1-14.mp3?v=5fe81014"
+      },
+      {
+       "py": "shénme?",
+       "es": "¿qué?",
+       "clip": "/assets/audios/yct1-e04-r1/EXP4.1-15.mp3?v=a09ad3ba"
+      }
+     ]
+    },
+    {
+     "code": "EXP4.2",
+     "kind": "dialogue",
+     "src": "/assets/audios/yct1-e04-r1/EXP4.2.mp3?v=6c93b153",
+     "dur": 56.56,
+     "parts": [
+      {
+       "at": 0,
+       "label": "Escucha la conversación"
+      },
+      {
+       "at": 19.32,
+       "label": "Ahora repite cada frase"
+      }
+     ],
+     "segs": [
+      [
+       0,
+       0.4,
+       1.64
+      ],
+      [
+       1,
+       2.34,
+       4.17
+      ],
+      [
+       2,
+       4.87,
+       6.42
+      ],
+      [
+       3,
+       7.12,
+       9.57
+      ],
+      [
+       4,
+       10.27,
+       13.08
+      ],
+      [
+       5,
+       13.78,
+       14.89
+      ],
+      [
+       6,
+       15.59,
+       17.42
+      ],
+      [
+       0,
+       19.32,
+       20.55
+      ],
+      [
+       1,
+       23.3,
+       25.14
+      ],
+      [
+       2,
+       28.63,
+       30.18
+      ],
+      [
+       3,
+       33.31,
+       35.76
+      ],
+      [
+       4,
+       40.03,
+       42.83
+      ],
+      [
+       5,
+       47.54,
+       48.65
+      ],
+      [
+       6,
+       51.25,
+       53.07
+      ]
+     ],
+     "items": [
+      {
+       "py": "nǐ chī píngguǒ ma?",
+       "es": "¿Quieres una manzana?",
+       "clip": "/assets/audios/yct1-e04-r1/EXP4.2-1.mp3?v=30b0f06b",
+       "who": "profe"
+      },
+      {
+       "py": "hǎo de, xièxie nǐ!",
+       "es": "¡Sí, gracias!",
+       "clip": "/assets/audios/yct1-e04-r1/EXP4.2-2.mp3?v=c1417e25",
+       "who": "tu"
+      },
+      {
+       "py": "wǒmen jīntiān chī shénme?",
+       "es": "¿Qué comemos hoy?",
+       "clip": "/assets/audios/yct1-e04-r1/EXP4.2-3.mp3?v=2f3f7ea2",
+       "who": "profe"
+      },
+      {
+       "py": "miàntiáo! wǒ ài chī miàntiáo.",
+       "es": "¡Fideos! Me encantan los fideos.",
+       "clip": "/assets/audios/yct1-e04-r1/EXP4.2-4.mp3?v=a17e636e",
+       "who": "tu"
+      },
+      {
+       "py": "zhèr yǒu shuǐ hé niúnǎi, nǐ hē shénme?",
+       "es": "Aquí hay agua y leche, ¿qué tomas?",
+       "clip": "/assets/audios/yct1-e04-r1/EXP4.2-5.mp3?v=9223fb80",
+       "who": "profe"
+      },
+      {
+       "py": "wǒ hē niúnǎi.",
+       "es": "Tomo leche.",
+       "clip": "/assets/audios/yct1-e04-r1/EXP4.2-6.mp3?v=ab4583e8",
+       "who": "tu"
+      },
+      {
+       "py": "hěn hǎo! wǒ hē shuǐ.",
+       "es": "¡Muy bien! Yo tomo agua.",
+       "clip": "/assets/audios/yct1-e04-r1/EXP4.2-7.mp3?v=232ed2ce",
+       "who": "profe"
+      }
+     ]
+    },
+    {
+     "code": "EXP4.3",
+     "kind": "video",
+     "src": "/assets/audios/yct1-e04-r1/EXP4.3.mp3?v=ecdd2ce8",
+     "dur": 56.65,
+     "parts": [
+      {
+       "at": 0,
+       "label": "Repite cada frase"
+      },
+      {
+       "at": 40.39,
+       "label": "Ahora todo seguido, como tu video"
+      }
+     ],
+     "segs": [
+      [
+       0,
+       0.4,
+       3.37
+      ],
+      [
+       1,
+       9.03,
+       10.47
+      ],
+      [
+       2,
+       13.99,
+       15.95
+      ],
+      [
+       3,
+       20.21,
+       22.54
+      ],
+      [
+       4,
+       27.31,
+       29.1
+      ],
+      [
+       5,
+       33.11,
+       35.27
+      ],
+      [
+       0,
+       40.39,
+       43.36
+      ],
+      [
+       1,
+       43.96,
+       45.4
+      ],
+      [
+       2,
+       46,
+       47.97
+      ],
+      [
+       3,
+       48.57,
+       50.9
+      ],
+      [
+       4,
+       51.5,
+       53.29
+      ],
+      [
+       5,
+       53.89,
+       56.05
+      ]
+     ],
+     "items": [
+      {
+       "py": "nǐ hǎo! wǒ jiào ___.",
+       "es": "¡Hola! Me llamo ___.",
+       "clip": "/assets/audios/yct1-e04-r1/EXP4.3-1.mp3?v=0fc27c17"
+      },
+      {
+       "py": "wǒ ài chī miàntiáo!",
+       "es": "¡Me encantan los fideos!",
+       "clip": "/assets/audios/yct1-e04-r1/EXP4.3-2.mp3?v=af784f4f"
+      },
+      {
+       "py": "zhèr yǒu shuǐ hé niúnǎi.",
+       "es": "Aquí hay agua y leche.",
+       "clip": "/assets/audios/yct1-e04-r1/EXP4.3-3.mp3?v=87482e59"
+      },
+      {
+       "py": "wǒ hē niúnǎi. nǐ hē shénme?",
+       "es": "Yo tomo leche. ¿Tú qué tomas?",
+       "clip": "/assets/audios/yct1-e04-r1/EXP4.3-4.mp3?v=fbcdf65c"
+      },
+      {
+       "py": "chī yì kǒu, hǎo ma?",
+       "es": "¿Pruebas un bocado?",
+       "clip": "/assets/audios/yct1-e04-r1/EXP4.3-5.mp3?v=34ec6f8d"
+      },
+      {
+       "py": "wǒ hěn xǐhuan! zàijiàn!",
+       "es": "¡Me gusta mucho! ¡Adiós!",
+       "clip": "/assets/audios/yct1-e04-r1/EXP4.3-6.mp3?v=170fc61f"
+      }
+     ]
+    }
+   ],
+   "thumb": "/assets/audios/yct1-e04-r1/cover-s.webp?v=700254e4"
+  },
+  {
+   "id": "yct1-e05-r1",
+   "level": "yct1",
+   "levelName": "YCT 1",
+   "exp": 5,
+   "round": 1,
+   "title": "Números y Tiempo",
+   "tagline": "Mañana es la fiesta de tu amigo, pero no sabes ni el día ni la hora. Papá te pregunta. ¿Sabes decirlo?",
+   "cover": "/assets/audios/yct1-e05-r1/cover.jpg?v=a476c9b0",
+   "tracks": [
+    {
+     "code": "EXP5.1",
+     "kind": "words",
+     "src": "/assets/audios/yct1-e05-r1/EXP5.1.mp3?v=c062684f",
+     "dur": 73.94,
+     "parts": [
+      {
+       "at": 0,
+       "label": "Escucha y repite"
+      }
+     ],
+     "segs": [
+      [
+       0,
+       0.4,
+       1.17
+      ],
+      [
+       0,
+       1.97,
+       2.74
+      ],
+      [
+       1,
+       4.62,
+       5.32
+      ],
+      [
+       1,
+       6.12,
+       6.83
+      ],
+      [
+       2,
+       8.63,
+       9.11
+      ],
+      [
+       2,
+       9.91,
+       10.39
+      ],
+      [
+       3,
+       12.19,
+       12.99
+      ],
+      [
+       3,
+       13.79,
+       14.6
+      ],
+      [
+       4,
+       16.52,
+       17.3
+      ],
+      [
+       4,
+       18.1,
+       18.87
+      ],
+      [
+       5,
+       20.76,
+       21.6
+      ],
+      [
+       5,
+       22.4,
+       23.25
+      ],
+      [
+       6,
+       25.23,
+       25.65
+      ],
+      [
+       6,
+       26.45,
+       26.88
+      ],
+      [
+       7,
+       28.68,
+       29.15
+      ],
+      [
+       7,
+       29.95,
+       30.41
+      ],
+      [
+       8,
+       32.21,
+       32.79
+      ],
+      [
+       8,
+       33.59,
+       34.18
+      ],
+      [
+       9,
+       35.98,
+       38.06
+      ],
+      [
+       9,
+       38.86,
+       40.94
+      ],
+      [
+       10,
+       44.65,
+       46.64
+      ],
+      [
+       10,
+       47.44,
+       49.43
+      ],
+      [
+       11,
+       53.03,
+       54.24
+      ],
+      [
+       11,
+       55.04,
+       56.25
+      ],
+      [
+       12,
+       58.74,
+       60.21
+      ],
+      [
+       12,
+       61.01,
+       62.47
+      ],
+      [
+       13,
+       65.32,
+       66.3
+      ],
+      [
+       13,
+       67.1,
+       68.09
+      ],
+      [
+       14,
+       70.27,
+       70.81
+      ],
+      [
+       14,
+       71.61,
+       72.14
+      ]
+     ],
+     "items": [
+      {
+       "py": "xiànzài",
+       "es": "ahora",
+       "clip": "/assets/audios/yct1-e05-r1/EXP5.1-1.mp3?v=20402f0d"
+      },
+      {
+       "py": "diǎn",
+       "es": "en punto (hora)",
+       "clip": "/assets/audios/yct1-e05-r1/EXP5.1-2.mp3?v=3e8dde26"
+      },
+      {
+       "py": "jǐ?",
+       "es": "¿cuántos?",
+       "clip": "/assets/audios/yct1-e05-r1/EXP5.1-3.mp3?v=50376a63"
+      },
+      {
+       "py": "jīntiān",
+       "es": "hoy",
+       "clip": "/assets/audios/yct1-e05-r1/EXP5.1-4.mp3?v=e7cb8be9"
+      },
+      {
+       "py": "míngtiān",
+       "es": "mañana",
+       "clip": "/assets/audios/yct1-e05-r1/EXP5.1-5.mp3?v=24f02776"
+      },
+      {
+       "py": "xīngqī",
+       "es": "semana",
+       "clip": "/assets/audios/yct1-e05-r1/EXP5.1-6.mp3?v=14678cff"
+      },
+      {
+       "py": "yuè",
+       "es": "mes",
+       "clip": "/assets/audios/yct1-e05-r1/EXP5.1-7.mp3?v=9a5a6c76"
+      },
+      {
+       "py": "hào",
+       "es": "día (fecha)",
+       "clip": "/assets/audios/yct1-e05-r1/EXP5.1-8.mp3?v=517e4b20"
+      },
+      {
+       "py": "tiān",
+       "es": "día",
+       "clip": "/assets/audios/yct1-e05-r1/EXP5.1-9.mp3?v=c9073c4b"
+      },
+      {
+       "py": "yī · èr · sān",
+       "es": "1 · 2 · 3",
+       "clip": "/assets/audios/yct1-e05-r1/EXP5.1-10.mp3?v=9e89eae5"
+      },
+      {
+       "py": "sì · wǔ · liù",
+       "es": "4 · 5 · 6",
+       "clip": "/assets/audios/yct1-e05-r1/EXP5.1-11.mp3?v=c3178d7f"
+      },
+      {
+       "py": "qī · bā",
+       "es": "7 · 8",
+       "clip": "/assets/audios/yct1-e05-r1/EXP5.1-12.mp3?v=2ded9900"
+      },
+      {
+       "py": "jiǔ · shí",
+       "es": "9 · 10",
+       "clip": "/assets/audios/yct1-e05-r1/EXP5.1-13.mp3?v=5dfded30"
+      },
+      {
+       "py": "xīngqīliù",
+       "es": "sábado",
+       "clip": "/assets/audios/yct1-e05-r1/EXP5.1-14.mp3?v=32b4905b"
+      },
+      {
+       "py": "jiàn",
+       "es": "nos vemos",
+       "clip": "/assets/audios/yct1-e05-r1/EXP5.1-15.mp3?v=54cd0132"
+      }
+     ]
+    },
+    {
+     "code": "EXP5.2",
+     "kind": "dialogue",
+     "src": "/assets/audios/yct1-e05-r1/EXP5.2.mp3?v=a31d9f34",
+     "dur": 52.04,
+     "parts": [
+      {
+       "at": 0,
+       "label": "Escucha la conversación"
+      },
+      {
+       "at": 17.93,
+       "label": "Ahora repite cada frase"
+      }
+     ],
+     "segs": [
+      [
+       0,
+       0.4,
+       1.58
+      ],
+      [
+       1,
+       2.28,
+       4.2
+      ],
+      [
+       2,
+       4.9,
+       6.35
+      ],
+      [
+       3,
+       7.05,
+       8.48
+      ],
+      [
+       4,
+       9.18,
+       11.06
+      ],
+      [
+       5,
+       11.76,
+       13.74
+      ],
+      [
+       6,
+       14.44,
+       16.03
+      ],
+      [
+       0,
+       17.93,
+       19.1
+      ],
+      [
+       1,
+       21.77,
+       23.7
+      ],
+      [
+       2,
+       27.31,
+       28.76
+      ],
+      [
+       3,
+       31.77,
+       33.2
+      ],
+      [
+       4,
+       36.19,
+       38.07
+      ],
+      [
+       5,
+       41.61,
+       43.6
+      ],
+      [
+       6,
+       47.27,
+       48.86
+      ]
+     ],
+     "items": [
+      {
+       "py": "xiànzài jǐ diǎn?",
+       "es": "¿Qué hora es?",
+       "clip": "/assets/audios/yct1-e05-r1/EXP5.2-1.mp3?v=d64bff53",
+       "who": "profe"
+      },
+      {
+       "py": "xiànzài qī diǎn sānshí.",
+       "es": "Son las siete y treinta.",
+       "clip": "/assets/audios/yct1-e05-r1/EXP5.2-2.mp3?v=f39e5500",
+       "who": "tu"
+      },
+      {
+       "py": "jīntiān xīngqī jǐ?",
+       "es": "¿Qué día de la semana es hoy?",
+       "clip": "/assets/audios/yct1-e05-r1/EXP5.2-3.mp3?v=77196085",
+       "who": "profe"
+      },
+      {
+       "py": "jīntiān xīngqīliù!",
+       "es": "¡Hoy es sábado!",
+       "clip": "/assets/audios/yct1-e05-r1/EXP5.2-4.mp3?v=d60ccf98",
+       "who": "tu"
+      },
+      {
+       "py": "míngtiān shì qī yuè jǐ hào?",
+       "es": "¿Qué día de julio es mañana?",
+       "clip": "/assets/audios/yct1-e05-r1/EXP5.2-5.mp3?v=4b6d80fa",
+       "who": "profe"
+      },
+      {
+       "py": "míngtiān shì qī yuè èr hào.",
+       "es": "Mañana es 2 de julio.",
+       "clip": "/assets/audios/yct1-e05-r1/EXP5.2-6.mp3?v=071dce54",
+       "who": "tu"
+      },
+      {
+       "py": "hǎo! míngtiān jiàn!",
+       "es": "¡Muy bien! ¡Hasta mañana!",
+       "clip": "/assets/audios/yct1-e05-r1/EXP5.2-7.mp3?v=1977b0ce",
+       "who": "profe"
+      }
+     ]
+    },
+    {
+     "code": "EXP5.3",
+     "kind": "video",
+     "src": "/assets/audios/yct1-e05-r1/EXP5.3.mp3?v=1bae4747",
+     "dur": 66.81,
+     "parts": [
+      {
+       "at": 0,
+       "label": "Repite cada frase"
+      },
+      {
+       "at": 47.56,
+       "label": "Ahora todo seguido, como tu video"
+      }
+     ],
+     "segs": [
+      [
+       0,
+       0.4,
+       5.97
+      ],
+      [
+       1,
+       15.26,
+       18.01
+      ],
+      [
+       2,
+       23.37,
+       24.8
+      ],
+      [
+       3,
+       28.3,
+       30.28
+      ],
+      [
+       4,
+       34.56,
+       36.54
+      ],
+      [
+       5,
+       40.82,
+       42.75
+      ],
+      [
+       0,
+       47.56,
+       53.13
+      ],
+      [
+       1,
+       53.73,
+       56.48
+      ],
+      [
+       2,
+       57.08,
+       58.51
+      ],
+      [
+       3,
+       59.11,
+       61.1
+      ],
+      [
+       4,
+       61.7,
+       63.68
+      ],
+      [
+       5,
+       64.28,
+       66.21
+      ]
+     ],
+     "items": [
+      {
+       "py": "nǐ hǎo! wǒ jiào ___, wǒ ___ suì.",
+       "es": "¡Hola! Me llamo ___, tengo ___ años.",
+       "clip": "/assets/audios/yct1-e05-r1/EXP5.3-1.mp3?v=fa000f51"
+      },
+      {
+       "py": "xiànzài jǐ diǎn? xiànzài qī diǎn.",
+       "es": "¿Qué hora es? Son las siete.",
+       "clip": "/assets/audios/yct1-e05-r1/EXP5.3-2.mp3?v=b2dca4b0"
+      },
+      {
+       "py": "jīntiān xīngqīliù!",
+       "es": "¡Hoy es sábado!",
+       "clip": "/assets/audios/yct1-e05-r1/EXP5.3-3.mp3?v=d60ccf98"
+      },
+      {
+       "py": "míngtiān shì qī yuè èr hào.",
+       "es": "Mañana es 2 de julio.",
+       "clip": "/assets/audios/yct1-e05-r1/EXP5.3-4.mp3?v=071dce54"
+      },
+      {
+       "py": "yí ge xīngqī yǒu qī tiān.",
+       "es": "Una semana tiene siete días.",
+       "clip": "/assets/audios/yct1-e05-r1/EXP5.3-5.mp3?v=c9762015"
+      },
+      {
+       "py": "míngtiān jiàn! zàijiàn!",
+       "es": "¡Hasta mañana! ¡Adiós!",
+       "clip": "/assets/audios/yct1-e05-r1/EXP5.3-6.mp3?v=120d9919"
+      }
+     ]
+    }
+   ],
+   "thumb": "/assets/audios/yct1-e05-r1/cover-s.webp?v=c029ea78"
+  },
+  {
+   "id": "yct1-e06-r1",
+   "level": "yct1",
+   "levelName": "YCT 1",
+   "exp": 6,
+   "round": 1,
+   "title": "La Escuela",
+   "tagline": "Primer día de clases. El maestro Lǐ llega de China y quiere conocerte. ¿Sabes saludarlo y presentarte?",
+   "cover": "/assets/audios/yct1-e06-r1/cover.jpg?v=8ea2388f",
+   "tracks": [
+    {
+     "code": "EXP6.1",
+     "kind": "words",
+     "src": "/assets/audios/yct1-e06-r1/EXP6.1.mp3?v=bc39a291",
+     "dur": 62.45,
+     "parts": [
+      {
+       "at": 0,
+       "label": "Escucha y repite"
+      }
+     ],
+     "segs": [
+      [
+       0,
+       0.4,
+       1.14
+      ],
+      [
+       0,
+       1.94,
+       2.68
+      ],
+      [
+       1,
+       4.52,
+       5.27
+      ],
+      [
+       1,
+       6.07,
+       6.83
+      ],
+      [
+       2,
+       8.68,
+       9.64
+      ],
+      [
+       2,
+       10.44,
+       11.41
+      ],
+      [
+       3,
+       13.56,
+       14.36
+      ],
+      [
+       3,
+       15.16,
+       15.96
+      ],
+      [
+       4,
+       17.88,
+       18.62
+      ],
+      [
+       4,
+       19.42,
+       20.16
+      ],
+      [
+       5,
+       21.99,
+       22.72
+      ],
+      [
+       5,
+       23.52,
+       24.24
+      ],
+      [
+       6,
+       26.05,
+       26.54
+      ],
+      [
+       6,
+       27.34,
+       27.82
+      ],
+      [
+       7,
+       29.62,
+       30.08
+      ],
+      [
+       7,
+       30.88,
+       31.35
+      ],
+      [
+       8,
+       33.15,
+       33.9
+      ],
+      [
+       8,
+       34.7,
+       35.46
+      ],
+      [
+       9,
+       37.32,
+       38.09
+      ],
+      [
+       9,
+       38.89,
+       39.67
+      ],
+      [
+       10,
+       41.56,
+       42.26
+      ],
+      [
+       10,
+       43.06,
+       43.77
+      ],
+      [
+       11,
+       45.57,
+       46.59
+      ],
+      [
+       11,
+       47.39,
+       48.41
+      ],
+      [
+       12,
+       50.63,
+       51.18
+      ],
+      [
+       12,
+       51.98,
+       52.53
+      ],
+      [
+       13,
+       54.33,
+       55.21
+      ],
+      [
+       13,
+       56.01,
+       56.88
+      ],
+      [
+       14,
+       58.9,
+       59.37
+      ],
+      [
+       14,
+       60.17,
+       60.65
+      ]
+     ],
+     "items": [
+      {
+       "py": "lǎoshī",
+       "es": "maestro · maestra",
+       "clip": "/assets/audios/yct1-e06-r1/EXP6.1-1.mp3?v=7928a89b"
+      },
+      {
+       "py": "xuéxiào",
+       "es": "escuela",
+       "clip": "/assets/audios/yct1-e06-r1/EXP6.1-2.mp3?v=bf374510"
+      },
+      {
+       "py": "Zhōngguórén",
+       "es": "persona china",
+       "clip": "/assets/audios/yct1-e06-r1/EXP6.1-3.mp3?v=7d324c7d"
+      },
+      {
+       "py": "Zhōngguó",
+       "es": "China",
+       "clip": "/assets/audios/yct1-e06-r1/EXP6.1-4.mp3?v=cf4772cd"
+      },
+      {
+       "py": "rènshi",
+       "es": "conocer",
+       "clip": "/assets/audios/yct1-e06-r1/EXP6.1-5.mp3?v=4c54a770"
+      },
+      {
+       "py": "míngzi",
+       "es": "nombre",
+       "clip": "/assets/audios/yct1-e06-r1/EXP6.1-6.mp3?v=f07658f6"
+      },
+      {
+       "py": "zhèr",
+       "es": "aquí",
+       "clip": "/assets/audios/yct1-e06-r1/EXP6.1-7.mp3?v=efc76197"
+      },
+      {
+       "py": "nàr",
+       "es": "allá",
+       "clip": "/assets/audios/yct1-e06-r1/EXP6.1-8.mp3?v=cf71e8ce"
+      },
+      {
+       "py": "zàijiàn",
+       "es": "adiós",
+       "clip": "/assets/audios/yct1-e06-r1/EXP6.1-9.mp3?v=f224e5cf"
+      },
+      {
+       "py": "nǐ hǎo",
+       "es": "hola",
+       "clip": "/assets/audios/yct1-e06-r1/EXP6.1-10.mp3?v=c4910296"
+      },
+      {
+       "py": "xièxie",
+       "es": "gracias",
+       "clip": "/assets/audios/yct1-e06-r1/EXP6.1-11.mp3?v=79658d6d"
+      },
+      {
+       "py": "hěn gāoxìng",
+       "es": "muy contento",
+       "clip": "/assets/audios/yct1-e06-r1/EXP6.1-12.mp3?v=c90af80d"
+      },
+      {
+       "py": "shéi?",
+       "es": "¿quién?",
+       "clip": "/assets/audios/yct1-e06-r1/EXP6.1-13.mp3?v=7645776c"
+      },
+      {
+       "py": "xǐhuan",
+       "es": "gustar",
+       "clip": "/assets/audios/yct1-e06-r1/EXP6.1-14.mp3?v=515a723c"
+      },
+      {
+       "py": "jiào",
+       "es": "llamarse",
+       "clip": "/assets/audios/yct1-e06-r1/EXP6.1-15.mp3?v=2a5356da"
+      }
+     ]
+    },
+    {
+     "code": "EXP6.2",
+     "kind": "dialogue",
+     "src": "/assets/audios/yct1-e06-r1/EXP6.2.mp3?v=f2c8a302",
+     "dur": 60.93,
+     "parts": [
+      {
+       "at": 0,
+       "label": "Escucha la conversación"
+      },
+      {
+       "at": 20.66,
+       "label": "Ahora repite cada frase"
+      }
+     ],
+     "segs": [
+      [
+       0,
+       0.4,
+       2.48
+      ],
+      [
+       1,
+       3.18,
+       6.16
+      ],
+      [
+       2,
+       6.86,
+       8.24
+      ],
+      [
+       3,
+       8.94,
+       10.11
+      ],
+      [
+       4,
+       10.81,
+       12.68
+      ],
+      [
+       5,
+       13.38,
+       15.31
+      ],
+      [
+       6,
+       16.01,
+       18.76
+      ],
+      [
+       0,
+       20.66,
+       22.75
+      ],
+      [
+       1,
+       26.55,
+       29.52
+      ],
+      [
+       2,
+       34.44,
+       35.83
+      ],
+      [
+       3,
+       38.76,
+       39.93
+      ],
+      [
+       4,
+       42.59,
+       44.46
+      ],
+      [
+       5,
+       47.99,
+       49.92
+      ],
+      [
+       6,
+       53.53,
+       56.29
+      ]
+     ],
+     "items": [
+      {
+       "py": "nǐ hǎo! wǒ shì Lǐ lǎoshī.",
+       "es": "¡Hola! Soy el maestro Lǐ.",
+       "clip": "/assets/audios/yct1-e06-r1/EXP6.2-1.mp3?v=b8c35d13",
+       "who": "profe"
+      },
+      {
+       "py": "Lǐ lǎoshī hǎo! hěn gāoxìng rènshi nǐ.",
+       "es": "¡Hola, maestro Lǐ! Mucho gusto.",
+       "clip": "/assets/audios/yct1-e06-r1/EXP6.2-2.mp3?v=cc17fa4c",
+       "who": "tu"
+      },
+      {
+       "py": "nǐ jiào shénme míngzi?",
+       "es": "¿Cómo te llamas?",
+       "clip": "/assets/audios/yct1-e06-r1/EXP6.2-3.mp3?v=a2fdefd1",
+       "who": "profe"
+      },
+      {
+       "py": "wǒ jiào Dani.",
+       "es": "Me llamo Dani.",
+       "clip": "/assets/audios/yct1-e06-r1/EXP6.2-4.mp3?v=c92476aa",
+       "who": "tu"
+      },
+      {
+       "py": "nǐ xǐhuan xiànzài de xuéxiào?",
+       "es": "¿Te gusta tu escuela de ahora?",
+       "clip": "/assets/audios/yct1-e06-r1/EXP6.2-5.mp3?v=5344c668",
+       "who": "profe"
+      },
+      {
+       "py": "shì de, hěn xǐhuan!",
+       "es": "¡Sí, me gusta mucho!",
+       "clip": "/assets/audios/yct1-e06-r1/EXP6.2-6.mp3?v=0987f550",
+       "who": "tu"
+      },
+      {
+       "py": "hǎo! zàijiàn, xīngqīyī jiàn!",
+       "es": "¡Muy bien! Adiós, ¡nos vemos el lunes!",
+       "clip": "/assets/audios/yct1-e06-r1/EXP6.2-7.mp3?v=417d94be",
+       "who": "profe"
+      }
+     ]
+    },
+    {
+     "code": "EXP6.3",
+     "kind": "video",
+     "src": "/assets/audios/yct1-e06-r1/EXP6.3.mp3?v=aa051630",
+     "dur": 70.08,
+     "parts": [
+      {
+       "at": 0,
+       "label": "Repite cada frase"
+      },
+      {
+       "at": 49.87,
+       "label": "Ahora todo seguido, como tu video"
+      }
+     ],
+     "segs": [
+      [
+       0,
+       0.4,
+       2.88
+      ],
+      [
+       1,
+       7.86,
+       11.51
+      ],
+      [
+       2,
+       18.13,
+       21.29
+      ],
+      [
+       3,
+       27.22,
+       29.21
+      ],
+      [
+       4,
+       33.49,
+       35.69
+      ],
+      [
+       5,
+       40.26,
+       43.39
+      ],
+      [
+       0,
+       49.87,
+       52.35
+      ],
+      [
+       1,
+       52.95,
+       56.6
+      ],
+      [
+       2,
+       57.2,
+       60.37
+      ],
+      [
+       3,
+       60.97,
+       62.95
+      ],
+      [
+       4,
+       63.55,
+       65.75
+      ],
+      [
+       5,
+       66.35,
+       69.48
+      ]
+     ],
+     "items": [
+      {
+       "py": "nǐ hǎo! hěn gāoxìng rènshi nǐ!",
+       "es": "¡Hola! ¡Mucho gusto!",
+       "clip": "/assets/audios/yct1-e06-r1/EXP6.3-1.mp3?v=75e54242"
+      },
+      {
+       "py": "wǒ jiào ___. nǐ jiào shénme míngzi?",
+       "es": "Me llamo ___. ¿Tú cómo te llamas?",
+       "clip": "/assets/audios/yct1-e06-r1/EXP6.3-2.mp3?v=f210918f"
+      },
+      {
+       "py": "zhè shì wǒ de lǎoshī, tā shì Zhōngguórén.",
+       "es": "Este es mi maestro, es de China.",
+       "clip": "/assets/audios/yct1-e06-r1/EXP6.3-3.mp3?v=9214e0eb"
+      },
+      {
+       "py": "wǒ hěn xǐhuan wǒ de xuéxiào!",
+       "es": "¡Me gusta mucho mi escuela!",
+       "clip": "/assets/audios/yct1-e06-r1/EXP6.3-4.mp3?v=1bf5a9e1"
+      },
+      {
+       "py": "Zhōngguó zài nǎr? zài zhèr!",
+       "es": "¿Dónde está China? ¡Aquí!",
+       "clip": "/assets/audios/yct1-e06-r1/EXP6.3-5.mp3?v=a826c398"
+      },
+      {
+       "py": "lǎoshī, zàijiàn! xīngqīyī jiàn!",
+       "es": "¡Adiós, maestro! ¡Nos vemos el lunes!",
+       "clip": "/assets/audios/yct1-e06-r1/EXP6.3-6.mp3?v=ee2715e9"
+      }
+     ]
+    }
+   ],
+   "thumb": "/assets/audios/yct1-e06-r1/cover-s.webp?v=78576a42"
+  },
   {
    "id": "newhsk1-e01-r1",
    "level": "newhsk1",
@@ -693,23 +3669,23 @@
      ]
     }
    ],
-   "thumb": "/assets/audios/newhsk1-e01-r1/cover-s.webp"
+   "thumb": "/assets/audios/newhsk1-e01-r1/cover-s.webp?v=f2cc20ac"
   },
   {
-   "id": "newhsk1-e03-r1",
+   "id": "newhsk1-e02-r1",
    "level": "newhsk1",
    "levelName": "New HSK 1",
-   "exp": 3,
+   "exp": 2,
    "round": 1,
-   "title": "El Restaurante Chino",
-   "tagline": "Tienes hambre. El menú está en chino. El mesero te mira con la libreta en la mano. ¿Qué le dices?",
-   "cover": "/assets/audios/newhsk1-e03-r1/cover.jpg",
+   "title": "Un Día en la Escuela",
+   "tagline": "Llegas tarde a clase y hay examen sorpresa. Necesitas un lugar, un lápiz y saber leer un carácter que nunca viste. ¿Sabes pedirlo?",
+   "cover": "/assets/audios/newhsk1-e02-r1/cover.jpg?v=4108ff15",
    "tracks": [
     {
-     "code": "EXP3.1",
+     "code": "EXP2.1",
      "kind": "words",
-     "src": "/assets/audios/newhsk1-e03-r1/EXP3.1.mp3",
-     "dur": 61.62,
+     "src": "/assets/audios/newhsk1-e02-r1/EXP2.1.mp3?v=6ff2910f",
+     "dur": 62.03,
      "parts": [
       {
        "at": 0,
@@ -720,244 +3696,244 @@
       [
        0,
        0.4,
-       1.35
+       1.44
       ],
       [
        0,
-       2.15,
-       3.1
+       2.24,
+       3.27
       ],
       [
        1,
-       5.23,
-       5.68
+       5.52,
+       6.37
       ],
       [
        1,
-       6.48,
-       6.93
+       7.17,
+       8.02
       ],
       [
        2,
-       8.73,
-       9.54
+       10.01,
+       10.76
       ],
       [
        2,
-       10.34,
-       11.14
+       11.56,
+       12.3
       ],
       [
        3,
-       13.07,
-       13.72
+       14.14,
+       14.9
       ],
       [
        3,
-       14.52,
-       15.18
+       15.7,
+       16.46
       ],
       [
        4,
-       16.98,
-       17.73
+       18.33,
+       18.77
       ],
       [
        4,
-       18.53,
-       19.28
+       19.57,
+       20.01
       ],
       [
        5,
-       21.13,
-       21.88
+       21.81,
+       22.26
       ],
       [
        5,
-       22.68,
-       23.43
+       23.06,
+       23.52
       ],
       [
        6,
-       25.29,
-       26.08
+       25.32,
+       25.84
       ],
       [
        6,
-       26.88,
-       27.68
+       26.64,
+       27.15
       ],
       [
        7,
-       29.59,
-       30.21
+       28.95,
+       29.56
       ],
       [
        7,
-       31.01,
-       31.62
+       30.36,
+       30.96
       ],
       [
        8,
-       33.42,
-       34.12
+       32.76,
+       33.66
       ],
       [
        8,
-       34.92,
-       35.62
+       34.46,
+       35.37
       ],
       [
        9,
-       37.42,
-       37.99
+       37.43,
+       38.17
       ],
       [
        9,
-       38.79,
-       39.36
+       38.97,
+       39.71
       ],
       [
        10,
-       41.16,
-       41.72
+       41.55,
+       42.39
       ],
       [
        10,
-       42.52,
-       43.08
+       43.19,
+       44.03
       ],
       [
        11,
-       44.88,
-       45.59
+       46.01,
+       46.79
       ],
       [
        11,
-       46.39,
-       47.11
+       47.59,
+       48.37
       ],
       [
        12,
-       48.92,
-       49.5
+       50.26,
+       50.98
       ],
       [
        12,
-       50.3,
-       50.87
+       51.78,
+       52.5
       ],
       [
        13,
-       52.67,
-       53.65
+       54.31,
+       54.9
       ],
       [
        13,
-       54.45,
-       55.43
+       55.7,
+       56.29
       ],
       [
        14,
-       57.6,
-       58.31
+       58.09,
+       58.76
       ],
       [
        14,
-       59.11,
-       59.82
+       59.56,
+       60.23
       ]
      ],
      "items": [
       {
-       "py": "fúwùyuán",
-       "es": "mesero",
-       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.1-1.mp3"
+       "py": "xiǎoxuéshēng",
+       "es": "alumno de primaria",
+       "clip": "/assets/audios/newhsk1-e02-r1/EXP2.1-1.mp3?v=4f431847"
       },
       {
-       "py": "yào",
-       "es": "querer / pedir",
-       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.1-2.mp3"
+       "py": "shàngkè",
+       "es": "empezar la clase",
+       "clip": "/assets/audios/newhsk1-e02-r1/EXP2.1-2.mp3?v=192adaa9"
       },
       {
-       "py": "miàntiáo",
-       "es": "fideos",
-       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.1-3.mp3"
+       "py": "shuōhuà",
+       "es": "hablar",
+       "clip": "/assets/audios/newhsk1-e02-r1/EXP2.1-3.mp3?v=31c0cf06"
       },
       {
-       "py": "jīdàn",
-       "es": "huevo",
-       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.1-4.mp3"
+       "py": "kěyǐ",
+       "es": "poder (permiso)",
+       "clip": "/assets/audios/newhsk1-e02-r1/EXP2.1-4.mp3?v=034ccdd2"
       },
       {
-       "py": "niúnǎi",
-       "es": "leche",
-       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.1-5.mp3"
+       "py": "zuò",
+       "es": "sentarse",
+       "clip": "/assets/audios/newhsk1-e02-r1/EXP2.1-5.mp3?v=86abb89a"
       },
       {
-       "py": "kāfēi",
-       "es": "café",
-       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.1-6.mp3"
+       "py": "zì",
+       "es": "carácter (letra)",
+       "clip": "/assets/audios/newhsk1-e02-r1/EXP2.1-6.mp3?v=838f488a"
       },
       {
-       "py": "hǎochī",
-       "es": "delicioso",
-       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.1-7.mp3"
+       "py": "dú",
+       "es": "leer en voz alta",
+       "clip": "/assets/audios/newhsk1-e02-r1/EXP2.1-7.mp3?v=0baa58c3"
       },
       {
-       "py": "gěi",
-       "es": "dar",
-       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.1-8.mp3"
+       "py": "bú huì",
+       "es": "no sé",
+       "clip": "/assets/audios/newhsk1-e02-r1/EXP2.1-8.mp3?v=4636f8c8"
       },
       {
-       "py": "děng",
-       "es": "esperar",
-       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.1-9.mp3"
+       "py": "méi guānxi",
+       "es": "no pasa nada",
+       "clip": "/assets/audios/newhsk1-e02-r1/EXP2.1-9.mp3?v=d1676e82"
       },
       {
-       "py": "chī",
-       "es": "comer",
-       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.1-10.mp3"
+       "py": "lǎoshī",
+       "es": "profe",
+       "clip": "/assets/audios/newhsk1-e02-r1/EXP2.1-10.mp3?v=7928a89b"
       },
       {
-       "py": "hē",
-       "es": "beber",
-       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.1-11.mp3"
+       "py": "xuésheng",
+       "es": "alumno",
+       "clip": "/assets/audios/newhsk1-e02-r1/EXP2.1-11.mp3?v=c27752f9"
       },
       {
-       "py": "mǐfàn",
-       "es": "arroz",
-       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.1-12.mp3"
+       "py": "xiě",
+       "es": "escribir",
+       "clip": "/assets/audios/newhsk1-e02-r1/EXP2.1-12.mp3?v=d780126e"
       },
       {
-       "py": "chá",
-       "es": "té",
-       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.1-13.mp3"
+       "py": "míngzi",
+       "es": "nombre",
+       "clip": "/assets/audios/newhsk1-e02-r1/EXP2.1-13.mp3?v=f07658f6"
       },
       {
-       "py": "duōshǎo qián",
-       "es": "¿cuánto es?",
-       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.1-14.mp3"
+       "py": "shū",
+       "es": "libro",
+       "clip": "/assets/audios/newhsk1-e02-r1/EXP2.1-14.mp3?v=dcf46a76"
       },
       {
-       "py": "xièxie",
-       "es": "gracias",
-       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.1-15.mp3"
+       "py": "zhuōzi",
+       "es": "mesa",
+       "clip": "/assets/audios/newhsk1-e02-r1/EXP2.1-15.mp3?v=057edcc7"
       }
      ]
     },
     {
-     "code": "EXP3.2",
+     "code": "EXP2.2",
      "kind": "dialogue",
-     "src": "/assets/audios/newhsk1-e03-r1/EXP3.2.mp3",
-     "dur": 72.99,
+     "src": "/assets/audios/newhsk1-e02-r1/EXP2.2.mp3?v=aa416b4a",
+     "dur": 75.31,
      "parts": [
       {
        "at": 0,
        "label": "Escucha la conversación"
       },
       {
-       "at": 24.37,
+       "at": 25.09,
        "label": "Ahora repite cada frase"
       }
      ],
@@ -965,131 +3941,131 @@
       [
        0,
        0.4,
-       2.32
+       3.23
       ],
       [
        1,
-       3.02,
-       5.97
+       3.93,
+       8.09
       ],
       [
        2,
-       6.67,
-       9.76
+       8.79,
+       12.51
       ],
       [
        3,
-       10.46,
-       13.14
+       13.21,
+       16.33
       ],
       [
        4,
-       13.84,
-       15.64
+       17.03,
+       17.97
       ],
       [
        5,
-       16.34,
-       20.13
+       18.67,
+       20.62
       ],
       [
        6,
-       20.83,
-       22.47
+       21.32,
+       23.19
       ],
       [
        0,
-       24.37,
-       26.29
+       25.09,
+       27.92
       ],
       [
        1,
-       29.88,
-       32.84
+       32.65,
+       36.81
       ],
       [
        2,
-       37.73,
-       40.82
+       43.21,
+       46.93
       ],
       [
        3,
-       45.89,
-       48.56
+       52.78,
+       55.9
       ],
       [
        4,
-       53.11,
-       54.91
+       60.99,
+       61.94
       ],
       [
        5,
-       58.36,
-       62.16
+       64.32,
+       66.27
       ],
       [
        6,
-       68.1,
-       69.74
+       69.91,
+       71.78
       ]
      ],
      "items": [
       {
-       "py": "nǐ hǎo! nǐ yào chī shénme?",
-       "es": "¡Hola! ¿Qué quieres comer?",
-       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.2-1.mp3",
+       "py": "shàngkè le, dàjiā bú yào shuōhuà le!",
+       "es": "¡Empezó la clase, todos dejen de hablar!",
+       "clip": "/assets/audios/newhsk1-e02-r1/EXP2.2-1.mp3?v=e789c49b",
        "who": "profe"
       },
       {
-       "py": "fúwùyuán, wǒ yào miàntiáo hé jīdàn.",
-       "es": "Mesero, quiero fideos y huevo.",
-       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.2-2.mp3",
+       "py": "lǎoshī, zhèr yǒu rén ma? wǒ kěyǐ zuò zhèr ma?",
+       "es": "Profe, ¿está ocupado? ¿Me puedo sentar aquí?",
+       "clip": "/assets/audios/newhsk1-e02-r1/EXP2.2-2.mp3?v=bae7dd39",
        "who": "tu"
       },
       {
-       "py": "hǎo. nǐ yào hē shénme? kāfēi ma?",
-       "es": "Bien. ¿Qué quieres beber? ¿Café?",
-       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.2-3.mp3",
+       "py": "méiyǒu, qǐng zuò. qǐng zài zhèlǐ xiě nǐ de míngzi.",
+       "es": "No, siéntate. Por favor, escribe aquí tu nombre.",
+       "clip": "/assets/audios/newhsk1-e02-r1/EXP2.2-3.mp3?v=aa2f388f",
        "who": "profe"
       },
       {
-       "py": "bú yào kāfēi. qǐng gěi wǒ niúnǎi.",
-       "es": "Café no. Por favor, deme leche.",
-       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.2-4.mp3",
+       "py": "hǎo de. lǎoshī, zhège zì zěnme dú?",
+       "es": "Está bien. Profe, ¿cómo se lee este carácter?",
+       "clip": "/assets/audios/newhsk1-e02-r1/EXP2.2-4.mp3?v=99e0688d",
        "who": "tu"
       },
       {
-       "py": "hǎo de, qǐng děng yíxià.",
-       "es": "Muy bien, espere un momento, por favor.",
-       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.2-5.mp3",
+       "py": "nǐ huì dú ma?",
+       "es": "¿Lo sabes leer?",
+       "clip": "/assets/audios/newhsk1-e02-r1/EXP2.2-5.mp3?v=15cc377b",
        "who": "profe"
       },
       {
-       "py": "hǎo, wǒ děng. … hěn hǎochī!",
-       "es": "Bien, espero. … ¡Está delicioso!",
-       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.2-6.mp3",
+       "py": "duìbuqǐ, wǒ bú huì.",
+       "es": "Perdón, no sé.",
+       "clip": "/assets/audios/newhsk1-e02-r1/EXP2.2-6.mp3?v=fd61e67b",
        "who": "tu"
       },
       {
-       "py": "xièxie! èrshí kuài.",
-       "es": "¡Gracias! Son veinte yuanes.",
-       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.2-7.mp3",
+       "py": "méi guānxi! nǐ hěn hǎo.",
+       "es": "¡No pasa nada! Lo haces muy bien.",
+       "clip": "/assets/audios/newhsk1-e02-r1/EXP2.2-7.mp3?v=15d70970",
        "who": "profe"
       }
      ]
     },
     {
-     "code": "EXP3.3",
+     "code": "EXP2.3",
      "kind": "video",
-     "src": "/assets/audios/newhsk1-e03-r1/EXP3.3.mp3",
-     "dur": 47.68,
+     "src": "/assets/audios/newhsk1-e02-r1/EXP2.3.mp3?v=03181169",
+     "dur": 67.75,
      "parts": [
       {
        "at": 0,
        "label": "Repite cada frase"
       },
       {
-       "at": 34.06,
+       "at": 48.22,
        "label": "Ahora todo seguido, como tu video"
       }
      ],
@@ -1097,99 +4073,595 @@
       [
        0,
        0.4,
-       1.38
+       2.93
       ],
       [
        1,
-       4.25,
-       6.15
+       7.96,
+       10.98
       ],
       [
        2,
-       10.31,
-       12.97
+       16.71,
+       19.73
       ],
       [
        3,
-       18.18,
-       19.71
+       25.45,
+       27.91
       ],
       [
        4,
-       23.35,
-       24.33
+       32.87,
+       35.55
       ],
       [
        5,
-       27.2,
-       29.18
+       40.79,
+       43.01
       ],
       [
        0,
-       34.06,
-       35.04
+       48.22,
+       50.75
       ],
       [
        1,
-       35.64,
-       37.54
+       51.35,
+       54.37
       ],
       [
        2,
-       38.14,
-       40.79
+       54.97,
+       57.98
       ],
       [
        3,
-       41.39,
-       42.92
+       58.58,
+       61.05
       ],
       [
        4,
-       43.52,
-       44.5
+       61.65,
+       64.33
       ],
       [
        5,
-       45.1,
-       47.08
+       64.93,
+       67.15
       ]
      ],
      "items": [
       {
-       "py": "fúwùyuán!",
-       "es": "¡Mesero!",
-       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.3-1.mp3"
+       "py": "dàjiā hǎo! wǒ shì xiǎoxuéshēng.",
+       "es": "¡Hola a todos! Soy alumno de primaria.",
+       "clip": "/assets/audios/newhsk1-e02-r1/EXP2.3-1.mp3?v=e22069b6"
       },
       {
-       "py": "wǒ yào miàntiáo hé jīdàn.",
-       "es": "Quiero fideos y huevo.",
-       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.3-2.mp3"
+       "py": "zhèr yǒu rén ma? wǒ kěyǐ zuò zhèr ma?",
+       "es": "¿Está ocupado? ¿Me puedo sentar aquí?",
+       "clip": "/assets/audios/newhsk1-e02-r1/EXP2.3-2.mp3?v=ad7c58ba"
       },
       {
-       "py": "qǐng gěi wǒ niúnǎi, bú yào kāfēi.",
-       "es": "Por favor, deme leche, café no.",
-       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.3-3.mp3"
+       "py": "shàngkè le, dàjiā bú yào shuōhuà le!",
+       "es": "¡Empezó la clase, todos a callar!",
+       "clip": "/assets/audios/newhsk1-e02-r1/EXP2.3-3.mp3?v=d9e34a1f"
       },
       {
-       "py": "hǎo de, wǒ děng.",
-       "es": "Está bien, yo espero.",
-       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.3-4.mp3"
+       "py": "zhège zì zěnme dú? wǒ bú huì!",
+       "es": "¿Cómo se lee este carácter? ¡No sé!",
+       "clip": "/assets/audios/newhsk1-e02-r1/EXP2.3-4.mp3?v=d82b6333"
       },
       {
-       "py": "hěn hǎochī!",
-       "es": "¡Está delicioso!",
-       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.3-5.mp3"
+       "py": "méi guānxi! wǒ xiě wǒ de míngzi.",
+       "es": "¡No pasa nada! Escribo mi nombre.",
+       "clip": "/assets/audios/newhsk1-e02-r1/EXP2.3-5.mp3?v=9dc82627"
       },
       {
-       "py": "duōshǎo qián? xièxie!",
-       "es": "¿Cuánto es? ¡Gracias!",
-       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.3-6.mp3"
+       "py": "xièxie lǎoshī! zàijiàn!",
+       "es": "¡Gracias, profe! ¡Adiós!",
+       "clip": "/assets/audios/newhsk1-e02-r1/EXP2.3-6.mp3?v=076eeb1f"
       }
      ]
     }
    ],
-   "thumb": "/assets/audios/newhsk1-e03-r1/cover-s.webp"
+   "thumb": "/assets/audios/newhsk1-e02-r1/cover-s.webp?v=3c9e9b2b"
+  },
+  {
+   "id": "newhsk1-e03-r1",
+   "level": "newhsk1",
+   "levelName": "New HSK 1",
+   "exp": 3,
+   "round": 1,
+   "title": "El Restaurante Chino",
+   "tagline": "La abuela invita a toda la familia a cenar. Hoy tú pides por todos. El mesero espera con su libreta. ¿Sabes pedir?",
+   "cover": "/assets/audios/newhsk1-e03-r1/cover.jpg?v=5ad01059",
+   "tracks": [
+    {
+     "code": "EXP3.1",
+     "kind": "words",
+     "src": "/assets/audios/newhsk1-e03-r1/EXP3.1.mp3?v=5db99f6c",
+     "dur": 60.64,
+     "parts": [
+      {
+       "at": 0,
+       "label": "Escucha y repite"
+      }
+     ],
+     "segs": [
+      [
+       0,
+       0.4,
+       1.14
+      ],
+      [
+       0,
+       1.94,
+       2.68
+      ],
+      [
+       1,
+       4.52,
+       5.33
+      ],
+      [
+       1,
+       6.13,
+       6.93
+      ],
+      [
+       2,
+       8.86,
+       9.52
+      ],
+      [
+       2,
+       10.32,
+       10.97
+      ],
+      [
+       3,
+       12.77,
+       13.57
+      ],
+      [
+       3,
+       14.37,
+       15.17
+      ],
+      [
+       4,
+       17.1,
+       17.65
+      ],
+      [
+       4,
+       18.45,
+       19
+      ],
+      [
+       5,
+       20.8,
+       21.23
+      ],
+      [
+       5,
+       22.03,
+       22.47
+      ],
+      [
+       6,
+       24.27,
+       25.02
+      ],
+      [
+       6,
+       25.82,
+       26.57
+      ],
+      [
+       7,
+       28.42,
+       29.04
+      ],
+      [
+       7,
+       29.84,
+       30.46
+      ],
+      [
+       8,
+       32.26,
+       32.93
+      ],
+      [
+       8,
+       33.73,
+       34.4
+      ],
+      [
+       9,
+       36.2,
+       36.77
+      ],
+      [
+       9,
+       37.57,
+       38.14
+      ],
+      [
+       10,
+       39.94,
+       40.5
+      ],
+      [
+       10,
+       41.3,
+       41.86
+      ],
+      [
+       11,
+       43.66,
+       44.23
+      ],
+      [
+       11,
+       45.03,
+       45.61
+      ],
+      [
+       12,
+       47.41,
+       48.13
+      ],
+      [
+       12,
+       48.93,
+       49.64
+      ],
+      [
+       13,
+       51.45,
+       52.32
+      ],
+      [
+       13,
+       53.12,
+       54
+      ],
+      [
+       14,
+       56.02,
+       56.91
+      ],
+      [
+       14,
+       57.71,
+       58.6
+      ]
+     ],
+     "items": [
+      {
+       "py": "wǎnfàn",
+       "es": "cena",
+       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.1-1.mp3?v=06fdb7c4"
+      },
+      {
+       "py": "miàntiáo",
+       "es": "fideos",
+       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.1-2.mp3?v=a8d75976"
+      },
+      {
+       "py": "jīdàn",
+       "es": "huevo",
+       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.1-3.mp3?v=2840350a"
+      },
+      {
+       "py": "jiǎozi",
+       "es": "jiǎozi (empanaditas)",
+       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.1-4.mp3?v=cd516b10"
+      },
+      {
+       "py": "lái",
+       "es": "tráigame (al pedir)",
+       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.1-5.mp3?v=bb135114"
+      },
+      {
+       "py": "bēi",
+       "es": "taza · vaso",
+       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.1-6.mp3?v=2dc87c6d"
+      },
+      {
+       "py": "niúnǎi",
+       "es": "leche",
+       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.1-7.mp3?v=b7909f36"
+      },
+      {
+       "py": "zěnmeyàng?",
+       "es": "¿qué tal?",
+       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.1-8.mp3?v=1b3f14f3"
+      },
+      {
+       "py": "hǎo de",
+       "es": "¡está bien!",
+       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.1-9.mp3?v=c017aa6d"
+      },
+      {
+       "py": "chī",
+       "es": "comer",
+       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.1-10.mp3?v=e2600464"
+      },
+      {
+       "py": "hē",
+       "es": "beber",
+       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.1-11.mp3?v=79285a3c"
+      },
+      {
+       "py": "chá",
+       "es": "té",
+       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.1-12.mp3?v=37fc6875"
+      },
+      {
+       "py": "mǐfàn",
+       "es": "arroz",
+       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.1-13.mp3?v=a0c8d340"
+      },
+      {
+       "py": "xǐhuan",
+       "es": "gustar",
+       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.1-14.mp3?v=515a723c"
+      },
+      {
+       "py": "duōshao qián?",
+       "es": "¿cuánto cuesta?",
+       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.1-15.mp3?v=74d74247"
+      }
+     ]
+    },
+    {
+     "code": "EXP3.2",
+     "kind": "dialogue",
+     "src": "/assets/audios/newhsk1-e03-r1/EXP3.2.mp3?v=6fd27c59",
+     "dur": 66.47,
+     "parts": [
+      {
+       "at": 0,
+       "label": "Escucha la conversación"
+      },
+      {
+       "at": 22.37,
+       "label": "Ahora repite cada frase"
+      }
+     ],
+     "segs": [
+      [
+       0,
+       0.4,
+       2.47
+      ],
+      [
+       1,
+       3.17,
+       5.57
+      ],
+      [
+       2,
+       6.27,
+       7.68
+      ],
+      [
+       3,
+       8.38,
+       10.88
+      ],
+      [
+       4,
+       11.58,
+       12.78
+      ],
+      [
+       5,
+       13.48,
+       15.76
+      ],
+      [
+       6,
+       16.46,
+       20.47
+      ],
+      [
+       0,
+       22.37,
+       24.44
+      ],
+      [
+       1,
+       28.23,
+       30.63
+      ],
+      [
+       2,
+       34.83,
+       36.24
+      ],
+      [
+       3,
+       39.2,
+       41.7
+      ],
+      [
+       4,
+       46.03,
+       47.23
+      ],
+      [
+       5,
+       49.93,
+       52.21
+      ],
+      [
+       6,
+       56.26,
+       60.27
+      ]
+     ],
+     "items": [
+      {
+       "py": "nǐ hǎo! nǐmen chī diǎn shénme?",
+       "es": "¡Hola! ¿Qué van a comer?",
+       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.2-1.mp3?v=86ef0366",
+       "who": "profe"
+      },
+      {
+       "py": "wǎnfàn, wǒ xiǎng chī miàntiáo.",
+       "es": "De cena quiero comer fideos.",
+       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.2-2.mp3?v=a5bae9f9",
+       "who": "tu"
+      },
+      {
+       "py": "jīdàn miàn zěnmeyàng?",
+       "es": "¿Qué tal unos fideos con huevo?",
+       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.2-3.mp3?v=cf15d92f",
+       "who": "profe"
+      },
+      {
+       "py": "hǎo de! wǒmen yě xiǎng chī jiǎozi.",
+       "es": "¡Está bien! También queremos jiǎozi.",
+       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.2-4.mp3?v=915d272b",
+       "who": "tu"
+      },
+      {
+       "py": "nǐ hē diǎn shénme?",
+       "es": "¿Qué quieres tomar?",
+       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.2-5.mp3?v=ce49c674",
+       "who": "profe"
+      },
+      {
+       "py": "lái yì bēi chá ba, xièxie!",
+       "es": "Tráigame un té, ¡gracias!",
+       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.2-6.mp3?v=45b2c83b",
+       "who": "tu"
+      },
+      {
+       "py": "hǎo de! miàntiáo, jiǎozi hé chá. xièxie!",
+       "es": "¡Muy bien! Fideos, jiǎozi y té. ¡Gracias!",
+       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.2-7.mp3?v=a5dd0505",
+       "who": "profe"
+      }
+     ]
+    },
+    {
+     "code": "EXP3.3",
+     "kind": "video",
+     "src": "/assets/audios/newhsk1-e03-r1/EXP3.3.mp3?v=57237030",
+     "dur": 65.53,
+     "parts": [
+      {
+       "at": 0,
+       "label": "Repite cada frase"
+      },
+      {
+       "at": 46.66,
+       "label": "Ahora todo seguido, como tu video"
+      }
+     ],
+     "segs": [
+      [
+       0,
+       0.4,
+       3.64
+      ],
+      [
+       1,
+       9.69,
+       12.09
+      ],
+      [
+       2,
+       16.95,
+       19.29
+      ],
+      [
+       3,
+       24.05,
+       26.33
+      ],
+      [
+       4,
+       31.03,
+       33.09
+      ],
+      [
+       5,
+       37.48,
+       40.43
+      ],
+      [
+       0,
+       46.66,
+       49.9
+      ],
+      [
+       1,
+       50.5,
+       52.9
+      ],
+      [
+       2,
+       53.5,
+       55.84
+      ],
+      [
+       3,
+       56.44,
+       58.72
+      ],
+      [
+       4,
+       59.32,
+       61.38
+      ],
+      [
+       5,
+       61.98,
+       64.93
+      ]
+     ],
+     "items": [
+      {
+       "py": "dàjiā hǎo! wǒ jiào ___.",
+       "es": "¡Hola a todos! Me llamo ___.",
+       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.3-1.mp3?v=45d5318e"
+      },
+      {
+       "py": "wǎnfàn, wǒ xiǎng chī miàntiáo.",
+       "es": "De cena quiero comer fideos.",
+       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.3-2.mp3?v=a5bae9f9"
+      },
+      {
+       "py": "jīdàn miàn zěnmeyàng? hǎo de!",
+       "es": "¿Fideos con huevo? ¡Está bien!",
+       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.3-3.mp3?v=bf325a27"
+      },
+      {
+       "py": "lái yì bēi chá ba, xièxie!",
+       "es": "Tráigame un té, ¡gracias!",
+       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.3-4.mp3?v=45b2c83b"
+      },
+      {
+       "py": "wǒ fēicháng xǐhuan chī jiǎozi!",
+       "es": "¡Me encantan los jiǎozi!",
+       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.3-5.mp3?v=f904efc9"
+      },
+      {
+       "py": "duōshao qián? xièxie, zàijiàn!",
+       "es": "¿Cuánto es? ¡Gracias, adiós!",
+       "clip": "/assets/audios/newhsk1-e03-r1/EXP3.3-6.mp3?v=9bb8315a"
+      }
+     ]
+    }
+   ],
+   "thumb": "/assets/audios/newhsk1-e03-r1/cover-s.webp?v=a2296d50"
   },
   {
    "id": "newhsk1-e04-r1",
@@ -1685,7 +5157,1991 @@
      ]
     }
    ],
-   "thumb": "/assets/audios/newhsk1-e04-r1/cover-s.webp"
+   "thumb": "/assets/audios/newhsk1-e04-r1/cover-s.webp?v=c6a56d79"
+  },
+  {
+   "id": "newhsk1-e05-r1",
+   "level": "newhsk1",
+   "levelName": "New HSK 1",
+   "exp": 5,
+   "round": 1,
+   "title": "Mi Rutina y el Clima",
+   "tagline": "Tu primo de China te llama por videollamada y quiere saber cómo es tu día: a qué hora te levantas, qué comes y qué tiempo hace. ¿Sabes contarlo?",
+   "cover": "/assets/audios/newhsk1-e05-r1/cover.jpg?v=636c7ee7",
+   "tracks": [
+    {
+     "code": "EXP5.1",
+     "kind": "words",
+     "src": "/assets/audios/newhsk1-e05-r1/EXP5.1.mp3?v=97131f0f",
+     "dur": 64.11,
+     "parts": [
+      {
+       "at": 0,
+       "label": "Escucha y repite"
+      }
+     ],
+     "segs": [
+      [
+       0,
+       0.4,
+       1.17
+      ],
+      [
+       0,
+       1.97,
+       2.74
+      ],
+      [
+       1,
+       4.62,
+       5.63
+      ],
+      [
+       1,
+       6.43,
+       7.43
+      ],
+      [
+       2,
+       9.64,
+       10.41
+      ],
+      [
+       2,
+       11.21,
+       11.97
+      ],
+      [
+       3,
+       13.85,
+       14.71
+      ],
+      [
+       3,
+       15.51,
+       16.38
+      ],
+      [
+       4,
+       18.4,
+       19.18
+      ],
+      [
+       4,
+       19.98,
+       20.76
+      ],
+      [
+       5,
+       22.64,
+       23.41
+      ],
+      [
+       5,
+       24.21,
+       24.97
+      ],
+      [
+       6,
+       26.85,
+       27.27
+      ],
+      [
+       6,
+       28.07,
+       28.49
+      ],
+      [
+       7,
+       30.29,
+       31.07
+      ],
+      [
+       7,
+       31.87,
+       32.65
+      ],
+      [
+       8,
+       34.55,
+       35.42
+      ],
+      [
+       8,
+       36.22,
+       37.1
+      ],
+      [
+       9,
+       39.12,
+       39.82
+      ],
+      [
+       9,
+       40.62,
+       41.33
+      ],
+      [
+       10,
+       43.13,
+       43.91
+      ],
+      [
+       10,
+       44.71,
+       45.49
+      ],
+      [
+       11,
+       47.39,
+       48.31
+      ],
+      [
+       11,
+       49.11,
+       50.04
+      ],
+      [
+       12,
+       52.13,
+       52.84
+      ],
+      [
+       12,
+       53.64,
+       54.35
+      ],
+      [
+       13,
+       56.15,
+       56.63
+      ],
+      [
+       13,
+       57.43,
+       57.91
+      ],
+      [
+       14,
+       59.71,
+       60.53
+      ],
+      [
+       14,
+       61.33,
+       62.15
+      ]
+     ],
+     "items": [
+      {
+       "py": "xiànzài",
+       "es": "ahora",
+       "clip": "/assets/audios/newhsk1-e05-r1/EXP5.1-1.mp3?v=20402f0d"
+      },
+      {
+       "py": "chuān yīfu",
+       "es": "vestirse",
+       "clip": "/assets/audios/newhsk1-e05-r1/EXP5.1-2.mp3?v=64def6bc"
+      },
+      {
+       "py": "zǎofàn",
+       "es": "desayuno",
+       "clip": "/assets/audios/newhsk1-e05-r1/EXP5.1-3.mp3?v=7a3aae94"
+      },
+      {
+       "py": "miàntiáor",
+       "es": "fideos",
+       "clip": "/assets/audios/newhsk1-e05-r1/EXP5.1-4.mp3?v=0b6be633"
+      },
+      {
+       "py": "wàibian",
+       "es": "afuera",
+       "clip": "/assets/audios/newhsk1-e05-r1/EXP5.1-5.mp3?v=07d18ee9"
+      },
+      {
+       "py": "fángjiān",
+       "es": "habitación",
+       "clip": "/assets/audios/newhsk1-e05-r1/EXP5.1-6.mp3?v=7d71a76b"
+      },
+      {
+       "py": "bàn",
+       "es": "y media",
+       "clip": "/assets/audios/newhsk1-e05-r1/EXP5.1-7.mp3?v=f786d2d9"
+      },
+      {
+       "py": "xiūxi",
+       "es": "descansar",
+       "clip": "/assets/audios/newhsk1-e05-r1/EXP5.1-8.mp3?v=510b134e"
+      },
+      {
+       "py": "fēicháng",
+       "es": "muchísimo",
+       "clip": "/assets/audios/newhsk1-e05-r1/EXP5.1-9.mp3?v=ccfa4b91"
+      },
+      {
+       "py": "diǎn",
+       "es": "en punto (hora)",
+       "clip": "/assets/audios/newhsk1-e05-r1/EXP5.1-10.mp3?v=3e8dde26"
+      },
+      {
+       "py": "tiānqì",
+       "es": "el tiempo",
+       "clip": "/assets/audios/newhsk1-e05-r1/EXP5.1-11.mp3?v=50a9e276"
+      },
+      {
+       "py": "xià yǔ",
+       "es": "llover",
+       "clip": "/assets/audios/newhsk1-e05-r1/EXP5.1-12.mp3?v=8feb474b"
+      },
+      {
+       "py": "lěng",
+       "es": "frío",
+       "clip": "/assets/audios/newhsk1-e05-r1/EXP5.1-13.mp3?v=831eac01"
+      },
+      {
+       "py": "rè",
+       "es": "calor",
+       "clip": "/assets/audios/newhsk1-e05-r1/EXP5.1-14.mp3?v=839fbbe5"
+      },
+      {
+       "py": "shuìjiào",
+       "es": "dormir",
+       "clip": "/assets/audios/newhsk1-e05-r1/EXP5.1-15.mp3?v=b310af02"
+      }
+     ]
+    },
+    {
+     "code": "EXP5.2",
+     "kind": "dialogue",
+     "src": "/assets/audios/newhsk1-e05-r1/EXP5.2.mp3?v=475805d2",
+     "dur": 69.43,
+     "parts": [
+      {
+       "at": 0,
+       "label": "Escucha la conversación"
+      },
+      {
+       "at": 23.28,
+       "label": "Ahora repite cada frase"
+      }
+     ],
+     "segs": [
+      [
+       0,
+       0.4,
+       2.77
+      ],
+      [
+       1,
+       3.47,
+       6.42
+      ],
+      [
+       2,
+       7.12,
+       8.79
+      ],
+      [
+       3,
+       9.49,
+       11.48
+      ],
+      [
+       4,
+       12.18,
+       13.84
+      ],
+      [
+       5,
+       14.54,
+       18.44
+      ],
+      [
+       6,
+       19.14,
+       21.38
+      ],
+      [
+       0,
+       23.28,
+       25.65
+      ],
+      [
+       1,
+       29.81,
+       32.77
+      ],
+      [
+       2,
+       37.66,
+       39.32
+      ],
+      [
+       3,
+       42.61,
+       44.6
+      ],
+      [
+       4,
+       48.29,
+       49.94
+      ],
+      [
+       5,
+       53.21,
+       57.11
+      ],
+      [
+       6,
+       63.19,
+       65.43
+      ]
+     ],
+     "items": [
+      {
+       "py": "nǐ hǎo! nǐ nàr xiànzài jǐ diǎn?",
+       "es": "¡Hola! ¿Qué hora es allá?",
+       "clip": "/assets/audios/newhsk1-e05-r1/EXP5.2-1.mp3?v=c09a75cd",
+       "who": "profe"
+      },
+      {
+       "py": "xiànzài qī diǎn bàn. wǒ chuān yīfu.",
+       "es": "Son las siete y media. Me estoy vistiendo.",
+       "clip": "/assets/audios/newhsk1-e05-r1/EXP5.2-2.mp3?v=e7df71e1",
+       "who": "tu"
+      },
+      {
+       "py": "nǐ de zǎofàn shì shénme?",
+       "es": "¿Qué desayunas?",
+       "clip": "/assets/audios/newhsk1-e05-r1/EXP5.2-3.mp3?v=bae3863f",
+       "who": "profe"
+      },
+      {
+       "py": "wǒ de zǎofàn shì miàntiáor.",
+       "es": "Mi desayuno son fideos.",
+       "clip": "/assets/audios/newhsk1-e05-r1/EXP5.2-4.mp3?v=dc0d7f13",
+       "who": "tu"
+      },
+      {
+       "py": "jīntiān tiānqì zěnmeyàng?",
+       "es": "¿Qué tiempo hace hoy?",
+       "clip": "/assets/audios/newhsk1-e05-r1/EXP5.2-5.mp3?v=fe58c3e3",
+       "who": "profe"
+      },
+      {
+       "py": "xià yǔ le, hěn lěng! wǒ zài fángjiān lǐ xiūxi.",
+       "es": "¡Llueve y hace frío! Descanso en mi cuarto.",
+       "clip": "/assets/audios/newhsk1-e05-r1/EXP5.2-6.mp3?v=3178946d",
+       "who": "tu"
+      },
+      {
+       "py": "wǒ zhèr fēicháng rè! zàijiàn!",
+       "es": "¡Aquí hace muchísimo calor! ¡Adiós!",
+       "clip": "/assets/audios/newhsk1-e05-r1/EXP5.2-7.mp3?v=4b192f54",
+       "who": "profe"
+      }
+     ]
+    },
+    {
+     "code": "EXP5.3",
+     "kind": "video",
+     "src": "/assets/audios/newhsk1-e05-r1/EXP5.3.mp3?v=f35ee3e7",
+     "dur": 62.61,
+     "parts": [
+      {
+       "at": 0,
+       "label": "Repite cada frase"
+      },
+      {
+       "at": 44.6,
+       "label": "Ahora todo seguido, como tu video"
+      }
+     ],
+     "segs": [
+      [
+       0,
+       0.4,
+       2.87
+      ],
+      [
+       1,
+       7.84,
+       10.83
+      ],
+      [
+       2,
+       16.51,
+       18.26
+      ],
+      [
+       3,
+       22.2,
+       24.57
+      ],
+      [
+       4,
+       29.38,
+       31.28
+      ],
+      [
+       5,
+       35.43,
+       38.38
+      ],
+      [
+       0,
+       44.6,
+       47.07
+      ],
+      [
+       1,
+       47.67,
+       50.66
+      ],
+      [
+       2,
+       51.26,
+       53
+      ],
+      [
+       3,
+       53.6,
+       55.97
+      ],
+      [
+       4,
+       56.57,
+       58.47
+      ],
+      [
+       5,
+       59.07,
+       62.01
+      ]
+     ],
+     "items": [
+      {
+       "py": "dàjiā hǎo! xiànzài qī diǎn.",
+       "es": "¡Hola a todos! Son las siete.",
+       "clip": "/assets/audios/newhsk1-e05-r1/EXP5.3-1.mp3?v=7ae33323"
+      },
+      {
+       "py": "wǒ chuān yīfu, zǎofàn chī miàntiáor.",
+       "es": "Me visto y desayuno fideos.",
+       "clip": "/assets/audios/newhsk1-e05-r1/EXP5.3-2.mp3?v=5cafb01c"
+      },
+      {
+       "py": "jīntiān tiānqì zěnmeyàng?",
+       "es": "¿Qué tiempo hace hoy?",
+       "clip": "/assets/audios/newhsk1-e05-r1/EXP5.3-3.mp3?v=5848c513"
+      },
+      {
+       "py": "xià yǔ le, wàibian hěn lěng!",
+       "es": "¡Llueve, afuera hace frío!",
+       "clip": "/assets/audios/newhsk1-e05-r1/EXP5.3-4.mp3?v=a64b57f4"
+      },
+      {
+       "py": "wǒ zài fángjiān lǐ xiūxi.",
+       "es": "Descanso en mi cuarto.",
+       "clip": "/assets/audios/newhsk1-e05-r1/EXP5.3-5.mp3?v=afbea4c7"
+      },
+      {
+       "py": "xiànzài shíyī diǎn, wǒ xiǎng shuìjiào le!",
+       "es": "¡Son las once, ya quiero dormir!",
+       "clip": "/assets/audios/newhsk1-e05-r1/EXP5.3-6.mp3?v=6781f0e0"
+      }
+     ]
+    }
+   ],
+   "thumb": "/assets/audios/newhsk1-e05-r1/cover-s.webp?v=7a6c0c3a"
+  },
+  {
+   "id": "newhsk1-e06-r1",
+   "level": "newhsk1",
+   "levelName": "New HSK 1",
+   "exp": 6,
+   "round": 1,
+   "title": "Deportes y Salud",
+   "tagline": "El día del gran partido amaneces con fiebre. Mamá te lleva al doctor, y el doctor solo habla Chino Mandarín. ¿Sabes decirle qué te pasa?",
+   "cover": "/assets/audios/newhsk1-e06-r1/cover.jpg?v=530785f6",
+   "tracks": [
+    {
+     "code": "EXP6.1",
+     "kind": "words",
+     "src": "/assets/audios/newhsk1-e06-r1/EXP6.1.mp3?v=84ef47e1",
+     "dur": 64.14,
+     "parts": [
+      {
+       "at": 0,
+       "label": "Escucha y repite"
+      }
+     ],
+     "segs": [
+      [
+       0,
+       0.4,
+       1
+      ],
+      [
+       0,
+       1.8,
+       2.41
+      ],
+      [
+       1,
+       4.21,
+       5.01
+      ],
+      [
+       1,
+       5.81,
+       6.62
+      ],
+      [
+       2,
+       8.54,
+       9.33
+      ],
+      [
+       2,
+       10.13,
+       10.92
+      ],
+      [
+       3,
+       12.82,
+       13.47
+      ],
+      [
+       3,
+       14.27,
+       14.92
+      ],
+      [
+       4,
+       16.72,
+       17.47
+      ],
+      [
+       4,
+       18.27,
+       19.02
+      ],
+      [
+       5,
+       20.87,
+       21.66
+      ],
+      [
+       5,
+       22.46,
+       23.24
+      ],
+      [
+       6,
+       25.14,
+       25.95
+      ],
+      [
+       6,
+       26.75,
+       27.56
+      ],
+      [
+       7,
+       29.5,
+       30.22
+      ],
+      [
+       7,
+       31.02,
+       31.73
+      ],
+      [
+       8,
+       33.53,
+       34.58
+      ],
+      [
+       8,
+       35.38,
+       36.43
+      ],
+      [
+       9,
+       38.71,
+       39.44
+      ],
+      [
+       9,
+       40.24,
+       40.98
+      ],
+      [
+       10,
+       42.81,
+       43.47
+      ],
+      [
+       10,
+       44.27,
+       44.93
+      ],
+      [
+       11,
+       46.73,
+       47.49
+      ],
+      [
+       11,
+       48.29,
+       49.04
+      ],
+      [
+       12,
+       50.9,
+       51.57
+      ],
+      [
+       12,
+       52.37,
+       53.04
+      ],
+      [
+       13,
+       54.84,
+       55.56
+      ],
+      [
+       13,
+       56.36,
+       57.07
+      ],
+      [
+       14,
+       58.87,
+       59.95
+      ],
+      [
+       14,
+       60.75,
+       61.83
+      ]
+     ],
+     "items": [
+      {
+       "py": "zěnme le?",
+       "es": "¿qué te pasa?",
+       "clip": "/assets/audios/newhsk1-e06-r1/EXP6.1-1.mp3?v=e8b4fdad"
+      },
+      {
+       "py": "shēngbìng",
+       "es": "enfermarse",
+       "clip": "/assets/audios/newhsk1-e06-r1/EXP6.1-2.mp3?v=c9d82153"
+      },
+      {
+       "py": "kànbìng",
+       "es": "ir al médico",
+       "clip": "/assets/audios/newhsk1-e06-r1/EXP6.1-3.mp3?v=9fa1bcc4"
+      },
+      {
+       "py": "bù néng",
+       "es": "no poder",
+       "clip": "/assets/audios/newhsk1-e06-r1/EXP6.1-4.mp3?v=02c293c4"
+      },
+      {
+       "py": "báitiān",
+       "es": "de día",
+       "clip": "/assets/audios/newhsk1-e06-r1/EXP6.1-5.mp3?v=5a50dc54"
+      },
+      {
+       "py": "xiūxi",
+       "es": "descansar",
+       "clip": "/assets/audios/newhsk1-e06-r1/EXP6.1-6.mp3?v=510b134e"
+      },
+      {
+       "py": "hǎo duō le",
+       "es": "mucho mejor",
+       "clip": "/assets/audios/newhsk1-e06-r1/EXP6.1-7.mp3?v=ef53df41"
+      },
+      {
+       "py": "méishì",
+       "es": "no me pasa nada",
+       "clip": "/assets/audios/newhsk1-e06-r1/EXP6.1-8.mp3?v=18d9cb40"
+      },
+      {
+       "py": "xièxie nǐmen",
+       "es": "gracias a todos",
+       "clip": "/assets/audios/newhsk1-e06-r1/EXP6.1-9.mp3?v=81b894c7"
+      },
+      {
+       "py": "yīshēng",
+       "es": "doctor",
+       "clip": "/assets/audios/newhsk1-e06-r1/EXP6.1-10.mp3?v=05d61e5b"
+      },
+      {
+       "py": "yīyuàn",
+       "es": "hospital",
+       "clip": "/assets/audios/newhsk1-e06-r1/EXP6.1-11.mp3?v=d4b0b8ce"
+      },
+      {
+       "py": "xuéxiào",
+       "es": "escuela",
+       "clip": "/assets/audios/newhsk1-e06-r1/EXP6.1-12.mp3?v=bf374510"
+      },
+      {
+       "py": "gōngzuò",
+       "es": "trabajar",
+       "clip": "/assets/audios/newhsk1-e06-r1/EXP6.1-13.mp3?v=e50d94a5"
+      },
+      {
+       "py": "nǎ tiān?",
+       "es": "¿qué día?",
+       "clip": "/assets/audios/newhsk1-e06-r1/EXP6.1-14.mp3?v=c9814c8d"
+      },
+      {
+       "py": "xīngqītiān",
+       "es": "domingo",
+       "clip": "/assets/audios/newhsk1-e06-r1/EXP6.1-15.mp3?v=a11ea0eb"
+      }
+     ]
+    },
+    {
+     "code": "EXP6.2",
+     "kind": "dialogue",
+     "src": "/assets/audios/newhsk1-e06-r1/EXP6.2.mp3?v=86b0d973",
+     "dur": 71.28,
+     "parts": [
+      {
+       "at": 0,
+       "label": "Escucha la conversación"
+      },
+      {
+       "at": 23.85,
+       "label": "Ahora repite cada frase"
+      }
+     ],
+     "segs": [
+      [
+       0,
+       0.4,
+       3.38
+      ],
+      [
+       1,
+       4.08,
+       6.35
+      ],
+      [
+       2,
+       7.05,
+       11.01
+      ],
+      [
+       3,
+       11.71,
+       13.88
+      ],
+      [
+       4,
+       14.58,
+       16.32
+      ],
+      [
+       5,
+       17.02,
+       19.47
+      ],
+      [
+       6,
+       20.17,
+       21.95
+      ],
+      [
+       0,
+       23.85,
+       26.83
+      ],
+      [
+       1,
+       31.76,
+       34.02
+      ],
+      [
+       2,
+       38.05,
+       42.02
+      ],
+      [
+       3,
+       48.18,
+       50.35
+      ],
+      [
+       4,
+       54.26,
+       56
+      ],
+      [
+       5,
+       59.37,
+       61.82
+      ],
+      [
+       6,
+       66.09,
+       67.86
+      ]
+     ],
+     "items": [
+      {
+       "py": "nǐ hǎo! wǒ shì Lǐ yīshēng. nǐ zěnme le?",
+       "es": "¡Hola! Soy el doctor Lǐ. ¿Qué te pasa?",
+       "clip": "/assets/audios/newhsk1-e06-r1/EXP6.2-1.mp3?v=7a532164",
+       "who": "profe"
+      },
+      {
+       "py": "yīshēng hǎo! wǒ shēngbìng le.",
+       "es": "¡Hola, doctor! Me enfermé.",
+       "clip": "/assets/audios/newhsk1-e06-r1/EXP6.2-2.mp3?v=f9a18534",
+       "who": "tu"
+      },
+      {
+       "py": "jīntiān nǐ bù néng qù xuéxiào le. qǐng zài jiā xiūxi.",
+       "es": "Hoy no puedes ir a la escuela. Descansa en casa, por favor.",
+       "clip": "/assets/audios/newhsk1-e06-r1/EXP6.2-3.mp3?v=9f55c13d",
+       "who": "profe"
+      },
+      {
+       "py": "hǎo de. wǒ zài jiā xiūxi.",
+       "es": "Está bien. Descanso en casa.",
+       "clip": "/assets/audios/newhsk1-e06-r1/EXP6.2-4.mp3?v=85d58d54",
+       "who": "tu"
+      },
+      {
+       "py": "nǐ nǎ tiān zài lái yīyuàn?",
+       "es": "¿Qué día vuelves al hospital?",
+       "clip": "/assets/audios/newhsk1-e06-r1/EXP6.2-5.mp3?v=caa52de1",
+       "who": "profe"
+      },
+      {
+       "py": "xīngqītiān. xièxie yīshēng!",
+       "es": "El domingo. ¡Gracias, doctor!",
+       "clip": "/assets/audios/newhsk1-e06-r1/EXP6.2-6.mp3?v=91ecfcea",
+       "who": "tu"
+      },
+      {
+       "py": "bú kèqi! zàijiàn!",
+       "es": "¡De nada! ¡Adiós!",
+       "clip": "/assets/audios/newhsk1-e06-r1/EXP6.2-7.mp3?v=ff563336",
+       "who": "profe"
+      }
+     ]
+    },
+    {
+     "code": "EXP6.3",
+     "kind": "video",
+     "src": "/assets/audios/newhsk1-e06-r1/EXP6.3.mp3?v=525da5e7",
+     "dur": 60.41,
+     "parts": [
+      {
+       "at": 0,
+       "label": "Repite cada frase"
+      },
+      {
+       "at": 43.04,
+       "label": "Ahora todo seguido, como tu video"
+      }
+     ],
+     "segs": [
+      [
+       0,
+       0.4,
+       3.64
+      ],
+      [
+       1,
+       9.69,
+       11.85
+      ],
+      [
+       2,
+       16.37,
+       17.69
+      ],
+      [
+       3,
+       21.03,
+       23.34
+      ],
+      [
+       4,
+       28.06,
+       30.95
+      ],
+      [
+       5,
+       36.49,
+       38.34
+      ],
+      [
+       0,
+       43.04,
+       46.29
+      ],
+      [
+       1,
+       46.89,
+       49.05
+      ],
+      [
+       2,
+       49.65,
+       50.97
+      ],
+      [
+       3,
+       51.57,
+       53.87
+      ],
+      [
+       4,
+       54.47,
+       57.36
+      ],
+      [
+       5,
+       57.96,
+       59.81
+      ]
+     ],
+     "items": [
+      {
+       "py": "dàjiā hǎo! wǒ jiào ___.",
+       "es": "¡Hola a todos! Me llamo ___.",
+       "clip": "/assets/audios/newhsk1-e06-r1/EXP6.3-1.mp3?v=45d5318e"
+      },
+      {
+       "py": "nǐ zěnme le? wǒ shēngbìng le.",
+       "es": "¿Qué te pasa? Me enfermé.",
+       "clip": "/assets/audios/newhsk1-e06-r1/EXP6.3-2.mp3?v=d2629856"
+      },
+      {
+       "py": "wǒ yào qù kànbìng.",
+       "es": "Tengo que ir al médico.",
+       "clip": "/assets/audios/newhsk1-e06-r1/EXP6.3-3.mp3?v=53137f5e"
+      },
+      {
+       "py": "jīntiān wǒ bù néng qù xuéxiào le.",
+       "es": "Hoy no puedo ir a la escuela.",
+       "clip": "/assets/audios/newhsk1-e06-r1/EXP6.3-4.mp3?v=e94cb18f"
+      },
+      {
+       "py": "xièxie nǐmen, wǒ xiànzài hǎo duō le!",
+       "es": "¡Gracias a todos, ya estoy mucho mejor!",
+       "clip": "/assets/audios/newhsk1-e06-r1/EXP6.3-5.mp3?v=52e73a37"
+      },
+      {
+       "py": "wǒ méishì! zàijiàn!",
+       "es": "¡No me pasa nada! ¡Adiós!",
+       "clip": "/assets/audios/newhsk1-e06-r1/EXP6.3-6.mp3?v=cda1b974"
+      }
+     ]
+    }
+   ],
+   "thumb": "/assets/audios/newhsk1-e06-r1/cover-s.webp?v=e100ee30"
+  },
+  {
+   "id": "newhsk1-e07-r1",
+   "level": "newhsk1",
+   "levelName": "New HSK 1",
+   "exp": 7,
+   "round": 1,
+   "title": "Aventura por China",
+   "tagline": "Tu familia llega a China de vacaciones. Hay aviones, trenes y taxis, y una librería que no encuentras. ¿Sabes preguntar el camino?",
+   "cover": "/assets/audios/newhsk1-e07-r1/cover.jpg?v=50ca29a9",
+   "tracks": [
+    {
+     "code": "EXP7.1",
+     "kind": "words",
+     "src": "/assets/audios/newhsk1-e07-r1/EXP7.1.mp3?v=b8f7ea49",
+     "dur": 64.77,
+     "parts": [
+      {
+       "at": 0,
+       "label": "Escucha y repite"
+      }
+     ],
+     "segs": [
+      [
+       0,
+       0.4,
+       1.5
+      ],
+      [
+       0,
+       2.3,
+       3.41
+      ],
+      [
+       1,
+       5.75,
+       6.54
+      ],
+      [
+       1,
+       7.34,
+       8.13
+      ],
+      [
+       2,
+       10.04,
+       10.79
+      ],
+      [
+       2,
+       11.59,
+       12.34
+      ],
+      [
+       3,
+       14.19,
+       14.84
+      ],
+      [
+       3,
+       15.64,
+       16.3
+      ],
+      [
+       4,
+       18.1,
+       18.85
+      ],
+      [
+       4,
+       19.65,
+       20.4
+      ],
+      [
+       5,
+       22.25,
+       23.1
+      ],
+      [
+       5,
+       23.9,
+       24.74
+      ],
+      [
+       6,
+       26.73,
+       27.38
+      ],
+      [
+       6,
+       28.18,
+       28.83
+      ],
+      [
+       7,
+       30.63,
+       31.25
+      ],
+      [
+       7,
+       32.05,
+       32.67
+      ],
+      [
+       8,
+       34.47,
+       35.33
+      ],
+      [
+       8,
+       36.13,
+       36.99
+      ],
+      [
+       9,
+       38.99,
+       39.72
+      ],
+      [
+       9,
+       40.52,
+       41.26
+      ],
+      [
+       10,
+       43.08,
+       43.88
+      ],
+      [
+       10,
+       44.68,
+       45.48
+      ],
+      [
+       11,
+       47.4,
+       48.13
+      ],
+      [
+       11,
+       48.93,
+       49.67
+      ],
+      [
+       12,
+       51.49,
+       52.46
+      ],
+      [
+       12,
+       53.26,
+       54.24
+      ],
+      [
+       13,
+       56.4,
+       56.84
+      ],
+      [
+       13,
+       57.64,
+       58.07
+      ],
+      [
+       14,
+       59.87,
+       60.84
+      ],
+      [
+       14,
+       61.64,
+       62.61
+      ]
+     ],
+     "items": [
+      {
+       "py": "yuè · hào",
+       "es": "mes · día",
+       "clip": "/assets/audios/newhsk1-e07-r1/EXP7.1-1.mp3?v=ad0acf56"
+      },
+      {
+       "py": "huǒchē",
+       "es": "tren",
+       "clip": "/assets/audios/newhsk1-e07-r1/EXP7.1-2.mp3?v=beeb1d5a"
+      },
+      {
+       "py": "qǐngwèn",
+       "es": "disculpe",
+       "clip": "/assets/audios/newhsk1-e07-r1/EXP7.1-3.mp3?v=c9d36708"
+      },
+      {
+       "py": "nǎlǐ?",
+       "es": "¿dónde?",
+       "clip": "/assets/audios/newhsk1-e07-r1/EXP7.1-4.mp3?v=e0e0a554"
+      },
+      {
+       "py": "shūdiàn",
+       "es": "librería",
+       "clip": "/assets/audios/newhsk1-e07-r1/EXP7.1-5.mp3?v=3c7fe3a5"
+      },
+      {
+       "py": "qiánbian",
+       "es": "delante",
+       "clip": "/assets/audios/newhsk1-e07-r1/EXP7.1-6.mp3?v=d622e1eb"
+      },
+      {
+       "py": "jiào le",
+       "es": "pedí (un taxi)",
+       "clip": "/assets/audios/newhsk1-e07-r1/EXP7.1-7.mp3?v=1fa96549"
+      },
+      {
+       "py": "néng",
+       "es": "poder",
+       "clip": "/assets/audios/newhsk1-e07-r1/EXP7.1-8.mp3?v=232f0bd4"
+      },
+      {
+       "py": "hǎowánr",
+       "es": "divertido",
+       "clip": "/assets/audios/newhsk1-e07-r1/EXP7.1-9.mp3?v=fe12ecb6"
+      },
+      {
+       "py": "Běijīng",
+       "es": "Beijing",
+       "clip": "/assets/audios/newhsk1-e07-r1/EXP7.1-10.mp3?v=5eb137eb"
+      },
+      {
+       "py": "Zhōngguó",
+       "es": "China",
+       "clip": "/assets/audios/newhsk1-e07-r1/EXP7.1-11.mp3?v=cf4772cd"
+      },
+      {
+       "py": "fēijī",
+       "es": "avión",
+       "clip": "/assets/audios/newhsk1-e07-r1/EXP7.1-12.mp3?v=e8b79353"
+      },
+      {
+       "py": "chūzūchē",
+       "es": "taxi",
+       "clip": "/assets/audios/newhsk1-e07-r1/EXP7.1-13.mp3?v=49081e85"
+      },
+      {
+       "py": "zhù",
+       "es": "quedarse · vivir",
+       "clip": "/assets/audios/newhsk1-e07-r1/EXP7.1-14.mp3?v=e7a83305"
+      },
+      {
+       "py": "xīngqīrì",
+       "es": "domingo",
+       "clip": "/assets/audios/newhsk1-e07-r1/EXP7.1-15.mp3?v=3a060fb2"
+      }
+     ]
+    },
+    {
+     "code": "EXP7.2",
+     "kind": "dialogue",
+     "src": "/assets/audios/newhsk1-e07-r1/EXP7.2.mp3?v=90de25c9",
+     "dur": 71.67,
+     "parts": [
+      {
+       "at": 0,
+       "label": "Escucha la conversación"
+      },
+      {
+       "at": 23.97,
+       "label": "Ahora repite cada frase"
+      }
+     ],
+     "segs": [
+      [
+       0,
+       0.4,
+       3.2
+      ],
+      [
+       1,
+       3.9,
+       6.57
+      ],
+      [
+       2,
+       7.28,
+       8.72
+      ],
+      [
+       3,
+       9.42,
+       13.49
+      ],
+      [
+       4,
+       14.19,
+       15.67
+      ],
+      [
+       5,
+       16.37,
+       18.94
+      ],
+      [
+       6,
+       19.64,
+       22.07
+      ],
+      [
+       0,
+       23.97,
+       26.77
+      ],
+      [
+       1,
+       31.47,
+       34.14
+      ],
+      [
+       2,
+       38.69,
+       40.13
+      ],
+      [
+       3,
+       43.13,
+       47.21
+      ],
+      [
+       4,
+       53.51,
+       54.98
+      ],
+      [
+       5,
+       58.02,
+       60.59
+      ],
+      [
+       6,
+       65.01,
+       67.44
+      ]
+     ],
+     "items": [
+      {
+       "py": "nǐ hǎo! nǐmen shì nǎ tiān lái Zhōngguó de?",
+       "es": "¡Hola! ¿Qué día llegaron a China?",
+       "clip": "/assets/audios/newhsk1-e07-r1/EXP7.2-1.mp3?v=9f362ec3",
+       "who": "profe"
+      },
+      {
+       "py": "wǒmen shì bā yuè qī hào lái Zhōngguó de.",
+       "es": "Llegamos a China el 7 de agosto.",
+       "clip": "/assets/audios/newhsk1-e07-r1/EXP7.2-2.mp3?v=234027b2",
+       "who": "tu"
+      },
+      {
+       "py": "nǐmen zěnme qù Běijīng?",
+       "es": "¿Cómo van a Beijing?",
+       "clip": "/assets/audios/newhsk1-e07-r1/EXP7.2-3.mp3?v=84906af2",
+       "who": "profe"
+      },
+      {
+       "py": "wǒmen zuò huǒchē qù. qǐngwèn, shūdiàn zài nǎlǐ?",
+       "es": "Vamos en tren. Disculpe, ¿dónde está la librería?",
+       "clip": "/assets/audios/newhsk1-e07-r1/EXP7.2-4.mp3?v=45bf8ea8",
+       "who": "tu"
+      },
+      {
+       "py": "zài zhōngxué qiánbian.",
+       "es": "Está delante de la escuela secundaria.",
+       "clip": "/assets/audios/newhsk1-e07-r1/EXP7.2-5.mp3?v=c00544af",
+       "who": "profe"
+      },
+      {
+       "py": "xièxie! wǒ jiào le chūzūchē.",
+       "es": "¡Gracias! Pedí un taxi.",
+       "clip": "/assets/audios/newhsk1-e07-r1/EXP7.2-6.mp3?v=e1ca491c",
+       "who": "tu"
+      },
+      {
+       "py": "bú kèqi! Zhōngguó hěn hǎowánr!",
+       "es": "¡De nada! ¡China es muy divertida!",
+       "clip": "/assets/audios/newhsk1-e07-r1/EXP7.2-7.mp3?v=014871d0",
+       "who": "profe"
+      }
+     ]
+    },
+    {
+     "code": "EXP7.3",
+     "kind": "video",
+     "src": "/assets/audios/newhsk1-e07-r1/EXP7.3.mp3?v=6eec083c",
+     "dur": 65.65,
+     "parts": [
+      {
+       "at": 0,
+       "label": "Repite cada frase"
+      },
+      {
+       "at": 46.74,
+       "label": "Ahora todo seguido, como tu video"
+      }
+     ],
+     "segs": [
+      [
+       0,
+       0.4,
+       3.78
+      ],
+      [
+       1,
+       10.02,
+       11.96
+      ],
+      [
+       2,
+       16.17,
+       18.35
+      ],
+      [
+       3,
+       22.89,
+       25.22
+      ],
+      [
+       4,
+       29.98,
+       32.97
+      ],
+      [
+       5,
+       38.65,
+       41.15
+      ],
+      [
+       0,
+       46.74,
+       50.12
+      ],
+      [
+       1,
+       50.72,
+       52.66
+      ],
+      [
+       2,
+       53.26,
+       55.44
+      ],
+      [
+       3,
+       56.04,
+       58.37
+      ],
+      [
+       4,
+       58.97,
+       61.95
+      ],
+      [
+       5,
+       62.55,
+       65.05
+      ]
+     ],
+     "items": [
+      {
+       "py": "dàjiā hǎo! wǒ bā yuè qī hào lái Zhōngguó!",
+       "es": "¡Hola a todos! ¡Llegué a China el 7 de agosto!",
+       "clip": "/assets/audios/newhsk1-e07-r1/EXP7.3-1.mp3?v=f3f260e4"
+      },
+      {
+       "py": "wǒ zuò fēijī qù Běijīng.",
+       "es": "Voy a Beijing en avión.",
+       "clip": "/assets/audios/newhsk1-e07-r1/EXP7.3-2.mp3?v=00125d11"
+      },
+      {
+       "py": "xīngqīrì wǒmen zuò huǒchē.",
+       "es": "El domingo vamos en tren.",
+       "clip": "/assets/audios/newhsk1-e07-r1/EXP7.3-3.mp3?v=73eae667"
+      },
+      {
+       "py": "qǐngwèn, shūdiàn zài nǎlǐ?",
+       "es": "Disculpe, ¿dónde está la librería?",
+       "clip": "/assets/audios/newhsk1-e07-r1/EXP7.3-4.mp3?v=7fd5f3af"
+      },
+      {
+       "py": "wǒ jiào le chūzūchē, liù diǎn bàn lái.",
+       "es": "Pedí un taxi, llega a las seis y media.",
+       "clip": "/assets/audios/newhsk1-e07-r1/EXP7.3-5.mp3?v=bc697969"
+      },
+      {
+       "py": "Zhōngguó zhēn hǎowánr! zàijiàn!",
+       "es": "¡China es súper divertida! ¡Adiós!",
+       "clip": "/assets/audios/newhsk1-e07-r1/EXP7.3-6.mp3?v=e18fee49"
+      }
+     ]
+    }
+   ],
+   "thumb": "/assets/audios/newhsk1-e07-r1/cover-s.webp?v=5612bb23"
+  },
+  {
+   "id": "newhsk1-e08-r1",
+   "level": "newhsk1",
+   "levelName": "New HSK 1",
+   "exp": 8,
+   "round": 1,
+   "title": "Palabras Mágicas II",
+   "tagline": "Dralingo esconde siete palabritas mágicas por toda tu casa. Sin ellas, el Chino Mandarín suena como un robot. ¿Las encuentras?",
+   "cover": "/assets/audios/newhsk1-e08-r1/cover.jpg?v=97a2c4d1",
+   "tracks": [
+    {
+     "code": "EXP8.1",
+     "kind": "words",
+     "src": "/assets/audios/newhsk1-e08-r1/EXP8.1.mp3?v=2220bd12",
+     "dur": 59.88,
+     "parts": [
+      {
+       "at": 0,
+       "label": "Escucha y repite"
+      }
+     ],
+     "segs": [
+      [
+       0,
+       0.4,
+       0.74
+      ],
+      [
+       0,
+       1.54,
+       1.88
+      ],
+      [
+       1,
+       3.68,
+       4.04
+      ],
+      [
+       1,
+       4.84,
+       5.19
+      ],
+      [
+       2,
+       6.99,
+       7.31
+      ],
+      [
+       2,
+       8.11,
+       8.43
+      ],
+      [
+       3,
+       10.23,
+       10.86
+      ],
+      [
+       3,
+       11.66,
+       12.29
+      ],
+      [
+       4,
+       14.09,
+       14.55
+      ],
+      [
+       4,
+       15.35,
+       15.82
+      ],
+      [
+       5,
+       17.62,
+       18.28
+      ],
+      [
+       5,
+       19.08,
+       19.75
+      ],
+      [
+       6,
+       21.55,
+       22.23
+      ],
+      [
+       6,
+       23.03,
+       23.72
+      ],
+      [
+       7,
+       25.52,
+       26.11
+      ],
+      [
+       7,
+       26.91,
+       27.51
+      ],
+      [
+       8,
+       29.31,
+       30.13
+      ],
+      [
+       8,
+       30.93,
+       31.74
+      ],
+      [
+       9,
+       33.69,
+       34.22
+      ],
+      [
+       9,
+       35.02,
+       35.55
+      ],
+      [
+       10,
+       37.35,
+       38.21
+      ],
+      [
+       10,
+       39.01,
+       39.86
+      ],
+      [
+       11,
+       41.86,
+       42.6
+      ],
+      [
+       11,
+       43.4,
+       44.13
+      ],
+      [
+       12,
+       45.96,
+       46.82
+      ],
+      [
+       12,
+       47.62,
+       48.47
+      ],
+      [
+       13,
+       50.47,
+       51.28
+      ],
+      [
+       13,
+       52.08,
+       52.89
+      ],
+      [
+       14,
+       54.82,
+       55.84
+      ],
+      [
+       14,
+       56.64,
+       57.65
+      ]
+     ],
+     "items": [
+      {
+       "py": "le",
+       "es": "ya (algo cambió)",
+       "clip": "/assets/audios/newhsk1-e08-r1/EXP8.1-1.mp3?v=756a301c"
+      },
+      {
+       "py": "ne",
+       "es": "está…-ando",
+       "clip": "/assets/audios/newhsk1-e08-r1/EXP8.1-2.mp3?v=daf7c0ba"
+      },
+      {
+       "py": "ba",
+       "es": "¡vamos a…! · ¿no?",
+       "clip": "/assets/audios/newhsk1-e08-r1/EXP8.1-3.mp3?v=9ce4adad"
+      },
+      {
+       "py": "hé",
+       "es": "y (entre cosas)",
+       "clip": "/assets/audios/newhsk1-e08-r1/EXP8.1-4.mp3?v=b9fee3c0"
+      },
+      {
+       "py": "dōu",
+       "es": "todos · los dos",
+       "clip": "/assets/audios/newhsk1-e08-r1/EXP8.1-5.mp3?v=c0709e4f"
+      },
+      {
+       "py": "yě",
+       "es": "también",
+       "clip": "/assets/audios/newhsk1-e08-r1/EXP8.1-6.mp3?v=d98b4e8e"
+      },
+      {
+       "py": "zhèngzài",
+       "es": "estar haciendo",
+       "clip": "/assets/audios/newhsk1-e08-r1/EXP8.1-7.mp3?v=1eb5c8a2"
+      },
+      {
+       "py": "zhēn",
+       "es": "de verdad · ¡qué…!",
+       "clip": "/assets/audios/newhsk1-e08-r1/EXP8.1-8.mp3?v=5f53ac18"
+      },
+      {
+       "py": "jīnnián",
+       "es": "este año",
+       "clip": "/assets/audios/newhsk1-e08-r1/EXP8.1-9.mp3?v=82f3381e"
+      },
+      {
+       "py": "suì",
+       "es": "años (edad)",
+       "clip": "/assets/audios/newhsk1-e08-r1/EXP8.1-10.mp3?v=f59ced84"
+      },
+      {
+       "py": "tóngxué",
+       "es": "compañero",
+       "clip": "/assets/audios/newhsk1-e08-r1/EXP8.1-11.mp3?v=7ff030d5"
+      },
+      {
+       "py": "zuò fàn",
+       "es": "cocinar",
+       "clip": "/assets/audios/newhsk1-e08-r1/EXP8.1-12.mp3?v=60f644ef"
+      },
+      {
+       "py": "chàng gē",
+       "es": "cantar",
+       "clip": "/assets/audios/newhsk1-e08-r1/EXP8.1-13.mp3?v=b4c44e01"
+      },
+      {
+       "py": "hǎotīng",
+       "es": "suena bonito",
+       "clip": "/assets/audios/newhsk1-e08-r1/EXP8.1-14.mp3?v=4bc4b1b1"
+      },
+      {
+       "py": "kàn diànshì",
+       "es": "ver la tele",
+       "clip": "/assets/audios/newhsk1-e08-r1/EXP8.1-15.mp3?v=3e997452"
+      }
+     ]
+    },
+    {
+     "code": "EXP8.2",
+     "kind": "dialogue",
+     "src": "/assets/audios/newhsk1-e08-r1/EXP8.2.mp3?v=546f3285",
+     "dur": 66.94,
+     "parts": [
+      {
+       "at": 0,
+       "label": "Escucha la conversación"
+      },
+      {
+       "at": 22.51,
+       "label": "Ahora repite cada frase"
+      }
+     ],
+     "segs": [
+      [
+       0,
+       0.4,
+       1.93
+      ],
+      [
+       1,
+       2.63,
+       4.24
+      ],
+      [
+       2,
+       4.94,
+       6.31
+      ],
+      [
+       3,
+       7.01,
+       11.25
+      ],
+      [
+       4,
+       11.95,
+       14.06
+      ],
+      [
+       5,
+       14.76,
+       17.77
+      ],
+      [
+       6,
+       18.47,
+       20.61
+      ],
+      [
+       0,
+       22.51,
+       24.04
+      ],
+      [
+       1,
+       27.16,
+       28.76
+      ],
+      [
+       2,
+       31.97,
+       33.35
+      ],
+      [
+       3,
+       36.27,
+       40.5
+      ],
+      [
+       4,
+       46.99,
+       49.1
+      ],
+      [
+       5,
+       52.94,
+       55.95
+      ],
+      [
+       6,
+       60.92,
+       63.06
+      ]
+     ],
+     "items": [
+      {
+       "py": "nǐ jīnnián jǐ suì le?",
+       "es": "¿Cuántos años tienes este año?",
+       "clip": "/assets/audios/newhsk1-e08-r1/EXP8.2-1.mp3?v=737de344",
+       "who": "profe"
+      },
+      {
+       "py": "wǒ jīnnián jiǔ suì le!",
+       "es": "¡Este año cumplo nueve!",
+       "clip": "/assets/audios/newhsk1-e08-r1/EXP8.2-2.mp3?v=f63cecaa",
+       "who": "tu"
+      },
+      {
+       "py": "bàba zài zuò shénme?",
+       "es": "¿Qué está haciendo papá?",
+       "clip": "/assets/audios/newhsk1-e08-r1/EXP8.2-3.mp3?v=bedc4205",
+       "who": "profe"
+      },
+      {
+       "py": "bàba zhèngzài zuò fàn ne. gēge zhèngzài kàn diànshì ne.",
+       "es": "Papá está cocinando. Mi hermano está viendo la tele.",
+       "clip": "/assets/audios/newhsk1-e08-r1/EXP8.2-4.mp3?v=e50f4a9e",
+       "who": "tu"
+      },
+      {
+       "py": "jiějie chàng de gē zhēn hǎotīng!",
+       "es": "¡Qué bonito canta tu hermana!",
+       "clip": "/assets/audios/newhsk1-e08-r1/EXP8.2-5.mp3?v=b61aecdf",
+       "who": "profe"
+      },
+      {
+       "py": "duì! wǒ hé jiějie dōu xǐhuan chàng gē.",
+       "es": "¡Sí! A mi hermana y a mí nos gusta cantar.",
+       "clip": "/assets/audios/newhsk1-e08-r1/EXP8.2-6.mp3?v=ff193b04",
+       "who": "tu"
+      },
+      {
+       "py": "wǒ yě xǐhuan! wǒmen chàng ba!",
+       "es": "¡A mí también me gusta! ¡Cantemos!",
+       "clip": "/assets/audios/newhsk1-e08-r1/EXP8.2-7.mp3?v=b99632ce",
+       "who": "profe"
+      }
+     ]
+    },
+    {
+     "code": "EXP8.3",
+     "kind": "video",
+     "src": "/assets/audios/newhsk1-e08-r1/EXP8.3.mp3?v=062c17e2",
+     "dur": 62.42,
+     "parts": [
+      {
+       "at": 0,
+       "label": "Repite cada frase"
+      },
+      {
+       "at": 44.46,
+       "label": "Ahora todo seguido, como tu video"
+      }
+     ],
+     "segs": [
+      [
+       0,
+       0.4,
+       4.7
+      ],
+      [
+       1,
+       12.21,
+       13.99
+      ],
+      [
+       2,
+       17.98,
+       20.11
+      ],
+      [
+       3,
+       24.58,
+       27.02
+      ],
+      [
+       4,
+       31.94,
+       33.21
+      ],
+      [
+       5,
+       36.49,
+       38.94
+      ],
+      [
+       0,
+       44.46,
+       48.76
+      ],
+      [
+       1,
+       49.36,
+       51.14
+      ],
+      [
+       2,
+       51.74,
+       53.86
+      ],
+      [
+       3,
+       54.46,
+       56.9
+      ],
+      [
+       4,
+       57.5,
+       58.77
+      ],
+      [
+       5,
+       59.37,
+       61.82
+      ]
+     ],
+     "items": [
+      {
+       "py": "dàjiā hǎo! wǒ jīnnián ___ suì le.",
+       "es": "¡Hola a todos! Este año cumplo ___ años.",
+       "clip": "/assets/audios/newhsk1-e08-r1/EXP8.3-1.mp3?v=5a6b558b"
+      },
+      {
+       "py": "bàba zhèngzài zuò fàn ne.",
+       "es": "Papá está cocinando.",
+       "clip": "/assets/audios/newhsk1-e08-r1/EXP8.3-2.mp3?v=f4360c12"
+      },
+      {
+       "py": "jiějie chàng de gē zhēn hǎotīng!",
+       "es": "¡Qué bonito canta mi hermana!",
+       "clip": "/assets/audios/newhsk1-e08-r1/EXP8.3-3.mp3?v=add97b91"
+      },
+      {
+       "py": "wǒ hé tóngxué dōu xǐhuan Hànyǔ.",
+       "es": "A mi compañero y a mí nos gusta el Chino Mandarín.",
+       "clip": "/assets/audios/newhsk1-e08-r1/EXP8.3-4.mp3?v=329601de"
+      },
+      {
+       "py": "nǐ yě xǐhuan ma?",
+       "es": "¿A ti también te gusta?",
+       "clip": "/assets/audios/newhsk1-e08-r1/EXP8.3-5.mp3?v=7b511574"
+      },
+      {
+       "py": "wǒmen shuō Hànyǔ ba! zàijiàn!",
+       "es": "¡Hablemos Chino Mandarín! ¡Adiós!",
+       "clip": "/assets/audios/newhsk1-e08-r1/EXP8.3-6.mp3?v=fe4ac834"
+      }
+     ]
+    }
+   ],
+   "thumb": "/assets/audios/newhsk1-e08-r1/cover-s.webp?v=5c7bc0b0"
   },
   {
    "id": "hsk1-e01-r1",
@@ -2181,7 +7637,999 @@
      ]
     }
    ],
-   "thumb": "/assets/audios/hsk1-e01-r1/cover-s.webp"
+   "thumb": "/assets/audios/hsk1-e01-r1/cover-s.webp?v=993c25b2"
+  },
+  {
+   "id": "hsk1-e01-r2",
+   "level": "hsk1",
+   "levelName": "HSK 1",
+   "exp": 1,
+   "round": 2,
+   "title": "Mi Familia",
+   "tagline": "Tu mejor amigo viene a tu casa con su perrito. La vecina quiere saber quién es él, de quién es el perrito y cuántos años tienes tú.",
+   "cover": "/assets/audios/hsk1-e01-r2/cover.jpg?v=a75d5cff",
+   "tracks": [
+    {
+     "code": "EXP1.4",
+     "kind": "words",
+     "src": "/assets/audios/hsk1-e01-r2/EXP1.4.mp3?v=020a8b4e",
+     "dur": 58.87,
+     "parts": [
+      {
+       "at": 0,
+       "label": "Escucha y repite"
+      }
+     ],
+     "segs": [
+      [
+       0,
+       0.4,
+       0.9
+      ],
+      [
+       0,
+       1.7,
+       2.2
+      ],
+      [
+       1,
+       4,
+       4.74
+      ],
+      [
+       1,
+       5.54,
+       6.27
+      ],
+      [
+       2,
+       8.11,
+       8.68
+      ],
+      [
+       2,
+       9.48,
+       10.06
+      ],
+      [
+       3,
+       11.86,
+       12.39
+      ],
+      [
+       3,
+       13.19,
+       13.72
+      ],
+      [
+       4,
+       15.52,
+       16.24
+      ],
+      [
+       4,
+       17.04,
+       17.75
+      ],
+      [
+       5,
+       19.55,
+       20.15
+      ],
+      [
+       5,
+       20.95,
+       21.55
+      ],
+      [
+       6,
+       23.35,
+       24.13
+      ],
+      [
+       6,
+       24.93,
+       25.72
+      ],
+      [
+       7,
+       27.61,
+       28.38
+      ],
+      [
+       7,
+       29.18,
+       29.94
+      ],
+      [
+       8,
+       31.81,
+       32.31
+      ],
+      [
+       8,
+       33.11,
+       33.61
+      ],
+      [
+       9,
+       35.41,
+       36.04
+      ],
+      [
+       9,
+       36.84,
+       37.48
+      ],
+      [
+       10,
+       39.28,
+       40
+      ],
+      [
+       10,
+       40.8,
+       41.52
+      ],
+      [
+       11,
+       43.34,
+       44.08
+      ],
+      [
+       11,
+       44.88,
+       45.62
+      ],
+      [
+       12,
+       47.45,
+       47.99
+      ],
+      [
+       12,
+       48.79,
+       49.32
+      ],
+      [
+       13,
+       51.12,
+       51.79
+      ],
+      [
+       13,
+       52.59,
+       53.26
+      ],
+      [
+       14,
+       55.06,
+       55.66
+      ],
+      [
+       14,
+       56.46,
+       57.07
+      ]
+     ],
+     "items": [
+      {
+       "py": "tā",
+       "es": "él · ella",
+       "clip": "/assets/audios/hsk1-e01-r2/EXP1.4-1.mp3?v=6be090f1"
+      },
+      {
+       "py": "péngyou",
+       "es": "amigo",
+       "clip": "/assets/audios/hsk1-e01-r2/EXP1.4-2.mp3?v=7da8abbf"
+      },
+      {
+       "py": "wǒmen",
+       "es": "nosotros",
+       "clip": "/assets/audios/hsk1-e01-r2/EXP1.4-3.mp3?v=4150f1f8"
+      },
+      {
+       "py": "suì",
+       "es": "años (edad)",
+       "clip": "/assets/audios/hsk1-e01-r2/EXP1.4-4.mp3?v=f59ced84"
+      },
+      {
+       "py": "jǐ suì?",
+       "es": "¿cuántos años?",
+       "clip": "/assets/audios/hsk1-e01-r2/EXP1.4-5.mp3?v=f384dc2f"
+      },
+      {
+       "py": "shéi de?",
+       "es": "¿de quién?",
+       "clip": "/assets/audios/hsk1-e01-r2/EXP1.4-6.mp3?v=984050cb"
+      },
+      {
+       "py": "érzi",
+       "es": "hijo",
+       "clip": "/assets/audios/hsk1-e01-r2/EXP1.4-7.mp3?v=3ca37b57"
+      },
+      {
+       "py": "nǚ'ér",
+       "es": "hija",
+       "clip": "/assets/audios/hsk1-e01-r2/EXP1.4-8.mp3?v=e3ec58b4"
+      },
+      {
+       "py": "ài",
+       "es": "querer · amar",
+       "clip": "/assets/audios/hsk1-e01-r2/EXP1.4-9.mp3?v=262bec87"
+      },
+      {
+       "py": "wǒ jiào",
+       "es": "me llamo",
+       "clip": "/assets/audios/hsk1-e01-r2/EXP1.4-10.mp3?v=0e52232c"
+      },
+      {
+       "py": "míngzi",
+       "es": "nombre",
+       "clip": "/assets/audios/hsk1-e01-r2/EXP1.4-11.mp3?v=f07658f6"
+      },
+      {
+       "py": "rènshi",
+       "es": "conocer",
+       "clip": "/assets/audios/hsk1-e01-r2/EXP1.4-12.mp3?v=4c54a770"
+      },
+      {
+       "py": "jiā",
+       "es": "casa · familia",
+       "clip": "/assets/audios/hsk1-e01-r2/EXP1.4-13.mp3?v=4f328b90"
+      },
+      {
+       "py": "māma",
+       "es": "mamá",
+       "clip": "/assets/audios/hsk1-e01-r2/EXP1.4-14.mp3?v=284b8e93"
+      },
+      {
+       "py": "gǒu",
+       "es": "perro",
+       "clip": "/assets/audios/hsk1-e01-r2/EXP1.4-15.mp3?v=c474909e"
+      }
+     ]
+    },
+    {
+     "code": "EXP1.5",
+     "kind": "dialogue",
+     "src": "/assets/audios/hsk1-e01-r2/EXP1.5.mp3?v=1571fca2",
+     "dur": 70.14,
+     "parts": [
+      {
+       "at": 0,
+       "label": "Escucha la conversación"
+      },
+      {
+       "at": 23.5,
+       "label": "Ahora repite cada frase"
+      }
+     ],
+     "segs": [
+      [
+       0,
+       0.4,
+       4.16
+      ],
+      [
+       1,
+       4.86,
+       7.17
+      ],
+      [
+       2,
+       7.87,
+       8.72
+      ],
+      [
+       3,
+       9.42,
+       12.24
+      ],
+      [
+       4,
+       12.94,
+       14.72
+      ],
+      [
+       5,
+       15.42,
+       18.19
+      ],
+      [
+       6,
+       18.89,
+       21.6
+      ],
+      [
+       0,
+       23.5,
+       27.26
+      ],
+      [
+       1,
+       33.15,
+       35.46
+      ],
+      [
+       2,
+       39.55,
+       40.4
+      ],
+      [
+       3,
+       42.66,
+       45.49
+      ],
+      [
+       4,
+       50.22,
+       52
+      ],
+      [
+       5,
+       55.43,
+       58.19
+      ],
+      [
+       6,
+       62.85,
+       65.56
+      ]
+     ],
+     "items": [
+      {
+       "py": "xiǎopéngyǒu, nǐ jiào shénme míngzi? nǐ jǐ suì le?",
+       "es": "Pequeño, ¿cómo te llamas? ¿Cuántos años tienes?",
+       "clip": "/assets/audios/hsk1-e01-r2/EXP1.5-1.mp3?v=20417473",
+       "who": "profe"
+      },
+      {
+       "py": "wǒ jiào Dani, wǒ bā suì.",
+       "es": "Me llamo Dani, tengo ocho años.",
+       "clip": "/assets/audios/hsk1-e01-r2/EXP1.5-2.mp3?v=a82cfe0a",
+       "who": "tu"
+      },
+      {
+       "py": "tā shì shéi?",
+       "es": "¿Quién es él?",
+       "clip": "/assets/audios/hsk1-e01-r2/EXP1.5-3.mp3?v=569a20ef",
+       "who": "profe"
+      },
+      {
+       "py": "zhè shì wǒ de péngyou, tā jiào Leo.",
+       "es": "Este es mi amigo, se llama Leo.",
+       "clip": "/assets/audios/hsk1-e01-r2/EXP1.5-4.mp3?v=bf6f3cda",
+       "who": "tu"
+      },
+      {
+       "py": "nàge xiǎo gǒu shì shéi de?",
+       "es": "¿De quién es ese perrito?",
+       "clip": "/assets/audios/hsk1-e01-r2/EXP1.5-5.mp3?v=b4dd55e7",
+       "who": "profe"
+      },
+      {
+       "py": "shì wǒ péngyou de! wǒmen dōu ài tā.",
+       "es": "¡Es de mi amigo! Todos lo queremos.",
+       "clip": "/assets/audios/hsk1-e01-r2/EXP1.5-6.mp3?v=afe4b20c",
+       "who": "tu"
+      },
+      {
+       "py": "hěn hǎo! rènshi nǐmen hěn gāoxìng!",
+       "es": "¡Qué bien! ¡Mucho gusto en conocerlos!",
+       "clip": "/assets/audios/hsk1-e01-r2/EXP1.5-7.mp3?v=4754bb3b",
+       "who": "profe"
+      }
+     ]
+    },
+    {
+     "code": "EXP1.6",
+     "kind": "video",
+     "src": "/assets/audios/hsk1-e01-r2/EXP1.6.mp3?v=91cf7fbf",
+     "dur": 71.58,
+     "parts": [
+      {
+       "at": 0,
+       "label": "Repite cada frase"
+      },
+      {
+       "at": 50.93,
+       "label": "Ahora todo seguido, como tu video"
+      }
+     ],
+     "segs": [
+      [
+       0,
+       0.4,
+       6.24
+      ],
+      [
+       1,
+       15.92,
+       19.63
+      ],
+      [
+       2,
+       26.34,
+       27.83
+      ],
+      [
+       3,
+       31.43,
+       33.25
+      ],
+      [
+       4,
+       37.3,
+       38.63
+      ],
+      [
+       5,
+       42,
+       44.84
+      ],
+      [
+       0,
+       50.93,
+       56.77
+      ],
+      [
+       1,
+       57.37,
+       61.08
+      ],
+      [
+       2,
+       61.68,
+       63.18
+      ],
+      [
+       3,
+       63.78,
+       65.6
+      ],
+      [
+       4,
+       66.2,
+       67.53
+      ],
+      [
+       5,
+       68.13,
+       70.98
+      ]
+     ],
+     "items": [
+      {
+       "py": "dàjiā hǎo! wǒ jiào ___, wǒ ___ suì.",
+       "es": "¡Hola a todos! Me llamo ___, tengo ___ años.",
+       "clip": "/assets/audios/hsk1-e01-r2/EXP1.6-1.mp3?v=081f6d61"
+      },
+      {
+       "py": "zhè shì wǒ de péngyou, tā jiào ___.",
+       "es": "Este es mi amigo, se llama ___.",
+       "clip": "/assets/audios/hsk1-e01-r2/EXP1.6-2.mp3?v=e650a99f"
+      },
+      {
+       "py": "wǒmen shì hǎo péngyou!",
+       "es": "¡Somos buenos amigos!",
+       "clip": "/assets/audios/hsk1-e01-r2/EXP1.6-3.mp3?v=5a3bffcb"
+      },
+      {
+       "py": "nàge xiǎo gǒu shì shéi de?",
+       "es": "¿De quién es ese perrito?",
+       "clip": "/assets/audios/hsk1-e01-r2/EXP1.6-4.mp3?v=24dece4f"
+      },
+      {
+       "py": "shì wǒ péngyou de!",
+       "es": "¡Es de mi amigo!",
+       "clip": "/assets/audios/hsk1-e01-r2/EXP1.6-5.mp3?v=4c0cba45"
+      },
+      {
+       "py": "māma, wǒ ài nǐ! zàijiàn!",
+       "es": "¡Mamá, te quiero! ¡Adiós!",
+       "clip": "/assets/audios/hsk1-e01-r2/EXP1.6-6.mp3?v=e01e31db"
+      }
+     ]
+    }
+   ],
+   "thumb": "/assets/audios/hsk1-e01-r2/cover-s.webp?v=335e7f3a"
+  },
+  {
+   "id": "hsk1-e02-r1",
+   "level": "hsk1",
+   "levelName": "HSK 1",
+   "exp": 2,
+   "round": 1,
+   "title": "La Escuela",
+   "tagline": "Primer día en la escuela de Dralingo. La profe pregunta: ¿sabes hablar chino? Y tú sí sabes… pero no sabes decir \"sé\".",
+   "cover": "/assets/audios/hsk1-e02-r1/cover.jpg?v=8c07f86d",
+   "tracks": [
+    {
+     "code": "EXP2.1",
+     "kind": "words",
+     "src": "/assets/audios/hsk1-e02-r1/EXP2.1.mp3?v=ef2a6deb",
+     "dur": 60.57,
+     "parts": [
+      {
+       "at": 0,
+       "label": "Escucha y repite"
+      }
+     ],
+     "segs": [
+      [
+       0,
+       0.4,
+       0.9
+      ],
+      [
+       0,
+       1.7,
+       2.19
+      ],
+      [
+       1,
+       3.99,
+       4.58
+      ],
+      [
+       1,
+       5.38,
+       5.97
+      ],
+      [
+       2,
+       7.77,
+       8.59
+      ],
+      [
+       2,
+       9.39,
+       10.2
+      ],
+      [
+       3,
+       12.15,
+       12.66
+      ],
+      [
+       3,
+       13.46,
+       13.98
+      ],
+      [
+       4,
+       15.78,
+       16.56
+      ],
+      [
+       4,
+       17.36,
+       18.14
+      ],
+      [
+       5,
+       20.03,
+       20.48
+      ],
+      [
+       5,
+       21.28,
+       21.74
+      ],
+      [
+       6,
+       23.54,
+       24.29
+      ],
+      [
+       6,
+       25.09,
+       25.85
+      ],
+      [
+       7,
+       27.7,
+       28.55
+      ],
+      [
+       7,
+       29.35,
+       30.19
+      ],
+      [
+       8,
+       32.17,
+       32.91
+      ],
+      [
+       8,
+       33.71,
+       34.45
+      ],
+      [
+       9,
+       36.28,
+       36.87
+      ],
+      [
+       9,
+       37.67,
+       38.26
+      ],
+      [
+       10,
+       40.06,
+       40.76
+      ],
+      [
+       10,
+       41.56,
+       42.27
+      ],
+      [
+       11,
+       44.07,
+       44.99
+      ],
+      [
+       11,
+       45.79,
+       46.71
+      ],
+      [
+       12,
+       48.79,
+       49.35
+      ],
+      [
+       12,
+       50.15,
+       50.72
+      ],
+      [
+       13,
+       52.52,
+       52.99
+      ],
+      [
+       13,
+       53.79,
+       54.27
+      ],
+      [
+       14,
+       56.07,
+       56.92
+      ],
+      [
+       14,
+       57.72,
+       58.58
+      ]
+     ],
+     "items": [
+      {
+       "py": "huì",
+       "es": "saber / poder",
+       "clip": "/assets/audios/hsk1-e02-r1/EXP2.1-1.mp3?v=0bd1349d"
+      },
+      {
+       "py": "shuō",
+       "es": "hablar",
+       "clip": "/assets/audios/hsk1-e02-r1/EXP2.1-2.mp3?v=73f98f74"
+      },
+      {
+       "py": "hànyǔ",
+       "es": "Chino Mandarín",
+       "clip": "/assets/audios/hsk1-e02-r1/EXP2.1-3.mp3?v=b582368f"
+      },
+      {
+       "py": "dú",
+       "es": "leer",
+       "clip": "/assets/audios/hsk1-e02-r1/EXP2.1-4.mp3?v=0baa58c3"
+      },
+      {
+       "py": "xiě",
+       "es": "escribir",
+       "clip": "/assets/audios/hsk1-e02-r1/EXP2.1-5.mp3?v=d780126e"
+      },
+      {
+       "py": "zì",
+       "es": "carácter",
+       "clip": "/assets/audios/hsk1-e02-r1/EXP2.1-6.mp3?v=838f488a"
+      },
+      {
+       "py": "xuéxiào",
+       "es": "escuela",
+       "clip": "/assets/audios/hsk1-e02-r1/EXP2.1-7.mp3?v=bf374510"
+      },
+      {
+       "py": "xuésheng",
+       "es": "estudiante",
+       "clip": "/assets/audios/hsk1-e02-r1/EXP2.1-8.mp3?v=c27752f9"
+      },
+      {
+       "py": "lǎoshī",
+       "es": "profe",
+       "clip": "/assets/audios/hsk1-e02-r1/EXP2.1-9.mp3?v=7928a89b"
+      },
+      {
+       "py": "shū",
+       "es": "libro",
+       "clip": "/assets/audios/hsk1-e02-r1/EXP2.1-10.mp3?v=dcf46a76"
+      },
+      {
+       "py": "běn",
+       "es": "(un) libro",
+       "clip": "/assets/audios/hsk1-e02-r1/EXP2.1-11.mp3?v=2ff5364e"
+      },
+      {
+       "py": "xuéxí",
+       "es": "estudiar",
+       "clip": "/assets/audios/hsk1-e02-r1/EXP2.1-12.mp3?v=1b0feccc"
+      },
+      {
+       "py": "tīng",
+       "es": "escuchar",
+       "clip": "/assets/audios/hsk1-e02-r1/EXP2.1-13.mp3?v=60a8be78"
+      },
+      {
+       "py": "kàn",
+       "es": "mirar",
+       "clip": "/assets/audios/hsk1-e02-r1/EXP2.1-14.mp3?v=929a6106"
+      },
+      {
+       "py": "tóngxué",
+       "es": "compañero",
+       "clip": "/assets/audios/hsk1-e02-r1/EXP2.1-15.mp3?v=7ff030d5"
+      }
+     ]
+    },
+    {
+     "code": "EXP2.2",
+     "kind": "dialogue",
+     "src": "/assets/audios/hsk1-e02-r1/EXP2.2.mp3?v=14154667",
+     "dur": 80.39,
+     "parts": [
+      {
+       "at": 0,
+       "label": "Escucha la conversación"
+      },
+      {
+       "at": 26.65,
+       "label": "Ahora repite cada frase"
+      }
+     ],
+     "segs": [
+      [
+       0,
+       0.4,
+       2.41
+      ],
+      [
+       1,
+       3.11,
+       8
+      ],
+      [
+       2,
+       8.7,
+       10.17
+      ],
+      [
+       3,
+       10.87,
+       13.92
+      ],
+      [
+       4,
+       14.62,
+       16.29
+      ],
+      [
+       5,
+       16.99,
+       21.1
+      ],
+      [
+       6,
+       21.8,
+       24.75
+      ],
+      [
+       0,
+       26.65,
+       28.67
+      ],
+      [
+       1,
+       32.38,
+       37.27
+      ],
+      [
+       2,
+       44.57,
+       46.04
+      ],
+      [
+       3,
+       49.08,
+       52.13
+      ],
+      [
+       4,
+       57.15,
+       58.82
+      ],
+      [
+       5,
+       62.1,
+       66.21
+      ],
+      [
+       6,
+       72.55,
+       75.5
+      ]
+     ],
+     "items": [
+      {
+       "py": "nǐ hǎo! nǐ shì xuésheng ma?",
+       "es": "¡Hola! ¿Eres estudiante?",
+       "clip": "/assets/audios/hsk1-e02-r1/EXP2.2-1.mp3?v=34ac278e",
+       "who": "profe"
+      },
+      {
+       "py": "shì! wǒ shì xuésheng. wǒ zài Dralingo xuéxí hànyǔ.",
+       "es": "¡Sí! Soy estudiante. Estudio chino en Dralingo.",
+       "clip": "/assets/audios/hsk1-e02-r1/EXP2.2-2.mp3?v=f3101cf0",
+       "who": "tu"
+      },
+      {
+       "py": "nǐ huì shuō hànyǔ ma?",
+       "es": "¿Sabes hablar chino?",
+       "clip": "/assets/audios/hsk1-e02-r1/EXP2.2-3.mp3?v=a4eadb1e",
+       "who": "profe"
+      },
+      {
+       "py": "huì yìdiǎnr! wǒ huì shuō, wǒ huì dú.",
+       "es": "¡Sé un poquito! Sé hablar, sé leer.",
+       "clip": "/assets/audios/hsk1-e02-r1/EXP2.2-4.mp3?v=bd859ae7",
+       "who": "tu"
+      },
+      {
+       "py": "zhège zì nǐ huì xiě ma?",
+       "es": "¿Sabes escribir este carácter?",
+       "clip": "/assets/audios/hsk1-e02-r1/EXP2.2-5.mp3?v=c76da3c8",
+       "who": "profe"
+      },
+      {
+       "py": "zhège zì wǒ bù huì xiě… wǒ hěn xǐhuan zhè běn shū!",
+       "es": "Este no sé escribirlo… ¡pero me encanta este libro!",
+       "clip": "/assets/audios/hsk1-e02-r1/EXP2.2-6.mp3?v=f9297b33",
+       "who": "tu"
+      },
+      {
+       "py": "nǐ de hànyǔ hěn hǎo! míngtiān xuéxiào jiàn!",
+       "es": "¡Tu chino es muy bueno! ¡Nos vemos mañana en la escuela!",
+       "clip": "/assets/audios/hsk1-e02-r1/EXP2.2-7.mp3?v=bd8003f4",
+       "who": "profe"
+      }
+     ]
+    },
+    {
+     "code": "EXP2.3",
+     "kind": "video",
+     "src": "/assets/audios/hsk1-e02-r1/EXP2.3.mp3?v=7bb6c71c",
+     "dur": 69.21,
+     "parts": [
+      {
+       "at": 0,
+       "label": "Repite cada frase"
+      },
+      {
+       "at": 49.25,
+       "label": "Ahora todo seguido, como tu video"
+      }
+     ],
+     "segs": [
+      [
+       0,
+       0.4,
+       4.53
+      ],
+      [
+       1,
+       11.82,
+       14.63
+      ],
+      [
+       2,
+       20.06,
+       21.48
+      ],
+      [
+       3,
+       24.97,
+       27.65
+      ],
+      [
+       4,
+       32.9,
+       34.8
+      ],
+      [
+       5,
+       38.96,
+       42.37
+      ],
+      [
+       0,
+       49.25,
+       53.39
+      ],
+      [
+       1,
+       53.99,
+       56.79
+      ],
+      [
+       2,
+       57.39,
+       58.81
+      ],
+      [
+       3,
+       59.41,
+       62.1
+      ],
+      [
+       4,
+       62.7,
+       64.6
+      ],
+      [
+       5,
+       65.2,
+       68.61
+      ]
+     ],
+     "items": [
+      {
+       "py": "nǐ hǎo! wǒ jiào ___. wǒ shì xuésheng.",
+       "es": "¡Hola! Me llamo ___. Soy estudiante.",
+       "clip": "/assets/audios/hsk1-e02-r1/EXP2.3-1.mp3?v=fc9103fc"
+      },
+      {
+       "py": "wǒ zài Dralingo xuéxí hànyǔ.",
+       "es": "Estudio chino en Dralingo.",
+       "clip": "/assets/audios/hsk1-e02-r1/EXP2.3-2.mp3?v=c4a1fddf"
+      },
+      {
+       "py": "wǒ huì shuō hànyǔ!",
+       "es": "¡Sé hablar chino!",
+       "clip": "/assets/audios/hsk1-e02-r1/EXP2.3-3.mp3?v=553f1f08"
+      },
+      {
+       "py": "zhège zì wǒ huì dú, wǒ huì xiě.",
+       "es": "Este carácter sé leerlo y sé escribirlo.",
+       "clip": "/assets/audios/hsk1-e02-r1/EXP2.3-4.mp3?v=18bcbc69"
+      },
+      {
+       "py": "wǒ hěn xǐhuan zhè běn shū.",
+       "es": "Me encanta este libro.",
+       "clip": "/assets/audios/hsk1-e02-r1/EXP2.3-5.mp3?v=637e537b"
+      },
+      {
+       "py": "zàijiàn, lǎoshī! míngtiān xuéxiào jiàn!",
+       "es": "¡Adiós, profe! ¡Nos vemos mañana en la escuela!",
+       "clip": "/assets/audios/hsk1-e02-r1/EXP2.3-6.mp3?v=7608916f"
+      }
+     ]
+    }
+   ],
+   "thumb": "/assets/audios/hsk1-e02-r1/cover-s.webp?v=ff63d4e0"
   },
   {
    "id": "hsk1-e02-r2",
@@ -2677,7 +9125,7 @@
      ]
     }
    ],
-   "thumb": "/assets/audios/hsk1-e02-r2/cover-s.webp"
+   "thumb": "/assets/audios/hsk1-e02-r2/cover-s.webp?v=2b4ecf9f"
   },
   {
    "id": "hsk1-e03-r1",
@@ -3173,7 +9621,7 @@
      ]
     }
    ],
-   "thumb": "/assets/audios/hsk1-e03-r1/cover-s.webp"
+   "thumb": "/assets/audios/hsk1-e03-r1/cover-s.webp?v=77da4d1d"
   },
   {
    "id": "hsk1-e04-r1",
@@ -3624,7 +10072,1991 @@
      ]
     }
    ],
-   "thumb": "/assets/audios/hsk1-e04-r1/cover-s.webp"
+   "thumb": "/assets/audios/hsk1-e04-r1/cover-s.webp?v=672002ca"
+  },
+  {
+   "id": "hsk1-e05-r1",
+   "level": "hsk1",
+   "levelName": "HSK 1",
+   "exp": 5,
+   "round": 1,
+   "title": "Viajando por China",
+   "tagline": "Hoy viajas a China con tu familia. En el aeropuerto te preguntan a dónde vas y cómo vas a llegar. ¿Sabes contestar?",
+   "cover": "/assets/audios/hsk1-e05-r1/cover.jpg?v=b784a8ff",
+   "tracks": [
+    {
+     "code": "EXP5.1",
+     "kind": "words",
+     "src": "/assets/audios/hsk1-e05-r1/EXP5.1.mp3?v=e26dcc80",
+     "dur": 59.89,
+     "parts": [
+      {
+       "at": 0,
+       "label": "Escucha y repite"
+      }
+     ],
+     "segs": [
+      [
+       0,
+       0.4,
+       0.9
+      ],
+      [
+       0,
+       1.7,
+       2.21
+      ],
+      [
+       1,
+       4.01,
+       4.56
+      ],
+      [
+       1,
+       5.36,
+       5.91
+      ],
+      [
+       2,
+       7.71,
+       8.28
+      ],
+      [
+       2,
+       9.08,
+       9.65
+      ],
+      [
+       3,
+       11.45,
+       12.25
+      ],
+      [
+       3,
+       13.05,
+       13.86
+      ],
+      [
+       4,
+       15.78,
+       16.51
+      ],
+      [
+       4,
+       17.31,
+       18.04
+      ],
+      [
+       5,
+       19.87,
+       20.31
+      ],
+      [
+       5,
+       21.11,
+       21.55
+      ],
+      [
+       6,
+       23.35,
+       24.08
+      ],
+      [
+       6,
+       24.88,
+       25.61
+      ],
+      [
+       7,
+       27.43,
+       28.41
+      ],
+      [
+       7,
+       29.21,
+       30.18
+      ],
+      [
+       8,
+       32.35,
+       32.76
+      ],
+      [
+       8,
+       33.56,
+       33.97
+      ],
+      [
+       9,
+       35.77,
+       36.58
+      ],
+      [
+       9,
+       37.38,
+       38.18
+      ],
+      [
+       10,
+       40.1,
+       40.88
+      ],
+      [
+       10,
+       41.68,
+       42.46
+      ],
+      [
+       11,
+       44.34,
+       44.88
+      ],
+      [
+       11,
+       45.68,
+       46.22
+      ],
+      [
+       12,
+       48.02,
+       48.75
+      ],
+      [
+       12,
+       49.55,
+       50.28
+      ],
+      [
+       13,
+       52.1,
+       52.73
+      ],
+      [
+       13,
+       53.53,
+       54.16
+      ],
+      [
+       14,
+       55.96,
+       56.62
+      ],
+      [
+       14,
+       57.42,
+       58.09
+      ]
+     ],
+     "items": [
+      {
+       "py": "qù",
+       "es": "ir",
+       "clip": "/assets/audios/hsk1-e05-r1/EXP5.1-1.mp3?v=5d4d70e8"
+      },
+      {
+       "py": "lái",
+       "es": "venir",
+       "clip": "/assets/audios/hsk1-e05-r1/EXP5.1-2.mp3?v=bb135114"
+      },
+      {
+       "py": "huí",
+       "es": "regresar",
+       "clip": "/assets/audios/hsk1-e05-r1/EXP5.1-3.mp3?v=53e41a3c"
+      },
+      {
+       "py": "Zhōngguó",
+       "es": "China",
+       "clip": "/assets/audios/hsk1-e05-r1/EXP5.1-4.mp3?v=cf4772cd"
+      },
+      {
+       "py": "Běijīng",
+       "es": "Beijing",
+       "clip": "/assets/audios/hsk1-e05-r1/EXP5.1-5.mp3?v=5eb137eb"
+      },
+      {
+       "py": "zuò",
+       "es": "ir en (avión, taxi)",
+       "clip": "/assets/audios/hsk1-e05-r1/EXP5.1-6.mp3?v=86abb89a"
+      },
+      {
+       "py": "fēijī",
+       "es": "avión",
+       "clip": "/assets/audios/hsk1-e05-r1/EXP5.1-7.mp3?v=e8b79353"
+      },
+      {
+       "py": "chūzūchē",
+       "es": "taxi",
+       "clip": "/assets/audios/hsk1-e05-r1/EXP5.1-8.mp3?v=49081e85"
+      },
+      {
+       "py": "zài",
+       "es": "en / estar en",
+       "clip": "/assets/audios/hsk1-e05-r1/EXP5.1-9.mp3?v=d8aaf9f3"
+      },
+      {
+       "py": "jīntiān",
+       "es": "hoy",
+       "clip": "/assets/audios/hsk1-e05-r1/EXP5.1-10.mp3?v=e7cb8be9"
+      },
+      {
+       "py": "míngtiān",
+       "es": "mañana",
+       "clip": "/assets/audios/hsk1-e05-r1/EXP5.1-11.mp3?v=24f02776"
+      },
+      {
+       "py": "jiā",
+       "es": "casa",
+       "clip": "/assets/audios/hsk1-e05-r1/EXP5.1-12.mp3?v=4f328b90"
+      },
+      {
+       "py": "xiǎng",
+       "es": "querer",
+       "clip": "/assets/audios/hsk1-e05-r1/EXP5.1-13.mp3?v=59ce4190"
+      },
+      {
+       "py": "bàba",
+       "es": "papá",
+       "clip": "/assets/audios/hsk1-e05-r1/EXP5.1-14.mp3?v=2d2bdf6e"
+      },
+      {
+       "py": "māma",
+       "es": "mamá",
+       "clip": "/assets/audios/hsk1-e05-r1/EXP5.1-15.mp3?v=284b8e93"
+      }
+     ]
+    },
+    {
+     "code": "EXP5.2",
+     "kind": "dialogue",
+     "src": "/assets/audios/hsk1-e05-r1/EXP5.2.mp3?v=2a823658",
+     "dur": 65.61,
+     "parts": [
+      {
+       "at": 0,
+       "label": "Escucha la conversación"
+      },
+      {
+       "at": 22.1,
+       "label": "Ahora repite cada frase"
+      }
+     ],
+     "segs": [
+      [
+       0,
+       0.4,
+       2.54
+      ],
+      [
+       1,
+       3.24,
+       4.95
+      ],
+      [
+       2,
+       5.65,
+       6.52
+      ],
+      [
+       3,
+       7.22,
+       9.16
+      ],
+      [
+       4,
+       9.86,
+       12.4
+      ],
+      [
+       5,
+       13.1,
+       17.78
+      ],
+      [
+       6,
+       18.48,
+       20.2
+      ],
+      [
+       0,
+       22.1,
+       24.24
+      ],
+      [
+       1,
+       28.12,
+       29.83
+      ],
+      [
+       2,
+       33.17,
+       34.04
+      ],
+      [
+       3,
+       36.33,
+       38.27
+      ],
+      [
+       4,
+       41.9,
+       44.43
+      ],
+      [
+       5,
+       48.8,
+       53.48
+      ],
+      [
+       6,
+       60.53,
+       62.25
+      ]
+     ],
+     "items": [
+      {
+       "py": "nǐ hǎo! jīntiān nǐ qù nǎr?",
+       "es": "¡Hola! ¿A dónde vas hoy?",
+       "clip": "/assets/audios/hsk1-e05-r1/EXP5.2-1.mp3?v=f05031df",
+       "who": "profe"
+      },
+      {
+       "py": "jīntiān wǒ qù Zhōngguó!",
+       "es": "¡Hoy voy a China!",
+       "clip": "/assets/audios/hsk1-e05-r1/EXP5.2-2.mp3?v=06129ae6",
+       "who": "tu"
+      },
+      {
+       "py": "nǐ zěnme qù?",
+       "es": "¿Cómo vas?",
+       "clip": "/assets/audios/hsk1-e05-r1/EXP5.2-3.mp3?v=79b45192",
+       "who": "profe"
+      },
+      {
+       "py": "wǒ zuò fēijī qù Běijīng.",
+       "es": "Voy a Beijing en avión.",
+       "clip": "/assets/audios/hsk1-e05-r1/EXP5.2-4.mp3?v=00125d11",
+       "who": "tu"
+      },
+      {
+       "py": "zài Běijīng, nǐ zuò chūzūchē ma?",
+       "es": "En Beijing, ¿vas en taxi?",
+       "clip": "/assets/audios/hsk1-e05-r1/EXP5.2-5.mp3?v=429a3968",
+       "who": "profe"
+      },
+      {
+       "py": "shì! zài Běijīng wǒ zuò chūzūchē. míngtiān wǒ huí jiā.",
+       "es": "¡Sí! En Beijing voy en taxi. Mañana regreso a casa.",
+       "clip": "/assets/audios/hsk1-e05-r1/EXP5.2-6.mp3?v=8a6e4a5d",
+       "who": "tu"
+      },
+      {
+       "py": "hěn hǎo! zàijiàn!",
+       "es": "¡Muy bien! ¡Adiós!",
+       "clip": "/assets/audios/hsk1-e05-r1/EXP5.2-7.mp3?v=a5ab52f6",
+       "who": "profe"
+      }
+     ]
+    },
+    {
+     "code": "EXP5.3",
+     "kind": "video",
+     "src": "/assets/audios/hsk1-e05-r1/EXP5.3.mp3?v=17b59e5d",
+     "dur": 55.25,
+     "parts": [
+      {
+       "at": 0,
+       "label": "Repite cada frase"
+      },
+      {
+       "at": 39.4,
+       "label": "Ahora todo seguido, como tu video"
+      }
+     ],
+     "segs": [
+      [
+       0,
+       0.4,
+       3.64
+      ],
+      [
+       1,
+       9.69,
+       11.4
+      ],
+      [
+       2,
+       15.29,
+       17.24
+      ],
+      [
+       3,
+       21.45,
+       23.65
+      ],
+      [
+       4,
+       28.22,
+       29.67
+      ],
+      [
+       5,
+       33.2,
+       34.91
+      ],
+      [
+       0,
+       39.4,
+       42.65
+      ],
+      [
+       1,
+       43.25,
+       44.96
+      ],
+      [
+       2,
+       45.56,
+       47.5
+      ],
+      [
+       3,
+       48.1,
+       50.29
+      ],
+      [
+       4,
+       50.89,
+       52.34
+      ],
+      [
+       5,
+       52.94,
+       54.65
+      ]
+     ],
+     "items": [
+      {
+       "py": "dàjiā hǎo! wǒ jiào ___.",
+       "es": "¡Hola a todos! Me llamo ___.",
+       "clip": "/assets/audios/hsk1-e05-r1/EXP5.3-1.mp3?v=45d5318e"
+      },
+      {
+       "py": "jīntiān wǒ qù Zhōngguó!",
+       "es": "¡Hoy voy a China!",
+       "clip": "/assets/audios/hsk1-e05-r1/EXP5.3-2.mp3?v=06129ae6"
+      },
+      {
+       "py": "wǒ zuò fēijī qù Běijīng.",
+       "es": "Voy a Beijing en avión.",
+       "clip": "/assets/audios/hsk1-e05-r1/EXP5.3-3.mp3?v=00125d11"
+      },
+      {
+       "py": "zài Běijīng wǒ zuò chūzūchē.",
+       "es": "En Beijing voy en taxi.",
+       "clip": "/assets/audios/hsk1-e05-r1/EXP5.3-4.mp3?v=fb7a2275"
+      },
+      {
+       "py": "míngtiān wǒ huí jiā.",
+       "es": "Mañana regreso a casa.",
+       "clip": "/assets/audios/hsk1-e05-r1/EXP5.3-5.mp3?v=48216b5d"
+      },
+      {
+       "py": "xièxie! zàijiàn!",
+       "es": "¡Gracias! ¡Adiós!",
+       "clip": "/assets/audios/hsk1-e05-r1/EXP5.3-6.mp3?v=1f6baf5b"
+      }
+     ]
+    }
+   ],
+   "thumb": "/assets/audios/hsk1-e05-r1/cover-s.webp?v=ff5e24b7"
+  },
+  {
+   "id": "hsk1-e06-r1",
+   "level": "hsk1",
+   "levelName": "HSK 1",
+   "exp": 6,
+   "round": 1,
+   "title": "Mi Casa",
+   "tagline": "Tu amigo viene a visitarte por primera vez. Entra, mira todo y pregunta qué hay en tu casa. ¿Sabes enseñársela?",
+   "cover": "/assets/audios/hsk1-e06-r1/cover.jpg?v=38b7b00b",
+   "tracks": [
+    {
+     "code": "EXP6.1",
+     "kind": "words",
+     "src": "/assets/audios/hsk1-e06-r1/EXP6.1.mp3?v=9e15a3e2",
+     "dur": 60.11,
+     "parts": [
+      {
+       "at": 0,
+       "label": "Escucha y repite"
+      }
+     ],
+     "segs": [
+      [
+       0,
+       0.4,
+       1.08
+      ],
+      [
+       0,
+       1.88,
+       2.56
+      ],
+      [
+       1,
+       4.36,
+       5.05
+      ],
+      [
+       1,
+       5.85,
+       6.54
+      ],
+      [
+       2,
+       8.34,
+       9
+      ],
+      [
+       2,
+       9.8,
+       10.46
+      ],
+      [
+       3,
+       12.26,
+       12.93
+      ],
+      [
+       3,
+       13.73,
+       14.4
+      ],
+      [
+       4,
+       16.2,
+       16.98
+      ],
+      [
+       4,
+       17.78,
+       18.55
+      ],
+      [
+       5,
+       20.43,
+       21.16
+      ],
+      [
+       5,
+       21.96,
+       22.69
+      ],
+      [
+       6,
+       24.51,
+       25.22
+      ],
+      [
+       6,
+       26.02,
+       26.73
+      ],
+      [
+       7,
+       28.53,
+       29.05
+      ],
+      [
+       7,
+       29.85,
+       30.37
+      ],
+      [
+       8,
+       32.17,
+       33.38
+      ],
+      [
+       8,
+       34.18,
+       35.38
+      ],
+      [
+       9,
+       37.87,
+       38.4
+      ],
+      [
+       9,
+       39.2,
+       39.74
+      ],
+      [
+       10,
+       41.54,
+       42.1
+      ],
+      [
+       10,
+       42.9,
+       43.45
+      ],
+      [
+       11,
+       45.25,
+       45.76
+      ],
+      [
+       11,
+       46.56,
+       47.06
+      ],
+      [
+       12,
+       48.86,
+       49.47
+      ],
+      [
+       12,
+       50.27,
+       50.87
+      ],
+      [
+       13,
+       52.67,
+       53.14
+      ],
+      [
+       13,
+       53.94,
+       54.42
+      ],
+      [
+       14,
+       56.22,
+       56.86
+      ],
+      [
+       14,
+       57.66,
+       58.31
+      ]
+     ],
+     "items": [
+      {
+       "py": "yǒu",
+       "es": "hay / tener",
+       "clip": "/assets/audios/hsk1-e06-r1/EXP6.1-1.mp3?v=4d1508ad"
+      },
+      {
+       "py": "méiyǒu",
+       "es": "no hay",
+       "clip": "/assets/audios/hsk1-e06-r1/EXP6.1-2.mp3?v=3923dd32"
+      },
+      {
+       "py": "lǐ",
+       "es": "dentro",
+       "clip": "/assets/audios/hsk1-e06-r1/EXP6.1-3.mp3?v=62131af1"
+      },
+      {
+       "py": "zhuōzi",
+       "es": "mesa",
+       "clip": "/assets/audios/hsk1-e06-r1/EXP6.1-4.mp3?v=057edcc7"
+      },
+      {
+       "py": "yǐzi",
+       "es": "silla",
+       "clip": "/assets/audios/hsk1-e06-r1/EXP6.1-5.mp3?v=620529fa"
+      },
+      {
+       "py": "diànshì",
+       "es": "tele",
+       "clip": "/assets/audios/hsk1-e06-r1/EXP6.1-6.mp3?v=62cf855c"
+      },
+      {
+       "py": "diànnǎo",
+       "es": "computadora",
+       "clip": "/assets/audios/hsk1-e06-r1/EXP6.1-7.mp3?v=5ce982b1"
+      },
+      {
+       "py": "kāi",
+       "es": "prender / abrir",
+       "clip": "/assets/audios/hsk1-e06-r1/EXP6.1-8.mp3?v=9fe9ea35"
+      },
+      {
+       "py": "dà · xiǎo",
+       "es": "grande · pequeño",
+       "clip": "/assets/audios/hsk1-e06-r1/EXP6.1-9.mp3?v=8683999c"
+      },
+      {
+       "py": "jiā",
+       "es": "casa",
+       "clip": "/assets/audios/hsk1-e06-r1/EXP6.1-10.mp3?v=4f328b90"
+      },
+      {
+       "py": "shàng",
+       "es": "sobre / arriba",
+       "clip": "/assets/audios/hsk1-e06-r1/EXP6.1-11.mp3?v=c1d8a3b1"
+      },
+      {
+       "py": "māo",
+       "es": "gato",
+       "clip": "/assets/audios/hsk1-e06-r1/EXP6.1-12.mp3?v=c5d61511"
+      },
+      {
+       "py": "gǒu",
+       "es": "perro",
+       "clip": "/assets/audios/hsk1-e06-r1/EXP6.1-13.mp3?v=c474909e"
+      },
+      {
+       "py": "kàn",
+       "es": "mirar",
+       "clip": "/assets/audios/hsk1-e06-r1/EXP6.1-14.mp3?v=929a6106"
+      },
+      {
+       "py": "zhè shì",
+       "es": "esto es",
+       "clip": "/assets/audios/hsk1-e06-r1/EXP6.1-15.mp3?v=a5524b3b"
+      }
+     ]
+    },
+    {
+     "code": "EXP6.2",
+     "kind": "dialogue",
+     "src": "/assets/audios/hsk1-e06-r1/EXP6.2.mp3?v=248057aa",
+     "dur": 69.07,
+     "parts": [
+      {
+       "at": 0,
+       "label": "Escucha la conversación"
+      },
+      {
+       "at": 23.17,
+       "label": "Ahora repite cada frase"
+      }
+     ],
+     "segs": [
+      [
+       0,
+       0.4,
+       2.55
+      ],
+      [
+       1,
+       3.25,
+       5.26
+      ],
+      [
+       2,
+       5.96,
+       7.32
+      ],
+      [
+       3,
+       8.02,
+       12.56
+      ],
+      [
+       4,
+       13.26,
+       14.33
+      ],
+      [
+       5,
+       15.03,
+       18.59
+      ],
+      [
+       6,
+       19.29,
+       21.27
+      ],
+      [
+       0,
+       23.17,
+       25.32
+      ],
+      [
+       1,
+       29.2,
+       31.22
+      ],
+      [
+       2,
+       34.94,
+       36.29
+      ],
+      [
+       3,
+       39.18,
+       43.72
+      ],
+      [
+       4,
+       50.6,
+       51.68
+      ],
+      [
+       5,
+       54.22,
+       57.78
+      ],
+      [
+       6,
+       63.43,
+       65.41
+      ]
+     ],
+     "items": [
+      {
+       "py": "nǐ hǎo! zhè shì nǐ de jiā ma?",
+       "es": "¡Hola! ¿Esta es tu casa?",
+       "clip": "/assets/audios/hsk1-e06-r1/EXP6.2-1.mp3?v=25135d62",
+       "who": "profe"
+      },
+      {
+       "py": "shì! zhè shì wǒ de jiā.",
+       "es": "¡Sí! Esta es mi casa.",
+       "clip": "/assets/audios/hsk1-e06-r1/EXP6.2-2.mp3?v=b587bb86",
+       "who": "tu"
+      },
+      {
+       "py": "nǐ jiā lǐ yǒu shénme?",
+       "es": "¿Qué hay en tu casa?",
+       "clip": "/assets/audios/hsk1-e06-r1/EXP6.2-3.mp3?v=9fc7d849",
+       "who": "profe"
+      },
+      {
+       "py": "jiā lǐ yǒu zhuōzi, yǒu yǐzi. zhuōzi shàng yǒu diànnǎo.",
+       "es": "Hay una mesa y sillas. Sobre la mesa hay una computadora.",
+       "clip": "/assets/audios/hsk1-e06-r1/EXP6.2-4.mp3?v=40b8a645",
+       "who": "tu"
+      },
+      {
+       "py": "yǒu diànshì ma?",
+       "es": "¿Hay tele?",
+       "clip": "/assets/audios/hsk1-e06-r1/EXP6.2-5.mp3?v=04309428",
+       "who": "profe"
+      },
+      {
+       "py": "yǒu! wǒ kāi diànshì, wǒmen kàn diànshì!",
+       "es": "¡Sí! Prendo la tele, ¡vemos la tele!",
+       "clip": "/assets/audios/hsk1-e06-r1/EXP6.2-6.mp3?v=ded36201",
+       "who": "tu"
+      },
+      {
+       "py": "hǎo! nǐ de jiā hěn dà!",
+       "es": "¡Qué bien! ¡Tu casa es muy grande!",
+       "clip": "/assets/audios/hsk1-e06-r1/EXP6.2-7.mp3?v=51613a32",
+       "who": "profe"
+      }
+     ]
+    },
+    {
+     "code": "EXP6.3",
+     "kind": "video",
+     "src": "/assets/audios/hsk1-e06-r1/EXP6.3.mp3?v=88bb8b6e",
+     "dur": 59.94,
+     "parts": [
+      {
+       "at": 0,
+       "label": "Repite cada frase"
+      },
+      {
+       "at": 42.71,
+       "label": "Ahora todo seguido, como tu video"
+      }
+     ],
+     "segs": [
+      [
+       0,
+       0.4,
+       2.84
+      ],
+      [
+       1,
+       7.74,
+       10.23
+      ],
+      [
+       2,
+       15.2,
+       16.93
+      ],
+      [
+       3,
+       20.86,
+       23.29
+      ],
+      [
+       4,
+       28.19,
+       31.03
+      ],
+      [
+       5,
+       36.51,
+       38.22
+      ],
+      [
+       0,
+       42.71,
+       45.15
+      ],
+      [
+       1,
+       45.75,
+       48.23
+      ],
+      [
+       2,
+       48.83,
+       50.56
+      ],
+      [
+       3,
+       51.16,
+       53.59
+      ],
+      [
+       4,
+       54.19,
+       57.03
+      ],
+      [
+       5,
+       57.63,
+       59.34
+      ]
+     ],
+     "items": [
+      {
+       "py": "dàjiā hǎo! zhè shì wǒ de jiā!",
+       "es": "¡Hola a todos! ¡Esta es mi casa!",
+       "clip": "/assets/audios/hsk1-e06-r1/EXP6.3-1.mp3?v=10f7e42b"
+      },
+      {
+       "py": "jiā lǐ yǒu zhuōzi, yǒu yǐzi.",
+       "es": "Hay una mesa y sillas.",
+       "clip": "/assets/audios/hsk1-e06-r1/EXP6.3-2.mp3?v=cc21ab96"
+      },
+      {
+       "py": "zhuōzi shàng yǒu diànnǎo.",
+       "es": "Sobre la mesa hay una computadora.",
+       "clip": "/assets/audios/hsk1-e06-r1/EXP6.3-3.mp3?v=398b93e9"
+      },
+      {
+       "py": "wǒ kāi diànshì, kàn diànshì!",
+       "es": "¡Prendo la tele y veo la tele!",
+       "clip": "/assets/audios/hsk1-e06-r1/EXP6.3-4.mp3?v=50e293d8"
+      },
+      {
+       "py": "wǒ de māo hěn xiǎo, wǒ de gǒu hěn dà.",
+       "es": "Mi gato es pequeño, mi perro es grande.",
+       "clip": "/assets/audios/hsk1-e06-r1/EXP6.3-5.mp3?v=7572a543"
+      },
+      {
+       "py": "xièxie! zàijiàn!",
+       "es": "¡Gracias! ¡Adiós!",
+       "clip": "/assets/audios/hsk1-e06-r1/EXP6.3-6.mp3?v=1f6baf5b"
+      }
+     ]
+    }
+   ],
+   "thumb": "/assets/audios/hsk1-e06-r1/cover-s.webp?v=9cf81152"
+  },
+  {
+   "id": "hsk1-e07-r1",
+   "level": "hsk1",
+   "levelName": "HSK 1",
+   "exp": 7,
+   "round": 1,
+   "title": "La Ciudad",
+   "tagline": "Paseas por la ciudad con mamá. La señorita Qián te pregunta quién es el señor de bata blanca. ¿Sabes contestar?",
+   "cover": "/assets/audios/hsk1-e07-r1/cover.jpg?v=00d7264a",
+   "tracks": [
+    {
+     "code": "EXP7.1",
+     "kind": "words",
+     "src": "/assets/audios/hsk1-e07-r1/EXP7.1.mp3?v=441f97fc",
+     "dur": 61.27,
+     "parts": [
+      {
+       "at": 0,
+       "label": "Escucha y repite"
+      }
+     ],
+     "segs": [
+      [
+       0,
+       0.4,
+       0.94
+      ],
+      [
+       0,
+       1.74,
+       2.27
+      ],
+      [
+       1,
+       4.07,
+       4.7
+      ],
+      [
+       1,
+       5.5,
+       6.13
+      ],
+      [
+       2,
+       7.93,
+       8.58
+      ],
+      [
+       2,
+       9.38,
+       10.02
+      ],
+      [
+       3,
+       11.82,
+       12.36
+      ],
+      [
+       3,
+       13.16,
+       13.69
+      ],
+      [
+       4,
+       15.49,
+       16.18
+      ],
+      [
+       4,
+       16.98,
+       17.66
+      ],
+      [
+       5,
+       19.46,
+       20.19
+      ],
+      [
+       5,
+       20.99,
+       21.73
+      ],
+      [
+       6,
+       23.56,
+       24.22
+      ],
+      [
+       6,
+       25.02,
+       25.69
+      ],
+      [
+       7,
+       27.49,
+       28.36
+      ],
+      [
+       7,
+       29.16,
+       30.04
+      ],
+      [
+       8,
+       32.06,
+       32.76
+      ],
+      [
+       8,
+       33.56,
+       34.26
+      ],
+      [
+       9,
+       36.06,
+       36.73
+      ],
+      [
+       9,
+       37.53,
+       38.2
+      ],
+      [
+       10,
+       40,
+       40.42
+      ],
+      [
+       10,
+       41.22,
+       41.63
+      ],
+      [
+       11,
+       43.43,
+       43.93
+      ],
+      [
+       11,
+       44.73,
+       45.24
+      ],
+      [
+       12,
+       47.04,
+       48.26
+      ],
+      [
+       12,
+       49.06,
+       50.27
+      ],
+      [
+       13,
+       52.78,
+       53.59
+      ],
+      [
+       13,
+       54.39,
+       55.21
+      ],
+      [
+       14,
+       57.15,
+       57.89
+      ],
+      [
+       14,
+       58.69,
+       59.43
+      ]
+     ],
+     "items": [
+      {
+       "py": "rén",
+       "es": "persona",
+       "clip": "/assets/audios/hsk1-e07-r1/EXP7.1-1.mp3?v=c523b4c6"
+      },
+      {
+       "py": "shéi",
+       "es": "¿quién?",
+       "clip": "/assets/audios/hsk1-e07-r1/EXP7.1-2.mp3?v=1abbd7fb"
+      },
+      {
+       "py": "shénme",
+       "es": "¿qué?",
+       "clip": "/assets/audios/hsk1-e07-r1/EXP7.1-3.mp3?v=68dbe7a5"
+      },
+      {
+       "py": "zěnme",
+       "es": "¿cómo?",
+       "clip": "/assets/audios/hsk1-e07-r1/EXP7.1-4.mp3?v=9da80ede"
+      },
+      {
+       "py": "zěnmeyàng",
+       "es": "¿qué tal?",
+       "clip": "/assets/audios/hsk1-e07-r1/EXP7.1-5.mp3?v=baef41c6"
+      },
+      {
+       "py": "yīshēng",
+       "es": "doctor",
+       "clip": "/assets/audios/hsk1-e07-r1/EXP7.1-6.mp3?v=05d61e5b"
+      },
+      {
+       "py": "yīyuàn",
+       "es": "hospital",
+       "clip": "/assets/audios/hsk1-e07-r1/EXP7.1-7.mp3?v=d4b0b8ce"
+      },
+      {
+       "py": "xiǎojiě",
+       "es": "señorita",
+       "clip": "/assets/audios/hsk1-e07-r1/EXP7.1-8.mp3?v=d3888a35"
+      },
+      {
+       "py": "gāoxìng",
+       "es": "feliz",
+       "clip": "/assets/audios/hsk1-e07-r1/EXP7.1-9.mp3?v=15d63d49"
+      },
+      {
+       "py": "gōngzuò",
+       "es": "trabajar",
+       "clip": "/assets/audios/hsk1-e07-r1/EXP7.1-10.mp3?v=e50d94a5"
+      },
+      {
+       "py": "zài",
+       "es": "en / estar en",
+       "clip": "/assets/audios/hsk1-e07-r1/EXP7.1-11.mp3?v=d8aaf9f3"
+      },
+      {
+       "py": "qù",
+       "es": "ir",
+       "clip": "/assets/audios/hsk1-e07-r1/EXP7.1-12.mp3?v=5d4d70e8"
+      },
+      {
+       "py": "zuò chūzūchē",
+       "es": "ir en taxi",
+       "clip": "/assets/audios/hsk1-e07-r1/EXP7.1-13.mp3?v=983e0abd"
+      },
+      {
+       "py": "hànyǔ",
+       "es": "Chino Mandarín",
+       "clip": "/assets/audios/hsk1-e07-r1/EXP7.1-14.mp3?v=b582368f"
+      },
+      {
+       "py": "rènshi",
+       "es": "conocer",
+       "clip": "/assets/audios/hsk1-e07-r1/EXP7.1-15.mp3?v=4c54a770"
+      }
+     ]
+    },
+    {
+     "code": "EXP7.2",
+     "kind": "dialogue",
+     "src": "/assets/audios/hsk1-e07-r1/EXP7.2.mp3?v=30b75612",
+     "dur": 65.52,
+     "parts": [
+      {
+       "at": 0,
+       "label": "Escucha la conversación"
+      },
+      {
+       "at": 22.07,
+       "label": "Ahora repite cada frase"
+      }
+     ],
+     "segs": [
+      [
+       0,
+       0.4,
+       4.49
+      ],
+      [
+       1,
+       5.19,
+       8.11
+      ],
+      [
+       2,
+       8.81,
+       10.04
+      ],
+      [
+       3,
+       10.74,
+       12.45
+      ],
+      [
+       4,
+       13.15,
+       14.6
+      ],
+      [
+       5,
+       15.3,
+       17.98
+      ],
+      [
+       6,
+       18.68,
+       20.17
+      ],
+      [
+       0,
+       22.07,
+       26.17
+      ],
+      [
+       1,
+       32.49,
+       35.4
+      ],
+      [
+       2,
+       40.24,
+       41.47
+      ],
+      [
+       3,
+       44.21,
+       45.92
+      ],
+      [
+       4,
+       49.27,
+       50.72
+      ],
+      [
+       5,
+       53.73,
+       56.41
+      ],
+      [
+       6,
+       60.95,
+       62.45
+      ]
+     ],
+     "items": [
+      {
+       "py": "nǐ hǎo! wǒ shì Qián xiǎojiě. qiánmiàn nàge rén shì shéi?",
+       "es": "¡Hola! Soy la señorita Qián. ¿Quién es esa persona de adelante?",
+       "clip": "/assets/audios/hsk1-e07-r1/EXP7.2-1.mp3?v=5c2b3164",
+       "who": "profe"
+      },
+      {
+       "py": "tā shì yīshēng. tā zài yīyuàn gōngzuò.",
+       "es": "Es doctor. Trabaja en el hospital.",
+       "clip": "/assets/audios/hsk1-e07-r1/EXP7.2-2.mp3?v=462d59cc",
+       "who": "tu"
+      },
+      {
+       "py": "nǐ zěnme qù yīyuàn?",
+       "es": "¿Cómo vas al hospital?",
+       "clip": "/assets/audios/hsk1-e07-r1/EXP7.2-3.mp3?v=64ea0289",
+       "who": "profe"
+      },
+      {
+       "py": "wǒ zuò chūzūchē qù.",
+       "es": "Voy en taxi.",
+       "clip": "/assets/audios/hsk1-e07-r1/EXP7.2-4.mp3?v=a4971ee5",
+       "who": "tu"
+      },
+      {
+       "py": "nǐ de hànyǔ zěnmeyàng?",
+       "es": "¿Qué tal tu Chino Mandarín?",
+       "clip": "/assets/audios/hsk1-e07-r1/EXP7.2-5.mp3?v=abdf8306",
+       "who": "profe"
+      },
+      {
+       "py": "hěn hǎo! rènshi nǐ hěn gāoxìng!",
+       "es": "¡Muy bien! ¡Mucho gusto en conocerte!",
+       "clip": "/assets/audios/hsk1-e07-r1/EXP7.2-6.mp3?v=52de584b",
+       "who": "tu"
+      },
+      {
+       "py": "hǎo! zàijiàn!",
+       "es": "¡Qué bien! ¡Adiós!",
+       "clip": "/assets/audios/hsk1-e07-r1/EXP7.2-7.mp3?v=cf81d4b8",
+       "who": "profe"
+      }
+     ]
+    },
+    {
+     "code": "EXP7.3",
+     "kind": "video",
+     "src": "/assets/audios/hsk1-e07-r1/EXP7.3.mp3?v=ae14075d",
+     "dur": 66.15,
+     "parts": [
+      {
+       "at": 0,
+       "label": "Repite cada frase"
+      },
+      {
+       "at": 47.09,
+       "label": "Ahora todo seguido, como tu video"
+      }
+     ],
+     "segs": [
+      [
+       0,
+       0.4,
+       3.64
+      ],
+      [
+       1,
+       9.69,
+       11.62
+      ],
+      [
+       2,
+       15.83,
+       18.56
+      ],
+      [
+       3,
+       23.89,
+       26.04
+      ],
+      [
+       4,
+       30.54,
+       33.25
+      ],
+      [
+       5,
+       38.54,
+       41.23
+      ],
+      [
+       0,
+       47.09,
+       50.34
+      ],
+      [
+       1,
+       50.94,
+       52.87
+      ],
+      [
+       2,
+       53.47,
+       56.21
+      ],
+      [
+       3,
+       56.81,
+       58.95
+      ],
+      [
+       4,
+       59.55,
+       62.26
+      ],
+      [
+       5,
+       62.86,
+       65.55
+      ]
+     ],
+     "items": [
+      {
+       "py": "dàjiā hǎo! wǒ jiào ___.",
+       "es": "¡Hola a todos! Me llamo ___.",
+       "clip": "/assets/audios/hsk1-e07-r1/EXP7.3-1.mp3?v=45d5318e"
+      },
+      {
+       "py": "qiánmiàn nàge rén shì shéi?",
+       "es": "¿Quién es esa persona de adelante?",
+       "clip": "/assets/audios/hsk1-e07-r1/EXP7.3-2.mp3?v=8ec05de3"
+      },
+      {
+       "py": "tā shì yīshēng, zài yīyuàn gōngzuò.",
+       "es": "Es doctor, trabaja en el hospital.",
+       "clip": "/assets/audios/hsk1-e07-r1/EXP7.3-3.mp3?v=4d2c700f"
+      },
+      {
+       "py": "wǒ zuò chūzūchē qù yīyuàn.",
+       "es": "Voy al hospital en taxi.",
+       "clip": "/assets/audios/hsk1-e07-r1/EXP7.3-4.mp3?v=5cd823b5"
+      },
+      {
+       "py": "wǒ de hànyǔ zěnmeyàng? hěn hǎo!",
+       "es": "¿Qué tal mi Chino Mandarín? ¡Muy bien!",
+       "clip": "/assets/audios/hsk1-e07-r1/EXP7.3-5.mp3?v=dfa73dd8"
+      },
+      {
+       "py": "rènshi nǐ hěn gāoxìng! zàijiàn!",
+       "es": "¡Mucho gusto! ¡Adiós!",
+       "clip": "/assets/audios/hsk1-e07-r1/EXP7.3-6.mp3?v=1c6bfe41"
+      }
+     ]
+    }
+   ],
+   "thumb": "/assets/audios/hsk1-e07-r1/cover-s.webp?v=0b78282b"
+  },
+  {
+   "id": "hsk1-e08-r1",
+   "level": "hsk1",
+   "levelName": "HSK 1",
+   "exp": 8,
+   "round": 1,
+   "title": "Números y Palabras Mágicas",
+   "tagline": "El jardín mágico de Dralingo tiene una puerta que solo se abre contando. El guardián te pregunta cuántos años tienes. ¿Sabes los números?",
+   "cover": "/assets/audios/hsk1-e08-r1/cover.jpg?v=e8dca071",
+   "tracks": [
+    {
+     "code": "EXP8.1",
+     "kind": "words",
+     "src": "/assets/audios/hsk1-e08-r1/EXP8.1.mp3?v=1ac88037",
+     "dur": 56.29,
+     "parts": [
+      {
+       "at": 0,
+       "label": "Escucha y repite"
+      }
+     ],
+     "segs": [
+      [
+       0,
+       0.4,
+       0.83
+      ],
+      [
+       0,
+       1.63,
+       2.06
+      ],
+      [
+       1,
+       3.86,
+       4.29
+      ],
+      [
+       1,
+       5.09,
+       5.53
+      ],
+      [
+       2,
+       7.33,
+       7.9
+      ],
+      [
+       2,
+       8.7,
+       9.28
+      ],
+      [
+       3,
+       11.08,
+       11.61
+      ],
+      [
+       3,
+       12.41,
+       12.95
+      ],
+      [
+       4,
+       14.75,
+       15.41
+      ],
+      [
+       4,
+       16.21,
+       16.87
+      ],
+      [
+       5,
+       18.67,
+       19.1
+      ],
+      [
+       5,
+       19.9,
+       20.33
+      ],
+      [
+       6,
+       22.13,
+       22.69
+      ],
+      [
+       6,
+       23.49,
+       24.05
+      ],
+      [
+       7,
+       25.85,
+       26.26
+      ],
+      [
+       7,
+       27.06,
+       27.47
+      ],
+      [
+       8,
+       29.27,
+       30.02
+      ],
+      [
+       8,
+       30.82,
+       31.58
+      ],
+      [
+       9,
+       33.43,
+       34.08
+      ],
+      [
+       9,
+       34.88,
+       35.53
+      ],
+      [
+       10,
+       37.33,
+       37.86
+      ],
+      [
+       10,
+       38.66,
+       39.19
+      ],
+      [
+       11,
+       40.99,
+       41.39
+      ],
+      [
+       11,
+       42.19,
+       42.58
+      ],
+      [
+       12,
+       44.38,
+       44.84
+      ],
+      [
+       12,
+       45.64,
+       46.1
+      ],
+      [
+       13,
+       47.9,
+       48.73
+      ],
+      [
+       13,
+       49.53,
+       50.37
+      ],
+      [
+       14,
+       52.34,
+       53.02
+      ],
+      [
+       14,
+       53.82,
+       54.49
+      ]
+     ],
+     "items": [
+      {
+       "py": "yī",
+       "es": "uno",
+       "clip": "/assets/audios/hsk1-e08-r1/EXP8.1-1.mp3?v=123f6bfc"
+      },
+      {
+       "py": "èr",
+       "es": "dos",
+       "clip": "/assets/audios/hsk1-e08-r1/EXP8.1-2.mp3?v=562cf677"
+      },
+      {
+       "py": "sān",
+       "es": "tres",
+       "clip": "/assets/audios/hsk1-e08-r1/EXP8.1-3.mp3?v=73047142"
+      },
+      {
+       "py": "sì",
+       "es": "cuatro",
+       "clip": "/assets/audios/hsk1-e08-r1/EXP8.1-4.mp3?v=e1e65cef"
+      },
+      {
+       "py": "wǔ",
+       "es": "cinco",
+       "clip": "/assets/audios/hsk1-e08-r1/EXP8.1-5.mp3?v=e3318a9a"
+      },
+      {
+       "py": "liù",
+       "es": "seis",
+       "clip": "/assets/audios/hsk1-e08-r1/EXP8.1-6.mp3?v=20d7aea2"
+      },
+      {
+       "py": "qī",
+       "es": "siete",
+       "clip": "/assets/audios/hsk1-e08-r1/EXP8.1-7.mp3?v=3d9d0d10"
+      },
+      {
+       "py": "bā",
+       "es": "ocho",
+       "clip": "/assets/audios/hsk1-e08-r1/EXP8.1-8.mp3?v=ddce9f78"
+      },
+      {
+       "py": "jiǔ",
+       "es": "nueve",
+       "clip": "/assets/audios/hsk1-e08-r1/EXP8.1-9.mp3?v=e31b19b2"
+      },
+      {
+       "py": "shí",
+       "es": "diez",
+       "clip": "/assets/audios/hsk1-e08-r1/EXP8.1-10.mp3?v=212827b0"
+      },
+      {
+       "py": "suì",
+       "es": "años de edad",
+       "clip": "/assets/audios/hsk1-e08-r1/EXP8.1-11.mp3?v=f59ced84"
+      },
+      {
+       "py": "ge",
+       "es": "(para contar)",
+       "clip": "/assets/audios/hsk1-e08-r1/EXP8.1-12.mp3?v=13e53a9e"
+      },
+      {
+       "py": "kuài",
+       "es": "yuan",
+       "clip": "/assets/audios/hsk1-e08-r1/EXP8.1-13.mp3?v=ac7f095a"
+      },
+      {
+       "py": "píngguǒ",
+       "es": "manzana",
+       "clip": "/assets/audios/hsk1-e08-r1/EXP8.1-14.mp3?v=9b962eec"
+      },
+      {
+       "py": "yǒu",
+       "es": "tener / hay",
+       "clip": "/assets/audios/hsk1-e08-r1/EXP8.1-15.mp3?v=4d1508ad"
+      }
+     ]
+    },
+    {
+     "code": "EXP8.2",
+     "kind": "dialogue",
+     "src": "/assets/audios/hsk1-e08-r1/EXP8.2.mp3?v=e6472929",
+     "dur": 59.21,
+     "parts": [
+      {
+       "at": 0,
+       "label": "Escucha la conversación"
+      },
+      {
+       "at": 20.13,
+       "label": "Ahora repite cada frase"
+      }
+     ],
+     "segs": [
+      [
+       0,
+       0.4,
+       2.02
+      ],
+      [
+       1,
+       2.72,
+       3.67
+      ],
+      [
+       2,
+       4.37,
+       5.86
+      ],
+      [
+       3,
+       6.56,
+       8.16
+      ],
+      [
+       4,
+       8.86,
+       10.54
+      ],
+      [
+       5,
+       11.24,
+       14.98
+      ],
+      [
+       6,
+       15.68,
+       18.23
+      ],
+      [
+       0,
+       20.13,
+       21.75
+      ],
+      [
+       1,
+       24.98,
+       25.93
+      ],
+      [
+       2,
+       28.33,
+       29.82
+      ],
+      [
+       3,
+       32.88,
+       34.47
+      ],
+      [
+       4,
+       37.66,
+       39.34
+      ],
+      [
+       5,
+       42.64,
+       46.38
+      ],
+      [
+       6,
+       52.25,
+       54.81
+      ]
+     ],
+     "items": [
+      {
+       "py": "nǐ hǎo! nǐ jǐ suì?",
+       "es": "¡Hola! ¿Cuántos años tienes?",
+       "clip": "/assets/audios/hsk1-e08-r1/EXP8.2-1.mp3?v=c8241911",
+       "who": "profe"
+      },
+      {
+       "py": "wǒ bā suì.",
+       "es": "Tengo ocho años.",
+       "clip": "/assets/audios/hsk1-e08-r1/EXP8.2-2.mp3?v=6a95107d",
+       "who": "tu"
+      },
+      {
+       "py": "nǐ jiā yǒu jǐ ge rén?",
+       "es": "¿Cuántas personas hay en tu familia?",
+       "clip": "/assets/audios/hsk1-e08-r1/EXP8.2-3.mp3?v=e01ad1b8",
+       "who": "profe"
+      },
+      {
+       "py": "wǒ jiā yǒu sì ge rén.",
+       "es": "En mi familia somos cuatro.",
+       "clip": "/assets/audios/hsk1-e08-r1/EXP8.2-4.mp3?v=757afa76",
+       "who": "tu"
+      },
+      {
+       "py": "zhèlǐ yǒu jǐ ge píngguǒ?",
+       "es": "¿Cuántas manzanas hay aquí?",
+       "clip": "/assets/audios/hsk1-e08-r1/EXP8.2-5.mp3?v=a20be1b2",
+       "who": "profe"
+      },
+      {
+       "py": "yī, èr, sān… yǒu sān ge píngguǒ!",
+       "es": "Uno, dos, tres… ¡hay tres manzanas!",
+       "clip": "/assets/audios/hsk1-e08-r1/EXP8.2-6.mp3?v=c76a5444",
+       "who": "tu"
+      },
+      {
+       "py": "hěn hǎo! xièxie! zàijiàn!",
+       "es": "¡Muy bien! ¡Gracias! ¡Adiós!",
+       "clip": "/assets/audios/hsk1-e08-r1/EXP8.2-7.mp3?v=7c750e8a",
+       "who": "profe"
+      }
+     ]
+    },
+    {
+     "code": "EXP8.3",
+     "kind": "video",
+     "src": "/assets/audios/hsk1-e08-r1/EXP8.3.mp3?v=623745b8",
+     "dur": 75.35,
+     "parts": [
+      {
+       "at": 0,
+       "label": "Repite cada frase"
+      },
+      {
+       "at": 53.59,
+       "label": "Ahora todo seguido, como tu video"
+      }
+     ],
+     "segs": [
+      [
+       0,
+       0.4,
+       6.24
+      ],
+      [
+       1,
+       15.92,
+       19.55
+      ],
+      [
+       2,
+       26.14,
+       29.9
+      ],
+      [
+       3,
+       36.67,
+       38.27
+      ],
+      [
+       4,
+       42,
+       43.61
+      ],
+      [
+       5,
+       47.38,
+       49.09
+      ],
+      [
+       0,
+       53.59,
+       59.43
+      ],
+      [
+       1,
+       60.03,
+       63.66
+      ],
+      [
+       2,
+       64.26,
+       68.03
+      ],
+      [
+       3,
+       68.63,
+       70.22
+      ],
+      [
+       4,
+       70.82,
+       72.44
+      ],
+      [
+       5,
+       73.04,
+       74.75
+      ]
+     ],
+     "items": [
+      {
+       "py": "dàjiā hǎo! wǒ jiào ___, wǒ ___ suì.",
+       "es": "¡Hola a todos! Me llamo ___, tengo ___ años.",
+       "clip": "/assets/audios/hsk1-e08-r1/EXP8.3-1.mp3?v=081f6d61"
+      },
+      {
+       "py": "yī, èr, sān, sì, wǔ!",
+       "es": "¡Uno, dos, tres, cuatro, cinco!",
+       "clip": "/assets/audios/hsk1-e08-r1/EXP8.3-2.mp3?v=ee007abc"
+      },
+      {
+       "py": "liù, qī, bā, jiǔ, shí!",
+       "es": "¡Seis, siete, ocho, nueve, diez!",
+       "clip": "/assets/audios/hsk1-e08-r1/EXP8.3-3.mp3?v=04f75fd7"
+      },
+      {
+       "py": "wǒ jiā yǒu sì ge rén.",
+       "es": "En mi familia somos cuatro.",
+       "clip": "/assets/audios/hsk1-e08-r1/EXP8.3-4.mp3?v=757afa76"
+      },
+      {
+       "py": "wǒ yǒu sān ge píngguǒ.",
+       "es": "Tengo tres manzanas.",
+       "clip": "/assets/audios/hsk1-e08-r1/EXP8.3-5.mp3?v=b72e1e5e"
+      },
+      {
+       "py": "xièxie! zàijiàn!",
+       "es": "¡Gracias! ¡Adiós!",
+       "clip": "/assets/audios/hsk1-e08-r1/EXP8.3-6.mp3?v=1f6baf5b"
+      }
+     ]
+    }
+   ],
+   "thumb": "/assets/audios/hsk1-e08-r1/cover-s.webp?v=6a240889"
   }
  ]
 }

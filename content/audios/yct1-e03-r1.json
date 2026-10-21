@@ -1,0 +1,179 @@
+{
+ "id": "yct1-e03-r1",
+ "level": "yct1",
+ "exp": 3,
+ "round": 1,
+ "title": "Mis Mascotas",
+ "tagline": "Tu amiga viene a conocer a tus mascotas: un perrito, un gatito, un pájaro y muchos peces. ¿Sabes presentarlos?",
+ "pdf": "DRALINGO_YCT1_E03_R1_MisMascotas.pdf",
+ "tracks": [
+  {
+   "code": "EXP3.1",
+   "kind": "words",
+   "items": [
+    {
+     "py": "gǒu",
+     "es": "perro",
+     "zh": "狗"
+    },
+    {
+     "py": "māo",
+     "es": "gato",
+     "zh": "猫"
+    },
+    {
+     "py": "niǎo",
+     "es": "pájaro",
+     "zh": "鸟"
+    },
+    {
+     "py": "yú",
+     "es": "pez",
+     "zh": "鱼"
+    },
+    {
+     "py": "niú",
+     "es": "vaca",
+     "zh": "牛"
+    },
+    {
+     "py": "xiǎo",
+     "es": "pequeño · -ito",
+     "zh": "小"
+    },
+    {
+     "py": "ài chī",
+     "es": "le encanta comer",
+     "zh": "爱吃"
+    },
+    {
+     "py": "tāmen",
+     "es": "ellos",
+     "zh": "它们"
+    },
+    {
+     "py": "hěn duō",
+     "es": "muchos",
+     "zh": "很多"
+    },
+    {
+     "py": "ěrduo",
+     "es": "orejas",
+     "zh": "耳朵"
+    },
+    {
+     "py": "cháng",
+     "es": "largo",
+     "zh": "长"
+    },
+    {
+     "py": "míngzi",
+     "es": "nombre",
+     "zh": "名字"
+    },
+    {
+     "py": "shì de",
+     "es": "sí",
+     "zh": "是的"
+    },
+    {
+     "py": "xǐhuan",
+     "es": "gustar",
+     "zh": "喜欢"
+    },
+    {
+     "py": "zhè shì",
+     "es": "este es",
+     "zh": "这是"
+    }
+   ]
+  },
+  {
+   "code": "EXP3.2",
+   "kind": "dialogue",
+   "items": [
+    {
+     "who": "profe",
+     "py": "zhè shì nǐ de gǒu?",
+     "es": "¿Este es tu perro?",
+     "zh": "这是你的狗？"
+    },
+    {
+     "who": "tu",
+     "py": "shì de! tā jiào Bobo.",
+     "es": "¡Sí! Se llama Bobo.",
+     "zh": "是的！它叫波波。"
+    },
+    {
+     "who": "profe",
+     "py": "nǎge shì nǐ de māo?",
+     "es": "¿Cuál es tu gato?",
+     "zh": "哪个是你的猫？"
+    },
+    {
+     "who": "tu",
+     "py": "xiǎo de zhège!",
+     "es": "¡Este, el pequeño!",
+     "zh": "小的这个！"
+    },
+    {
+     "who": "profe",
+     "py": "xiǎo māo ài chī shénme?",
+     "es": "¿Qué le encanta comer al gatito?",
+     "zh": "小猫爱吃什么？"
+    },
+    {
+     "who": "tu",
+     "py": "yú! zhèr yǒu hěn duō yú.",
+     "es": "¡Pescado! Aquí hay muchos peces.",
+     "zh": "鱼！这儿有很多鱼。"
+    },
+    {
+     "who": "profe",
+     "py": "wǒ hěn xǐhuan tāmen!",
+     "es": "¡Me gustan mucho!",
+     "zh": "我很喜欢它们！"
+    }
+   ]
+  },
+  {
+   "code": "EXP3.3",
+   "kind": "video",
+   "items": [
+    {
+     "py": "nǐ hǎo! wǒ jiào ___.",
+     "es": "¡Hola! Me llamo ___.",
+     "zh": [
+      "你好！我叫",
+      ""
+     ]
+    },
+    {
+     "py": "zhè shì wǒ de xiǎo gǒu!",
+     "es": "¡Este es mi perrito!",
+     "zh": "这是我的小狗！"
+    },
+    {
+     "py": "xiǎo gǒu, nǐ jiào shénme míngzi?",
+     "es": "Perrito, ¿cómo te llamas?",
+     "zh": "小狗，你叫什么名字？"
+    },
+    {
+     "py": "nǐ kàn, tā de ěrduo hěn cháng!",
+     "es": "¡Mira, tiene las orejas muy largas!",
+     "zh": "你看，它的耳朵很长！"
+    },
+    {
+     "py": "xiǎo māo ài chī yú.",
+     "es": "Al gatito le encanta el pescado.",
+     "zh": "小猫爱吃鱼。"
+    },
+    {
+     "py": "wǒ hěn xǐhuan tāmen! zàijiàn!",
+     "es": "¡Me gustan mucho! ¡Adiós!",
+     "zh": "我很喜欢它们！再见！"
+    }
+   ]
+  }
+ ]
+}

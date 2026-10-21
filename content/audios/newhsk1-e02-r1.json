@@ -1,0 +1,176 @@
+{
+ "id": "newhsk1-e02-r1",
+ "level": "newhsk1",
+ "exp": 2,
+ "round": 1,
+ "title": "Un Día en la Escuela",
+ "tagline": "Llegas tarde a clase y hay examen sorpresa. Necesitas un lugar, un lápiz y saber leer un carácter que nunca viste. ¿Sabes pedirlo?",
+ "pdf": "DRALINGO_NewHSK1_E02_R1_UnDiaEnLaEscuela.pdf",
+ "tracks": [
+  {
+   "code": "EXP2.1",
+   "kind": "words",
+   "items": [
+    {
+     "py": "xiǎoxuéshēng",
+     "es": "alumno de primaria",
+     "zh": "小学生"
+    },
+    {
+     "py": "shàngkè",
+     "es": "empezar la clase",
+     "zh": "上课"
+    },
+    {
+     "py": "shuōhuà",
+     "es": "hablar",
+     "zh": "说话"
+    },
+    {
+     "py": "kěyǐ",
+     "es": "poder (permiso)",
+     "zh": "可以"
+    },
+    {
+     "py": "zuò",
+     "es": "sentarse",
+     "zh": "坐"
+    },
+    {
+     "py": "zì",
+     "es": "carácter (letra)",
+     "zh": "字"
+    },
+    {
+     "py": "dú",
+     "es": "leer en voz alta",
+     "zh": "读"
+    },
+    {
+     "py": "bú huì",
+     "es": "no sé",
+     "zh": "不会"
+    },
+    {
+     "py": "méi guānxi",
+     "es": "no pasa nada",
+     "zh": "没关系"
+    },
+    {
+     "py": "lǎoshī",
+     "es": "profe",
+     "zh": "老师"
+    },
+    {
+     "py": "xuésheng",
+     "es": "alumno",
+     "zh": "学生"
+    },
+    {
+     "py": "xiě",
+     "es": "escribir",
+     "zh": "写"
+    },
+    {
+     "py": "míngzi",
+     "es": "nombre",
+     "zh": "名字"
+    },
+    {
+     "py": "shū",
+     "es": "libro",
+     "zh": "书"
+    },
+    {
+     "py": "zhuōzi",
+     "es": "mesa",
+     "zh": "桌子"
+    }
+   ]
+  },
+  {
+   "code": "EXP2.2",
+   "kind": "dialogue",
+   "items": [
+    {
+     "who": "profe",
+     "py": "shàngkè le, dàjiā bú yào shuōhuà le!",
+     "es": "¡Empezó la clase, todos dejen de hablar!",
+     "zh": "上课了，大家不要说话了！"
+    },
+    {
+     "who": "tu",
+     "py": "lǎoshī, zhèr yǒu rén ma? wǒ kěyǐ zuò zhèr ma?",
+     "es": "Profe, ¿está ocupado? ¿Me puedo sentar aquí?",
+     "zh": "老师，这儿有人吗？我可以坐这儿吗？"
+    },
+    {
+     "who": "profe",
+     "py": "méiyǒu, qǐng zuò. qǐng zài zhèlǐ xiě nǐ de míngzi.",
+     "es": "No, siéntate. Por favor, escribe aquí tu nombre.",
+     "zh": "没有，请坐。请在这里写你的名字。"
+    },
+    {
+     "who": "tu",
+     "py": "hǎo de. lǎoshī, zhège zì zěnme dú?",
+     "es": "Está bien. Profe, ¿cómo se lee este carácter?",
+     "zh": "好的。老师，这个字怎么读？"
+    },
+    {
+     "who": "profe",
+     "py": "nǐ huì dú ma?",
+     "es": "¿Lo sabes leer?",
+     "zh": "你会读吗？"
+    },
+    {
+     "who": "tu",
+     "py": "duìbuqǐ, wǒ bú huì.",
+     "es": "Perdón, no sé.",
+     "zh": "对不起，我不会。"
+    },
+    {
+     "who": "profe",
+     "py": "méi guānxi! nǐ hěn hǎo.",
+     "es": "¡No pasa nada! Lo haces muy bien.",
+     "zh": "没关系！你很好。"
+    }
+   ]
+  },
+  {
+   "code": "EXP2.3",
+   "kind": "video",
+   "items": [
+    {
+     "py": "dàjiā hǎo! wǒ shì xiǎoxuéshēng.",
+     "es": "¡Hola a todos! Soy alumno de primaria.",
+     "zh": "大家好！我是小学生。"
+    },
+    {
+     "py": "zhèr yǒu rén ma? wǒ kěyǐ zuò zhèr ma?",
+     "es": "¿Está ocupado? ¿Me puedo sentar aquí?",
+     "zh": "这儿有人吗？我可以坐这儿吗？"
+    },
+    {
+     "py": "shàngkè le, dàjiā bú yào shuōhuà le!",
+     "es": "¡Empezó la clase, todos a callar!",
+     "zh": "上课了，大家不要说话了！"
+    },
+    {
+     "py": "zhège zì zěnme dú? wǒ bú huì!",
+     "es": "¿Cómo se lee este carácter? ¡No sé!",
+     "zh": "这个字怎么读？我不会！"
+    },
+    {
+     "py": "méi guānxi! wǒ xiě wǒ de míngzi.",
+     "es": "¡No pasa nada! Escribo mi nombre.",
+     "zh": "没关系！我写我的名字。"
+    },
+    {
+     "py": "xièxie lǎoshī! zàijiàn!",
+     "es": "¡Gracias, profe! ¡Adiós!",
+     "zh": "谢谢老师！再见！"
+    }
+   ]
+  }
+ ]
+}

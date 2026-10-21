@@ -1,0 +1,179 @@
+{
+ "id": "hsk1-e02-r1",
+ "level": "hsk1",
+ "exp": 2,
+ "round": 1,
+ "title": "La Escuela",
+ "tagline": "Primer día en la escuela de Dralingo. La profe pregunta: ¿sabes hablar chino? Y tú sí sabes… pero no sabes decir \"sé\".",
+ "pdf": "DRALINGO_HSK1_E02_R1_LaEscuela.pdf",
+ "tracks": [
+  {
+   "code": "EXP2.1",
+   "kind": "words",
+   "items": [
+    {
+     "py": "huì",
+     "es": "saber / poder",
+     "zh": "会"
+    },
+    {
+     "py": "shuō",
+     "es": "hablar",
+     "zh": "说"
+    },
+    {
+     "py": "hànyǔ",
+     "es": "Chino Mandarín",
+     "zh": "汉语"
+    },
+    {
+     "py": "dú",
+     "es": "leer",
+     "zh": "读"
+    },
+    {
+     "py": "xiě",
+     "es": "escribir",
+     "zh": "写"
+    },
+    {
+     "py": "zì",
+     "es": "carácter",
+     "zh": "字"
+    },
+    {
+     "py": "xuéxiào",
+     "es": "escuela",
+     "zh": "学校"
+    },
+    {
+     "py": "xuésheng",
+     "es": "estudiante",
+     "zh": "学生"
+    },
+    {
+     "py": "lǎoshī",
+     "es": "profe",
+     "zh": "老师"
+    },
+    {
+     "py": "shū",
+     "es": "libro",
+     "zh": "书"
+    },
+    {
+     "py": "běn",
+     "es": "(un) libro",
+     "zh": "本"
+    },
+    {
+     "py": "xuéxí",
+     "es": "estudiar",
+     "zh": "学习"
+    },
+    {
+     "py": "tīng",
+     "es": "escuchar",
+     "zh": "听"
+    },
+    {
+     "py": "kàn",
+     "es": "mirar",
+     "zh": "看"
+    },
+    {
+     "py": "tóngxué",
+     "es": "compañero",
+     "zh": "同学"
+    }
+   ]
+  },
+  {
+   "code": "EXP2.2",
+   "kind": "dialogue",
+   "items": [
+    {
+     "who": "profe",
+     "py": "nǐ hǎo! nǐ shì xuésheng ma?",
+     "es": "¡Hola! ¿Eres estudiante?",
+     "zh": "你好！你是学生吗？"
+    },
+    {
+     "who": "tu",
+     "py": "shì! wǒ shì xuésheng. wǒ zài Dralingo xuéxí hànyǔ.",
+     "es": "¡Sí! Soy estudiante. Estudio chino en Dralingo.",
+     "zh": "是！我是学生。我在德拉林戈学习汉语。"
+    },
+    {
+     "who": "profe",
+     "py": "nǐ huì shuō hànyǔ ma?",
+     "es": "¿Sabes hablar chino?",
+     "zh": "你会说汉语吗？"
+    },
+    {
+     "who": "tu",
+     "py": "huì yìdiǎnr! wǒ huì shuō, wǒ huì dú.",
+     "es": "¡Sé un poquito! Sé hablar, sé leer.",
+     "zh": "会一点儿！我会说，我会读。"
+    },
+    {
+     "who": "profe",
+     "py": "zhège zì nǐ huì xiě ma?",
+     "es": "¿Sabes escribir este carácter?",
+     "zh": "这个字你会写吗？"
+    },
+    {
+     "who": "tu",
+     "py": "zhège zì wǒ bù huì xiě… wǒ hěn xǐhuan zhè běn shū!",
+     "es": "Este no sé escribirlo… ¡pero me encanta este libro!",
+     "zh": "这个字我不会写……我很喜欢这本书！"
+    },
+    {
+     "who": "profe",
+     "py": "nǐ de hànyǔ hěn hǎo! míngtiān xuéxiào jiàn!",
+     "es": "¡Tu chino es muy bueno! ¡Nos vemos mañana en la escuela!",
+     "zh": "你的汉语很好！明天学校见！"
+    }
+   ]
+  },
+  {
+   "code": "EXP2.3",
+   "kind": "video",
+   "items": [
+    {
+     "py": "nǐ hǎo! wǒ jiào ___. wǒ shì xuésheng.",
+     "es": "¡Hola! Me llamo ___. Soy estudiante.",
+     "zh": [
+      "你好！我叫",
+      "我是学生。"
+     ]
+    },
+    {
+     "py": "wǒ zài Dralingo xuéxí hànyǔ.",
+     "es": "Estudio chino en Dralingo.",
+     "zh": "我在德拉林戈学习汉语。"
+    },
+    {
+     "py": "wǒ huì shuō hànyǔ!",
+     "es": "¡Sé hablar chino!",
+     "zh": "我会说汉语！"
+    },
+    {
+     "py": "zhège zì wǒ huì dú, wǒ huì xiě.",
+     "es": "Este carácter sé leerlo y sé escribirlo.",
+     "zh": "这个字我会读，我会写。"
+    },
+    {
+     "py": "wǒ hěn xǐhuan zhè běn shū.",
+     "es": "Me encanta este libro.",
+     "zh": "我很喜欢这本书。"
+    },
+    {
+     "py": "zàijiàn, lǎoshī! míngtiān xuéxiào jiàn!",
+     "es": "¡Adiós, profe! ¡Nos vemos mañana en la escuela!",
+     "zh": "再见，老师！明天学校见！"
+    }
+   ]
+  }
+ ]
+}

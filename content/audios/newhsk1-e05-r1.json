@@ -1,0 +1,176 @@
+{
+ "id": "newhsk1-e05-r1",
+ "level": "newhsk1",
+ "exp": 5,
+ "round": 1,
+ "title": "Mi Rutina y el Clima",
+ "tagline": "Tu primo de China te llama por videollamada y quiere saber cómo es tu día: a qué hora te levantas, qué comes y qué tiempo hace. ¿Sabes contarlo?",
+ "pdf": "DRALINGO_NewHSK1_E05_R1_MiRutinaYElClima.pdf",
+ "tracks": [
+  {
+   "code": "EXP5.1",
+   "kind": "words",
+   "items": [
+    {
+     "py": "xiànzài",
+     "es": "ahora",
+     "zh": "现在"
+    },
+    {
+     "py": "chuān yīfu",
+     "es": "vestirse",
+     "zh": "穿衣服"
+    },
+    {
+     "py": "zǎofàn",
+     "es": "desayuno",
+     "zh": "早饭"
+    },
+    {
+     "py": "miàntiáor",
+     "es": "fideos",
+     "zh": "面条儿"
+    },
+    {
+     "py": "wàibian",
+     "es": "afuera",
+     "zh": "外边"
+    },
+    {
+     "py": "fángjiān",
+     "es": "habitación",
+     "zh": "房间"
+    },
+    {
+     "py": "bàn",
+     "es": "y media",
+     "zh": "半"
+    },
+    {
+     "py": "xiūxi",
+     "es": "descansar",
+     "zh": "休息"
+    },
+    {
+     "py": "fēicháng",
+     "es": "muchísimo",
+     "zh": "非常"
+    },
+    {
+     "py": "diǎn",
+     "es": "en punto (hora)",
+     "zh": "点"
+    },
+    {
+     "py": "tiānqì",
+     "es": "el tiempo",
+     "zh": "天气"
+    },
+    {
+     "py": "xià yǔ",
+     "es": "llover",
+     "zh": "下雨"
+    },
+    {
+     "py": "lěng",
+     "es": "frío",
+     "zh": "冷"
+    },
+    {
+     "py": "rè",
+     "es": "calor",
+     "zh": "热"
+    },
+    {
+     "py": "shuìjiào",
+     "es": "dormir",
+     "zh": "睡觉"
+    }
+   ]
+  },
+  {
+   "code": "EXP5.2",
+   "kind": "dialogue",
+   "items": [
+    {
+     "who": "profe",
+     "py": "nǐ hǎo! nǐ nàr xiànzài jǐ diǎn?",
+     "es": "¡Hola! ¿Qué hora es allá?",
+     "zh": "你好！你那儿现在几点？"
+    },
+    {
+     "who": "tu",
+     "py": "xiànzài qī diǎn bàn. wǒ chuān yīfu.",
+     "es": "Son las siete y media. Me estoy vistiendo.",
+     "zh": "现在七点半。我穿衣服。"
+    },
+    {
+     "who": "profe",
+     "py": "nǐ de zǎofàn shì shénme?",
+     "es": "¿Qué desayunas?",
+     "zh": "你的早饭是什么？"
+    },
+    {
+     "who": "tu",
+     "py": "wǒ de zǎofàn shì miàntiáor.",
+     "es": "Mi desayuno son fideos.",
+     "zh": "我的早饭是面条儿。"
+    },
+    {
+     "who": "profe",
+     "py": "jīntiān tiānqì zěnmeyàng?",
+     "es": "¿Qué tiempo hace hoy?",
+     "zh": "今天天气怎么样？"
+    },
+    {
+     "who": "tu",
+     "py": "xià yǔ le, hěn lěng! wǒ zài fángjiān lǐ xiūxi.",
+     "es": "¡Llueve y hace frío! Descanso en mi cuarto.",
+     "zh": "下雨了，很冷！我在房间里休息。"
+    },
+    {
+     "who": "profe",
+     "py": "wǒ zhèr fēicháng rè! zàijiàn!",
+     "es": "¡Aquí hace muchísimo calor! ¡Adiós!",
+     "zh": "我这儿非常热！再见！"
+    }
+   ]
+  },
+  {
+   "code": "EXP5.3",
+   "kind": "video",
+   "items": [
+    {
+     "py": "dàjiā hǎo! xiànzài qī diǎn.",
+     "es": "¡Hola a todos! Son las siete.",
+     "zh": "大家好！现在七点。"
+    },
+    {
+     "py": "wǒ chuān yīfu, zǎofàn chī miàntiáor.",
+     "es": "Me visto y desayuno fideos.",
+     "zh": "我穿衣服，早饭吃面条儿。"
+    },
+    {
+     "py": "jīntiān tiānqì zěnmeyàng?",
+     "es": "¿Qué tiempo hace hoy?",
+     "zh": "今天天气怎么样？"
+    },
+    {
+     "py": "xià yǔ le, wàibian hěn lěng!",
+     "es": "¡Llueve, afuera hace frío!",
+     "zh": "下雨了，外边很冷！"
+    },
+    {
+     "py": "wǒ zài fángjiān lǐ xiūxi.",
+     "es": "Descanso en mi cuarto.",
+     "zh": "我在房间里休息。"
+    },
+    {
+     "py": "xiànzài shíyī diǎn, wǒ xiǎng shuìjiào le!",
+     "es": "¡Son las once, ya quiero dormir!",
+     "zh": "现在十一点，我想睡觉了！"
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,179 @@
+{
+ "id": "yct1-e04-r1",
+ "level": "yct1",
+ "exp": 4,
+ "round": 1,
+ "title": "La Comida",
+ "tagline": "Es hora de comer y la abuela pregunta qué quieres. Hay fideos, arroz, pan, leche y manzanas. ¿Sabes pedirlo?",
+ "pdf": "DRALINGO_YCT1_E04_R1_LaComida.pdf",
+ "tracks": [
+  {
+   "code": "EXP4.1",
+   "kind": "words",
+   "items": [
+    {
+     "py": "chī",
+     "es": "comer",
+     "zh": "吃"
+    },
+    {
+     "py": "hē",
+     "es": "beber · tomar",
+     "zh": "喝"
+    },
+    {
+     "py": "miàntiáo",
+     "es": "fideos",
+     "zh": "面条"
+    },
+    {
+     "py": "niúnǎi",
+     "es": "leche",
+     "zh": "牛奶"
+    },
+    {
+     "py": "shuǐ",
+     "es": "agua",
+     "zh": "水"
+    },
+    {
+     "py": "mǐfàn",
+     "es": "arroz",
+     "zh": "米饭"
+    },
+    {
+     "py": "miànbāo",
+     "es": "pan",
+     "zh": "面包"
+    },
+    {
+     "py": "píngguǒ",
+     "es": "manzana",
+     "zh": "苹果"
+    },
+    {
+     "py": "yì kǒu",
+     "es": "un bocado",
+     "zh": "一口"
+    },
+    {
+     "py": "ài",
+     "es": "encantar",
+     "zh": "爱"
+    },
+    {
+     "py": "xǐhuan",
+     "es": "gustar",
+     "zh": "喜欢"
+    },
+    {
+     "py": "hǎo de",
+     "es": "¡está bien!",
+     "zh": "好的"
+    },
+    {
+     "py": "xièxie",
+     "es": "gracias",
+     "zh": "谢谢"
+    },
+    {
+     "py": "bù",
+     "es": "no",
+     "zh": "不"
+    },
+    {
+     "py": "shénme?",
+     "es": "¿qué?",
+     "zh": "什么？"
+    }
+   ]
+  },
+  {
+   "code": "EXP4.2",
+   "kind": "dialogue",
+   "items": [
+    {
+     "who": "profe",
+     "py": "nǐ chī píngguǒ ma?",
+     "es": "¿Quieres una manzana?",
+     "zh": "你吃苹果吗？"
+    },
+    {
+     "who": "tu",
+     "py": "hǎo de, xièxie nǐ!",
+     "es": "¡Sí, gracias!",
+     "zh": "好的，谢谢你！"
+    },
+    {
+     "who": "profe",
+     "py": "wǒmen jīntiān chī shénme?",
+     "es": "¿Qué comemos hoy?",
+     "zh": "我们今天吃什么？"
+    },
+    {
+     "who": "tu",
+     "py": "miàntiáo! wǒ ài chī miàntiáo.",
+     "es": "¡Fideos! Me encantan los fideos.",
+     "zh": "面条！我爱吃面条。"
+    },
+    {
+     "who": "profe",
+     "py": "zhèr yǒu shuǐ hé niúnǎi, nǐ hē shénme?",
+     "es": "Aquí hay agua y leche, ¿qué tomas?",
+     "zh": "这儿有水和牛奶，你喝什么？"
+    },
+    {
+     "who": "tu",
+     "py": "wǒ hē niúnǎi.",
+     "es": "Tomo leche.",
+     "zh": "我喝牛奶。"
+    },
+    {
+     "who": "profe",
+     "py": "hěn hǎo! wǒ hē shuǐ.",
+     "es": "¡Muy bien! Yo tomo agua.",
+     "zh": "很好！我喝水。"
+    }
+   ]
+  },
+  {
+   "code": "EXP4.3",
+   "kind": "video",
+   "items": [
+    {
+     "py": "nǐ hǎo! wǒ jiào ___.",
+     "es": "¡Hola! Me llamo ___.",
+     "zh": [
+      "你好！我叫",
+      ""
+     ]
+    },
+    {
+     "py": "wǒ ài chī miàntiáo!",
+     "es": "¡Me encantan los fideos!",
+     "zh": "我爱吃面条！"
+    },
+    {
+     "py": "zhèr yǒu shuǐ hé niúnǎi.",
+     "es": "Aquí hay agua y leche.",
+     "zh": "这儿有水和牛奶。"
+    },
+    {
+     "py": "wǒ hē niúnǎi. nǐ hē shénme?",
+     "es": "Yo tomo leche. ¿Tú qué tomas?",
+     "zh": "我喝牛奶。你喝什么？"
+    },
+    {
+     "py": "chī yì kǒu, hǎo ma?",
+     "es": "¿Pruebas un bocado?",
+     "zh": "吃一口，好吗？"
+    },
+    {
+     "py": "wǒ hěn xǐhuan! zàijiàn!",
+     "es": "¡Me gusta mucho! ¡Adiós!",
+     "zh": "我很喜欢！再见！"
+    }
+   ]
+  }
+ ]
+}

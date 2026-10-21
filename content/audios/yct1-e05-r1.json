@@ -1,0 +1,180 @@
+{
+ "id": "yct1-e05-r1",
+ "level": "yct1",
+ "exp": 5,
+ "round": 1,
+ "title": "Números y Tiempo",
+ "tagline": "Mañana es la fiesta de tu amigo, pero no sabes ni el día ni la hora. Papá te pregunta. ¿Sabes decirlo?",
+ "pdf": "DRALINGO_YCT1_E05_R1_NumerosYTiempo.pdf",
+ "tracks": [
+  {
+   "code": "EXP5.1",
+   "kind": "words",
+   "items": [
+    {
+     "py": "xiànzài",
+     "es": "ahora",
+     "zh": "现在"
+    },
+    {
+     "py": "diǎn",
+     "es": "en punto (hora)",
+     "zh": "点"
+    },
+    {
+     "py": "jǐ?",
+     "es": "¿cuántos?",
+     "zh": "几？"
+    },
+    {
+     "py": "jīntiān",
+     "es": "hoy",
+     "zh": "今天"
+    },
+    {
+     "py": "míngtiān",
+     "es": "mañana",
+     "zh": "明天"
+    },
+    {
+     "py": "xīngqī",
+     "es": "semana",
+     "zh": "星期"
+    },
+    {
+     "py": "yuè",
+     "es": "mes",
+     "zh": "月"
+    },
+    {
+     "py": "hào",
+     "es": "día (fecha)",
+     "zh": "号"
+    },
+    {
+     "py": "tiān",
+     "es": "día",
+     "zh": "天"
+    },
+    {
+     "py": "yī · èr · sān",
+     "es": "1 · 2 · 3",
+     "zh": "一，二，三"
+    },
+    {
+     "py": "sì · wǔ · liù",
+     "es": "4 · 5 · 6",
+     "zh": "四，五，六"
+    },
+    {
+     "py": "qī · bā",
+     "es": "7 · 8",
+     "zh": "七，八"
+    },
+    {
+     "py": "jiǔ · shí",
+     "es": "9 · 10",
+     "zh": "九，十"
+    },
+    {
+     "py": "xīngqīliù",
+     "es": "sábado",
+     "zh": "星期六"
+    },
+    {
+     "py": "jiàn",
+     "es": "nos vemos",
+     "zh": "见"
+    }
+   ]
+  },
+  {
+   "code": "EXP5.2",
+   "kind": "dialogue",
+   "items": [
+    {
+     "who": "profe",
+     "py": "xiànzài jǐ diǎn?",
+     "es": "¿Qué hora es?",
+     "zh": "现在几点？"
+    },
+    {
+     "who": "tu",
+     "py": "xiànzài qī diǎn sānshí.",
+     "es": "Son las siete y treinta.",
+     "zh": "现在七点三十。"
+    },
+    {
+     "who": "profe",
+     "py": "jīntiān xīngqī jǐ?",
+     "es": "¿Qué día de la semana es hoy?",
+     "zh": "今天星期几？"
+    },
+    {
+     "who": "tu",
+     "py": "jīntiān xīngqīliù!",
+     "es": "¡Hoy es sábado!",
+     "zh": "今天星期六！"
+    },
+    {
+     "who": "profe",
+     "py": "míngtiān shì qī yuè jǐ hào?",
+     "es": "¿Qué día de julio es mañana?",
+     "zh": "明天是七月几号？"
+    },
+    {
+     "who": "tu",
+     "py": "míngtiān shì qī yuè èr hào.",
+     "es": "Mañana es 2 de julio.",
+     "zh": "明天是七月二号。"
+    },
+    {
+     "who": "profe",
+     "py": "hǎo! míngtiān jiàn!",
+     "es": "¡Muy bien! ¡Hasta mañana!",
+     "zh": "好！明天见！"
+    }
+   ]
+  },
+  {
+   "code": "EXP5.3",
+   "kind": "video",
+   "items": [
+    {
+     "py": "nǐ hǎo! wǒ jiào ___, wǒ ___ suì.",
+     "es": "¡Hola! Me llamo ___, tengo ___ años.",
+     "zh": [
+      "你好！我叫",
+      "，我",
+      "岁。"
+     ]
+    },
+    {
+     "py": "xiànzài jǐ diǎn? xiànzài qī diǎn.",
+     "es": "¿Qué hora es? Son las siete.",
+     "zh": "现在几点？现在七点。"
+    },
+    {
+     "py": "jīntiān xīngqīliù!",
+     "es": "¡Hoy es sábado!",
+     "zh": "今天星期六！"
+    },
+    {
+     "py": "míngtiān shì qī yuè èr hào.",
+     "es": "Mañana es 2 de julio.",
+     "zh": "明天是七月二号。"
+    },
+    {
+     "py": "yí ge xīngqī yǒu qī tiān.",
+     "es": "Una semana tiene siete días.",
+     "zh": "一个星期有七天。"
+    },
+    {
+     "py": "míngtiān jiàn! zàijiàn!",
+     "es": "¡Hasta mañana! ¡Adiós!",
+     "zh": "明天见！再见！"
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,179 @@
+{
+ "id": "yct1-e02-r1",
+ "level": "yct1",
+ "exp": 2,
+ "round": 1,
+ "title": "El Espejo Mágico",
+ "tagline": "Dralingo encuentra un espejo mágico que solo habla Chino Mandarín. Te pregunta por tus ojos, tu nariz y tus manos. ¿Sabes contestarle?",
+ "pdf": "DRALINGO_YCT1_E02_R1_ElEspejoMagico.pdf",
+ "tracks": [
+  {
+   "code": "EXP2.1",
+   "kind": "words",
+   "items": [
+    {
+     "py": "yǎnjing",
+     "es": "ojos",
+     "zh": "眼睛"
+    },
+    {
+     "py": "bízi",
+     "es": "nariz",
+     "zh": "鼻子"
+    },
+    {
+     "py": "ěrduo",
+     "es": "orejas",
+     "zh": "耳朵"
+    },
+    {
+     "py": "kǒu",
+     "es": "boca",
+     "zh": "口"
+    },
+    {
+     "py": "shǒu",
+     "es": "mano",
+     "zh": "手"
+    },
+    {
+     "py": "tóufa",
+     "es": "cabello",
+     "zh": "头发"
+    },
+    {
+     "py": "cháng",
+     "es": "largo",
+     "zh": "长"
+    },
+    {
+     "py": "gāo",
+     "es": "alto",
+     "zh": "高"
+    },
+    {
+     "py": "gèzi",
+     "es": "estatura",
+     "zh": "个子"
+    },
+    {
+     "py": "dà",
+     "es": "grande",
+     "zh": "大"
+    },
+    {
+     "py": "xiǎo",
+     "es": "pequeño",
+     "zh": "小"
+    },
+    {
+     "py": "zhèr",
+     "es": "aquí",
+     "zh": "这儿"
+    },
+    {
+     "py": "nǎr?",
+     "es": "¿dónde?",
+     "zh": "哪儿？"
+    },
+    {
+     "py": "kàn",
+     "es": "mirar",
+     "zh": "看"
+    },
+    {
+     "py": "wǒ de",
+     "es": "mi",
+     "zh": "我的"
+    }
+   ]
+  },
+  {
+   "code": "EXP2.2",
+   "kind": "dialogue",
+   "items": [
+    {
+     "who": "profe",
+     "py": "nǐ kàn, zhè shì shénme?",
+     "es": "Mira, ¿qué es esto?",
+     "zh": "你看，这是什么？"
+    },
+    {
+     "who": "tu",
+     "py": "zhè shì wǒ de dà bízi!",
+     "es": "¡Es mi nariz grande!",
+     "zh": "这是我的大鼻子！"
+    },
+    {
+     "who": "profe",
+     "py": "ěrduo zài nǎr?",
+     "es": "¿Dónde están las orejas?",
+     "zh": "耳朵在哪儿？"
+    },
+    {
+     "who": "tu",
+     "py": "zài zhèr!",
+     "es": "¡Aquí!",
+     "zh": "在这儿！"
+    },
+    {
+     "who": "profe",
+     "py": "nǐ de yǎnjing xiǎo ma?",
+     "es": "¿Tus ojos son pequeños?",
+     "zh": "你的眼睛小吗？"
+    },
+    {
+     "who": "tu",
+     "py": "bù xiǎo! wǒ de yǎnjing dà.",
+     "es": "¡No! Mis ojos son grandes.",
+     "zh": "不小！我的眼睛大。"
+    },
+    {
+     "who": "profe",
+     "py": "hěn hǎo! nǐ kàn, nǐ de gèzi gāo!",
+     "es": "¡Muy bien! ¡Mira, eres alto!",
+     "zh": "很好！你看，你的个子高！"
+    }
+   ]
+  },
+  {
+   "code": "EXP2.3",
+   "kind": "video",
+   "items": [
+    {
+     "py": "nǐ hǎo! wǒ jiào ___.",
+     "es": "¡Hola! Me llamo ___.",
+     "zh": [
+      "你好！我叫",
+      ""
+     ]
+    },
+    {
+     "py": "nǐ kàn, zhè shì wǒ de yǎnjing hé bízi!",
+     "es": "¡Mira, estos son mis ojos y mi nariz!",
+     "zh": "你看，这是我的眼睛和鼻子！"
+    },
+    {
+     "py": "ěrduo zài nǎr? zài zhèr!",
+     "es": "¿Dónde están las orejas? ¡Aquí!",
+     "zh": "耳朵在哪儿？在这儿！"
+    },
+    {
+     "py": "wǒ de shǒu xiǎo, bàba de shǒu dà.",
+     "es": "Mi mano es pequeña, la de papá es grande.",
+     "zh": "我的手小，爸爸的手大。"
+    },
+    {
+     "py": "nǐ kàn, wǒ gèzi gāo ma?",
+     "es": "Mira, ¿soy alto?",
+     "zh": "你看，我个子高吗？"
+    },
+    {
+     "py": "xièxie! zàijiàn!",
+     "es": "¡Gracias! ¡Adiós!",
+     "zh": "谢谢！再见！"
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,179 @@
+{
+ "id": "newhsk1-e06-r1",
+ "level": "newhsk1",
+ "exp": 6,
+ "round": 1,
+ "title": "Deportes y Salud",
+ "tagline": "El día del gran partido amaneces con fiebre. Mamá te lleva al doctor, y el doctor solo habla Chino Mandarín. ¿Sabes decirle qué te pasa?",
+ "pdf": "DRALINGO_NewHSK1_E06_R1_DeportesYSalud.pdf",
+ "tracks": [
+  {
+   "code": "EXP6.1",
+   "kind": "words",
+   "items": [
+    {
+     "py": "zěnme le?",
+     "es": "¿qué te pasa?",
+     "zh": "怎么了？"
+    },
+    {
+     "py": "shēngbìng",
+     "es": "enfermarse",
+     "zh": "生病"
+    },
+    {
+     "py": "kànbìng",
+     "es": "ir al médico",
+     "zh": "看病"
+    },
+    {
+     "py": "bù néng",
+     "es": "no poder",
+     "zh": "不能"
+    },
+    {
+     "py": "báitiān",
+     "es": "de día",
+     "zh": "白天"
+    },
+    {
+     "py": "xiūxi",
+     "es": "descansar",
+     "zh": "休息"
+    },
+    {
+     "py": "hǎo duō le",
+     "es": "mucho mejor",
+     "zh": "好多了"
+    },
+    {
+     "py": "méishì",
+     "es": "no me pasa nada",
+     "zh": "没事"
+    },
+    {
+     "py": "xièxie nǐmen",
+     "es": "gracias a todos",
+     "zh": "谢谢你们"
+    },
+    {
+     "py": "yīshēng",
+     "es": "doctor",
+     "zh": "医生"
+    },
+    {
+     "py": "yīyuàn",
+     "es": "hospital",
+     "zh": "医院"
+    },
+    {
+     "py": "xuéxiào",
+     "es": "escuela",
+     "zh": "学校"
+    },
+    {
+     "py": "gōngzuò",
+     "es": "trabajar",
+     "zh": "工作"
+    },
+    {
+     "py": "nǎ tiān?",
+     "es": "¿qué día?",
+     "zh": "哪天？"
+    },
+    {
+     "py": "xīngqītiān",
+     "es": "domingo",
+     "zh": "星期天"
+    }
+   ]
+  },
+  {
+   "code": "EXP6.2",
+   "kind": "dialogue",
+   "items": [
+    {
+     "who": "profe",
+     "py": "nǐ hǎo! wǒ shì Lǐ yīshēng. nǐ zěnme le?",
+     "es": "¡Hola! Soy el doctor Lǐ. ¿Qué te pasa?",
+     "zh": "你好！我是李医生。你怎么了？"
+    },
+    {
+     "who": "tu",
+     "py": "yīshēng hǎo! wǒ shēngbìng le.",
+     "es": "¡Hola, doctor! Me enfermé.",
+     "zh": "医生好！我生病了。"
+    },
+    {
+     "who": "profe",
+     "py": "jīntiān nǐ bù néng qù xuéxiào le. qǐng zài jiā xiūxi.",
+     "es": "Hoy no puedes ir a la escuela. Descansa en casa, por favor.",
+     "zh": "今天你不能去学校了。请在家休息。"
+    },
+    {
+     "who": "tu",
+     "py": "hǎo de. wǒ zài jiā xiūxi.",
+     "es": "Está bien. Descanso en casa.",
+     "zh": "好的。我在家休息。"
+    },
+    {
+     "who": "profe",
+     "py": "nǐ nǎ tiān zài lái yīyuàn?",
+     "es": "¿Qué día vuelves al hospital?",
+     "zh": "你哪天再来医院？"
+    },
+    {
+     "who": "tu",
+     "py": "xīngqītiān. xièxie yīshēng!",
+     "es": "El domingo. ¡Gracias, doctor!",
+     "zh": "星期天。谢谢医生！"
+    },
+    {
+     "who": "profe",
+     "py": "bú kèqi! zàijiàn!",
+     "es": "¡De nada! ¡Adiós!",
+     "zh": "不客气！再见！"
+    }
+   ]
+  },
+  {
+   "code": "EXP6.3",
+   "kind": "video",
+   "items": [
+    {
+     "py": "dàjiā hǎo! wǒ jiào ___.",
+     "es": "¡Hola a todos! Me llamo ___.",
+     "zh": [
+      "大家好！我叫",
+      ""
+     ]
+    },
+    {
+     "py": "nǐ zěnme le? wǒ shēngbìng le.",
+     "es": "¿Qué te pasa? Me enfermé.",
+     "zh": "你怎么了？我生病了。"
+    },
+    {
+     "py": "wǒ yào qù kànbìng.",
+     "es": "Tengo que ir al médico.",
+     "zh": "我要去看病。"
+    },
+    {
+     "py": "jīntiān wǒ bù néng qù xuéxiào le.",
+     "es": "Hoy no puedo ir a la escuela.",
+     "zh": "今天我不能去学校了。"
+    },
+    {
+     "py": "xièxie nǐmen, wǒ xiànzài hǎo duō le!",
+     "es": "¡Gracias a todos, ya estoy mucho mejor!",
+     "zh": "谢谢你们，我现在好多了！"
+    },
+    {
+     "py": "wǒ méishì! zàijiàn!",
+     "es": "¡No me pasa nada! ¡Adiós!",
+     "zh": "我没事！再见！"
+    }
+   ]
+  }
+ ]
+}

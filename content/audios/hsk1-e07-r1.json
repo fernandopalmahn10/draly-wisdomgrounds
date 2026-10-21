@@ -1,0 +1,179 @@
+{
+ "id": "hsk1-e07-r1",
+ "level": "hsk1",
+ "exp": 7,
+ "round": 1,
+ "title": "La Ciudad",
+ "tagline": "Paseas por la ciudad con mamá. La señorita Qián te pregunta quién es el señor de bata blanca. ¿Sabes contestar?",
+ "pdf": "DRALINGO_HSK1_E07_R1_LaCiudad.pdf",
+ "tracks": [
+  {
+   "code": "EXP7.1",
+   "kind": "words",
+   "items": [
+    {
+     "py": "rén",
+     "es": "persona",
+     "zh": "人"
+    },
+    {
+     "py": "shéi",
+     "es": "¿quién?",
+     "zh": "谁"
+    },
+    {
+     "py": "shénme",
+     "es": "¿qué?",
+     "zh": "什么"
+    },
+    {
+     "py": "zěnme",
+     "es": "¿cómo?",
+     "zh": "怎么"
+    },
+    {
+     "py": "zěnmeyàng",
+     "es": "¿qué tal?",
+     "zh": "怎么样"
+    },
+    {
+     "py": "yīshēng",
+     "es": "doctor",
+     "zh": "医生"
+    },
+    {
+     "py": "yīyuàn",
+     "es": "hospital",
+     "zh": "医院"
+    },
+    {
+     "py": "xiǎojiě",
+     "es": "señorita",
+     "zh": "小姐"
+    },
+    {
+     "py": "gāoxìng",
+     "es": "feliz",
+     "zh": "高兴"
+    },
+    {
+     "py": "gōngzuò",
+     "es": "trabajar",
+     "zh": "工作"
+    },
+    {
+     "py": "zài",
+     "es": "en / estar en",
+     "zh": "在"
+    },
+    {
+     "py": "qù",
+     "es": "ir",
+     "zh": "去"
+    },
+    {
+     "py": "zuò chūzūchē",
+     "es": "ir en taxi",
+     "zh": "坐出租车"
+    },
+    {
+     "py": "hànyǔ",
+     "es": "Chino Mandarín",
+     "zh": "汉语"
+    },
+    {
+     "py": "rènshi",
+     "es": "conocer",
+     "zh": "认识"
+    }
+   ]
+  },
+  {
+   "code": "EXP7.2",
+   "kind": "dialogue",
+   "items": [
+    {
+     "who": "profe",
+     "py": "nǐ hǎo! wǒ shì Qián xiǎojiě. qiánmiàn nàge rén shì shéi?",
+     "es": "¡Hola! Soy la señorita Qián. ¿Quién es esa persona de adelante?",
+     "zh": "你好！我是钱小姐。前面那个人是谁？"
+    },
+    {
+     "who": "tu",
+     "py": "tā shì yīshēng. tā zài yīyuàn gōngzuò.",
+     "es": "Es doctor. Trabaja en el hospital.",
+     "zh": "他是医生。他在医院工作。"
+    },
+    {
+     "who": "profe",
+     "py": "nǐ zěnme qù yīyuàn?",
+     "es": "¿Cómo vas al hospital?",
+     "zh": "你怎么去医院？"
+    },
+    {
+     "who": "tu",
+     "py": "wǒ zuò chūzūchē qù.",
+     "es": "Voy en taxi.",
+     "zh": "我坐出租车去。"
+    },
+    {
+     "who": "profe",
+     "py": "nǐ de hànyǔ zěnmeyàng?",
+     "es": "¿Qué tal tu Chino Mandarín?",
+     "zh": "你的汉语怎么样？"
+    },
+    {
+     "who": "tu",
+     "py": "hěn hǎo! rènshi nǐ hěn gāoxìng!",
+     "es": "¡Muy bien! ¡Mucho gusto en conocerte!",
+     "zh": "很好！认识你很高兴！"
+    },
+    {
+     "who": "profe",
+     "py": "hǎo! zàijiàn!",
+     "es": "¡Qué bien! ¡Adiós!",
+     "zh": "好！再见！"
+    }
+   ]
+  },
+  {
+   "code": "EXP7.3",
+   "kind": "video",
+   "items": [
+    {
+     "py": "dàjiā hǎo! wǒ jiào ___.",
+     "es": "¡Hola a todos! Me llamo ___.",
+     "zh": [
+      "大家好！我叫",
+      ""
+     ]
+    },
+    {
+     "py": "qiánmiàn nàge rén shì shéi?",
+     "es": "¿Quién es esa persona de adelante?",
+     "zh": "前面那个人是谁？"
+    },
+    {
+     "py": "tā shì yīshēng, zài yīyuàn gōngzuò.",
+     "es": "Es doctor, trabaja en el hospital.",
+     "zh": "他是医生，在医院工作。"
+    },
+    {
+     "py": "wǒ zuò chūzūchē qù yīyuàn.",
+     "es": "Voy al hospital en taxi.",
+     "zh": "我坐出租车去医院。"
+    },
+    {
+     "py": "wǒ de hànyǔ zěnmeyàng? hěn hǎo!",
+     "es": "¿Qué tal mi Chino Mandarín? ¡Muy bien!",
+     "zh": "我的汉语怎么样？很好！"
+    },
+    {
+     "py": "rènshi nǐ hěn gāoxìng! zàijiàn!",
+     "es": "¡Mucho gusto! ¡Adiós!",
+     "zh": "认识你很高兴！再见！"
+    }
+   ]
+  }
+ ]
+}
