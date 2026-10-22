@@ -82,7 +82,8 @@
       .then((s) => ((s && Array.isArray(s.modules)) ? s : null), () => null);
     Promise.all([fetch(fresh('/assets/audios/catalog.json')).then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); }), state])
       .then(([c, s]) => {
-        catalog = c; ruta = s; route();
+        catalog = c; ruta = s;
+        if (!levelFollow()) route();
         // 🆕 2026-10-18: an automatic account made on the page before (the key screen) shows its card once
         if (window.DralyAuto) { try { window.DralyAuto.afterRoute(ruta); } catch (_) {} }
       })
@@ -134,6 +135,27 @@
   // reduced motion or an older phone: the new screen simply appears
   const calm = () => !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
   const isWorldView = () => document.body.classList.contains('au-is-pick') || document.body.classList.contains('au-is-path');
+  // 🆕 2026-10-22 «Change level» (/maestro): a teacher moved the logged-in kid to another level. The picker or another
+  // module's path goes to that level's path (nothing to type: the kid's session already holds it), and the card «Tu profe
+  // te cambió a <nivel> ✨» says so once (js/level-note.js). A base, a homework's audio, a round or a book keep their
+  // page: the note waits for the route. → true when it went (the path is drawn)
+  const noteFor = (s) => { const n = s && s.levelNote; return n && window.DralyLevelNote && !window.DralyLevelNote.seenHere(n.at) ? n : null; };
+  function levelFollow() {
+    const n = noteFor(ruta);
+    if (!n || !catalog) return false;
+    const p = location.pathname;
+    const pick = /^\/audios?\/?$/i.test(p);
+    const at = p.match(/^\/audios?\/([a-z0-9-]+)\/?$/i);
+    const here = at ? at[1].toLowerCase() : '';
+    const isMod = (x) => ruta.modules.some((m) => m.slug === x || m.id === x);
+    if (!pick && !(here && isMod(here))) return false;
+    const mod = ruta.modules.find((m) => m.slug === n.level || m.id === n.levelId);
+    if (!mod) return false;
+    if (here !== mod.slug) { try { history.replaceState(null, '', '/audios/' + mod.slug + location.search); } catch (_) { return false; } }
+    route();
+    setTimeout(() => window.DralyLevelNote.show(n), 350);
+    return true;
+  }
   function swap(update) {
     const safe = () => {
       try { update(); } catch (e) {
@@ -169,6 +191,7 @@
     fetch('/api/ruta-dorada', { credentials: 'same-origin', cache: 'no-store' })
       .then((r) => (r.ok ? r.json() : null)).then((s) => {
         if (!s || !Array.isArray(s.modules) || !isWorldView()) return;
+        if (noteFor(s)) { ruta = s; firstRoute = true; if (!levelFollow()) route(); return; }   // (2026-10-22: a teacher's «Change level»)
         if (force !== true && sig(s) === sig(ruta) && localSig() === drawnLocal) return;
         // (a homework audio playing here is never cut by a redraw: the next return to the tab brings the news)
         if (force !== true && player && !player.paused) return;

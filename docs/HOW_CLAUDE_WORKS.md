@@ -451,8 +451,13 @@ block «LA ENTRADA» in server.js).
     yo» turns it into the new kid's. «¿No eres tú?» always makes a new account (a sister's account is never taken).
   - A key that leaked: when you «Cambiar» the key and «Cerrar en todos los aparatos», every phone that remembers a kid of
     that level shows «Este teléfono te recuerda: escribe la clave nueva de tu nivel» (just the new key, no code).
-  - A lost or stolen phone: in /maestro, a kid's profile has «📵 Cerrar su sesión en todos los teléfonos» (you only):
-    every phone where that kid is signed in signs out at once; they come back with their code + the key.
+  - A lost or stolen phone: in /maestro, a kid's profile has «📵 Cerrar su sesión en todos los teléfonos» (you only,
+    under «More» since 2026-10-22): every phone where that kid is signed in signs out at once; they come back with their
+    code + the key.
+  - A kid in the wrong level (since 2026-10-22): in /maestro, the kid's profile → «Level: Old HSK 1 · Change level» →
+    pick the right level → «Yes, move to …» (an «Undo» stays 8 seconds). Their phone follows by itself the next time it
+    opens (nothing to type) and shows «Tu profe te cambió a New HSK 1 ✨» once; their progress stays. A teacher can do it
+    for her own kids, you for everyone.
   - A wrong key at «Ya tengo mi código» counts as a key guess only; a wrong code counts per phone and per address, so
     nobody can block other families' logins.
   - After «Salir» on a shared phone, «¿Eres tú?» shows a key kid's name and avatar, never their code, and the phone

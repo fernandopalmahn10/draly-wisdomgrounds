@@ -477,6 +477,8 @@
         if (stopEntryLife) stopEntryLife();
         hwKeyMode = !!data.keyMode && !ac;
         if (!ac && data.classroomCode && !data.keyMode) ac = data.classroomCode;
+        // 🆕 2026-10-22 «Change level»: a teacher moved this kid to her class of another level: the phone keeps the new code
+        if (ac && data.classMoved && data.classroomCode) ac = data.classroomCode;
         accessCode = ac;
         studentCode = data.studentCode;
         displayName = data.displayName;
@@ -3586,6 +3588,10 @@
     replayAnim: (m) => _showAnimOverlay(m),
     readAll: () => markInboxRead(),
     showList: () => showScreen('list'),
+    // 🆕 2026-10-22 «Change level»: the server says this kid is in another level now (a teacher changed it in /maestro, or
+    // another phone opened a level): come in again in that level with nothing to type (the session or this phone's dkid,
+    // else the class code + code this tab holds, which the server still accepts for this kid) → Promise<true | false>
+    follow: () => followLevel(),
     screen: () => ['list', 'settings', 'assignment', 'results', 'parents', 'reading', 'daily', 'avatar', 'entry']
       .find((n) => { const el = $('screen-' + n); return el && !el.classList.contains('hidden'); }) || '',
     avatar: (el, v) => renderAvatarInto(el, v),
@@ -3603,6 +3609,21 @@
   };
   function renderList() {
     if (window.DralyHome) window.DralyHome.render(HOME);
+  }
+  function followLevel() {
+    const viaCodes = () => {
+      if (!accessCode || !studentCode || hwKeyMode) return false;
+      const a = $('hw-access-code'), s = $('hw-student-code');
+      if (a) a.value = accessCode;
+      if (s) s.value = studentCode;
+      return Promise.resolve(tryEnter({ eres: true })).then((d) => !!(d && d.ok), () => false);
+    };
+    return fetch('/api/entrada/vamos', { method: 'POST', credentials: 'same-origin', cache: 'no-store', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+      .then((r) => r.json().catch(() => null), () => null)
+      .then((d) => {
+        if (d && d.ok && d.studentCode === studentCode) { hwAfterEnter(d, '', {}); return true; }
+        return viaCodes();
+      });
   }
   // «▶ Siguiente» in a round's reveal: the next tarea of the same experience on the home (the tarea that just ended
   // excluded, in case its submit didn't reach us)

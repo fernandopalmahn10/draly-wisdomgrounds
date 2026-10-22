@@ -1,0 +1,60 @@
+/* level-note.css — «Tu profe te cambió a New HSK 1 ✨» (js/level-note.js, 2026-10-22): the card a kid's phone shows once
+   after a teacher changed their level in /maestro. On the kid's home (/homework) and La Ruta Dorada (/audios). The
+   platform palette (Rojo Imperial, Oro, Crema), the level's wonder behind Dralingo with his star, one big «¡Vamos!» in
+   the entrance's red (js/entrada.js), 48 px+ targets, a phone sheet that is a centred card on a laptop. Reduced motion:
+   nothing moves. Every rule starts at .ln-back. */
+.ln-back {
+  --ln-rojo: #5a1010; --ln-red: #a3241c; --ln-red-deep: #6e140f; --ln-oro: #e8c878; --ln-oro-line: #c79c3e;
+  --ln-crema: #fffdf8; --ln-ink: #1c1a17; --ln-ink-2: #4a3f36; --ln-ease: cubic-bezier(.23, 1, .32, 1);
+  position: fixed; inset: 0; z-index: 9700; display: flex; align-items: flex-end; justify-content: center;
+  padding: 12px 12px calc(12px + env(safe-area-inset-bottom, 0px)); background: rgba(28, 10, 8, .55);
+  font-family: 'Noto Sans', 'Nunito', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  animation: lnFade 180ms ease-out both;
+}
+.ln-back, .ln-back * { box-sizing: border-box; }
+.ln-card {
+  position: relative; width: 100%; max-width: 400px; overflow: hidden; border-radius: 24px; background: var(--ln-crema); color: var(--ln-ink);
+  box-shadow: inset 0 0 0 2px var(--ln-oro-line), 0 -8px 34px rgba(28, 10, 8, .35);
+  animation: lnRise 320ms var(--ln-ease) both;
+}
+.ln-card:focus { outline: none; }
+.ln-x {
+  position: absolute; top: 10px; right: 10px; z-index: 2; width: 44px; height: 44px; border: 0; border-radius: 50%; cursor: pointer;
+  background: rgba(255, 253, 248, .92); color: var(--ln-rojo); font-size: 1.1rem; font-weight: 900; line-height: 1;
+  box-shadow: 0 2px 8px rgba(28, 10, 8, .25); touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+}
+.ln-sky {
+  position: relative; height: 150px; background-size: cover; background-repeat: no-repeat; background-color: #2b4c6b;
+  display: flex; align-items: flex-end; justify-content: center;
+}
+.ln-sky::after { content: ''; position: absolute; inset: auto 0 0 0; height: 46px; background: linear-gradient(to bottom, rgba(255, 253, 248, 0), var(--ln-crema)); }
+.ln-dra {
+  position: relative; z-index: 1; width: 132px; height: 132px; object-fit: contain; margin-bottom: -10px;
+  filter: drop-shadow(0 8px 12px rgba(28, 10, 8, .35)); animation: lnPop 520ms var(--ln-ease) 120ms both;
+}
+.ln-pill {
+  position: absolute; top: 12px; left: 12px; z-index: 2; padding: 6px 12px; border-radius: 999px; background: var(--ln-rojo); color: var(--ln-oro);
+  font-weight: 900; font-size: .95rem; letter-spacing: .01em; box-shadow: 0 2px 8px rgba(28, 10, 8, .3);
+}
+.ln-body { padding: 14px 18px 18px; display: flex; flex-direction: column; gap: 10px; text-align: center; }
+.ln-t { margin: 0; font-family: 'Baloo 2', 'Noto Sans', system-ui, sans-serif; font-weight: 800; font-size: 1.45rem; line-height: 1.15; color: var(--ln-rojo); text-wrap: balance; }
+.ln-p { margin: 0; font-weight: 600; font-size: 1rem; line-height: 1.4; color: var(--ln-ink-2); text-wrap: pretty; }
+.ln-go {
+  margin-top: 4px; width: 100%; min-height: 56px; border: 0; border-radius: 16px; cursor: pointer; background: var(--ln-red); color: #fff7e6;
+  font-family: inherit; font-weight: 900; font-size: 1.2rem; box-shadow: 0 5px 0 var(--ln-red-deep);
+  transition: transform 140ms var(--ln-ease), box-shadow 140ms var(--ln-ease); touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+}
+.ln-go:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--ln-red-deep); }
+.ln-x:active { transform: scale(.94); }
+.ln-go:focus-visible, .ln-x:focus-visible { outline: 3px solid var(--ln-ink); outline-offset: 3px; }
+.ln-back.is-out { animation: lnFadeOut 150ms ease-in both; }
+@media (min-width: 700px) { .ln-back { align-items: center; } .ln-sky { height: 170px; } .ln-dra { width: 150px; height: 150px; } }
+@media (max-height: 660px) { .ln-sky { height: 118px; } .ln-dra { width: 106px; height: 106px; } .ln-t { font-size: 1.3rem; } }
+@keyframes lnFade { from { opacity: 0; } }
+@keyframes lnFadeOut { to { opacity: 0; } }
+@keyframes lnRise { from { opacity: 0; transform: translateY(24px) scale(.97); } }
+@keyframes lnPop { from { opacity: 0; transform: translateY(18px) scale(.86); } 70% { transform: translateY(-3px) scale(1.03); } }
+@media (prefers-reduced-motion: reduce) {
+  .ln-back, .ln-card, .ln-dra, .ln-back.is-out { animation: none; }
+  .ln-go, .ln-x { transition: none; }
+}

@@ -212,7 +212,11 @@ function rememberDevice(req, res, level) {
 }
 
 // ── a student record ────────────────────────────────────────────────────────────────────────────────────────────
-// the class level of a record: the level stamped at its last /homework login, else its class code's level
+// the class level of a record: the level stamped at its last /homework login, else its class code's level.
+// 2026-10-22: THE one function for "which level is this kid in?" — every reader (the home, La Ruta Dorada, Papás, the
+// homework list, /maestro's roster and profile, the dkid cookie) asks it, never rec.level or the class code by itself.
+// rec.level is the kid's own level: stamped at a class-code login, by the level key, or by a teacher's «Change level»
+// (core/student-records.js changeLevel), so it wins over the class code's.
 function classLevel(rec) {
   if (!rec) return null;
   return Levels.normalize(rec.level) || (rec.classroomCode ? Levels.normalize(Teachers.levelForAccessCode(rec.classroomCode)) : null);

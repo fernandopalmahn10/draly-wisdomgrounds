@@ -125,6 +125,7 @@
   let ctxR = null;       // js/ruta.js's context for the homework cards (the kid's account mirror)
   let view = { kind: 'home' };
   let loadSeq = 0, loadedAt = 0, failed = false;
+  let followed = '';     // (2026-10-22) the level this page already came in again for, after a teacher's «Change level»
   let cards = null;      // the homework cards on screen (Ruta.hwCards)
   let focusStep = 0;     // «Empezar aquí»: the step to bring forward once the experience is drawn
   let sentAt = 0, examsAt = 0;   // when Mis oraciones / Mis exámenes were last asked for
@@ -319,6 +320,16 @@
       .then((r) => r.json().catch(() => null), () => null)
       .then((d) => {
         if (seq !== loadSeq) return;
+        // 🆕 2026-10-22 «Change level»: the kid is in another level now (a teacher changed it in /maestro, or another phone
+        // opened a level): the home comes in again in that level, with nothing to type (homework.js follow), once per
+        // level on this page; then «Tu profe te cambió a <nivel> ✨» (js/level-note.js), once
+        if (d && d.ok && d.level && s.level && d.level !== s.level && H.follow && followed !== d.level) {
+          followed = d.level;
+          return H.follow().then((ok) => { if (!ok && seq === loadSeq) { followed = ''; location.reload(); } });
+        }
+        if (d && d.ok && d.levelNote && d.level === s.level && window.DralyLevelNote) {
+          setTimeout(() => { if (H && H.screen() === 'list') window.DralyLevelNote.show(d.levelNote); }, 450);
+        }
         if (d && d.ok) {
           D = d;
           Object.defineProperty(D, '__code', { value: s.code });

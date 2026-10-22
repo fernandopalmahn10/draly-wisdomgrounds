@@ -39,6 +39,10 @@
   DICT.map['Escucha, graba y manda tu video'] = 'Listen, record and send your video';
   DICT.map['¡Todas mandadas!'] = 'All sent!';
   PATTERNS.push({ re: /^(\d+) por mandar$/, en: '$1 to send' });
+  // 🆕 2026-10-22 «Tu profe te cambió a <nivel> ✨» (js/level-note.js, after a teacher's «Change level» in /maestro). Their
+  // English never matches the Spanish again (it settles).
+  PATTERNS.push({ re: /^Tu profe te cambió a (.+) ✨$/, en: 'Your teacher moved you to $1 ✨' });
+  PATTERNS.push({ re: /^Ahora tus palabras, tus tareas y tus prácticas son de (.+)\. Lo que ya hiciste sigue guardado\.$/, en: 'Now your words, your homework and your practice are from $1. What you already did is still saved.' });
   // 🆕 2026-10-18 (automatic accounts): the «¿Eres tú?» card in the login (js/ruta-auto.js)
   DICT.map['Este teléfono ya tiene un alumno'] = 'This phone already has a student';
   DICT.map['¿Eres tú?'] = 'Is it you?';

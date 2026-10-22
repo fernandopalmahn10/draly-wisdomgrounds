@@ -644,6 +644,50 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--ink); flex
 }
 .m-detail-key.is-open { background: var(--mint); color: var(--jade); }
 .m-detail-key b { font-weight: 900; }
+/* 🆕 2026-10-22 «Change level»: the profile's «Level: Old HSK 1 · Change level» row, its window, the toast's «Undo» and
+   the «More» fold that keeps «Cerrar su sesión en todos los teléfonos» apart (js/maestro.js levelChangeOpen) */
+.m-detail-level { display: flex; align-items: center; gap: 8px 10px; flex-wrap: wrap; margin-top: 8px; }
+.m-detail-level-k { font-weight: 900; font-size: 0.9375rem; }
+.m-detail-level .m-level-pill { font-size: 0.9375rem; padding: 3px 12px; }
+.m-detail-level-none { font-weight: 800; font-size: 0.875rem; color: var(--ink-mute); }
+.m-detail-level-when { flex-basis: 100%; font-weight: 700; font-size: 0.8125rem; line-height: 1.35; color: var(--ink-soft); }
+.m-level-change-btn { min-height: 40px; }
+.m-kl-card { max-width: 480px; }
+.m-kl-opts { display: grid; gap: 8px; margin: 4px 0 12px; }
+.m-kl-opt {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; min-height: 56px; padding: 10px 14px;
+  font: inherit; text-align: left; color: var(--ink); background: var(--paper-hi); border: 2px solid var(--line-2); border-radius: var(--r-card);
+  cursor: pointer; transition: border-color 150ms ease, box-shadow 150ms ease, transform 100ms var(--ease-out);
+}
+.m-kl-opt .m-level-pill { font-size: 1rem; padding: 4px 14px; }
+.m-kl-sub { font-weight: 800; font-size: 0.8125rem; color: var(--ink-soft); text-align: right; }
+.m-kl-opt[aria-checked="true"] { border-color: var(--ink); box-shadow: var(--drop-sm); background: var(--gold-soft); }
+.m-kl-opt:active:not(:disabled) { transform: translateY(1px); }
+.m-kl-opt:disabled, .m-kl-opt.is-now { cursor: default; opacity: 0.75; border-style: dashed; }
+.m-kl-opt.is-now .m-kl-sub { color: var(--ink); }
+.m-kl-opt:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) { .m-kl-opt:hover:not(:disabled) { border-color: var(--ink); } }
+.m-kl-sure { min-height: 0; }
+.m-kl-sure p { margin: 0 0 12px; padding: 10px 12px; border-radius: var(--r-btn); background: var(--butter); font-weight: 700; font-size: 0.9375rem; line-height: 1.45; }
+.m-kl-quote { white-space: nowrap; font-weight: 900; }
+.m-kl-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+.m-kl-actions .btn { min-height: 48px; }
+.m-detail-more { margin-top: 6px; }
+.m-detail-more summary {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 4px 2px; cursor: pointer; list-style: none;
+  font-weight: 800; font-size: 0.875rem; color: var(--ink-soft);
+}
+.m-detail-more summary::-webkit-details-marker { display: none; }
+.m-detail-more summary::before { content: '▸'; font-size: 0.75rem; transition: transform 150ms var(--ease-out); }
+.m-detail-more[open] summary::before { transform: rotate(90deg); }
+.m-detail-more-p { margin: 2px 0 8px; max-width: 62ch; color: var(--ink-soft); font-weight: 700; font-size: 0.875rem; line-height: 1.45; }
+.m-toast-act {
+  flex: none; min-height: 32px; margin: -4px 0; padding: 2px 12px; border: 2px solid var(--ink); border-radius: 10px; cursor: pointer;
+  background: var(--paper-hi); color: var(--ink); font: inherit; font-weight: 900; box-shadow: 0 2px 0 var(--ink);
+}
+.m-toast-act:active { transform: translateY(2px); box-shadow: none; }
+@media (max-width: 560px) { .m-kl-actions .btn { flex: 1; } .m-kl-quote { white-space: normal; } }
+@media (prefers-reduced-motion: reduce) { .m-kl-opt, .m-detail-more summary::before { transition: none; } }
 @media (max-width: 720px) {
   .m-key-row { grid-template-columns: 1fr; }
   .m-key-actions { justify-content: flex-start; }

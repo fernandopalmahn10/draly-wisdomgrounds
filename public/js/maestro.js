@@ -53,7 +53,8 @@
   // ── 2026-10-13 remake helpers ─────────────────────────────────────────
   // Toasts replace the blocking alert() boxes: a projector never shows a dialog that freezes the class.
   // Errors stay longer and are announced (role=alert); a tap or ✕ dismisses.
-  function notify(msg, tone) {
+  // action (2026-10-22, «Change level»'s «Undo»): { label, run, ms } = one button in the toast, which stays ms long
+  function notify(msg, tone, action) {
     const box = $('m-toasts');
     const text = String(msg == null ? '' : msg);
     if (!box) { try { window.alert(text); } catch (_) {} return; }
@@ -62,17 +63,23 @@
     const el = document.createElement('div');
     el.className = 'm-toast' + (t ? ' is-' + t : '');
     el.setAttribute('role', t === 'error' ? 'alert' : 'status');
-    el.innerHTML = '<span class="m-toast-text"></span><button class="m-toast-x" type="button" aria-label="Dismiss">✕</button>';
+    el.innerHTML = '<span class="m-toast-text"></span>' + (action ? '<button class="m-toast-act" type="button"></button>' : '') +
+      '<button class="m-toast-x" type="button" aria-label="Dismiss">✕</button>';
     el.querySelector('.m-toast-text').textContent = text;
     const kill = () => {
       if (!el.isConnected) return;
       el.classList.add('is-leaving');
       setTimeout(() => { try { el.remove(); } catch (_) {} }, 170);
     };
+    if (action) {
+      const b = el.querySelector('.m-toast-act');
+      b.textContent = action.label || 'Undo';
+      b.addEventListener('click', () => { b.disabled = true; kill(); try { action.run(); } catch (_) {} });
+    }
     el.querySelector('.m-toast-x').addEventListener('click', kill);
     box.appendChild(el);
     while (box.children.length > 3) box.firstChild.remove();
-    setTimeout(kill, Math.min(t === 'error' ? 12000 : 9000, (t === 'error' ? 6000 : 3500) + text.length * 45));
+    setTimeout(kill, action && action.ms ? action.ms : Math.min(t === 'error' ? 12000 : 9000, (t === 'error' ? 6000 : 3500) + text.length * 45));
   }
 
   // Every .m-modal (static or built by this file) gets the same behaviour: dialog semantics, focus moves in and
@@ -3363,7 +3370,7 @@
         <span class="m-row-avatar"><span class="m-avatar-frame">${renderAvatar(s.avatar)}</span>${s._onlineNow ? '<span class="m-online-dot" title="Online now"></span>' : ''}</span>
         <span class="m-row-who"><span class="m-row-name">${escapeHtml(name)}</span><span class="m-row-code">${escapeHtml(s.code)}</span>${s.auto ? '<span class="m-row-auto" title="Made by itself on La Ruta Dorada (no class code yet). It joins a class when the family logs in at Mis tareas with a class code + this code.">automática</span>' : ''}${s.byKey && !s.classroomCode ? '<span class="m-row-auto" title="Made by the family with the level key (Mis tareas, «Soy nuevo»). It joins your class the first time the kid plays in one of your PIN rooms.">con clave</span>' : ''}</span>
         <span class="m-row-tags">
-          <span class="m-row-levelcell"><span class="m-row-level is-${escapeHtml(s.level || 'hsk1')}" title="Level (from the class code the kid typed)">${escapeHtml(levelLabel(s.level))}</span>${rutaBar}</span>
+          <span class="m-row-levelcell"><span class="m-row-level is-${escapeHtml(s.level || 'hsk1')}" title="Level (the one the kid is in: their class code's, or the one a teacher set with «Change level»)">${escapeHtml(levelLabel(s.level))}</span>${rutaBar}</span>
           <span class="m-row-classroom${s.classroomName ? '' : ' is-none'}" title="Class">${s.classroomName ? '🎓 ' + escapeHtml(s.classroomName) : 'No class'}</span>
           <span class="m-row-daily${done ? ' is-done' : ''}" title="Daily challenge today">${done ? '✅ Done' : 'Not yet'}</span>
         </span>
@@ -3681,6 +3688,128 @@
         }).catch(() => { b.disabled = false; notify('Network error'); });
     });
   }
+  // ── 🆕 2026-10-22 «Change level» (his words: "if I see someone is mistakenly in a level that doesn't correspond to them,
+  // I change it, and then automatically that person gets logged out and logged in again and it says exactly that") ──
+  // The profile's «Level: Old HSK 1 · Change level» → a window: the levels of core/levels.js (the one they are in marked
+  // «now»), one line of what happens, «Move to …» → server.js POST /api/admin/kid-level (the code in the body). Their
+  // phone follows by itself and shows «Tu profe te cambió a <nivel> ✨» once; their progress stays. A toast with «Undo»
+  // for 8 s puts back exactly what changed.
+  const KID_LEVEL_NAMES = { yct1: 'YCT 1', hsk2: 'New HSK 1', hsk1: 'HSK 1' };   // (what kids read; /api/admin/levels wins)
+  const kidLevelName = (id) => { const l = mLevels.find((x) => x.id === id); return (l && l.name) || KID_LEVEL_NAMES[id] || levelLabel(id); };
+  function levelRowHtml(level, change) {
+    const when = change && change.at ? new Date(change.at).toLocaleDateString('en-US', { day: 'numeric', month: 'short' }) : '';
+    return '<span class="m-detail-level-k">Level</span>' +
+      (level ? '<span class="m-level-pill is-' + escapeHtml(level) + '">' + escapeHtml(levelLabel(level)) + '</span>' : '<span class="m-detail-level-none">none yet</span>') +
+      '<button class="btn btn-sm m-level-change-btn" id="m-detail-level-btn" type="button" aria-haspopup="dialog">Change level</button>' +
+      (when ? '<span class="m-detail-level-when">Changed by a teacher on ' + escapeHtml(when) + ' · ' +
+        (change.seen ? 'their phone already told them ✓' : 'their phone tells them the next time they open it') + '</span>' : '');
+  }
+  // after a change or an undo: the profile's level row, La Ruta Dorada's lines and the roster row show the new level
+  function levelApply(data, r) {
+    data.levelKey = r.levelKey || data.levelKey;
+    data.levelChange = r.levelChange || null;
+    if (r.ruta) data.ruta = r.ruta;
+    const lvl = (r.levelKey && r.levelKey.level) || r.level || null;
+    const row = $('m-detail-level');
+    if (row) { row.innerHTML = levelRowHtml(lvl, data.levelChange); wireLevelBtn(data); }
+    const line = $('m-detail-key');
+    if (line && data.levelKey) { line.innerHTML = levelKeyLine(data.levelKey); line.classList.toggle('is-open', !!data.levelKey.open); wireUnlock(data); }
+    const rw = $('m-ruta');
+    if (rw && data.ruta) renderRuta(rw, data);
+    if (_rosterByCode[data.code] && lvl) _rosterByCode[data.code].level = lvl;
+    if (r.classroomCode !== undefined && _rosterByCode[data.code]) _rosterByCode[data.code].classroomCode = r.classroomCode;
+    try { fetchRoster(); } catch (_) { /* the roster catches up at its next poll */ }
+  }
+  function wireLevelBtn(data) {
+    const b = $('m-detail-level-btn');
+    if (b) b.addEventListener('click', () => levelChangeOpen(data));
+  }
+  // 🔑 «Open early» in the key line (2026-10-15; a function since 2026-10-22: the line is drawn again after a level change)
+  function wireUnlock(data) {
+    const unlockBtn = $('m-detail-unlock');
+    if (unlockBtn) unlockBtn.addEventListener('click', () => {
+      unlockBtn.disabled = true;
+      adminFetch('/api/admin/student/' + encodeURIComponent(data.code) + '/level-access', pw, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}),
+      }).then((r) => r.json()).then((r) => {
+        if (!r || !r.ok) { unlockBtn.disabled = false; notify('Could not open it: ' + ((r && r.error) || 'unknown error')); return; }
+        const line = $('m-detail-key');
+        if (line) { line.innerHTML = levelKeyLine(r.levelKey); line.classList.add('is-open'); }
+        data.levelKey = r.levelKey || data.levelKey;
+        const rw = $('m-ruta');
+        if (rw && r.ruta) { data.ruta = r.ruta; renderRuta(rw, data); }
+        notify('✓ ' + (data.displayName || data.code) + ': La Ruta Dorada open. It opens on their phone at their next login to Mis Tareas.');
+      }).catch(() => { unlockBtn.disabled = false; notify('Network error'); });
+    });
+  }
+  function levelChangeOpen(data) {
+    const cur = (data.levelKey && data.levelKey.level) || null;
+    const name = data.displayName || 'This kid';
+    let overlay = $('m-kl-modal');
+    if (overlay) overlay.remove();
+    overlay = document.createElement('div');
+    overlay.className = 'm-modal';
+    overlay.id = 'm-kl-modal';
+    const opts = mLevels.map((l) => {
+      const now = l.id === cur;
+      const kid = kidLevelName(l.id);
+      return '<button class="m-kl-opt' + (now ? ' is-now' : '') + '" type="button" role="radio" aria-checked="false" data-kl="' + escapeHtml(l.id) + '"' + (now ? ' disabled' : '') + '>' +
+        '<span class="m-level-pill is-' + escapeHtml(l.id) + '">' + escapeHtml(l.teacherName || kid) + '</span>' +
+        '<span class="m-kl-sub">' + (now ? 'Now' : (kid !== (l.teacherName || kid) ? 'Kids see «' + escapeHtml(kid) + '»' : '')) + '</span></button>';
+    }).join('');
+    overlay.innerHTML = '<div class="m-modal-card m-kl-card">' +
+      '<button class="m-modal-close" type="button" aria-label="Close">✕</button>' +
+      '<h2>Change ' + escapeHtml(name) + '\'s level</h2>' +
+      '<p class="m-modal-sub">Pick the level ' + escapeHtml(name) + ' really belongs to. Nothing they did is lost.</p>' +
+      '<div class="m-kl-opts" role="radiogroup" aria-label="Level">' + opts + '</div>' +
+      '<div class="m-kl-sure" id="m-kl-sure" aria-live="polite"></div>' +
+      '<div class="m-kl-actions"><button class="btn btn-ghost" type="button" data-kl-cancel>Cancel</button>' +
+        '<button class="btn btn-gold" type="button" id="m-kl-go" disabled>Pick a level</button></div></div>';
+    document.body.appendChild(overlay);
+    let pick = null;
+    const go = overlay.querySelector('#m-kl-go');
+    const sure = overlay.querySelector('#m-kl-sure');
+    const close = () => overlay.classList.add('hidden');
+    overlay.querySelector('.m-modal-close').addEventListener('click', close);
+    overlay.querySelector('[data-kl-cancel]').addEventListener('click', close);
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) { close(); return; }
+      const o = e.target.closest('[data-kl]');
+      if (!o || o.disabled) return;
+      pick = o.dataset.kl;
+      overlay.querySelectorAll('[data-kl]').forEach((x) => x.setAttribute('aria-checked', String(x === o)));
+      const t = levelLabel(pick), kid = kidLevelName(pick);
+      sure.innerHTML = '<p><b>Are you sure?</b> ' + escapeHtml(name) + ' moves to ' + escapeHtml(t) + '. Their phone updates by itself and tells them: ' +
+        '<span class="m-kl-quote">«Tu profe te cambió a ' + escapeHtml(kid) + ' ✨»</span></p>';
+      go.disabled = false;
+      go.textContent = 'Yes, move to ' + t;
+    });
+    go.addEventListener('click', () => {
+      if (!pick) return;
+      go.disabled = true;
+      go.textContent = 'Moving…';
+      adminFetch('/api/admin/kid-level', pw, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: data.code, level: pick }),
+      }).then((r) => r.json().catch(() => null)).then((r) => {
+        if (!r || !r.ok) { go.disabled = false; go.textContent = 'Yes, move to ' + levelLabel(pick); notify('Could not change the level: ' + ((r && r.error) || 'unknown error')); return; }
+        close();
+        if (r.unchanged) { notify('✓ ' + name + ' is already in ' + r.teacherName + '.'); return; }
+        levelApply(data, r);
+        notify('✓ ' + name + ' is now in ' + r.teacherName + (r.moved && r.classroomCode ? ', in class ' + r.classroomCode + ' (the ' + r.teacherName + ' class of the same teacher)' : '') + '. Their phone updates by itself.', 'ok', {
+          label: 'Undo', ms: 8000,
+          run: () => adminFetch('/api/admin/kid-level/undo', pw, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ undo: r.undo }),
+          }).then((x) => x.json().catch(() => null)).then((x) => {
+            if (!x || !x.ok) { notify('Could not undo: ' + ((x && x.error) || 'unknown error')); return; }
+            levelApply(data, x);
+            notify('↩ ' + name + ' is back in ' + (x.teacherName || 'their level') + '.', 'ok');
+          }).catch(() => notify('Could not undo: network error. Change the level again instead.')),
+        });
+      }).catch(() => { go.disabled = false; go.textContent = 'Yes, move to ' + levelLabel(pick); notify('Could not change the level: network error. Try again.'); });
+    });
+    // the kid-facing names come from core/levels.js (already loaded when the Teachers tab was opened)
+    if (!mLevels.some((l) => l.name)) adminFetch('/api/admin/levels', pw).then((r) => r.json()).then((d) => { if (d && d.ok && Array.isArray(d.levels)) mLevels = d.levels; }).catch(() => {});
+  }
   // 🔑 2026-10-15 La Ruta Dorada: is this kid's level open on their account (any phone)? «Open early» opens it.
   function levelKeyLine(lk) {
     if (!lk || !lk.level) return '🔑 La Ruta Dorada: no level yet (the kid has not entered a class code)';
@@ -3788,7 +3917,8 @@
     const tests = data.tests || [];
     const assigns = data.assignments || [];
     const entry = _rosterByCode[data.code] || {};
-    const level = entry.level || null;
+    // (2026-10-22) the level the kid really is in (server.js LevelKeys.classLevel, the one function), else the roster's
+    const level = (data.levelKey && data.levelKey.level) || entry.level || null;
     const online = isOnlineNow(data);
     const seen = online ? 'Online now'
       : (data.lastSeen ? 'Last seen ' + new Date(data.lastSeen).toLocaleString('en-US', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Not seen yet');
@@ -3802,7 +3932,6 @@
           </div>
           <div class="m-detail-tags">
             <span class="m-detail-code" title="Student code">${escapeHtml(data.code)}</span>
-            ${level ? '<span class="m-level-pill is-' + escapeHtml(level) + '">' + escapeHtml(levelLabel(level)) + '</span>' : ''}
             ${data.auto ? '<span class="m-row-auto" title="Made by itself on La Ruta Dorada (no class code yet). It joins a class when the family logs in at Mis tareas with a class code + this code.">automática</span>' : ''}
             ${data.byKey ? '<span class="m-row-auto" title="Made by the family with the level key (Mis tareas, «Soy nuevo»). It joins your class the first time the kid plays in one of your PIN rooms.">con clave</span>' : ''}
             <span class="m-presence${online ? ' is-online' : ''}">${online ? '🟢 ' : ''}${escapeHtml(seen)}</span>
@@ -3816,6 +3945,7 @@
             ${data.device ? ' · 📱 ' + escapeHtml(data.device) : ''}
             ${data.locale ? ' · 🗣 ' + escapeHtml(data.locale) : ''}
           </div>
+          <div class="m-detail-level" id="m-detail-level">${levelRowHtml(level, data.levelChange)}</div>
           <div class="m-detail-key${data.levelKey && data.levelKey.open ? ' is-open' : ''}" id="m-detail-key">${levelKeyLine(data.levelKey)}</div>
           <label class="m-detail-class">🎓 Class
             <select class="input" id="m-detail-classroom"><option value="">Loading…</option></select>
@@ -3823,7 +3953,6 @@
           <div class="m-detail-actions-row">
             <button class="btn btn-gold btn-sm" id="m-detail-send-btn" type="button" aria-expanded="false" aria-controls="m-detail-compose">💬 Send message</button>
             <button class="btn btn-ghost btn-sm m-danger-ghost" id="m-detail-clear-sent-btn" type="button" title="Deletes only the saved sentences; the student stays">🧹 Clear sentences</button>
-            ${_self && _self.isSuperAdmin && !data.auto ? '<button class="btn btn-ghost btn-sm m-danger-ghost" id="m-detail-close-sessions-btn" type="button" title="A lost or stolen phone: every phone this kid is signed in on signs out at once; they come back with their code + the level key">📵 Cerrar su sesión en todos los teléfonos</button>' : ''}
             <button class="btn btn-red btn-sm m-danger-zone" id="m-detail-delete-btn" type="button" title="Delete this student permanently">🗑 Delete student</button>
           </div>
           <div class="m-compose hidden" id="m-detail-compose">
@@ -3835,6 +3964,11 @@
               <button class="btn btn-ghost btn-sm" id="m-detail-msg-cancel" type="button">Cancel</button>
             </div>
           </div>
+          ${_self && _self.isSuperAdmin && !data.auto ? `<details class="m-detail-more" id="m-detail-more">
+            <summary>More</summary>
+            <p class="m-detail-more-p">Only for a lost phone, or when someone else is using this kid's account: every phone signs out, and the kid comes back with their code + the level key. To put a kid in the right level, use <b>Change level</b> above: that one needs nothing from them.</p>
+            <button class="btn btn-ghost btn-sm m-danger-ghost" id="m-detail-close-sessions-btn" type="button">📵 Cerrar su sesión en todos los teléfonos</button>
+          </details>` : ''}
         </div>
       </div>
       <!-- 📋 Notes for the monthly report card -->
@@ -3857,20 +3991,8 @@
       setTimeout(() => { try { $('m-detail-back').focus({ preventScroll: true }); } catch (_) {} }, 0);
     }
     // 🔑 «Open early»: this kid's level opens on their account (their next /homework login opens it on any phone)
-    const unlockBtn = $('m-detail-unlock');
-    if (unlockBtn) unlockBtn.addEventListener('click', () => {
-      unlockBtn.disabled = true;
-      adminFetch('/api/admin/student/' + encodeURIComponent(data.code) + '/level-access', pw, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}),
-      }).then((r) => r.json()).then((r) => {
-        if (!r || !r.ok) { unlockBtn.disabled = false; notify('Could not open it: ' + ((r && r.error) || 'unknown error')); return; }
-        const line = $('m-detail-key');
-        if (line) { line.innerHTML = levelKeyLine(r.levelKey); line.classList.add('is-open'); }
-        const rw = $('m-ruta');
-        if (rw && r.ruta) { data.ruta = r.ruta; renderRuta(rw, data); }
-        notify('✓ ' + (data.displayName || data.code) + ': La Ruta Dorada open. It opens on their phone at their next login to Mis Tareas.');
-      }).catch(() => { unlockBtn.disabled = false; notify('Network error'); });
-    });
+    wireUnlock(data);
+    wireLevelBtn(data);   // 🆕 2026-10-22 «Change level»
     // Notes: default month = current, render existing, wire add/delete.
     (function wireNotes() {
       const monthEl = $('m-note-month');

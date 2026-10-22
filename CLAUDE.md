@@ -637,6 +637,32 @@ the checklist for any new game mode.
     - the super admin's «Cerrar su sesión en todos los teléfonos» (kid profile) bumps `kidGen` and asks for code + key.
   - A PIN room tags an untagged key account with the room owner's class code for its level, only when the phone proves it.
   - `node scripts/test-entrada.js` and `node scripts/test-papas.js` must pass.
+- **A teacher changes a kid's level** (his words 2026-10-22: "if I see someone is mistakenly in a level that doesn't
+  correspond to them, I change it, and then automatically that person gets logged out and logged in again and it says
+  exactly that… that is happening a lot"; and "I don't need to log the kid out from all sessions — why would I need to
+  do that?"):
+  - /maestro → the kid's profile: «Level: Old HSK 1 · Change level» → the levels of core/levels.js → «Are you sure?»
+    with one line of what happens → a toast with «Undo» for 8 s. The kid's own teacher (the kid is on one of her class
+    codes: a key kid tagged to her class too) or the super admin; an unknown kid and «not yours» get one answer; an
+    archived kid is refused, never woken.
+  - After it the kid IS in the new level everywhere (home, La Ruta Dorada, Papás, homework list, profile, roster):
+    `LevelKeys.classLevel` is the one function every reader asks, and the kid's own level wins over the class code's.
+    A class-code kid moves to the same teacher's class code of the new level when she has one. The new level opens as
+    a teacher's opening (no key). Their progress of the old level stays on the record (nothing deleted).
+  - The kid's phone follows by itself at its next request (page load, back to the tab), with nothing to type: never the
+    key screen, never «¿Eres tú?». It shows «Tu profe te cambió a New HSK 1 ✨» once (on any phone). A phone that saved
+    the old class code still comes in, and the remembered-phone cookie still holds the kid.
+  - «Cerrar su sesión en todos los teléfonos» stays, under «More» in the profile, for a lost phone or someone else
+    using the account only; it is never how a level is changed.
+  - Built 2026-10-22: `POST /api/admin/kid-level` { code, level } + `/undo` (the code in the body, never an address;
+    `_autoSameSite`, `_editRateOk`); core/student-records.js `changeLevel` / `undoLevel` / `seeLevelNote` write
+    `rec.level`, the class code, `levelAccess` and `rec.levelBy` { to, from, codes, at, seen } (the notice and the
+    levels / class codes the kid was moved away from: `_hwOwnsStudent` accepts a moved-from code, `/api/homework/enter`
+    keeps the teacher's level for the kid's own or moved-from code (`_levelKept`, `classMoved`), dkid holds the kid
+    while its old level's key generation is unchanged (`_kidLgMoved`) and is re-issued (`_kidFollow`); a class-code
+    rename renames `levelBy.codes` too). Kid side: `js/level-note.js` + `css/level-note.css` (home: mi-dralingo.js
+    follows through homework.js `follow`; La Ruta Dorada: audios.js `levelFollow`). `node scripts/test-kid-level.js`
+    (port 4640) must pass.
 - **The kid's home** (part 3, built 2026-10-18: /homework = «Mi Dralingo», `public/js/mi-dralingo.js`):
   - «Hoy» always comes from `papas-plan.js`, never its own logic. The kid's `today()` follows the ladder inside the
     current experience (1 Palabras → 2 Tu tarea → 3 Práctica, his priority 2026-10-21; `LADDER` in papas-plan.js is

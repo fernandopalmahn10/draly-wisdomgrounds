@@ -362,6 +362,83 @@ function bumpKidGen(code) {
   scheduleSave();
   return rec.kidGen;
 }
+// 🆕 2026-10-22 «Change level» (/maestro, a kid's profile; his words: "if I see someone is mistakenly in a level that
+// doesn't correspond to them, I change it, and then automatically that person gets logged out and logged in again and
+// it says exactly that"). server.js /api/admin/kid-level decides who may and what changes; this writes it all at once,
+// on a LIVE account only (server.js refuses an archived one first), and hands back what it replaced so «Undo» puts it
+// back exactly. Nothing of the kid's progress is touched: seals, practice, homework marks, coins and exam tries stay on
+// the record, per level.
+//   level (+ levelSince)  the kid's own level: LevelKeys.classLevel (THE one function every reader asks) reads it first,
+//                         so it wins over the class code's level
+//   classroomCode         ch.classroomCode: the same teacher's class of the new level, when she has one (else unchanged)
+//   levelAccess           the new level opened as a teacher's opening (no key needed, like «Desbloquear»; a key grant is
+//                         upgraded, a teacher or grandfathered one stays); ch.keepFrom stamps the old level grandfathered
+//                         (it was open from before the keys: it stays theirs)
+//   levelBy               { to, from: [levels], codes: [class codes], at, seen, by }: the notice the kid's phone shows
+//                         once («Tu profe te cambió a …», seen = when), and the levels and class codes a teacher moved
+//                         this kid away from: the phone's dkid and the class code it saved still hold the kid (server.js
+//                         _kidLgMoved, _hwOwnsStudent, _levelKept). A renamed class code is renamed here too.
+// → { snap, expect } (snap: the fields as they were; expect: what was written, for undoLevel) | null
+const LEVEL_FIELDS = ['level', 'levelSince', 'classroomCode', 'levelAccess', 'levelBy'];
+const _jclone = (v) => (v === undefined ? undefined : JSON.parse(JSON.stringify(v)));
+function changeLevel(code, ch) {
+  const c = normalizeCode(code);
+  const rec = c ? records[c] : null;
+  const lvl = Levels.normalize(ch && ch.level);
+  if (!rec || !lvl) return null;
+  const snap = {};
+  LEVEL_FIELDS.forEach((k) => { snap[k] = Object.prototype.hasOwnProperty.call(rec, k) ? _jclone(rec[k]) : undefined; });
+  const now = Date.now();
+  const from = Levels.normalize(ch.from);
+  if (!rec.levelAccess || typeof rec.levelAccess !== 'object' || Array.isArray(rec.levelAccess)) rec.levelAccess = {};
+  if (from && ch.keepFrom && !rec.levelAccess[from]) rec.levelAccess[from] = { via: 'grandfathered', at: now };
+  const cur = rec.levelAccess[lvl];
+  if (!cur || cur.via === 'key') rec.levelAccess[lvl] = { via: 'teacher', at: now };
+  if (rec.level !== lvl) { rec.level = lvl; rec.levelSince = now; }
+  const oldCode = rec.classroomCode ? String(rec.classroomCode).trim().toUpperCase() : null;
+  const newCode = ch.classroomCode ? String(ch.classroomCode).trim().toUpperCase() : null;
+  if (newCode && newCode !== oldCode) rec.classroomCode = newCode;
+  const lb = rec.levelBy && typeof rec.levelBy === 'object' ? rec.levelBy : {};
+  const keep = (list, add, drop) => {
+    const a = (Array.isArray(list) ? list : []).filter((x) => typeof x === 'string' && x !== add && x !== drop);
+    if (add && add !== drop) a.push(add);
+    return a.slice(-6);
+  };
+  rec.levelBy = {
+    to: lvl,
+    from: keep(lb.from, from, lvl),
+    codes: keep(lb.codes, newCode && oldCode && newCode !== oldCode ? oldCode : null, rec.classroomCode || null),
+    at: now, seen: 0, by: String(ch.by || '').slice(0, 40),
+  };
+  if (!persistNow()) {                                     // the disk refused: the account goes back as it was
+    LEVEL_FIELDS.forEach((k) => { if (snap[k] === undefined) delete rec[k]; else rec[k] = _jclone(snap[k]); });
+    return null;
+  }
+  return { snap, expect: { level: rec.level, classroomCode: rec.classroomCode || null, at: now } };
+}
+// «Undo» (8 s in /maestro): the fields changeLevel replaced come back, only while nothing else changed them since (the
+// same level, class code and change). → true | false
+function undoLevel(code, snap, expect) {
+  const c = normalizeCode(code);
+  const rec = c ? records[c] : null;
+  if (!rec || !snap || !expect) return false;
+  if (rec.level !== expect.level || (rec.classroomCode || null) !== expect.classroomCode || !rec.levelBy || rec.levelBy.at !== expect.at) return false;
+  const now = {};
+  LEVEL_FIELDS.forEach((k) => { now[k] = rec[k]; });
+  LEVEL_FIELDS.forEach((k) => { if (snap[k] === undefined) delete rec[k]; else rec[k] = _jclone(snap[k]); });
+  if (!persistNow()) { LEVEL_FIELDS.forEach((k) => { if (now[k] === undefined) delete rec[k]; else rec[k] = now[k]; }); return false; }
+  return true;
+}
+// the kid's phone showed «Tu profe te cambió a …» (POST /api/homework/level-note, the kid's own session): once per change
+function seeLevelNote(code, at) {
+  const c = normalizeCode(code);
+  const rec = c ? records[c] : null;
+  const lb = rec && rec.levelBy;
+  if (!lb || lb.seen || Number(at) !== Number(lb.at)) return false;
+  lb.seen = Date.now();
+  scheduleSave();
+  return true;
+}
 // Counts for /api/_diag and the teacher dashboard. `classroomCodes` (a Set) limits the count to one teacher's classes.
 function archiveStats(classroomCodes) {
   let bytes = 0;
@@ -537,6 +614,8 @@ function classroomCodesInUse() {
   [records, archive].forEach((map) => Object.values(map).forEach((r) => {
     if (r && r.classroomCode) s.add(_ccNorm(r.classroomCode));
     if (r && typeof r.accessCode === 'string' && r.accessCode.trim()) s.add(_ccNorm(r.accessCode));   // (early records' own field)
+    // (2026-10-22: a class code a teacher moved this kid away from still holds them on the phone that saved it)
+    if (r && r.levelBy && Array.isArray(r.levelBy.codes)) r.levelBy.codes.forEach((x) => { if (typeof x === 'string' && x.trim()) s.add(_ccNorm(x)); });
   }));
   return s;
 }
@@ -556,16 +635,26 @@ function renameClassroomCode(fromCode, toCode) {
     let hit = false;
     if (rec.classroomCode != null && _ccNorm(rec.classroomCode) === from) { undo.push([rec, 'classroomCode', rec.classroomCode]); rec.classroomCode = to; hit = true; }
     if (typeof rec.accessCode === 'string' && _ccNorm(rec.accessCode) === from) { undo.push([rec, 'accessCode', rec.accessCode]); rec.accessCode = to; hit = true; }
+    // (2026-10-22) the class codes a teacher's «Change level» moved this kid away from (their phone may still hold one):
+    // renamed with the class, never counted as a kid moved (the kid is in another class now)
+    const lb = rec.levelBy;
+    if (lb && typeof lb === 'object' && Array.isArray(lb.codes) && lb.codes.some((x) => _ccNorm(x) === from)) {
+      undo.push([lb, 'codes', lb.codes.slice()]);
+      lb.codes = lb.codes.map((x) => (_ccNorm(x) === from ? to : x));
+      if (where === 'archived') touchedArchive = true;
+    }
     if (hit) out[where]++;
   };
+  let touchedArchive = false;
   Object.values(records).forEach((r) => move(r, 'live'));
   Object.values(archive).forEach((r) => move(r, 'archived'));
   if (!undo.length) return out;
-  if (out.archived) archiveDirty = true;
+  const arch = !!(out.archived || touchedArchive);
+  if (arch) archiveDirty = true;
   const wrote = persistNow();
-  if (!wrote || (out.archived && archiveDirty)) {        // the live file or the archive refused: everything back
+  if (!wrote || (arch && archiveDirty)) {        // the live file or the archive refused: everything back
     undo.reverse().forEach(([rec, k, v]) => { rec[k] = v; });
-    if (out.archived) archiveDirty = true;
+    if (arch) archiveDirty = true;
     persistNow();
     return { ok: false, error: 'disk' };
   }
@@ -1441,6 +1530,9 @@ module.exports = {
   createByKey,     // 🆕 2026-10-18 la entrada
   claimByKey,
   bumpKidGen,      // 🔒 2026-10-18 security review F2
+  changeLevel,     // 🆕 2026-10-22 «Change level» in /maestro
+  undoLevel,
+  seeLevelNote,
   ARCHIVE_AFTER_DAYS,
   flushNow: persistNow,   // write now (tests; before a planned shutdown)
 };
