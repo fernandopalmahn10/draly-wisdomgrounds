@@ -1,14 +1,17 @@
 // ¡No despiertes a Dralingo! — the kid's phone (the product). player.js calls DormilonPhone.init(...) once; the pastel
 // skin (player-kingdoms-skin.js) routes the sounds, the music, the lobby card and the end screen here.
-//   · my board on top like the video (4 faces, the scores, an arrow on whose turn it is), the clock, the night
-//   · the bedroom (js/dormilon-stage.js): Dralingo snoring in his bed, the turn kid tiptoeing in with the golden feather
-//   · MY TURN: a big countdown, quick questions one after another (Kahoot tiles), every right answer = a stroke (+1),
-//     a wrong one = he stirs; the big «¡Me retiro!» keeps my points safe. The first turn is guided (coach card + hand).
-//   · A FRIEND'S TURN (never a dead phone): «Turno de Hamdan», the «¿Se despierta?» guess, the question live with ✓ / ✗
-//     (I can tap what I would say), reactions 🤫 😱 😂 👏 floating over the bed, «Tu turno: después de Aileen».
-//   · the wake-up: he bolts up, rays, the gong, «¡Se despertó!»; the kid who woke him loses all their points
-//   · «¡FINAL!» → my board's ceremony: the bonus stars, «¿Quién gana tu tablero?», the winner, my card.
-// Test hooks: DormilonPhone.frame(), DormilonPhone.answer(i), DormilonPhone.freeze(v).
+// v2 (his pick 2026-10-22, «Earn feathers, then pet with your finger»; his rule «Never call it done unless it FEELS like
+// Mario Party»):
+//   · MY TURN: the camera closes in: his sleeping face fills my phone (the close-up of js/dormilon-stage.js); I RUB his
+//     head with my finger and the golden feather (with my face, like the glove of the video) follows it; every completed
+//     back-and-forth rub = +1 (a feather spent, a soft woosh + pop, a sleepy squish, a buzz); a scribble = «¡Despacio!»
+//     (+2 danger); a big 6-s countdown (red at 3), my feathers left, the big «¡Me retiro!». Out of feathers = done.
+//   · NOT MY TURN (never a dead phone): quick questions from the class pack, each right answer = a feather that flies
+//     into my quiver (max 6, the gang cheers a streak); my friend's turn plays live above (their feather moving on his
+//     face as they rub, their «+1», the danger rising); before each turn the «¿Se despierta?» guess; reactions.
+//   · the wake-up: he bolts up with the pillow, the gong, rays, the shake; the kid who woke him loses all their points.
+//   · «¡FINAL!» → my board's ceremony: the bonus stars, «¿Quién gana tu tablero?», the winner by the bed, my card.
+// Test hooks: DormilonPhone.frame(), .answer(i), .rub(n, gapMs), .stop(), .freeze(v).
 (function () {
   'use strict';
   const A = '/assets/dormilon/', H = '/assets/halcon/', K = '/assets/kingdoms/', PARTY = '/assets/party/', MO = '/assets/monopoly/';
@@ -16,23 +19,26 @@
   const S = () => window.DormStage;
   const HB = () => window.HalconBoard;
   const P = () => window.DralyParty || null;
+  const C = () => window.DralingoCast || null;
   const reduced = () => !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   const sfx = (url, vol) => { const s = window.KingdomsSkin; if (s && s.sfx) s.sfx(url, vol); };
   const buzz = (p) => { try { if (navigator.vibrate) navigator.vibrate(p); } catch (_) {} };
   const COLORS = ['red', 'blue', 'yellow', 'green'];
   const SHAPES = ['▲', '◆', '●', '■'];
+  const MAXF = 6;
   // the music steps back during MY turn so the snore, the creaks and my heartbeat carry (player-kingdoms-skin.js musicVol)
-  const duck = (low) => { const k = window.KingdomsSkin; if (k && k.musicVol) k.musicVol(low ? 0.1 : 0.32); };
+  const duck = (low) => { const k = window.KingdomsSkin; if (k && k.musicVol) k.musicVol(low ? 0.08 : 0.32); };
   // Dralingo woken up: funny-grumpy, never scary (his personality: wise, super friendly — cast.md)
   const WAKE_LINES = ['¡¿Quién me despertó?! Soñaba con dumplings… 🥟', '¡Uaaah! ¡Hasta un dragón sabio necesita su siesta!', '¡Te vi con esa pluma! 😤', '¡Ay, qué cosquillas! …bueno, a dormir otra vez.', '¡Shhh! ¡Mañana tengo clase de Chino Mandarín!'];
   const fmtClock = (ms) => { const s = Math.max(0, Math.ceil(ms / 1000)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
 
   let ctx = null, on = false, stage = null;
   let g = null;              // { id, you (k), b, phase }
-  let seats = [];            // my board [{ k, name, skin, score, on }]
-  let turn = null;           // { k, phase: 'pre'|'turn', until, guided, pats }
-  let myQ = null, myLocked = false, bq = null, myPick = -1;
-  let endsAt = 0, paused = false, frenzy = false, cue = 0, night = 1, guessed = null, coachStep = 0;
+  let seats = [];            // my board [{ k, name, skin, score, feathers, on }]
+  let turn = null;           // { k, phase: 'pre'|'turn', until, guided, pats, total }
+  let myQ = null, myLocked = false;
+  let feathers = 3, streak = 0;
+  let endsAt = 0, pausedLeft = 0, paused = false, frenzy = false, cue = 0, night = 1, guessed = null;
   let clockT = null, snoreT = null, timers = [];
   const later = (ms, fn) => { const t = setTimeout(fn, Math.max(0, ms)); timers.push(t); return t; };
   function clearTimers() { timers.forEach(clearTimeout); timers = []; }
@@ -53,8 +59,7 @@
     document.body.classList.toggle('dm-on', on);
     if (!on) { stopAll(); placeMute(false); }
   }
-  // the platform's «🔊 Sonido» button sits in the bedroom's corner while the game plays (never over «¡Me retiro!» or the
-  // tiles), and goes back to its own place for the lobby, the ceremony and other games
+  // the platform's «🔊 Sonido» sits in the bedroom's corner while the game plays (never over the tiles or «¡Me retiro!»)
   let muteHome = null;
   function placeMute(inStage) {
     const b = $('mute-btn');
@@ -82,6 +87,14 @@
     placeMute(true);
     requestAnimationFrame(() => { if (stage) stage.fit(); });
   }
+  // my turn = the stage fills the phone (the close-up), the quiz panel steps away
+  function setMyTurn(v) {
+    const scr = $('screen-dormilon');
+    if (!scr) return;
+    scr.classList.toggle('dm-myturn', !!v);
+    $('dm-turnhud').classList.toggle('hidden', !v);
+    requestAnimationFrame(() => { if (stage) { stage.fit(); if (v) stage.featherAt(null, null, skinOf(g && g.you)); } });
+  }
   function paintList() {
     const box = $('dm-list');
     if (!box) return;
@@ -95,10 +108,14 @@
       const n = document.createElement('span');
       n.className = 'dm-rn';
       n.textContent = g && x.k === g.you ? 'Tú' : x.name;
+      const fe = document.createElement('i');
+      fe.className = 'dm-rf';
+      fe.id = 'dm-rf-' + x.k;
+      fe.textContent = '🪶' + (x.feathers != null ? x.feathers : '');
       const sc = document.createElement('b');
       sc.textContent = x.score;
       sc.id = 'dm-sc-' + x.k;
-      r.append(i, n, sc);
+      r.append(i, n, fe, sc);
       box.appendChild(r);
     });
   }
@@ -113,37 +130,70 @@
     }
     if (g && k === g.you) $('dm-me').textContent = v + ' ⭐';
   }
+  function setSeatFeathers(k, n) {
+    const x = seat(k);
+    if (x) x.feathers = n;
+    const e = $('dm-rf-' + k);
+    if (e) e.textContent = '🪶' + n;
+  }
+  // my quiver: 6 slots, the gold ones are my feathers (in the quiz panel and in my turn's HUD)
+  function paintQuiver(pop) {
+    ['dm-quiver', 'dm-hudq'].forEach((id) => {
+      const box = $(id);
+      if (!box) return;
+      if (box.childElementCount !== MAXF) { box.innerHTML = ''; for (let i = 0; i < MAXF; i++) { const s = document.createElement('i'); s.className = 'dm-qs'; box.appendChild(s); } }
+      [...box.children].forEach((s, i) => { s.classList.toggle('full', i < feathers); s.classList.toggle('pop', !!pop && i === feathers - 1 && !reduced()); });
+    });
+    const t = $('dm-qcount');
+    if (t) t.textContent = feathers >= MAXF ? '¡6 plumas, listo!' : feathers + ' de ' + MAXF;
+    if (g) setSeatFeathers(g.you, feathers);
+  }
+  // a feather flies from the tile I got right into my quiver
+  function flyFeather(fromEl) {
+    if (reduced() || !fromEl) return;
+    const to = $('dm-quiver');
+    if (!to) return;
+    const a = fromEl.getBoundingClientRect(), b = to.getBoundingClientRect();
+    const f = document.createElement('img');
+    f.src = A + 'feather.webp';
+    f.alt = '';
+    f.className = 'dm-flyf';
+    f.style.left = (a.left + a.width / 2 - 22) + 'px';
+    f.style.top = (a.top + a.height / 2 - 22) + 'px';
+    document.body.appendChild(f);
+    const dx = b.left + Math.min(b.width - 20, (feathers - 1) * (b.width / MAXF)) - (a.left + a.width / 2 - 22);
+    const dy = b.top - (a.top + a.height / 2 - 22);
+    f.animate([{ transform: 'translate(0,0) rotate(-30deg) scale(1.3)', opacity: 1 }, { transform: `translate(${dx * 0.5}px, ${dy * 0.5 - 60}px) rotate(160deg) scale(1)`, opacity: 1, offset: 0.55 }, { transform: `translate(${dx}px, ${dy}px) rotate(330deg) scale(0.6)`, opacity: 0.9 }], { duration: 620, easing: 'cubic-bezier(.3,.7,.4,1)' });
+    setTimeout(() => f.remove(), 640);
+  }
+  let pausedTurn = 0;
   function paintClock() {
     const left = endsAt ? (paused ? pausedLeft : endsAt - Date.now()) : 0;
     $('dm-clock').textContent = endsAt ? fmtClock(left) : '·:··';
     $('dm-clock').classList.toggle('hurry', !!endsAt && left <= 30000);
     if (turn && turn.phase === 'turn') {
-      const tl = paused ? turn.pausedLeft : turn.until - Date.now();
+      const tl = paused ? pausedTurn : turn.until - Date.now();
       const sec = Math.max(0, Math.ceil(tl / 1000));
       const big = $('dm-count');
       if (big && big.dataset.s !== String(sec)) {
         big.dataset.s = String(sec);
         big.textContent = sec;
         big.classList.toggle('hurry', sec <= 3);
-        if (mine() && sec <= 3 && sec > 0 && !paused) sfx(PARTY + (sec % 2 ? 'tick.mp3' : 'tock.mp3'), 0.55);
+        if (!reduced()) { big.classList.remove('tick'); void big.offsetWidth; big.classList.add('tick'); }
+        if (mine() && sec <= 3 && sec > 0 && !paused) sfx(PARTY + (sec % 2 ? 'tick.mp3' : 'tock.mp3'), 0.6);
       }
-      const ring = $('dm-ring');
-      if (ring && turn.total) ring.style.setProperty('--p', Math.max(0, Math.min(1, tl / turn.total)).toFixed(3));
     }
   }
-  let pausedLeft = 0;
-  function runClock() { if (!clockT) clockT = setInterval(paintClock, 250); paintClock(); }
+  function runClock() { if (!clockT) clockT = setInterval(paintClock, 200); paintClock(); }
   function paintNight() { $('dm-night').textContent = 'Noche ' + night; }
 
-  // the snore: every few seconds while he sleeps, louder when he gets restless (the sound of the danger on MY phone).
-  // Real snores made on Higgsfield 2026-10-22 (-h1 = new names, so no phone or Cloudflare keeps the old noise ones):
-  // snore-h1 = one breath (a rattling snore + soft breathing, 4.0 s), snore-loud-h1 = a puff and a big snore (2.5 s)
+  // the snore (Higgsfield sounds): every few seconds while he sleeps, louder when he gets restless
   function snoreLoop() {
     stopSnore();
     const go = () => {
       if (!on || paused) { snoreT = setTimeout(go, 1500); return; }
-      if (cue < 4 && g && g.phase === 'play') sfx(A + (cue >= 1 ? 'snore-loud-h1.mp3' : 'snore-h1.mp3'), cue >= 2 ? 0.6 : cue >= 1 ? 0.45 : 0.32);
-      snoreT = setTimeout(go, cue >= 3 ? 2700 : cue >= 1 ? 3200 : 4200);
+      if (cue < 4 && g && g.phase === 'play') sfx(A + (cue >= 1 ? 'snore-loud-h1.mp3' : 'snore-h1.mp3'), cue >= 2 ? 0.6 : cue >= 1 ? 0.45 : mine() ? 0.4 : 0.3);
+      snoreT = setTimeout(go, cue >= 3 ? 2600 : cue >= 1 ? 3200 : 4100);
     };
     snoreT = setTimeout(go, 1200);
   }
@@ -153,26 +203,27 @@
     cue = n;
     if (stage) stage.setCue(n);
     if (n >= 2 && n > was && n < 4) sfx(A + (n >= 3 ? 'creak2.mp3' : 'creak.mp3'), 0.6);
-    // the danger under my thumb: «¡Me retiro!» warms (gold → orange → pulsing red) and my heart beats on my turn
     const st = $('dm-stop');
     if (st) st.className = 'dm-stop c' + Math.min(3, n);
-    if (mine() && n >= 3 && n > was && n < 4) { sfx('/assets/escape/heartbeat.mp3', 0.7); buzz([50, 80, 50]); }
+    if (mine() && n >= 3 && n > was && n < 4) { sfx('/assets/escape/heartbeat.mp3', 0.75); buzz([50, 80, 50]); }
     const m = $('dm-meter');
     if (m) { m.className = 'dm-meter c' + Math.min(4, n); m.textContent = n >= 4 ? '😡 ¡Despierto!' : n >= 3 ? '😣 ¡Casi se despierta!' : n >= 2 ? '😟 Se está moviendo…' : n >= 1 ? '😪 Ronca más fuerte' : '😴 Duerme profundo'; }
   }
 
-  // ---------- the panel: my turn / a friend's turn ----------
-  function panel(mode) {
-    ['dm-mine', 'dm-watch', 'dm-msg'].forEach((id) => $(id).classList.toggle('hidden', id !== mode));
-  }
+  // ---------- the panel (not my turn): the quiz, the guess, a message ----------
   function msg(big, small, kind, img) {
-    panel('dm-msg');
+    $('dm-msg').classList.remove('hidden');
+    $('dm-quiz').classList.add('hidden');
     const box = $('dm-msg');
     box.className = 'dm-msg' + (kind ? ' ' + kind : '');
     $('dm-msg-big').textContent = big || '';
     $('dm-msg-small').textContent = small || '';
     const im = $('dm-msg-img');
     if (img) { im.src = img; im.classList.remove('hidden'); } else im.classList.add('hidden');
+  }
+  function quizView() {
+    $('dm-msg').classList.add('hidden');
+    $('dm-quiz').classList.remove('hidden');
   }
   function whenMine() {
     if (!g || !seats.length || !turn) return '';
@@ -182,73 +233,54 @@
     if (ti < 0 || mi < 0) return '';
     const d = (mi - ti + n) % n;
     if (d === 0) return '';
-    if (d === 1) return '¡Tú sigues! Prepárate';
+    if (d === 1) return '¡Tú sigues! Junta plumas';
     return 'Tu turno: después de ' + seats[(mi - 1 + n) % n].name;
   }
-  function watch(k) {
-    panel('dm-watch');
-    $('dm-w-who').textContent = nameOf(k);
-    $('dm-w-img').src = S() ? S().head(skinOf(k)) : '';
-    $('dm-w-next').textContent = whenMine();
-    paintGuess();
-    paintBq();
+  function paintStatus() {
+    const t = $('dm-status');
+    if (!t) return;
+    if (!turn || mine()) { t.textContent = ''; return; }
+    t.innerHTML = '';
+    const im = document.createElement('img');
+    im.alt = '';
+    im.src = S() ? S().head(skinOf(turn.k)) : '';
+    const sp = document.createElement('span');
+    sp.textContent = (turn.phase === 'pre' ? 'Turno de ' : '') + nameOf(turn.k) + (turn.phase === 'turn' ? ' le hace cosquillas…' : '');
+    const nx = document.createElement('small');
+    nx.textContent = whenMine();
+    t.append(im, sp, nx);
   }
   function paintGuess() {
     const box = $('dm-guess');
-    if (turn && turn.guided && turn.k !== (g && g.you)) {
-      // a friend's first turn is the class's lesson (he never wakes then): watch, no guess
-      box.classList.remove('hidden');
-      box.classList.add('done');
-      $('dm-guess-q').textContent = '👀 Primer turno de ' + nameOf(turn.k) + ': ¡mira cómo se juega!';
-      $('dm-tally').textContent = '';
-      return;
-    }
-    const open = turn && turn.k !== (g && g.you) && (turn.phase === 'pre' || (turn.phase === 'turn' && Date.now() - turn.startAt < 1700));
+    const watching = turn && turn.k !== (g && g.you);
+    if (!watching || (turn.guided)) { box.classList.add('hidden'); return; }
+    const open = turn.phase === 'pre' || (turn.phase === 'turn' && Date.now() - turn.startAt < 1500);
     box.classList.toggle('hidden', !open && !guessed);
     box.classList.toggle('done', !!guessed);
     document.querySelectorAll('#dm-guess button').forEach((b) => { b.disabled = !!guessed || !open; b.classList.toggle('picked', guessed === b.dataset.g); });
-    $('dm-guess-q').textContent = guessed ? (guessed === 'wake' ? '😱 Dijiste: ¡se despierta!' : '😴 Dijiste: sigue dormido') : '¿Se despierta en este turno?';
+    $('dm-guess-q').textContent = guessed ? (guessed === 'wake' ? '😱 Dijiste: ¡se despierta!' : '😴 Dijiste: sigue dormido') : '¿Se despierta con ' + nameOf(turn.k) + '?';
   }
-  function paintBq() {
-    const box = $('dm-bq');
-    if (!bq) { box.classList.add('hidden'); return; }
-    box.classList.remove('hidden');
-    $('dm-bq-text').textContent = bq.text;
-    const opts = $('dm-bq-opts');
-    opts.innerHTML = '';
-    bq.answers.forEach((a, i) => {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'dm-bqo ' + COLORS[i % 4] + (myPick === i ? ' picked' : '');
-      b.textContent = a;
-      b.addEventListener('click', () => { if (!bq || bq.done) return; myPick = i; sfx(A + 'tap.mp3', 0.5); paintBq(); });
-      opts.appendChild(b);
-    });
-    $('dm-bq-hint').textContent = bq.done ? '' : myPick >= 0 ? '¡Ya elegiste! Mira si acierta…' : '¿Tú qué dirías? Toca (sin puntos)';
-  }
-  function markBq(idx, correctIdx) {
-    if (!bq) return;
-    bq.done = true;
-    const btns = document.querySelectorAll('#dm-bq-opts .dm-bqo');
-    btns.forEach((b, i) => { b.disabled = true; if (i === correctIdx) b.classList.add('ok'); else if (i === idx) b.classList.add('no'); });
-    if (myPick >= 0) {
-      const right = myPick === correctIdx;
-      $('dm-bq-hint').textContent = right ? '¡Tú también lo sabías! ✓' : 'Era «' + bq.answers[correctIdx] + '»';
-      $('dm-bq-hint').className = 'dm-bq-hint ' + (right ? 'ok' : 'no');
-    } else $('dm-bq-hint').textContent = '';
-  }
-  // my question
+  // the quiz question (to earn feathers)
   function paintMyQ() {
-    panel('dm-mine');
+    if (mine() && turn && turn.phase === 'turn') return;
+    quizView();
     const box = $('dm-mq');
-    if (!myQ) { box.classList.add('wait'); $('dm-mq-text').textContent = '¡Atento!'; $('dm-tiles').innerHTML = ''; return; }
+    if (feathers >= MAXF && !myQ) {
+      box.classList.add('wait');
+      $('dm-mq-text').textContent = '¡6 plumas, listo! 🪶 · Mira a ' + (turn ? nameOf(turn.k) : 'Dralingo');
+      $('dm-tiles').innerHTML = '';
+      $('dm-mq-img').classList.add('hidden');
+      return;
+    }
+    if (!myQ) { box.classList.add('wait'); $('dm-mq-text').textContent = '…'; $('dm-tiles').innerHTML = ''; $('dm-mq-img').classList.add('hidden'); return; }
     box.classList.remove('wait');
+    const qf = $('dm-qfeed');                                  // a new question: the last answer's «+1 pluma» / «¡Casi!» goes
+    if (qf.classList.contains('ans')) { qf.textContent = ''; qf.className = 'dm-qfeed'; }
     $('dm-mq-text').textContent = myQ.text;
     const im = $('dm-mq-img');
     if (myQ.image) { im.src = myQ.image; im.classList.remove('hidden'); } else { im.classList.add('hidden'); im.removeAttribute('src'); }
     const tiles = $('dm-tiles');
     tiles.innerHTML = '';
-    tiles.classList.toggle('three', myQ.answers.length === 3);
     myQ.answers.forEach((a, i) => {
       const b = document.createElement('button');
       b.type = 'button';
@@ -263,10 +295,9 @@
     });
     myLocked = false;
     if (!reduced()) { box.classList.remove('new'); void box.offsetWidth; box.classList.add('new'); }
-    coach();
   }
   function answer(i) {
-    if (!myQ || myLocked || paused || !mine()) return;
+    if (!myQ || myLocked || paused) return;
     myLocked = true;
     const b = document.querySelectorAll('#dm-tiles .dm-tile')[i];
     if (b) b.classList.add('chosen');
@@ -275,27 +306,118 @@
     ctx.socket.emit('player:dm-answer', { pin: ctx.getPin(), qid: myQ.qid, idx: i });
     ctx.markActivity();
   }
+  // a gang member cheers a quiz streak (3, 5, 8…) at the panel's edge
+  function cheer(n) {
+    const c = C();
+    if (!c || ![3, 5, 8, 12].includes(n)) return;
+    const id = c.pick ? c.pick(1)[0] : 'aileen';
+    const box = $('dm-cheer');
+    box.innerHTML = '';
+    const im = document.createElement('img');
+    im.alt = '';
+    im.src = c.pose(id, 'cheer');
+    const t = document.createElement('span');
+    t.textContent = '¡' + n + ' seguidas! ' + c.line(id, 'win');
+    box.append(im, t);
+    box.classList.remove('hidden', 'on'); void box.offsetWidth; box.classList.add('on');
+    later(2400, () => box.classList.add('hidden'));
+    sfx(K + 'streak.mp3', 0.5);
+  }
+
+  // ---------- my turn: rub his head with my finger ----------
+  // A stroke = one back-and-forth rub over his head: the finger travels 36 px+ one way, then 36 px+ back (any direction);
+  // the leg that finished a stroke never counts as the first leg of the next one (a natural rub ≈ one tickle a 0.7 s, a
+  // scribble is faster). A mouse rubs by just moving over him (no button to hold: a laptop kid hovers and it works).
+  let rub = null, lastFeatherSent = 0, lastStrokeSent = 0, rubHintT = null;
+  const newRub = (e) => ({ id: e.pointerId, x: e.clientX, y: e.clientY, dx: 0, dy: 0, seg: 0, halves: 0, used: false });
+  const canRub = () => !!(mine() && turn && (turn.phase === 'turn' || turn.phase === 'pre') && !paused);
+  function rubStart(e) {
+    if (!canRub()) return;                                    // (in «¡Te toca!» the finger may already rest on him)
+    e.preventDefault();
+    try { e.target.setPointerCapture(e.pointerId); } catch (_) {}
+    rub = newRub(e);
+    rubMove(e);
+  }
+  function rubMove(e) {
+    if (!rub && e.pointerType === 'mouse' && canRub()) rub = newRub(e);
+    if (!rub || e.pointerId !== rub.id || !stage) return;
+    e.preventDefault();
+    const box = $('dm-stage').getBoundingClientRect();
+    const [fx, fy] = stage.toCu(e.clientX - box.left, e.clientY - box.top);
+    stage.featherAt(fx, fy, skinOf(g.you));
+    const now = Date.now();
+    const live = !!(turn && turn.phase === 'turn');
+    if (live && now - lastFeatherSent > 70) { lastFeatherSent = now; ctx.socket.emit('player:dm-feather', { pin: ctx.getPin(), x: fx, y: fy }); }
+    const head = stage.onHead(fx, fy);
+    if (live) rubHint(head);
+    const mx = e.clientX - rub.x, my = e.clientY - rub.y;
+    rub.x = e.clientX; rub.y = e.clientY;
+    const len = Math.hypot(mx, my);
+    if (len < 2) return;
+    if (!head || !live) { rub.seg = 0; rub.halves = 0; rub.used = false; return; }
+    const ux = mx / len, uy = my / len;
+    if (!rub.seg) { rub.dx = ux; rub.dy = uy; rub.seg = len; return; }
+    if (ux * rub.dx + uy * rub.dy < -0.35) {                 // the finger turned back: a long leg out = the first half
+      rub.halves = rub.seg >= 36 && !rub.used ? 1 : 0;
+      rub.used = false;
+      rub.dx = ux; rub.dy = uy; rub.seg = len;
+    } else {
+      const vx = rub.dx * rub.seg + mx, vy = rub.dy * rub.seg + my, vl = Math.hypot(vx, vy) || 1;
+      rub.dx = vx / vl; rub.dy = vy / vl; rub.seg += len;
+    }
+    if (rub.halves === 1 && rub.seg >= 36) { rub.halves = 0; rub.used = true; strokeNow(); }   // …and 36 px back = a tickle
+  }
+  function placeHand() {                                     // the guided hand's fingertip on his head
+    const h = $('dm-hand');
+    if (!stage || !h || !h.classList.contains('rubbing')) return;
+    const sb = $('dm-stage').getBoundingClientRect(), hb = $('dm-turnhud').getBoundingClientRect();
+    const [px, py] = stage.cuPoint(...stage.cuHead());
+    h.style.left = Math.round(sb.left - hb.left + px - 25) + 'px';
+    const nb = $('dm-hudname').getBoundingClientRect();        // (never over «Tu primer turno…» on a short screen)
+    h.style.top = Math.round(Math.max(sb.top - hb.top + py - 6, nb.height ? nb.bottom - hb.top + 4 : 0)) + 'px';
+  }
+  function rubEnd(e) { if (rub && e.pointerId === rub.id) rub = null; }
+  function rubHint(onHead) {
+    const h = $('dm-rubhint');
+    if (!h) return;
+    if (onHead) { h.textContent = feathers > 0 ? 'Ida y vuelta = una cosquilla' : ''; h.classList.remove('warn'); }
+    else { h.textContent = '👆 ¡En su cabeza!'; h.classList.add('warn'); }
+  }
+  function strokeNow() {
+    const now = Date.now();
+    if (now - lastStrokeSent < 230 || feathers <= 0) return;
+    lastStrokeSent = now;
+    ctx.socket.emit('player:dm-stroke', { pin: ctx.getPin() });
+    ctx.markActivity();
+    $('dm-hand').className = 'dm-hand hidden';          // (the guided hand goes once I rub)
+  }
   function stopTurn() {
     if (!mine() || !turn || turn.phase !== 'turn' || paused) return;
     $('dm-stop').disabled = true;
     sfx(A + 'tap.mp3', 0.6);
     ctx.socket.emit('player:dm-stop', { pin: ctx.getPin() });
   }
-  // the guided first turn: the coach card + the hand on the answers, then on «¡Me retiro!»
-  function coach() {
-    const box = $('dm-coach');
-    const hand = $('dm-hand');
-    if (!turn || !turn.guided || !mine() || turn.phase !== 'turn') { box.classList.add('hidden'); hand.className = 'dm-hand hidden'; return; }
-    box.classList.remove('hidden');
-    if (coachStep === 0) {
-      $('dm-coach-big').textContent = 'Responde bien = una cosquilla ✨';
-      $('dm-coach-small').textContent = '+1 punto cada una. ¡Pero no lo despiertes!';
-      hand.className = 'dm-hand on-tiles';
-    } else {
-      $('dm-coach-big').textContent = '¿Otra cosquilla o te retiras?';
-      $('dm-coach-small').textContent = 'Toca «¡Me retiro!» y tus puntos quedan a salvo';
-      hand.className = 'dm-hand on-stop';
-    }
+  function paintHud() {
+    // the name bar only on the guided first turn (an ordinary turn says it with «¡YA!»); the danger chip then steps aside
+    const guided = !!(turn && turn.guided);
+    $('dm-hudname').textContent = guided ? 'Tu primer turno: ¡frota su cabeza con el dedo!' : '';
+    $('dm-hudname').classList.toggle('hidden', !guided);
+    $('screen-dormilon').classList.toggle('dm-guided', guided);
+  }
+  // the video's «START!»: a big word lands on his face («¡Te toca!» while the camera moves in, «¡YA!» when the clock runs)
+  function splash(text, kind, ms) {
+    const s = $('dm-splash');
+    if (!s) return;
+    s.textContent = text;
+    s.className = 'dm-splash ' + (kind || '');
+    if (!reduced()) { void s.offsetWidth; s.classList.add('on'); }
+    later(ms || 1100, () => { if (s.textContent === text) s.className = 'dm-splash hidden'; });
+  }
+  // his sleepy giggle when the feather tickles him (Higgsfield takes, rotated so it never sounds the same twice in a row)
+  let giggleN = 0;
+  function giggle(vol) {
+    giggleN = (giggleN + 1 + Math.floor(Math.random() * 2)) % 3;
+    sfx(A + 'giggle-h' + (giggleN + 1) + '.mp3', vol);
   }
 
   // ---------- the events ----------
@@ -304,42 +426,48 @@
     const fresh = !g || g.id !== d.id;
     g = { id: d.id, you: d.you ? d.you.k : null, b: d.board ? d.board.id : null, phase: d.phase };
     show();
-    if (fresh) { guessed = null; coachStep = 0; bq = null; myPick = -1; }
+    if (fresh) { guessed = null; myQ = null; streak = 0; }
     paused = !!d.paused;
     $('dm-pause').classList.toggle('hidden', !paused);
     if (d.endsMs != null) { endsAt = Date.now() + d.endsMs; pausedLeft = d.endsMs; }
     frenzy = !!d.frenzy;
     document.body.classList.toggle('dm-frenzy', frenzy);
+    if (d.you && d.you.feathers != null) feathers = d.you.feathers;
     const bd = d.board;
     if (bd) {
       seats = bd.seats.slice();
       night = bd.night || 1;
       paintNight();
-      if (stage && bd.phase !== 'wake') stage.sleep();        // (no wake-up rays left over after a reconnect)
+      if (stage && bd.phase !== 'wake') stage.sleep();
       setCue(bd.cue || 0);
       const tk = bd.turn;
       if (tk && (bd.phase === 'pre' || bd.phase === 'turn')) {
         const total = bd.phase === 'turn' ? (d.turnMs || bd.phaseMs) : bd.phaseMs;
-        turn = { k: tk, phase: bd.phase, until: Date.now() + (bd.phase === 'turn' ? (d.turnMs || 0) : bd.phaseMs), startAt: bd.phase === 'turn' ? 0 : Date.now(), guided: !!bd.guided, pats: bd.pats || 0, total: Math.max(total, 1), pausedLeft: d.turnMs || 0 };
-        if (stage) { stage.kid(skinOf(tk), nameOf(tk), { me: tk === g.you }); stage.featherOn(bd.phase === 'turn'); }
-      } else { turn = null; if (stage) stage.kid(null); }
+        turn = { k: tk, phase: bd.phase, until: Date.now() + (bd.phase === 'turn' ? (d.turnMs || 0) : bd.phaseMs), startAt: bd.phase === 'turn' ? 0 : Date.now(), guided: !!bd.guided, pats: bd.pats || 0, total: Math.max(total, 1) };
+        pausedTurn = d.turnMs || 0;
+        const meNow = tk === g.you;                    // (my «¡Te toca!» is already the close-up, like dm:pre)
+        if (stage) { stage.kid(skinOf(tk), nameOf(tk), { me: meNow }); stage.closeup(bd.phase === 'turn' || meNow); if (bd.phase === 'turn' || meNow) stage.featherAt(null, null, skinOf(tk)); }
+      } else { turn = null; if (stage) { stage.kid(null); stage.closeup(false); } }
       if (bd.phase === 'wake' && stage) stage.wake();
       if (d.you) guessed = d.you.guess || guessed;
     }
     paintList();
+    paintQuiver();
     if (d.you) setScore(d.you.k, d.you.score);
-    if (d.q && turn && mine()) {
-      turn.until = Date.now() + (d.q.ms || 0);
-      if (!myQ || myQ.qid !== d.q.qid || $('dm-mine').classList.contains('hidden')) { myQ = d.q; paintMyQ(); }   // (a resync of the same question keeps my tap)
+    const myTurnNow = !!(turn && mine() && (turn.phase === 'turn' || turn.phase === 'pre'));
+    setMyTurn(myTurnNow);
+    if (myTurnNow) {
+      paintHud();
+      $('dm-stop').disabled = turn.phase !== 'turn';
+      if (turn.phase === 'pre') { const big = $('dm-count'); big.textContent = turn.guided ? 9 : 6; big.dataset.s = ''; big.classList.remove('hurry'); }
     }
-    else if (turn && mine() && turn.phase === 'turn') { myQ = null; paintMyQ(); }
-    else if (turn && turn.phase === 'pre' && mine()) msg('¡Te toca!', 'Prepárate: responde bien = una cosquilla', 'go', S() ? S().tiptoe(skinOf(g.you)) : null);
-    else if (turn) { bq = d.bq ? Object.assign({}, d.bq) : bq; watch(turn.k); }
-    else if (d.phase === 'countdown' || d.phase === 'intro') msg('¡Shhh!', 'Dralingo está durmiendo…', 'calm');
-    else msg('😴', 'Dralingo duerme…', 'calm');
+    if (d.q) { if (!myQ || myQ.qid !== d.q.qid || $('dm-quiz').classList.contains('hidden')) { myQ = d.q; paintMyQ(); } }
+    else if (!myTurnNow) { myQ = null; if (d.phase === 'play') paintMyQ(); else msg('¡Shhh!', 'Dralingo está durmiendo…', 'calm'); }
+    paintStatus();
+    paintGuess();
     if (d.phase === 'play' || d.phase === 'intro') runClock();
     if (d.phase === 'play') snoreLoop();
-    duck(!!(turn && mine() && turn.phase === 'turn'));
+    duck(myTurnNow);
     paintClock();
     $('dm-frenzy').classList.toggle('hidden', !frenzy);
   }
@@ -350,6 +478,12 @@
     const s = { on: (ev, fn) => sock.on(ev, (d) => { if (frozen && ev.indexOf('dm:') === 0) { queue.push([fn, d]); return; } fn(d); }) };
     DormilonPhone._freeze = (v) => { frozen = !!v; if (!frozen) { const q = queue; queue = []; q.forEach(([fn, d]) => fn(d)); } return queue.length; };
     $('dm-stop').addEventListener('click', stopTurn);
+    const touch = $('dm-touch');
+    touch.addEventListener('pointerdown', rubStart);
+    touch.addEventListener('pointermove', rubMove);
+    touch.addEventListener('pointerup', rubEnd);
+    touch.addEventListener('pointercancel', rubEnd);
+    touch.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') rubEnd(e); });
     window.addEventListener('draly:elsewhere', () => { stopAll(); duck(false); setOn(false); });
     document.querySelectorAll('#dm-guess button').forEach((b) => b.addEventListener('click', () => {
       if (guessed || !turn) return;
@@ -372,8 +506,9 @@
       if (st.gameType) setOn(st.gameType === 'dormilon');
       if (!on) return;
       if (st.state === 'lobby') {
-        stopAll(); g = null; turn = null; myQ = null; bq = null;
+        stopAll(); g = null; turn = null; myQ = null;
         placeMute(false);
+        setMyTurn(false);
         document.body.classList.remove('dm-ended', 'dm-frenzy');
         const old = $('dm-cer'); if (old) old.remove();
       }
@@ -387,7 +522,8 @@
     });
     s.on('countdown', () => {
       if (!on) return;
-      stopAll(); g = null; turn = null; myQ = null; bq = null; guessed = null; coachStep = 0; endsAt = 0; cue = 0; night = 1;
+      stopAll(); g = null; turn = null; myQ = null; guessed = null; endsAt = 0; cue = 0; night = 1; feathers = 3; streak = 0;
+      setMyTurn(false);
       document.body.classList.remove('dm-ended', 'dm-frenzy');
       const old = $('dm-cer'); if (old) old.remove();
     });
@@ -396,14 +532,14 @@
       if (!on || !d.board || !g || d.board.id !== g.b) return;
       seats = d.board.seats.slice();
       paintList();
-      if (turn && !mine()) $('dm-w-next').textContent = whenMine();
+      paintStatus();
     });
     s.on('dm:intro', (d) => {
       if (!on || !g) return;
       ctx.markActivity();
       g.phase = 'intro';
       if (stage) stage.say('¡Shhh! Dralingo duerme…', 'calm');
-      msg('¡Shhh!', 'Responde bien = una cosquilla. ¡No lo despiertes!', 'calm', A + 'feather.webp');
+      msg('¡Shhh!', 'Responde y junta plumas 🪶 · en tu turno, ¡hazle cosquillas con el dedo!', 'calm', A + 'feather.webp');
       later((d.ms || 2600) - 700, () => { if (stage) stage.say('¡YA!', 'go', 700); sfx(H + 'start.mp3', 0.7); buzz(30); });
     });
     s.on('dm:play', (d) => {
@@ -412,24 +548,41 @@
       endsAt = Date.now() + (d.endsMs || 0);
       runClock();
       snoreLoop();
+      paintMyQ();
     });
     s.on('dm:pre', (d) => {
       if (!on || !g || d.b !== g.b) return;
       ctx.markActivity();
-      clearTimers();
       turn = { k: d.k, phase: 'pre', until: Date.now() + d.ms, startAt: Date.now(), guided: !!d.guided, pats: 0, total: d.ms };
-      guessed = null; myQ = null; bq = null; myPick = -1; coachStep = 0;
-      if (stage) { stage.kid(skinOf(d.k), nameOf(d.k), { me: d.k === g.you }); stage.featherOn(false); stage.say(''); }
+      guessed = null;
+      if (stage) { stage.closeup(false); stage.kid(skinOf(d.k), nameOf(d.k), { me: d.k === g.you }); stage.say(''); }
       paintList();
       if (d.k === g.you) {
-        msg('¡Te toca!', d.guided ? 'Tu primer turno: te enseño cómo' : 'Responde bien = una cosquilla. ¡Pero no lo despiertes!', 'go', S() ? S().tiptoe(skinOf(g.you)) : null);
+        myQ = null;
+        if (d.feathers != null) { feathers = d.feathers; paintQuiver(); }
+        msg('¡Te toca!', feathers ? 'Tienes ' + feathers + ' plumas: ¡prepara el dedo! 👆' : '¡Sin plumas! Responde para ganar más', 'go', S() ? S().tiptoe(skinOf(g.you)) : null);
+        // the camera moves in on his face at once (the video's turn starts there): the feather waits by his head, the
+        // finger may already rest on him, the clock and «¡Me retiro!» wake up with «¡YA!»
+        if (stage) { stage.closeup(true); stage.featherAt(null, null, skinOf(g.you)); }
+        setMyTurn(true);
+        paintHud();
+        $('dm-stop').disabled = true;
+        $('dm-hand').className = 'dm-hand hidden';
+        const big = $('dm-count');
+        big.textContent = d.guided ? 9 : 6;
+        big.dataset.s = '';
+        big.classList.remove('hurry');
+        $('dm-rubhint').textContent = feathers ? 'Pon el dedo en su cabeza… 👆' : '¡Sin plumas!';
+        $('dm-rubhint').classList.remove('warn');
+        splash('¡Te toca!', 'ready', Math.max(900, d.ms - 150));
         sfx(H + 'round.mp3', 0.7);
         buzz([40, 30, 40]);
       } else {
-        watch(d.k);
-        if (!d.here) $('dm-w-next').textContent = nameOf(d.k) + ' no está… esperando un momento';
+        if (stage) stage.say('Turno de ' + nameOf(d.k), 'calm', d.ms);
+        paintMyQ();
       }
-      coach();
+      paintStatus();
+      paintGuess();
     });
     s.on('dm:skip', (d) => {
       if (!on || !g) return;
@@ -440,74 +593,92 @@
       if (!on || !g || d.b !== g.b) return;
       ctx.markActivity();
       turn = { k: d.k, phase: 'turn', until: Date.now() + d.ms, startAt: Date.now(), guided: !!d.guided, pats: 0, total: d.ms };
-      if (stage) stage.featherOn(true);
+      if (stage) { stage.closeup(true); stage.say(''); stage.featherAt(null, null, skinOf(d.k)); }
       if (d.k === g.you) {
-        myQ = null;
-        paintMyQ();
+        if (d.feathers != null) feathers = d.feathers;
+        paintQuiver();
+        setMyTurn(true);
+        paintHud();
         $('dm-stop').disabled = false;
+        $('dm-hand').className = d.guided ? 'dm-hand rubbing' : 'dm-hand hidden';
+        if (d.guided) requestAnimationFrame(() => requestAnimationFrame(placeHand));
+        rubHint(true);
         duck(true);
+        splash(feathers ? '¡YA!' : '¡Sin plumas!', feathers ? 'go' : 'no', 900);
         sfx(K + 'whoosh.mp3', 0.5);
+        buzz(30);
       } else {
-        watch(d.k);
-        later(2100, paintGuess);
+        paintStatus();
+        later(1600, paintGuess);
       }
       paintClock();
     });
+    s.on('dm:fe', (d) => { if (on && g && d.b === g.b && d.k !== g.you && stage && turn && turn.phase === 'turn') stage.featherAt(d.x, d.y, skinOf(d.k)); });
     s.on('dm:q', (d) => {
       if (!on || !g || d.b !== g.b) return;
       ctx.markActivity();
       myQ = d;
-      if (turn) { turn.until = Date.now() + (d.ms || 0); if (turn.phase !== 'turn') { turn.phase = 'turn'; turn.total = d.ms; } }
+      if (d.feathers != null) feathers = d.feathers;
       paintMyQ();
     });
+    s.on('dm:qx', () => { myQ = null; });
     s.on('dm:nope', (d) => {
       if (!on || !myQ || !d || d.qid !== myQ.qid) return;
       if (d.why === 'closed' || d.why === 'fast') { myLocked = false; document.querySelectorAll('#dm-tiles .dm-tile').forEach((x) => { x.disabled = false; x.classList.remove('chosen'); }); }
     });
-    s.on('dm:bq', (d) => {
-      if (!on || !g || d.b !== g.b || d.k === g.you) return;
+    s.on('dm:qr', (d) => {
+      if (!on || !g) return;
       ctx.markActivity();
-      bq = { text: d.text, answers: d.answers, done: false };
-      myPick = -1;
-      if (turn && !mine()) paintBq();
+      const ts = document.querySelectorAll('#dm-tiles .dm-tile');
+      feathers = d.feathers;
+      streak = d.streak || 0;
+      if (d.ok) {
+        if (ts[d.idx]) ts[d.idx].classList.add('ok');
+        if (d.gained) { flyFeather(ts[d.idx]); sfx(H + 'pop.mp3', 0.6); later(560, () => paintQuiver(true)); buzz(20); }
+        $('dm-qfeed').textContent = d.full ? '¡6 plumas, listo! 🪶' : '+1 pluma 🪶';
+        $('dm-qfeed').className = 'dm-qfeed ok ans';
+        cheer(streak);
+      } else {
+        if (ts[d.idx]) ts[d.idx].classList.add('no');
+        if (ts[d.correctIdx]) ts[d.correctIdx].classList.add('ok');
+        sfx(K + 'wrong.mp3', 0.4);
+        $('dm-qfeed').textContent = '¡Casi! Era «' + d.correctText + '»';
+        $('dm-qfeed').className = 'dm-qfeed no ans';
+      }
+      myQ = null;
+      later(d.ok ? 560 : 1300, () => { if (!myQ) paintMyQ(); });
+    });
+    s.on('dm:plume', (d) => { if (on && g && d.b === g.b) setSeatFeathers(d.k, d.feathers); });
+    s.on('dm:nostroke', (d) => {
+      if (!on || !d) return;
+      if (d.why === 'empty') { rubHint(false); $('dm-rubhint').textContent = '¡Sin plumas!'; }
     });
     s.on('dm:pat', (d) => {
       if (!on || !g || d.b !== g.b) return;
       ctx.markActivity();
       setScore(d.k, d.score, 'bump');
+      setSeatFeathers(d.k, d.feathers);
       setCue(d.cue);
       if (turn) turn.pats = d.pats;
-      if (stage) stage.stroke(d.pts);
-      sfx(A + 'stroke.mp3', 0.75);
-      later(160, () => sfx(H + 'pop.mp3', 0.6));
+      if (stage) stage.cuStroke(d.pts, d.fast);
+      sfx(A + 'stroke.mp3', d.k === g.you ? 0.8 : 0.55);
+      later(140, () => sfx(H + 'pop.mp3', d.k === g.you ? 0.6 : 0.4));
+      if (d.fast) sfx(A + 'creak.mp3', 0.6);
+      else later(200, () => giggle(d.k === g.you ? 0.8 : 0.45));
       if (d.k === g.you) {
-        buzz(25);
-        const t = document.querySelectorAll('#dm-tiles .dm-tile')[d.idx];
-        if (t) t.classList.add('ok');
+        feathers = d.feathers;
+        paintQuiver();
+        buzz(d.fast ? [25, 30, 25] : 14);
+        if (turn && turn.guided && d.pats === 2) {
+          $('dm-hand').className = 'dm-hand on-stop';
+          $('dm-hand').style.left = $('dm-hand').style.top = '';
+          $('dm-hudname').textContent = '¿Otra más o te retiras? Si se despierta, ¡pierdes todo!';
+        }
         const f = $('dm-plus');
-        f.textContent = '+' + d.pts + (d.streak >= 3 ? ' · ¡' + d.streak + ' seguidas!' : '');
+        f.textContent = d.fast ? '¡Despacio! 😬' : '+' + d.pts + (d.pats >= 3 ? ' · ¡' + d.pats + '!' : '');
+        f.classList.toggle('no', !!d.fast);
         if (!reduced()) { f.classList.remove('on'); void f.offsetWidth; f.classList.add('on'); }
-        if (turn && turn.guided && coachStep === 0) { coachStep = 1; coach(); }
-      } else markBq(d.idx, d.idx);
-    });
-    s.on('dm:miss', (d) => {
-      if (!on || !g || d.b !== g.b) return;
-      ctx.markActivity();
-      setCue(d.cue);
-      if (stage) stage.stir();
-      sfx(A + 'creak.mp3', 0.7);
-      if (d.k === g.you) {
-        sfx(K + 'wrong.mp3', 0.45);
-        buzz([30, 40, 30]);
-        const ts = document.querySelectorAll('#dm-tiles .dm-tile');
-        if (ts[d.idx]) ts[d.idx].classList.add('no');
-        if (ts[d.correctIdx]) ts[d.correctIdx].classList.add('ok');
-        const f = $('dm-plus');
-        f.textContent = '¡Se movió! Era «' + d.correctText + '»';
-        f.classList.add('no');
-        if (!reduced()) { f.classList.remove('on'); void f.offsetWidth; f.classList.add('on'); }
-        later(900, () => f.classList.remove('no'));
-      } else markBq(d.idx, d.correctIdx);
+      }
     });
     s.on('dm:wake', (d) => {
       if (!on || !g || d.b !== g.b) return;
@@ -516,40 +687,52 @@
       const name = nameOf(d.k);
       setScore(d.k, 0, 'zero');
       setCue(4);
-      if (stage) { stage.wake(); stage.say('¡Se despertó!', 'wake'); later(1100, () => { if (stage) stage.speak(WAKE_LINES[Math.floor(Math.random() * WAKE_LINES.length)], 2400); }); }
+      if (stage) { stage.closeup(true); stage.featherOff(); stage.wake(); stage.say('¡Se despertó!', 'wake'); later(1100, () => { if (stage) stage.speak(WAKE_LINES[Math.floor(Math.random() * WAKE_LINES.length)], 2400); }); }
+      const wasMine = d.k === g.you;
+      turn = null;
+      paintGuess();                                          // (the open «¿Se despierta?» closes: its 1.6-s timer was just cleared)
+      setMyTurn(false);
       duck(false);
-      turn = null; myQ = null; bq = null;
       paintList();
       sfx(A + 'wake-h1.mp3', 0.9);
       const right = (d.guess || []).includes(g.you);
-      if (d.k === g.you) {
+      if (wasMine) {
         later(500, () => sfx(MO + 'lose.mp3', 0.7));
         buzz([80, 60, 200]);
         msg('¡Lo despertaste! 😱', d.lost ? (d.lost === 1 ? 'Pierdes tu punto… ¡a recuperarlo!' : 'Pierdes tus ' + d.lost + ' puntos… ¡a recuperarlos!') : 'No tenías puntos: ¡nada que perder!', 'wake', A + 'dralingo-awake.webp');
       } else {
         later(450, () => sfx(H + 'aww.mp3', 0.55));
         buzz(60);
-        msg('¡' + name + ' lo despertó!', (d.lost ? name + ' pierde ' + d.lost + (d.lost === 1 ? ' punto. ' : ' puntos. ') : '') + (right ? '¡Adivinaste! 🔮' : ''), 'wake', A + 'dralingo-awake.webp');
+        $('dm-qfeed').textContent = '¡' + name + ' lo despertó!' + (d.lost ? ' Pierde ' + d.lost + (d.lost === 1 ? ' punto.' : ' puntos.') : '') + (right ? ' ¡Adivinaste! 🔮' : '');
+        $('dm-qfeed').className = 'dm-qfeed no';
       }
+      paintStatus();
     });
     s.on('dm:end', (d) => {
       if (!on || !g || d.b !== g.b) return;
       ctx.markActivity();
-      if (stage) stage.featherOn(false);
       const right = (d.guess || []).includes(g.you);
       const name = nameOf(d.k);
       setScore(d.k, d.score);
-      turn = null; myQ = null; bq = null;
-      paintList();
-      coach();
+      if (d.feathers != null) setSeatFeathers(d.k, d.feathers);
+      const wasMine = d.k === g.you;
+      turn = null;
+      if (stage) { stage.closeup(false); stage.featherOff(); }
+      setMyTurn(false);
       duck(false);
+      paintList();
+      paintStatus();
+      paintGuess();
       if (d.why === 'final') { msg('¡Shhh!', '¡Se acabó la noche!', 'calm'); return; }
       const pts = d.pts != null ? d.pts : d.pats;
-      if (d.k === g.you) {
+      if (wasMine) {
+        if (d.feathers != null) { feathers = d.feathers; paintQuiver(); }
         sfx(K + 'correct.mp3', 0.6);
-        msg(pts ? '¡A salvo! +' + pts : '¡Turno terminado!', d.why === 'stop' ? 'Te retiraste a tiempo 😌' : d.pats ? '¡Se acabó tu tiempo y sigue dormido!' : 'La próxima: ¡responde para hacerle cosquillas!', 'safe', S() ? S().tiptoe(skinOf(g.you)) : null);
+        msg(pts ? '¡A salvo! +' + pts : d.why === 'empty' ? '¡Sin plumas!' : '¡Turno terminado!', d.why === 'guided' ? '¡Así se juega! Ahora responde para ganar plumas 🪶' : d.why === 'stop' ? 'Te retiraste a tiempo 😌' : d.why === 'empty' ? (pts ? '¡Usaste todas tus plumas!' : 'Responde preguntas para ganar plumas 🪶') : pts ? '¡Se acabó tu tiempo y sigue dormido!' : '¡Frota su cabeza ida y vuelta!', 'safe', S() ? S().tiptoe(skinOf(g.you)) : null);
+        later(2000, () => { if (!turn || !mine()) paintMyQ(); });
       } else {
-        msg(d.why === 'stop' ? name + ' se retiró' : name + ': ¡a salvo!', (pts ? '+' + pts + ' para ' + name + '. ' : '') + (right ? '¡Adivinaste! 🔮' : ''), 'safe', S() ? S().head(skinOf(d.k)) : null);
+        $('dm-qfeed').textContent = (d.why === 'stop' ? name + ' se retiró' : name + ': ¡a salvo!') + (pts ? ' +' + pts : '') + (right ? ' · ¡Adivinaste! 🔮' : '');
+        $('dm-qfeed').className = 'dm-qfeed';
         if (right) sfx(H + 'yes.mp3', 0.5);
       }
     });
@@ -558,8 +741,9 @@
       night = d.night;
       paintNight();
       setCue(0);
-      if (stage) { stage.sleep(); stage.kid(null); stage.say('Noche ' + d.night + ' 🌙 Se vuelve a dormir…', 'calm', 2200); }
-      msg('Noche ' + d.night, 'Dralingo se vuelve a dormir… 😴', 'calm', A + 'dralingo-sleep.webp');
+      if (stage) { stage.closeup(false); stage.sleep(); stage.kid(null); stage.say('Noche ' + d.night + ' 🌙 Se vuelve a dormir…', 'calm', 2200); }
+      paintGuess();
+      paintMyQ();
     });
     s.on('dm:guess', (d) => {
       if (!on || !g || d.b !== g.b) return;
@@ -589,15 +773,15 @@
     s.on('dm:pause', (d) => {
       if (!on || !g) return;
       paused = !!d.paused;
-      if (paused) { pausedLeft = endsAt - Date.now(); if (turn) turn.pausedLeft = turn.until - Date.now(); }
+      if (paused) { pausedLeft = endsAt - Date.now(); if (turn) pausedTurn = turn.until - Date.now(); }
       $('dm-pause').classList.toggle('hidden', !paused);
     });
     s.on('dm:final', (d) => {
       if (!on || !g) return;
       clearTimers(); stopSnore(); duck(false);
       turn = null; myQ = null;
+      setMyTurn(false);
       document.querySelectorAll('#dm-tiles .dm-tile').forEach((x) => { x.disabled = true; });
-      $('dm-coach').classList.add('hidden'); $('dm-hand').className = 'dm-hand hidden';
       if (P() && P().final) P().final({ mode: 'phone', ms: d.ms, sub: '¡Se acabó la noche!', play: (u, v) => sfx(u, v), buzz });
       else if (stage) stage.say('¡FINAL!', 'wake');
     });
@@ -615,9 +799,9 @@
       box.id = 'dm-how';
       box.innerHTML = '<div class="dm-you"><img id="dm-you-img" alt=""><span>Vas a jugar como<b id="dm-you-name"></b></span></div>'
         + '<div class="dm-how-title">Así se juega</div><ol>'
-        + '<li><div class="dm-step s1"><i class="t r">▲</i><i class="t b">◆</i><i class="t y ok">●</i><i class="t g">■</i></div><span>Responde bien<small>en tu turno</small></span></li>'
-        + '<li><div class="dm-step s2"><img src="' + A + 'dralingo-sleep.webp" alt=""><img class="f" src="' + A + 'feather.webp" alt=""><b>+1</b></div><span>Una cosquilla<small>= +1 punto</small></span></li>'
-        + '<li><div class="dm-step s3"><img src="' + A + 'dralingo-awake.webp" alt=""><b>0</b></div><span>¡No lo despiertes!<small>si se despierta, pierdes todo</small></span></li>'
+        + '<li><div class="dm-step s1"><i class="t r">▲</i><i class="t b">◆</i><i class="t y ok">●</i><i class="t g">■</i><img class="fl" src="' + A + 'feather.webp" alt=""></div><span>Responde bien<small>= una pluma 🪶</small></span></li>'
+        + '<li><div class="dm-step s2"><img src="' + A + 'closeup-sleep.webp" alt=""><img class="f" src="' + A + 'feather.webp" alt=""><b>+1</b></div><span>Tu turno: ¡frota!<small>ida y vuelta = +1</small></span></li>'
+        + '<li><div class="dm-step s3"><img src="' + A + 'closeup-awake.webp" alt=""><b>0</b></div><span>¡No lo despiertes!<small>si se despierta, pierdes todo</small></span></li>'
         + '</ol>';
       head.after(box);
     }
@@ -740,7 +924,7 @@
       if (me.guest) l1.textContent = 'Mira el proyector: ¡ahí están los campeones! 👀';
       else if (me.score) { l1.innerHTML = 'Tus puntos: <b></b>'; l1.querySelector('b').textContent = me.score + ' ⭐'; }
       else if (me.lost) l1.textContent = 'Tenías ' + me.lost + (me.lost === 1 ? ' punto' : ' puntos') + '… ¡y lo despertaste! 😱';
-      else l1.textContent = 'Responde bien en tu turno y hazle cosquillas 🪶';
+      else l1.textContent = 'Responde para ganar plumas 🪶 y en tu turno, ¡frota su cabeza!';
       const l2 = document.createElement('p');
       l2.className = 'dm-small';
       const bits = [];
@@ -801,11 +985,35 @@
   const DormilonPhone = window.DormilonPhone = {
     init, lobby, end,
     frame: () => ({
-      on, phase: g && g.phase, you: g && g.you, board: g && g.b, seats: seats.map((x) => x.name + ':' + x.score),
-      turn: turn && { k: turn.k, phase: turn.phase, mine: mine(), guided: turn.guided }, q: myQ && myQ.text, cue, night, paused, frenzy,
-      panel: ['dm-mine', 'dm-watch', 'dm-msg'].find((id) => $(id) && !$(id).classList.contains('hidden')) || null,
+      on, phase: g && g.phase, you: g && g.you, board: g && g.b, seats: seats.map((x) => x.name + ':' + x.score + ':' + x.feathers),
+      turn: turn && { k: turn.k, phase: turn.phase, mine: mine(), guided: turn.guided }, q: myQ && myQ.text, answers: myQ && myQ.answers, feathers, cue, night, paused, frenzy,
+      myturn: !!(document.getElementById('screen-dormilon') && document.getElementById('screen-dormilon').classList.contains('dm-myturn')),
     }),
     answer: (i) => answer(i),
+    // test hook: n back-and-forth rubs over his head, gapMs apart (pointer events on the touch layer, like a finger)
+    rub: (n, gapMs) => new Promise((done) => {
+      const t = document.getElementById('dm-touch');
+      const st = stage;
+      if (!t || !st) { done(0); return; }
+      const box = document.getElementById('dm-stage').getBoundingClientRect();
+      const [hx, hy] = st.cuHead();
+      const [px, py] = st.cuPoint(hx, hy);
+      const cx = box.left + px, cy = box.top + py;
+      const ev = (type, x, y) => t.dispatchEvent(new PointerEvent(type, { pointerId: 7, clientX: x, clientY: y, bubbles: true, cancelable: true, pointerType: 'touch' }));
+      // (the moves are spread over the stroke's time like a real finger: one back-and-forth every gapMs)
+      let i = 0, s = 0;
+      const step = Math.max(8, Math.round((gapMs || 700) / 12));
+      ev('pointerdown', cx - 30, cy);
+      const one = () => {
+        if (i >= n) { ev('pointerup', cx, cy); done(i); return; }
+        s++;
+        if (s <= 6) ev('pointermove', cx - 30 + s * 12, cy + (s % 2));
+        else ev('pointermove', cx + 42 - (s - 6) * 12, cy - (s % 2));
+        if (s >= 12) { s = 0; i++; }
+        setTimeout(one, step);
+      };
+      one();
+    }),
     stop: () => stopTurn(),
     freeze: (v) => (DormilonPhone._freeze ? DormilonPhone._freeze(v) : 0),
     stage: () => stage,

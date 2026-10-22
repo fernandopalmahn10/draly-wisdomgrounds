@@ -28,7 +28,7 @@
   <link rel="stylesheet" href="/css/escape.css?v=20261019ch">
   <link rel="stylesheet" href="/css/halcon.css?v=20261019zc">
   <!-- ¡No despiertes a Dralingo! -->
-  <link rel="stylesheet" href="/css/dormilon.css?v=20261022dm">
+  <link rel="stylesheet" href="/css/dormilon.css?v=20261022v2">
   <link rel="stylesheet" href="/css/mochi.css?v=20261019zc">
   <link rel="stylesheet" href="/css/party.css?v=20261019zc">
   <link rel="stylesheet" href="/css/pinata.css?v=20261018a">
@@ -678,10 +678,10 @@
     <div class="hc-pause hidden" id="hc-pause"><div><img src="/assets/dralingo/wise.webp" alt=""><b>⏸ Pausa</b><span>Mira al profe</span></div></div>
   </div>
 
-  <!-- ¡No despiertes a Dralingo! (js/player-dormilon.js + js/dormilon-stage.js + css/dormilon.css): my board on top
-       like the video (faces, scores, whose turn), the bedroom with Dralingo asleep and the turn kid tiptoeing with the
-       golden feather, then MY TURN (the question + Kahoot tiles + «¡Me retiro!») or a FRIEND'S TURN (the guess, the
-       question live, reactions). -->
+  <!-- ¡No despiertes a Dralingo! v2 (js/player-dormilon.js + js/dormilon-stage.js + css/dormilon.css): my board on top
+       like the video (faces, scores, feathers, whose turn). MY TURN: his sleeping face fills the phone and I rub his head
+       with my finger (the touch layer; the HUD: the 6-s count, my feathers, «¡Me retiro!»). NOT MY TURN: my friend's turn
+       live above, the quiz below (each right answer = a feather), the «¿Se despierta?» guess, reactions. -->
   <div id="screen-dormilon" class="hidden">
     <div class="dm-top">
       <div class="dm-list" id="dm-list"></div>
@@ -696,33 +696,35 @@
       <div class="dm-stage" id="dm-stage"></div>
       <div class="dm-meter c0" id="dm-meter" role="status">😴 Duerme profundo</div>
       <b class="dm-plus" id="dm-plus" aria-live="polite"></b>
+      <b class="dm-splash hidden" id="dm-splash" aria-hidden="true"></b>
+      <div class="dm-guess hidden" id="dm-guess">
+        <p id="dm-guess-q">¿Se despierta?</p>
+        <div class="dm-guess-btns"><button type="button" data-g="sleep">😴 Sigue dormido</button><button type="button" data-g="wake">😱 ¡Se despierta!</button></div>
+        <small id="dm-tally"></small>
+      </div>
+      <div class="dm-touch" id="dm-touch" aria-label="Frota su cabeza con el dedo"></div>
+      <div class="dm-turnhud hidden" id="dm-turnhud">
+        <div class="dm-hudtop"><b class="dm-count" id="dm-count">6</b><span class="dm-hudname" id="dm-hudname"></span></div>
+        <i class="dm-hand hidden" id="dm-hand" aria-hidden="true"></i>
+        <div class="dm-hudbot">
+          <div class="dm-rubhint" id="dm-rubhint">Ida y vuelta = una cosquilla</div>
+          <div class="dm-hudrow"><div class="dm-hudq" id="dm-hudq" aria-label="Tus plumas"></div><button class="dm-stop" id="dm-stop" type="button">✋ ¡Me retiro!</button></div>
+        </div>
+      </div>
     </div>
     <div class="dm-panel">
-      <div class="dm-mine hidden" id="dm-mine">
-        <div class="dm-coach hidden" id="dm-coach"><b id="dm-coach-big"></b><span id="dm-coach-small"></span></div>
-        <div class="dm-mq wait" id="dm-mq">
-          <div class="dm-ring" id="dm-ring"><b id="dm-count">11</b></div>
-          <img id="dm-mq-img" class="hidden" alt="">
-          <b id="dm-mq-text">¡Atento!</b>
-        </div>
+      <div class="dm-status" id="dm-status"></div>
+      <div class="dm-quiz" id="dm-quiz">
+        <div class="dm-qhead"><span>Gana plumas:</span><div class="dm-quiver" id="dm-quiver" aria-label="Tus plumas"></div><b id="dm-qcount">3 de 6</b></div>
+        <div class="dm-mq wait" id="dm-mq"><img id="dm-mq-img" class="hidden" alt=""><b id="dm-mq-text">…</b></div>
         <div class="dm-tiles" id="dm-tiles"></div>
-        <button class="dm-stop" id="dm-stop" type="button">✋ ¡Me retiro!</button>
-        <i class="dm-hand hidden" id="dm-hand" aria-hidden="true"></i>
+        <p class="dm-qfeed" id="dm-qfeed"></p>
       </div>
-      <div class="dm-watch hidden" id="dm-watch">
-        <div class="dm-w-head"><img id="dm-w-img" alt=""><span>Turno de <b id="dm-w-who"></b></span></div>
-        <div class="dm-guess" id="dm-guess">
-          <p id="dm-guess-q">¿Se despierta en este turno?</p>
-          <div class="dm-guess-btns"><button type="button" data-g="sleep">😴 Sigue dormido</button><button type="button" data-g="wake">😱 ¡Se despierta!</button></div>
-          <small id="dm-tally"></small>
-        </div>
-        <div class="dm-bq hidden" id="dm-bq"><b id="dm-bq-text"></b><div class="dm-bq-opts" id="dm-bq-opts"></div><small class="dm-bq-hint" id="dm-bq-hint"></small></div>
-        <div class="dm-reacts" id="dm-reacts" aria-label="Reacciones">
-          <button type="button" data-e="shh" aria-label="Silencio">🤫</button><button type="button" data-e="wow" aria-label="¡Uy!">😱</button><button type="button" data-e="lol" aria-label="Risa">😂</button><button type="button" data-e="clap" aria-label="Aplausos">👏</button>
-        </div>
-        <p class="dm-w-next" id="dm-w-next"></p>
+      <div class="dm-msg calm hidden" id="dm-msg"><img id="dm-msg-img" class="hidden" alt=""><b id="dm-msg-big"></b><span id="dm-msg-small"></span></div>
+      <div class="dm-reacts" id="dm-reacts" aria-label="Reacciones">
+        <button type="button" data-e="shh" aria-label="Silencio">🤫</button><button type="button" data-e="wow" aria-label="¡Uy!">😱</button><button type="button" data-e="lol" aria-label="Risa">😂</button><button type="button" data-e="clap" aria-label="Aplausos">👏</button>
       </div>
-      <div class="dm-msg calm" id="dm-msg"><img id="dm-msg-img" class="hidden" alt=""><b id="dm-msg-big">¡Shhh!</b><span id="dm-msg-small">Dralingo está durmiendo…</span></div>
+      <div class="dm-cheer hidden" id="dm-cheer"></div>
     </div>
     <div class="dm-pause hidden" id="dm-pause"><div><img src="/assets/dralingo/wise.webp" alt=""><b>⏸ Pausa</b><span>Mira al profe</span></div></div>
   </div>
@@ -829,8 +831,8 @@
   <script src="/js/player-escape.js?v=20261019zc"></script>
   <script src="/js/halcon-board.js?v=20261019zc"></script>
   <script src="/js/player-halcon.js?v=20261019zc"></script>
-  <script src="/js/dormilon-stage.js?v=20261022dm"></script>
-  <script src="/js/player-dormilon.js?v=20261022snd"></script>
+  <script src="/js/dormilon-stage.js?v=20261022v2"></script>
+  <script src="/js/player-dormilon.js?v=20261022v2"></script>
   <script src="/js/monopoly-map.js?v=20261016a"></script>
   <script src="/js/monopoly-board.js?v=20261019zc"></script>
   <script src="/js/player-monopoly.js?v=20261020clk"></script>

@@ -488,3 +488,128 @@ body.dmh-ended .dmh-mute { top: 14px; bottom: auto; }
 /* (the size overrides of the ceremony figures come last: small phones and short sideways screens) */
 @media (orientation: portrait) and (max-height: 700px) { .dm-cer-fig img { height: 118px; } .dm-cer-figs.n3 img, .dm-cer-figs.n4 img { height: 96px; } .dm-cer-card.win .dm-cer-fig img { height: 150px; } }
 @media (orientation: landscape) and (max-height: 480px) { .dm-cer-fig img { height: 104px; } .dm-cer-figs.n3 img, .dm-cer-figs.n4 img { height: 90px; } .dm-cer-card.win .dm-cer-fig img { height: 140px; } }
+
+/* ========================= v2 (2026-10-22): the close-up, my turn, the quiz for feathers ========================= */
+/* the close-up of his face on the pillow (the camera of the video during a turn) */
+.dms-cu { position: absolute; inset: 0; z-index: 4; opacity: 0; visibility: hidden; transition: opacity .28s ease, visibility 0s .28s; pointer-events: none; }
+.dms.cu .dms-cu { opacity: 1; visibility: visible; transition: opacity .28s ease; }
+.dms.cu .dms-bedbox, .dms.cu .dms-kid, .dms.cu .dms-feather, .dms.cu .dms-pops { opacity: 0; transition: opacity .2s; }
+.dms.cu .dms-room { filter: blur(5px) brightness(.62) saturate(1.1); transform: scale(1.12); transition: filter .3s, transform .3s; }
+.dms-cu.zoomin .dms-cubox { animation: dms-zoomin .45s cubic-bezier(.2, .9, .3, 1); }
+@keyframes dms-zoomin { from { transform: scale(.82); opacity: .4; } to { transform: none; opacity: 1; } }
+.dms-cubox { position: absolute; transform-origin: 45% 60%; }
+.dms-cuimg { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; transition: opacity .16s; filter: drop-shadow(0 12px 20px rgba(0, 0, 0, .45)); user-select: none; -webkit-user-drag: none; }
+.dms-cuimg.on { opacity: 1; }
+.dms.cu .dms-cubox { animation: dms-cubreathe 3.2s ease-in-out infinite; }
+.dms.cu.cue-1 .dms-cubox { animation-duration: 2.5s; }
+.dms.cu.cue-2 .dms-cubox { animation: dms-cubreathe 2.1s ease-in-out infinite, dms-fidget 3.4s ease-in-out infinite; }
+.dms.cu.cue-3 .dms-cubox { animation: dms-cubreathe 1.7s ease-in-out infinite, dms-tremble 1.1s linear infinite; }
+.dms.cu.cue-4 .dms-cubox { animation: dms-jump .68s cubic-bezier(.2, 1.4, .4, 1); }
+@keyframes dms-cubreathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.012, 1.022); } }
+.dms-cubox.dms-cusquish { animation: dms-cusquish .45s ease-out !important; }
+@keyframes dms-cusquish { 0% { transform: scale(1); } 35% { transform: scale(1.03, .975) translateY(1.5%); } 70% { transform: scale(.99, 1.012); } 100% { transform: scale(1); } }
+.dms-cubox.dms-cuwobble { animation: dms-cuwobble .6s ease-out !important; }
+@keyframes dms-cuwobble { 0% { transform: rotate(0); } 20% { transform: rotate(-2.2deg) translateX(-2%); } 45% { transform: rotate(2deg) translateX(1.5%); } 70% { transform: rotate(-1deg); } 100% { transform: rotate(0); } }
+.dms-cuzs { position: absolute; left: 56%; top: 6%; width: 30%; height: 34%; pointer-events: none; }
+.dms-cuzs .dms-z { font-size: clamp(22px, 9vmin, 92px); }
+.dms-cuzs .dms-z.z1 { font-size: clamp(18px, 7vmin, 72px); }
+.dms-cuzs .dms-z.z2 { font-size: clamp(14px, 5.5vmin, 56px); }
+.dms.cu.cue-4 .dms-cuzs { display: none; }
+.dms-custar { left: 30%; top: 14%; font-size: clamp(22px, 8vmin, 80px); }
+.dms.cu.cue-3 .dms-custar { animation: dms-star 1.4s ease-in-out infinite; }
+.dms-cufeather { position: absolute; left: 0; top: 0; z-index: 6; pointer-events: none; transition: transform 70ms linear; will-change: transform; }
+.dms-cufeather.hidden { display: none; }
+.dms-cufeather .dms-fimg { width: 100%; height: 100%; object-fit: contain; rotate: -28deg; filter: drop-shadow(0 6px 8px rgba(0, 0, 0, .5)); }
+.dms-cufeather .dms-fhead { position: absolute; right: -10%; top: -8%; width: 42%; aspect-ratio: 1; border-radius: 50%; object-fit: cover; background: #fff; border: 3px solid var(--dm-gold); box-shadow: 0 2px 6px rgba(0, 0, 0, .45); }
+.dms-cupops { position: absolute; inset: 0; z-index: 7; pointer-events: none; }
+.dms-cupops .dms-pop { font-size: clamp(30px, 11vmin, 110px); }
+.dms-spark { position: absolute; width: 14px; height: 14px; translate: -50% -50%; background: radial-gradient(circle, #fff 0 25%, var(--dm-gold2) 26% 55%, transparent 56%); animation: dms-spark .8s ease-out forwards; }
+@keyframes dms-spark { 0% { transform: scale(.3); opacity: 1; } 100% { transform: scale(1.8) translateY(-30px); opacity: 0; } }
+
+/* the phone: my turn fills the screen with his face; the quiz panel steps away */
+#screen-dormilon.dm-myturn .dm-panel { display: none; }
+#screen-dormilon.dm-myturn .dm-stagewrap { flex: 1 1 auto; }
+#screen-dormilon.dm-myturn .dm-meter { top: 92px; }
+.dm-touch { position: absolute; inset: 0; z-index: 7; touch-action: none; pointer-events: none; cursor: grab; }
+#screen-dormilon.dm-myturn .dm-touch { pointer-events: auto; }
+.dm-turnhud { position: absolute; inset: 0; z-index: 8; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; padding: 8px 10px 12px; }
+.dm-turnhud.hidden { display: none; }
+.dm-hudtop { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.dm-count { display: grid; place-items: center; width: 74px; height: 74px; border-radius: 50%; font: 900 46px/1 'Baloo 2', 'Nunito', sans-serif; color: var(--dm-ink); background: radial-gradient(circle at 40% 35%, #fff, var(--dm-cream) 60%, #f1d9a6); border: 4px solid var(--dm-gold); box-shadow: 0 6px 14px rgba(0, 0, 0, .45); }
+.dm-count.hurry { color: #fff; background: radial-gradient(circle at 40% 35%, #ff8f84, var(--dm-red2) 60%, #8e1c22); border-color: #ffd2cc; }
+.dm-count.tick { animation: dm-tick .35s cubic-bezier(.2, 1.6, .4, 1); }
+@keyframes dm-tick { 0% { transform: scale(1.35); } 100% { transform: scale(1); } }
+.dm-hudname { font-weight: 900; font-size: 15px; padding: 3px 12px; border-radius: 999px; background: rgba(14, 21, 49, .82); color: var(--dm-gold2); text-align: center; }
+.dm-hudbot { display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
+.dm-hudrow { display: flex; align-items: center; gap: 10px; }
+.dm-hudrow .dm-stop { flex: 1 1 auto; pointer-events: auto; }
+.dm-rubhint { align-self: center; font-weight: 900; font-size: 15px; padding: 4px 14px; border-radius: 999px; background: rgba(255, 246, 226, .92); color: var(--dm-ink); box-shadow: 0 3px 8px rgba(0, 0, 0, .35); }
+.dm-rubhint.warn { background: var(--dm-red2); color: #fff; animation: dm-pulse .6s ease-in-out infinite; }
+.dm-hand.rubbing { position: absolute; left: 40%; top: 46%; width: 62px; height: 62px; animation: dm-rubhand 1s ease-in-out infinite; }
+@keyframes dm-rubhand { 0%, 100% { transform: translate(-40px, 0) rotate(-12deg); } 50% { transform: translate(40px, -6px) rotate(10deg); } }
+/* the quiver: 6 slots, the gold ones are my feathers */
+.dm-hudq, .dm-quiver { display: flex; gap: 2px; }
+.dm-qs { width: 22px; height: 30px; border-radius: 6px; background: rgba(255, 255, 255, .12); border: 1.5px dashed rgba(255, 255, 255, .35); }
+.dm-qs.full { background: center / 92% no-repeat url(/assets/dormilon/feather.webp); border: 0; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .4)); }
+.dm-qs.pop { animation: dm-qpop .5s cubic-bezier(.2, 1.6, .4, 1); }
+@keyframes dm-qpop { 0% { transform: scale(1.8) rotate(-20deg); } 100% { transform: none; } }
+.dm-hudq { padding: 4px 6px; border-radius: 12px; background: rgba(14, 21, 49, .78); }
+.dm-hudq .dm-qs { width: 20px; height: 28px; }
+.dm-flyf { position: fixed; z-index: 90; width: 44px; height: 44px; pointer-events: none; filter: drop-shadow(0 4px 6px rgba(0, 0, 0, .45)); }
+/* the panel (not my turn) */
+.dm-status { display: flex; align-items: center; gap: 8px; min-height: 30px; font-weight: 900; font-size: 15px; flex-wrap: wrap; }
+.dm-status img { width: 28px; height: 28px; border-radius: 50%; background: #fff; border: 2px solid var(--dm-gold); }
+.dm-status span { color: var(--dm-gold2); }
+.dm-status small { margin-left: auto; font-weight: 800; font-size: 12.5px; color: var(--dm-cream); opacity: .9; }
+.dm-quiz { display: flex; flex-direction: column; gap: 7px; }
+.dm-quiz.hidden { display: none; }
+.dm-qhead { display: flex; align-items: center; gap: 8px; font-weight: 900; font-size: 14px; }
+.dm-qhead b { margin-left: auto; color: var(--dm-gold2); font-size: 14px; }
+.dm-qfeed { margin: 0; min-height: 1.2em; text-align: center; font-weight: 900; font-size: 14px; }
+.dm-qfeed.ok { color: #a6f0be; } .dm-qfeed.no { color: #ffb4b4; }
+.dm-panel .dm-guess { margin-bottom: 6px; }
+.dm-panel .dm-reacts { margin-top: 6px; }
+.dm-cheer { position: absolute; left: 10px; right: 10px; top: -54px; z-index: 12; display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 14px; background: var(--dm-cream); color: var(--dm-ink); font-weight: 900; font-size: 14px; box-shadow: 0 6px 16px rgba(0, 0, 0, .4); }
+.dm-cheer img { width: 44px; height: 44px; object-fit: contain; }
+.dm-cheer.hidden { display: none; }
+.dm-cheer.on { animation: dms-band .35s cubic-bezier(.2, 1.4, .4, 1); }
+.dm-step.s1 .fl { position: absolute; width: 38%; right: 2%; top: 2%; rotate: -25deg; }
+@media (max-height: 700px) {
+  .dm-count { width: 60px; height: 60px; font-size: 36px; } .dm-qs { width: 18px; height: 25px; } .dm-hudq .dm-qs { width: 16px; height: 22px; }
+  .dm-status { min-height: 24px; font-size: 13.5px; } .dm-status img { width: 22px; height: 22px; }
+}
+@media (orientation: landscape) and (min-width: 560px) {
+  #screen-dormilon.dm-myturn { grid-template-columns: minmax(0, 1fr); }
+  #screen-dormilon.dm-myturn .dm-stagewrap { grid-column: 1; }
+}
+@media (prefers-reduced-motion: reduce) { .dms-cubox, .dm-hand.rubbing, .dm-count, .dm-qs { animation: none !important; } .dms-cufeather { transition: none; } }
+.dmh-rf { font-style: normal; font-size: .9em; opacity: .9; }
+.dmh-row.turn .dmh-rf { opacity: 1; }
+/* v2 · the turn opens like the video: «¡Te toca!» while the camera moves in, then «¡YA!» lands on his face (transform/opacity only) */
+.dm-splash { position: absolute; left: 50%; top: 44%; z-index: 9; translate: -50% -50%; font: 900 64px/1 'Baloo 2', 'Nunito', sans-serif; color: var(--dm-gold2); -webkit-text-stroke: 3px var(--dm-ink); paint-order: stroke fill; text-shadow: 0 6px 0 rgba(28, 20, 48, .55), 0 0 28px rgba(242, 193, 78, .55); white-space: nowrap; pointer-events: none; rotate: -5deg; }
+.dm-splash.ready { font-size: 50px; color: #fff; }
+.dm-splash.go { font-size: 84px; }
+.dm-splash.no { font-size: 40px; color: #ffd0d0; }
+.dm-splash.on { animation: dm-splash .5s cubic-bezier(.2, 1.5, .4, 1) both; }
+.dm-splash.go.on { animation: dm-splash .5s cubic-bezier(.2, 1.5, .4, 1) both, dm-splash-out .3s ease-in .6s forwards; }
+@keyframes dm-splash { from { opacity: 0; transform: scale(.3); } to { opacity: 1; transform: none; } }
+@keyframes dm-splash-out { to { opacity: 0; transform: scale(1.25); } }
+#screen-dormilon.dm-myturn .dm-hudname.hidden { display: none; }
+#screen-dormilon.dm-myturn.dm-guided .dm-meter { display: none; }   /* (the guided turn never wakes him; its name bar takes the place) */
+@media (max-width: 380px) { .dm-splash { font-size: 54px; } .dm-splash.go { font-size: 70px; } .dm-splash.ready { font-size: 42px; } }
+@media (prefers-reduced-motion: reduce) { .dm-splash.on, .dm-splash.go.on { animation: none !important; } }
+#screen-dormilon.dm-myturn .dm-plus { display: none; }   /* (my turn: the +1 lands by the feather, like the video; the bottom is the HUD) */
+.dms.cuwide .dms-cubox { -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%); mask-image: linear-gradient(90deg, transparent, #000 12%); }   /* (wide views: the picture's cut edge melts into the room) */
+@media (orientation: landscape) and (min-width: 560px) {
+  #screen-dormilon.dm-myturn .dm-hudbot { flex-direction: row; align-items: flex-end; justify-content: space-between; }
+  #screen-dormilon.dm-myturn .dm-rubhint { align-self: flex-end; margin-bottom: 12px; }
+  #screen-dormilon.dm-myturn .dm-hudrow .dm-stop { flex: 0 0 auto; min-width: 230px; padding: 0 26px; }
+  #screen-dormilon.dm-myturn .dm-hudbot { order: 0; }
+}
+/* «¿Se despierta?» over the bottom of the stage (it used to push the quiz tiles down at every «Turno de…») */
+.dm-stagewrap > .dm-guess { position: absolute; left: 8px; right: 8px; bottom: 8px; z-index: 9; padding: 6px 8px; background: rgba(14, 21, 49, .9); border-color: rgba(214, 228, 255, .6); box-shadow: 0 6px 16px rgba(0, 0, 0, .45); }
+.dm-stagewrap > .dm-guess p { font-size: 14px; margin-bottom: 5px; }
+.dm-stagewrap > .dm-guess button { min-height: 46px; font-size: 15px; }
+.dm-stagewrap > .dm-guess.done { left: auto; right: 8px; padding: 4px 10px; }
+.dm-stagewrap > .dm-guess.done p { margin: 0; font-size: 13px; }
+#dm-stage .dms-band { top: 30%; }   /* (below the danger chip and «Sonido» on phones) */

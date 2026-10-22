@@ -1,12 +1,14 @@
 // ¡No despiertes a Dralingo! (gameType 'dormilon') — the rules, no sockets (server.js «NO DESPIERTES A DRALINGO» block
 // glues them to the room). #3 of his Mario Party series: Super Mario Party «Don't Wake Wiggler» (his video y9BKCVx_mNk,
 // 6:14-7:29) with our cast: Dralingo sleeps in a Chinese palace bedroom; the class plays in BOARDS OF 4 (the deal of
-// core/halcon.js); on a board the kids take TURNS: «Turno de X» (the others guess «¿Se despierta?») → the turn (10 s,
-// a kid's first one 14 s and guided): quick questions one after another, every right answer = a stroke of the golden
-// feather = +1 point (+2 in the last 30 s), a wrong answer = he stirs; «¡Me retiro!» ends the turn any time. Every
-// stroke (+1) and every wrong answer (+2) brings him closer to waking (a hidden limit per night, random per board in a
-// fair range, cues without the number). The kid holding the feather when he wakes LOSES ALL their points; then he falls
-// asleep again (a new night, a new limit) and the next kid plays. The clock ends the game: «¡FINAL!», then each board's
+// core/halcon.js); on a board the kids take TURNS. v2 (his pick 2026-10-22, «Earn feathers, then pet with your finger»,
+// after v1 «felt like a quiz with a sleeping dragon on top»): while the others of the board take their turns, every kid
+// answers quick questions from the pack, each right answer = one golden feather (start 3, at most 6). «Turno de X»
+// (the others guess «¿Se despierta?») → THE TURN (6 s like the video's 5 s, a kid's first one 9 s and guided): his
+// sleeping face fills the phone and the kid RUBS his head with a finger; every completed stroke = +1 point (+2 in the
+// last 30 s) and spends a feather; a gentle stroke is +1 danger, a scribble (strokes closer than GENTLE_MS) +2; out of
+// feathers or out of time ends the turn, «¡Me retiro!» any time. A hidden limit per night (random per board in a fair
+// range, cues without the number): the kid stroking when he wakes LOSES ALL their points; then a new night. The clock ends the game: «¡FINAL!», then each board's
 // ceremony (bonus stars as honours, the board's winner, the class podium).
 // Every kid's numbers live in m.kids[k] (k = the server's stable id p.dmK), so a kid who left still counts at the end.
 // Spec: docs/specs/no-despiertes-a-dralingo.md. The server emits the events every function returns ({ t, b, … }).
@@ -17,21 +19,27 @@ const Halcon = require('./halcon');    // boards of 4 (boardSizes, splitBoards),
 const R = {
   DURATIONS: [180, 240, 300], DURATION: 240,
   INTRO_MS: 2600,            // «¡Shhh! Dralingo duerme…» → «¡YA!» after the 3.5 s run-in countdown
-  PRE_MS: 2600,              // «Turno de X»: the kid tiptoes to the bed, the others guess
-  TURN_MS: 11000,            // the turn: quick questions one after another (bot-tuned: 2-5 strokes a turn)
-  FIRST_TURN_MS: 14000,      // a kid's very first turn (guided: the coach card, the hand on the answers)
-  NEXT_Q_MS: 650,            // after an answer the next question comes this soon (the phone shows ✓ / ✗ meanwhile)
-  POST_MS: 1600,             // «¡A salvo! +3» after a turn that ended safely
+  PRE_MS: 2200,              // «Turno de X»: the camera closes in on his face, the others guess
+  TURN_MS: 6000,             // the turn: rub his head (the video's 5 s + a breath; the clock goes red at 3)
+  FIRST_TURN_MS: 9000,       // a kid's very first turn (guided: the hand shows the rub, he never wakes)
+  NEXT_Q_MS: 600,            // the quiz: after a right answer the next question comes this soon (the feather flies in)
+  WRONG_WAIT_MS: 1400,       // …after a wrong one («¡Casi!» + the right answer)
+  Q_TIMEOUT_MS: 25000,       // a question nobody answers is replaced (a phone in a pocket never blocks its quiz)
+  FEATHERS_START: 3, FEATHERS_MAX: 6,   // every kid starts with 3 feathers; a full quiver = 6 (one 6-s turn of strokes)
+  GUIDED_MAX: 3,             // a guided first turn (he never wakes) takes at most 3 tickles: a later seat's full quiver is no edge
+  MIN_STROKE_MS: 250,        // strokes closer than this are noise (never counted)
+  GENTLE_MS: 550,            // a stroke sooner than this after the last one = a scribble: +2 danger
+  POST_MS: 1500,             // «¡A salvo! +3» after a turn that ended safely
   WAKE_MS: 3600,             // «¡Se despertó!»: he bolts up with the pillow, the kid's points → 0
   NIGHT_MS: 2400,            // «Dralingo se vuelve a dormir… Noche N»
   DROP_MS: 3000,             // the turn kid's phone is gone: «Turno de X» waits this long, a turn ends this long after
   AWAY_SKIP_MS: 15000,       // a kid gone longer than this is skipped at once (no wait every round)
-  FAST_MS: 300,              // an answer sooner than this after its question = a double tap: ignored
+  FAST_MS: 300,              // a quiz answer sooner than this after its question = a double tap: ignored
   GUESS_IN_MS: 2000,         // the «¿Se despierta?» guess stays open this long into the turn
   FINAL_MS: 2400,            // «¡FINAL!» before the ceremony (game-end)
   FRENZY_MS: 30000,          // the last 30 s: «¡Luna llena!» every stroke +2
-  PAT_DANGER: 1, WRONG_DANGER: 2,
-  LIMIT_LO: 4, LIMIT_HI: 7,  // the wake limit of a night: between 4 and 7 per kid of the board (a board of 4: 16-28)
+  PAT_DANGER: 1, FAST_DANGER: 2,
+  LIMIT_LO: 6, LIMIT_HI: 10, // the wake limit of a night: between 6 and 10 per kid of the board (a board of 4: 24-40; v2 sim-tuned)
   CUES: [[0.33, 0.45], [0.58, 0.70], [0.80, 0.90]],   // where the cues 1 · 2 · 3 start (a fraction of the limit, jittered per night)
   BOARD: 4, BOARD_MAX: 5,    // the size of a Mario Party match; a late joiner can make a board of 5, never 6
   REACTS: ['shh', 'wow', 'lol', 'clap'], REACT_GAP_MS: 1200,
@@ -59,6 +67,7 @@ function newKid(k, name, skin, b, code) {
     k, name: String(name || ''), skin: skin || 'dralingo', b, code: code ? String(code) : '',   // (code: server only, never in a view)
     score: 0, pats: 0, right: 0, wrong: 0, answered: 0, streak: 0, best: 0, wakes: 0, lost: 0,
     turns: 0, safe: 0, big: 0, guesses: 0, guessOk: 0, first: true, awaySince: 0, lastReact: 0,
+    feathers: R.FEATHERS_START, earned: 0, fast: 0, q: null, qNextAt: 0, order: [], qi: 0,
   };
 }
 // A night: the danger back to 0, a new hidden limit (4-7 per kid of the board, at least 2 kids counted), new cue cuts.
@@ -73,7 +82,7 @@ function newNight(m, b) {
 function addBoard(m) {
   const b = {
     id: m.nextBoard++, seats: [], ti: -1, phase: 'wait', phaseAt: 0, phaseUntil: 0, night: 1,
-    danger: 0, limit: 0, cuts: [], cue: 0, cur: null, guesses: {}, order: [], qi: 0, waker: null,
+    danger: 0, limit: 0, cuts: [], cue: 0, cur: null, guesses: {}, waker: null,
   };
   newNight(m, b);
   m.boards.push(b);
@@ -151,11 +160,14 @@ function shiftTimes(m, ms) {
     const c = b.cur;
     if (c) {
       c.startAt += ms; c.until += ms;
-      if (c.nextQAt) c.nextQAt += ms;          // (c.q.sentAt stays: it only tells a double tap; after «Seguir» a tap counts)
+      if (c.lastStroke) c.lastStroke += ms;
       if (c.droppedAt) c.droppedAt += ms;
     }
   });
-  Object.values(m.kids).forEach((r) => { if (r.awaySince) r.awaySince += ms; });
+  Object.values(m.kids).forEach((r) => {
+    if (r.awaySince) r.awaySince += ms;
+    if (r.qNextAt) r.qNextAt += ms;            // (r.q.sentAt stays: it only tells a double tap)
+  });
 }
 
 // ---------- turns ----------
@@ -189,17 +201,22 @@ function nextTurn(m, b, now, ev, online) {
   const here = !online || online(r.k);
   setPhase(b, 'pre', now, here ? R.PRE_MS : R.DROP_MS);
   const nidx = b.seats.length > 1 ? pickNext(m, b, online, now, idx) : -1;
-  ev.push({ t: 'pre', b: b.id, k: r.k, ms: b.phaseUntil - now, guided: !!r.first, night: b.night, next: nidx >= 0 && nidx !== idx ? b.seats[nidx] : null, here });
+  if (r.q) { r.q = null; ev.push({ t: 'qx', b: b.id, k: r.k }); }
+  if (r.first && r.feathers < R.FEATHERS_START) r.feathers = R.FEATHERS_START;    // the first turn always has its feathers
+  ev.push({ t: 'pre', b: b.id, k: r.k, ms: b.phaseUntil - now, guided: !!r.first, night: b.night, next: nidx >= 0 && nidx !== idx ? b.seats[nidx] : null, here, feathers: r.feathers });
 }
 function goTurn(m, b, now, ev) {
   const r = kid(m, b.seats[b.ti]);
   if (!r) return;
   const ms = r.first ? R.FIRST_TURN_MS : R.TURN_MS;
+  if (r.first && r.feathers < R.FEATHERS_START) r.feathers = R.FEATHERS_START;     // the first turn always has its feathers
   setPhase(b, 'turn', now, ms);
-  b.cur = { k: r.k, guided: !!r.first, startAt: now, until: now + ms, pats: 0, pts: 0, wrongs: 0, q: null, nextQAt: now, droppedAt: 0 };
+  b.cur = { k: r.k, guided: !!r.first, startAt: now, until: now + ms, pats: 0, pts: 0, fast: 0, lastStroke: 0, droppedAt: 0 };
   r.first = false;
   r.turns++;
-  ev.push({ t: 'go', b: b.id, k: r.k, ms, guided: b.cur.guided });
+  if (r.q) { r.q = null; ev.push({ t: 'qx', b: b.id, k: r.k }); }
+  ev.push({ t: 'go', b: b.id, k: r.k, ms, guided: b.cur.guided, feathers: r.feathers });
+  if (r.feathers <= 0) endTurn(m, b, now, 'empty', ev);      // «¡Sin plumas! Responde para ganar más»
 }
 function guessResult(b, woke) {
   const want = woke ? 'wake' : 'sleep';
@@ -221,7 +238,8 @@ function endTurn(m, b, now, why, ev) {
     r.big = Math.max(r.big, c.pats);
   }
   const right = payGuesses(m, b, false);
-  ev.push({ t: 'end', b: b.id, k: c.k, why, pats: c.pats, pts: c.pts, score: r ? r.score : 0, guess: right });
+  if (r) r.qNextAt = now + R.POST_MS + 300;      // back to the quiz once «¡A salvo! +N» has been seen
+  ev.push({ t: 'end', b: b.id, k: c.k, why, pats: c.pats, pts: c.pts, score: r ? r.score : 0, guess: right, feathers: r ? r.feathers : 0 });
   b.cur = null;
   setPhase(b, 'post', now, R.POST_MS);
   return true;
@@ -235,6 +253,7 @@ function wake(m, b, now, by, ev) {
     r.score = 0;
     r.wakes++;
     r.big = Math.max(r.big, c.pats);
+    r.qNextAt = now + R.WAKE_MS;                 // back to the quiz after the wake-up
   }
   const right = payGuesses(m, b, true);
   b.waker = c.k;
@@ -264,17 +283,17 @@ function rise(m, b, amount) {
 }
 
 // ---------- questions ----------
-// The board's next question: its own shuffled order of the pack (answers that fit a tile first), the answers shuffled,
-// the right one kept here. imageFor(q) → a picture url or null.
-function nextQ(m, b, questions, imageFor, now) {
-  if (!b.order.length || b.qi >= b.order.length) { b.order = Halcon.pickOrder(questions, m.rng); b.qi = 0; }
-  if (!b.order.length) return null;
-  const src = questions[b.order[b.qi++]];
+// A kid's next quiz question: their own shuffled order of the pack (answers that fit a tile first), the answers
+// shuffled, the right one kept here. imageFor(q) → a picture url or null.
+function nextQ(m, h, questions, imageFor, now) {
+  if (!h.order.length || h.qi >= h.order.length) { h.order = Halcon.pickOrder(questions, m.rng); h.qi = 0; }
+  if (!h.order.length) return null;
+  const src = questions[h.order[h.qi++]];
   if (!src) return null;
   const answers = Halcon.shuffle([src.correct].concat(src.answers.filter((a) => a !== src.correct)).slice(0, 4).map(String), m.rng);
   m.qn++;
   return {
-    qid: `dm${m.id % 100000}-${b.id}-${m.qn}`, text: String(src.text), answers, correctIdx: answers.indexOf(String(src.correct)),
+    qid: `dm${m.id % 100000}-${h.k}-${m.qn}`, text: String(src.text), answers, correctIdx: answers.indexOf(String(src.correct)),
     image: imageFor ? imageFor(src) || null : null, sentAt: now,
   };
 }
@@ -282,39 +301,57 @@ function nextQ(m, b, questions, imageFor, now) {
 const qPublic = (q) => (q ? { qid: q.qid, text: q.text, answers: q.answers, image: q.image } : null);
 
 // ---------- the actions ----------
-// The turn kid answered. → { ok, ev } (ev: pat / miss, then maybe wake). Stale or too fast = ignored.
+// A quiz answer (any kid who is not playing a turn). Right = one more feather (at most FEATHERS_MAX), wrong = «¡Casi!»
+// and a short wait. → { ok, right, ev } (ev: qr, for the kid; the server tells the board the new feather count).
 function answer(m, k, qid, idx, now) {
+  const r = kid(m, k);
+  if (!r || m.phase !== 'play' || m.paused || !r.q) return { ok: false, why: 'closed', ev: [] };
+  if (r.q.qid !== qid) return { ok: false, why: 'stale', ev: [] };
+  if (now - r.q.sentAt < R.FAST_MS) return { ok: false, why: 'fast', ev: [] };
+  if (!Number.isInteger(idx) || idx < 0 || idx >= r.q.answers.length) return { ok: false, why: 'bad', ev: [] };
+  const q = r.q;
+  r.q = null;
+  r.answered++;
+  const ok = idx === q.correctIdx;
+  const before = r.feathers;
+  if (ok) {
+    r.right++; r.streak++; r.best = Math.max(r.best, r.streak);
+    r.feathers = Math.min(R.FEATHERS_MAX, r.feathers + 1);
+    r.earned += r.feathers - before;
+    r.qNextAt = now + R.NEXT_Q_MS;
+  } else {
+    r.wrong++; r.streak = 0;
+    r.qNextAt = now + R.WRONG_WAIT_MS;
+  }
+  return {
+    ok: true, right: ok,
+    ev: [{ t: 'qr', b: r.b, k, qid: q.qid, idx, ok, correctIdx: q.correctIdx, correctText: q.answers[q.correctIdx], feathers: r.feathers, gained: r.feathers - before, streak: r.streak, full: r.feathers >= R.FEATHERS_MAX }],
+  };
+}
+// A stroke of the golden feather on his head (the turn kid's finger: one back-and-forth rub). +1 point (+2 in the last
+// 30 s), one feather spent; gentle (GENTLE_MS since the last one, or the first) = +1 danger, a scribble = +2. Out of
+// feathers ends the turn. → { ok, why, ev } (ev: pat, then maybe wake / end).
+function stroke(m, k, now) {
   const r = kid(m, k);
   if (!r || m.phase !== 'play' || m.paused) return { ok: false, why: 'closed', ev: [] };
   const b = boardOf(m, r.b);
   const c = b && b.cur;
-  if (!c || b.phase !== 'turn' || c.k !== k || !c.q) return { ok: false, why: 'closed', ev: [] };
-  if (c.q.qid !== qid) return { ok: false, why: 'stale', ev: [] };
-  if (now - c.q.sentAt < R.FAST_MS) return { ok: false, why: 'fast', ev: [] };
-  if (!Number.isInteger(idx) || idx < 0 || idx >= c.q.answers.length) return { ok: false, why: 'bad', ev: [] };
-  const q = c.q;
-  c.q = null;
-  c.nextQAt = now + R.NEXT_Q_MS;
-  r.answered++;
-  const ev = [];
-  const ok = idx === q.correctIdx;
-  if (ok) {
-    const pts = m.frenzy ? 2 : 1;
-    r.right++; r.pats++; r.score += pts;
-    r.streak++; r.best = Math.max(r.best, r.streak);
-    c.pats++;
-    c.pts += pts;
-    const woke = rise(m, b, R.PAT_DANGER);
-    ev.push({ t: 'pat', b: b.id, k, qid: q.qid, idx, pts, score: r.score, cue: woke ? 4 : b.cue, streak: r.streak, pats: c.pats, x2: m.frenzy });
-    if (woke) wake(m, b, now, 'pat', ev);
-  } else {
-    r.wrong++; r.streak = 0;
-    c.wrongs++;
-    const woke = rise(m, b, R.WRONG_DANGER);
-    ev.push({ t: 'miss', b: b.id, k, qid: q.qid, idx, correctIdx: q.correctIdx, correctText: q.answers[q.correctIdx], cue: woke ? 4 : b.cue });
-    if (woke) wake(m, b, now, 'miss', ev);
-  }
-  return { ok: true, right: ok, ev };
+  if (!c || b.phase !== 'turn' || c.k !== k) return { ok: false, why: 'closed', ev: [] };
+  if (r.feathers <= 0) return { ok: false, why: 'empty', ev: [] };
+  if (c.lastStroke && now - c.lastStroke < R.MIN_STROKE_MS) return { ok: false, why: 'noise', ev: [] };
+  const fast = !!c.lastStroke && now - c.lastStroke < R.GENTLE_MS;
+  c.lastStroke = now;
+  r.feathers--;
+  const pts = m.frenzy ? 2 : 1;
+  r.pats++; r.score += pts;
+  c.pats++; c.pts += pts;
+  if (fast) { c.fast++; r.fast++; }
+  const woke = rise(m, b, fast ? R.FAST_DANGER : R.PAT_DANGER);
+  const ev = [{ t: 'pat', b: b.id, k, pts, score: r.score, cue: woke ? 4 : b.cue, pats: c.pats, x2: m.frenzy, fast, feathers: r.feathers }];
+  if (woke) wake(m, b, now, fast ? 'fast' : 'pat', ev);
+  else if (r.feathers <= 0) endTurn(m, b, now, 'empty', ev);
+  else if (c.guided && c.pats >= R.GUIDED_MAX) endTurn(m, b, now, 'guided', ev);   // «¡Así se juega!»
+  return { ok: true, ev };
 }
 // «¡Me retiro!»
 function stop(m, k, now) {
@@ -389,11 +426,6 @@ function tick(m, now, opts) {
       if (!online(c.k)) { if (!c.droppedAt) c.droppedAt = now; } else c.droppedAt = 0;
       if (now >= c.until) { endTurn(m, b, now, 'time', ev); return; }
       if (c.droppedAt && now - c.droppedAt >= R.DROP_MS) { endTurn(m, b, now, 'drop', ev); return; }
-      if (!c.q && now >= c.nextQAt && online(c.k)) {
-        c.q = nextQ(m, b, o.questions || [], o.imageFor, now);
-        if (c.q) ev.push({ t: 'q', b: b.id, k: c.k, q: c.q, ms: Math.max(0, c.until - now) });
-        else c.nextQAt = now + 2000;        // (no usable question: try again in a moment)
-      }
       return;
     }
     if (b.phase === 'post') { if (now >= b.phaseUntil) nextTurn(m, b, now, ev, online); return; }
@@ -407,6 +439,19 @@ function tick(m, now, opts) {
     }
     if (b.phase === 'night') { if (now >= b.phaseUntil) nextTurn(m, b, now, ev, online); }
   });
+  // the quiz: every kid who is not playing (nor about to: «Turno de…») answers to earn feathers; a full quiver rests
+  Object.values(m.kids).forEach((r) => {
+    const b = boardOf(m, r.b);
+    if (!b) return;
+    const mine = b.ti >= 0 && b.seats[b.ti] === r.k && (b.phase === 'pre' || b.phase === 'turn');
+    if (mine) return;
+    if (r.q && now - r.q.sentAt > R.Q_TIMEOUT_MS) r.q = null;          // (never answered: a fresh one)
+    if (!r.q && r.feathers < R.FEATHERS_MAX && now >= r.qNextAt && online(r.k)) {
+      r.q = nextQ(m, r, o.questions || [], o.imageFor, now);
+      if (r.q) ev.push({ t: 'q', b: r.b, k: r.k, q: r.q, feathers: r.feathers });
+      else r.qNextAt = now + 2000;        // (no usable question: try again in a moment)
+    }
+  });
   if (now >= m.endsAt) ev.push.apply(ev, final(m, now));
   return ev;
 }
@@ -417,6 +462,7 @@ function final(m, now) {
   if (m.phase !== 'play') startPlay(m, now);          // «Terminar» in the countdown / intro: nothing played yet
   m.boards.forEach((b) => { if (b.phase === 'turn') endTurn(m, b, now, 'final', ev); });
   m.boards.forEach((b) => { b.cur = null; if (b.phase !== 'wake') setPhase(b, 'done', now, 0); });
+  Object.values(m.kids).forEach((r) => { r.q = null; });
   m.phase = 'final';
   m.frenzy = false;
   m.phaseAt = now;
@@ -444,15 +490,13 @@ function boardView(m, b, online, now) {
     id: b.id, phase: b.phase, phaseMs: Math.max(0, b.phaseUntil - clock), night: b.night, cue: b.phase === 'wake' ? 4 : b.cue,
     turn: b.ti >= 0 && ['pre', 'turn', 'post', 'wake'].includes(b.phase) ? b.seats[b.ti] : null,
     guided: !!(c && c.guided), pats: c ? c.pats : 0, tally: tally(b), waker: b.phase === 'wake' || b.phase === 'night' ? b.waker : null,
-    seats: b.seats.map((k) => { const r = kid(m, k); return { k, name: r.name, skin: r.skin, score: r.score, on: !online || online(k) }; }),
+    seats: b.seats.map((k) => { const r = kid(m, k); return { k, name: r.name, skin: r.skin, score: r.score, feathers: r.feathers, on: !online || online(k) }; }),
   };
 }
-// the open question of a kid (a reconnect gets it again, the same qid, with the time really left)
+// the open quiz question of a kid (a reconnect gets it again, the same qid)
 function openQ(m, k) {
   const r = kid(m, k);
-  const b = r && boardOf(m, r.b);
-  const c = b && b.cur;
-  return c && c.k === k && c.q ? qPublic(c.q) : null;
+  return r && r.q ? qPublic(r.q) : null;
 }
 
 // ---------- the end ----------
@@ -476,7 +520,7 @@ function starDefs(n) {
 function finish(m) {
   const row = (r) => ({
     k: r.k, name: r.name, skin: r.skin, b: r.b, score: r.score, pats: r.pats, right: r.right, wrong: r.wrong, answered: r.answered,
-    best: r.best, wakes: r.wakes, lost: r.lost, turns: r.turns, safe: r.safe, big: r.big, guessOk: r.guessOk, stars: [],
+    best: r.best, wakes: r.wakes, lost: r.lost, turns: r.turns, safe: r.safe, big: r.big, guessOk: r.guessOk, earned: r.earned, stars: [],
   });
   const all = Object.values(m.kids).map(row);
   const byK = {};
@@ -498,5 +542,5 @@ function finish(m) {
 
 module.exports = {
   R, clampDuration, newGame, kid, inGame, boardOf, deal, seatLate, byCode, startPlay, addTime, shiftTimes, tick, final, skip,
-  answer, stop, guess, react, tally, boardView, openQ, qPublic, finish, cueOf, nextQ, starDefs,
+  answer, stroke, stop, guess, react, tally, boardView, openQ, qPublic, finish, cueOf, nextQ, starDefs,
 };

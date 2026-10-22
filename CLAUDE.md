@@ -932,9 +932,12 @@ the checklist for any new game mode.
   the shared Mario Party ending (it has no last-30-s frenzy: the Final Round is its climax).
   «¡No despiertes a Dralingo!» (new 2026-10-22, `dormilon`, #3 of the Mario Party series, his video 6:14-7:29 «Don't Wake
   Wiggler», spec `docs/specs/no-despiertes-a-dralingo.md`): Dralingo asleep in a Chinese palace bedroom, boards of 4 take
-  turns; every right answer = a stroke of the golden feather (+1), «¡Me retiro!» any time, a hidden wake limit per night:
-  whoever wakes him loses ALL their points, then a new night; watchers guess «¿Se despierta?», see the question live and
-  react; the last 30 s every stroke +2; its own board ceremony + the projector's champions and class podium.
+  turns; a hidden wake limit per night: whoever wakes him loses ALL their points, then a new night; the last 30 s every
+  tickle +2; its own board ceremony + the projector's champions and class podium. **v2 (2026-10-22, his pick after
+  playing v1, «Gana plumas, luego frota con el dedo»)**: between turns the quiz earns golden feathers (3 to start, 6 max)
+  with the friend's turn live above it; on my turn his face fills my phone and I RUB his head with my finger (each sweep
+  = +1 and a feather, a scribble = double danger, «¡Me retiro!» any time, 6 s), the board and the projector watch my
+  feather live; the turn was filmed at 4 fps beside the video's (`scripts/record-dormilon-turn.js`).
 - **The kid's phone is the product** (his correction 2026-10-11: "a beautiful projector is useless if everybody else's
   UI is terrible"). Every game ships a phone experience that feels like a competition, better than Kahoot: big colored
   answer tiles, a per-question timer with ticking, live team score, Dralingo pose reactions (right / wrong / streak /
@@ -953,6 +956,15 @@ the checklist for any new game mode.
   the video shows; the phone shows the minigame itself (the kid's own character and rivals), not a remote control;
   the projector is secondary. A class plays in boards of 4 like real Mario Party matches (3 when it doesn't divide; one
   board up to 5 kids): each phone shows its own board, the projector shows every board + the class top 3.
+- **Never call it done unless it FEELS like Mario Party** (his standing rule 2026-10-22, after «¡No despiertes a
+  Dralingo!» shipped as a quiz with a sleeping dragon on top: "it's not feeling like you are there in the game… it needs
+  to feel more live… more animations, more interactivity… you need to pet the dragon… you need to feel like everything
+  depends on you… don't approve things that really don't feel like Mario Party… once you have your turn, you interact
+  with the screen and you have to do a task"). On your turn (or in your moment) you DO the minigame's physical task on
+  the screen (rub, swipe, aim, time, move), your character does it in real time, and the suspense lands on you; the
+  questions feed the game (they earn the moves, the tries, the turn), they never replace the task. Before showing him,
+  watch the original minigame's turn side by side with ours (frames of both) and list where it wins and where we lose;
+  a «we lose» left = not done, whatever the checklist score says.
 - **Feelings at the end of class** (his words 2026-10-14, after playing Ojos de Halcón: "the Mario Party feeling is so
   important because it makes feelings at the end of a class"): every pin game ends with a Mario Party style ceremony,
   not a plain score list: «¡FINAL!», a suspenseful reveal, the winners celebrating and the others reacting, bonus stars

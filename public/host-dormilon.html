@@ -7,7 +7,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/app/favicon-32.png">
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/back.css?v=20261018a">
-  <link rel="stylesheet" href="/css/dormilon.css?v=20261022dm">
+  <link rel="stylesheet" href="/css/dormilon.css?v=20261022v2">
 </head>
 <body class="dmh">
   <button class="dmh-btn dmh-mute" id="mute-btn" type="button">🔊 Sonido</button>
@@ -16,7 +16,7 @@
   <main id="screen-lobby" class="dmh-lobby">
     <section class="dmh-lobby-left">
       <h1 class="dmh-title">¡No despiertes a <span>Dralingo</span>!</h1>
-      <p class="dmh-tagline">Dralingo duerme en su palacio. Por turnos, cada respuesta correcta es una cosquilla con la pluma dorada: +1 punto. ¡Pero si se despierta, pierdes todos tus puntos!</p>
+      <p class="dmh-tagline">Dralingo duerme en su palacio. Cada respuesta correcta te da una pluma dorada. En tu turno, frota su cabeza con el dedo: cada cosquilla es +1 punto. ¡Pero si se despierta, pierdes todos tus puntos!</p>
       <div class="dmh-pin-card">
         <div>
           <div class="dmh-pin-label">PIN</div>
@@ -26,9 +26,9 @@
         <div class="dmh-qr" id="qr" aria-hidden="true"></div>
       </div>
       <ol class="dmh-steps">
-        <li><div class="dm-step s1"><i class="t r">▲</i><i class="t b">◆</i><i class="t y ok">●</i><i class="t g">■</i></div>Responde bien<small>en tu turno</small></li>
-        <li><div class="dm-step s2"><img src="/assets/dormilon/dralingo-sleep.webp" alt=""><img class="f" src="/assets/dormilon/feather.webp" alt=""><b>+1</b></div>Una cosquilla<small>= +1 punto · «¡Me retiro!» y estás a salvo</small></li>
-        <li><div class="dm-step s3"><img src="/assets/dormilon/dralingo-awake.webp" alt=""><b>0</b></div>¡No lo despiertes!<small>si se despierta, pierdes todo</small></li>
+        <li><div class="dm-step s1"><i class="t r">▲</i><i class="t b">◆</i><i class="t y ok">●</i><i class="t g">■</i><img class="fl" src="/assets/dormilon/feather.webp" alt=""></div>Responde bien<small>= una pluma 🪶</small></li>
+        <li><div class="dm-step s2"><img src="/assets/dormilon/closeup-sleep.webp" alt=""><img class="f" src="/assets/dormilon/feather.webp" alt=""><b>+1</b></div>Tu turno: ¡frota su cabeza!<small>ida y vuelta = +1 · «¡Me retiro!» y estás a salvo</small></li>
+        <li><div class="dm-step s3"><img src="/assets/dormilon/closeup-awake.webp" alt=""><b>0</b></div>¡No lo despiertes!<small>si se despierta, pierdes todo</small></li>
       </ol>
       <div class="dmh-tools">
         <div class="dmh-dur" role="group" aria-label="Duración"><span>⏱ Tiempo</span>
@@ -54,7 +54,7 @@
   <main id="screen-active" class="dmh-stage hidden">
     <header class="dmh-head">
       <div class="dmh-clock"><b id="clock">4:00</b><span id="clock-sub">tiempo</span></div>
-      <div class="dmh-headline" id="headline">¡Shhh! Dralingo duerme… Respondan bien para hacerle cosquillas</div>
+      <div class="dmh-headline" id="headline">¡Shhh! Dralingo duerme… Respondan para ganar plumas · en su turno, ¡a frotar!</div>
       <div class="dmh-fchip hidden" id="frenzy-chip">🌕 Luna llena · cosquillas ×2</div>
       <div class="dmh-pinmini">PIN <b id="active-pin">····</b></div>
     </header>
@@ -107,8 +107,8 @@
   <script src="/js/saga.js?v=20261020z3d3"></script>
   <script src="/js/halcon-board.js?v=20261019zc"></script>
   <script src="/js/cast.js?v=20261017td"></script>
-  <script src="/js/dormilon-stage.js?v=20261022dm"></script>
-  <script src="/js/host-dormilon.js?v=20261022snd"></script>
+  <script src="/js/dormilon-stage.js?v=20261022v2"></script>
+  <script src="/js/host-dormilon.js?v=20261022v2"></script>
   <script src="/js/live-game.js?v=20261011c"></script>
   <!-- ← «Volver» while the lobby waits (his rule 2026-10-18: every screen has a way back) -->
   <script src="/js/host-back.js?v=20261022dm" data-place="title"></script>

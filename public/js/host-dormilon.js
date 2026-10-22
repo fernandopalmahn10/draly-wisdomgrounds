@@ -3,6 +3,8 @@
 // of 4 as its own bedroom (Dralingo asleep, the turn kid tiptoeing with the golden feather, the board's scores with an
 // arrow on whose turn it is, strokes / stirs / wake-ups live) + the class top 3 → «¡FINAL!» → each board's champion and
 // the class podium. Teacher buttons always work: Pausa, +30 s, −30 s, Saltar, Terminar, Sonido.
+// v2 (2026-10-22): during a turn a board's tile is the close-up of his face, the turn kid's feather moving live (dm:fe)
+// and each stroke landing (+1, the squish; a scribble wobbles); every kid's feathers (🪶N) beside their score.
 // Test hooks: DormHost.frame(), DormHost.freeze(v).
 (function () {
   'use strict';
@@ -15,6 +17,7 @@
     stroke: A + 'stroke.mp3', pop: H + 'pop.mp3', creak: A + 'creak.mp3', wake: A + 'wake-h1.mp3', aww: H + 'aww.mp3',
     snore: A + 'snore-h1.mp3', round: H + 'round.mp3', start: H + 'start.mp3', whoosh: K + 'whoosh.mp3', win: K + 'sting-win.mp3',
     final: H + 'final.mp3', hurry: PARTY + 'hurry.mp3', tick: PARTY + 'tick.mp3', yes: H + 'yes.mp3',
+    giggle1: A + 'giggle-h1.mp3', giggle2: A + 'giggle-h2.mp3', giggle3: A + 'giggle-h3.mp3',
   };
   const MUSIC = { lobby: K + 'music-lobby.mp3', night: A + 'music-night.mp3', final: K + 'music-final.mp3' };
   const reduced = () => !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -245,9 +248,10 @@
       const s = seatOf(b, tk);
       b.turn = tk;
       b.stage.kid(s ? s.skin : 'dralingo', s ? s.name : '');
-      b.stage.featherOn(v.phase === 'turn');
-      setTurnLabel(b, v.phase === 'pre' ? 'Turno de ' + (s ? s.name : '…') : (s ? s.name : '') + ' está jugando');
-    } else { b.turn = null; b.stage.kid(null); setTurnLabel(b, v.phase === 'night' ? 'Noche ' + v.night : ''); }
+      b.stage.closeup(v.phase === 'turn');
+      if (v.phase === 'turn') b.stage.featherAt(null, null, s ? s.skin : 'dralingo');
+      setTurnLabel(b, v.phase === 'pre' ? 'Turno de ' + (s ? s.name : '…') : (s ? s.name : '') + ' le hace cosquillas…');
+    } else { b.turn = null; b.stage.kid(null); b.stage.closeup(v.phase === 'wake'); setTurnLabel(b, v.phase === 'night' ? 'Noche ' + v.night : ''); }
     paintCue(b, v.cue || 0);
     paintList(b);
   }
@@ -268,10 +272,14 @@
       i.src = S.head(x.skin);
       const n = document.createElement('span');
       n.textContent = x.name;
+      const fe = document.createElement('i');
+      fe.className = 'dmh-rf';
+      fe.dataset.k = x.k;
+      fe.textContent = '🪶' + (x.feathers != null ? x.feathers : '');
       const sc = document.createElement('b');
       sc.textContent = x.score;
       sc.dataset.k = x.k;
-      r.append(i, n, sc);
+      r.append(i, n, fe, sc);
       box.appendChild(r);
     });
   }
@@ -280,6 +288,12 @@
     if (s) s.score = v;
     const e = b.el.querySelector('.dmh-blist b[data-k="' + k + '"]');
     if (e) { e.textContent = v; if (cls && !reduced()) { e.classList.remove('bump', 'zero'); void e.offsetWidth; e.classList.add(cls); } }
+  }
+  function setFeathers(b, k, n) {
+    const s = seatOf(b, k);
+    if (s) s.feathers = n;
+    const e = b.el.querySelector('.dmh-blist i[data-k="' + k + '"]');
+    if (e) e.textContent = '🪶' + n;
   }
   function paintTop(top) {
     const box = $('top3');
@@ -353,7 +367,7 @@
     requestAnimationFrame(() => Object.values(boards).forEach((b) => b.stage.fit()));
     bigBand('¡Shhh! Dralingo duerme…', 'calm', (d.ms || 2600) - 600);
     later((d.ms || 2600) - 600, () => { bigBand('¡YA!', 'go', 700); sfx('start', 0.7); });
-    say('Respondan bien para hacerle cosquillas… ¡sin despertarlo!');
+    say('Respondan para ganar plumas… y en su turno, ¡a frotar sin despertarlo!');
   });
   onDm('dm:play', (d) => { if (game) game.phase = 'play'; endsAt = Date.now() + (d.endsMs || 0); runClock(); });
   onDm('dm:pre', (d) => {
@@ -362,6 +376,7 @@
     b.turn = d.k;
     Object.assign(b.view, { phase: 'pre', turn: d.k, night: d.night || b.view.night });
     const s = seatOf(b, d.k);
+    b.stage.closeup(false);
     b.stage.kid(s ? s.skin : 'dralingo', s ? s.name : '');
     b.stage.featherOn(false);
     b.stage.say('');
@@ -377,8 +392,9 @@
     if (!b) return;
     const s = seatOf(b, d.k);
     Object.assign(b.view, { phase: 'turn', turn: d.k });
-    b.stage.featherOn(true);
-    setTurnLabel(b, (s ? s.name : '') + ' está jugando');
+    b.stage.closeup(true);
+    b.stage.featherAt(null, null, s ? s.skin : 'dralingo');
+    setTurnLabel(b, (s ? s.name : '') + ' le hace cosquillas…');
   });
   onDm('dm:bq', (d) => {
     const b = boards[d.b];
@@ -390,12 +406,15 @@
   onDm('dm:pat', (d) => {
     const b = boards[d.b];
     if (!b) return;
-    b.stage.stroke(d.pts);
+    b.stage.cuStroke(d.pts, d.fast);
     b.view.cue = d.cue;
     b.stage.setCue(d.cue);
     paintCue(b, d.cue);
     setScore(b, d.k, d.score, 'bump');
+    setFeathers(b, d.k, d.feathers);
     sfx('stroke', 0.55, 250);
+    if (d.fast) sfx('creak', 0.45, 500);
+    else if (Date.now() - (lastSfx.giggle || 0) > 900) { lastSfx.giggle = Date.now(); setTimeout(() => sfx('giggle' + (1 + Math.floor(Math.random() * 3)), 0.5), 200); }   // his sleepy giggle (one at a time with many boards)
   });
   onDm('dm:miss', (d) => {
     const b = boards[d.b];
@@ -411,6 +430,8 @@
     if (!b) return;
     const s = seatOf(b, d.k);
     Object.assign(b.view, { phase: 'wake', turn: null, cue: 4 });
+    b.stage.closeup(true);
+    b.stage.featherOff();
     b.stage.wake();
     b.stage.say('¡Se despertó!', 'wake');
     paintCue(b, 4);
@@ -430,8 +451,11 @@
     if (!b) return;
     const s = seatOf(b, d.k);
     Object.assign(b.view, { phase: 'post', turn: null });
+    b.stage.closeup(false);
+    b.stage.featherOff();
     b.stage.featherOn(false);
     setScore(b, d.k, d.score);
+    if (d.feathers != null) setFeathers(b, d.k, d.feathers);
     b.el.querySelector('.dmh-bq').classList.add('hidden');
     const pts = d.pts != null ? d.pts : d.pats;
     if (d.why !== 'final') setTurnLabel(b, (s ? s.name : '') + (pts ? ': ¡a salvo! +' + pts : ': turno terminado'));
@@ -440,12 +464,15 @@
     const b = boards[d.b];
     if (!b) return;
     Object.assign(b.view, { phase: 'night', turn: null, cue: 0, night: d.night });
+    b.stage.closeup(false);
     b.stage.sleep();
     b.stage.kid(null);
     paintCue(b, 0);
     b.stage.say('Noche ' + d.night + ' 🌙', 'calm', 2000);
     setTurnLabel(b, 'Se vuelve a dormir…');
   });
+  onDm('dm:fe', (d) => { const b = boards[d.b]; if (b && b.view.phase === 'turn') { const s = seatOf(b, d.k); b.stage.featherAt(d.x, d.y, s ? s.skin : 'dralingo'); } });
+  onDm('dm:plume', (d) => { const b = boards[d.b]; if (b) setFeathers(b, d.k, d.feathers); });
   onDm('dm:react', (d) => { const b = boards[d.b]; if (b) { const s = seatOf(b, d.k); b.stage.react(d.e, s ? s.skin : null); } });
   onDm('dm:top', (d) => paintTop(d.top));
   onDm('dm:frenzy', (d) => {

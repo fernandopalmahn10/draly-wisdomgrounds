@@ -1,7 +1,62 @@
 # «¡No despiertes a Dralingo!» (gameType `dormilon`) · spec
 
 #3 of his Mario Party series (his video https://www.youtube.com/watch?v=y9BKCVx_mNk 6:14-7:29, Super Mario Party
-«Don't Wake Wiggler»), his picks 2026-10-22. Status: built 2026-10-22 on branch `dormilon` (bundle), not deployed.
+«Don't Wake Wiggler»), his picks 2026-10-22. Status: v1 live 2026-10-22 08:37 (219cee484, sounds ab51bf2cc); **v2 «Gana
+plumas, luego frota con el dedo»** built the same day on branch `dormilon-v2` (bundle), not deployed. v2 replaces the
+turn below («Our version» keeps v1's text for the parts v2 did not change: the place, boards, the danger, the wake-up,
+the clock, the ending); read «v2» first.
+
+## v2 · «Gana plumas, luego frota con el dedo» (his pick 2026-10-22, after playing v1)
+His words after playing v1: "it's not feeling like you are there in the game… you need to pet the dragon… you need to
+feel like everything depends on you… once you have your turn, you interact with the screen and you have to do a
+task." v1's turn was a quiz with a sleeping dragon on top (11-14 s of reading). v2 splits it the way the video does:
+- **Between turns: the quiz earns feathers.** While the others of my board take their turns, I answer quick questions
+  from the class pack, one after another (a right answer = one golden feather flies into my quiver, «+1 pluma 🪶»;
+  a wrong one = «¡Casi! Era …», a short wait). Everyone starts with 3, the quiver holds 6. A streak of 3 / 5 / 8 / 12
+  brings a gang cheer. My friend's turn plays LIVE above my quiz (his face, their feather moving, every «+1»).
+- **My turn: his face fills my phone and I rub his head with my finger.** «¡Te toca!» lands while the camera moves in
+  on his sleeping face (2.2 s; the friends guess «¿Se despierta?»), then «¡YA!» (the video's «START!») and a 6-s clock
+  (9 s on my guided first turn), red at 3 with tick-tock. The golden feather follows my finger; each sweep across his
+  head and back (≥ 36 px each way, on his head) = one tickle: +1 point (+2 in the last 30 s), one feather spent, a
+  squish, sparks, «+1» by the feather, the woosh + pop + his sleepy giggle, a vibration, my score ticks in the board
+  list. A scribble (tickles < 0.55 s apart) = «¡Despacio!» + a creak + danger ×2. Out of feathers = the turn ends
+  safely («¡A salvo! +N · ¡Usaste todas tus plumas!», on screen ~1.8 s before the quiz comes back). «✋ ¡Me retiro!» any
+  time. A turn with no feathers at all ends at once («¡Sin plumas! Responde para ganar más»). A laptop kid rubs by just
+  moving the mouse over him (no button to hold). The finger may already rest on him during «¡Te toca!».
+- **The guided first turn** (9 s): a hand rubs on his head (placed by code on every screen shape), the name bar says
+  «Tu primer turno: ¡frota su cabeza con el dedo!»; after the 2nd tickle the hand moves to «¡Me retiro!» with «¿Otra más
+  o te retiras? Si se despierta, ¡pierdes todo!»; it ends after 3 tickles («¡Así se juega!»: a later seat that comes with
+  6 feathers gets no risk-free edge) and never wakes him.
+- **Everyone watches it live**: the turn kid's feather position is relayed (~14 a second, volatile) to the board's
+  phones and the projector; the projector shows each board's close-up during its turn. The friends' «¿Se despierta?»
+  sits over the bottom of the stage (the quiz tiles below never move under a finger).
+- **Every screen shape**: tall phones fill the height with his face (92 %, anchored at the bottom); wide views (a phone
+  sideways, a laptop, a projector tile) fit his whole face (the ghutra to the beard) above the turn's bottom row, the
+  blurred palace at the sides, «¡Me retiro!» a side button.
+- **The danger stays hidden** (6-10 per kid of the board a night; a tickle +1, a scribble +2; the cues: louder snore →
+  he stirs (the close-up changes) → «¡Casi se despierta!»): whoever is tickling when he wakes loses ALL their points.
+  Guided first turns never wake him.
+
+## v2 · the turn side by side with the video (his rule «Never call it done unless it FEELS like Mario Party»)
+Frames of both at 4 fps: `scripts/record-dormilon-turn.js` films a kid's ordinary turn on a 390×844 phone (a real touch
+finger through CDP, one tickle ≈ 0.8 s); the sheet `.claude/handoff/dormilon-shots/v2-side-by-side.jpg` (six matched
+moments + our whole turn). Where each one wins:
+| Moment | The video | Ours (v2) | |
+|---|---|---|---|
+| Turn starts | camera on Wiggler's face, «START!» | camera moves in on his face with «¡Te toca!», then «¡YA!» | even |
+| The action | press A: a glove pats its head | MY finger rubs his head; the feather follows it | **we win** (a physical task on the screen) |
+| A pat | glove pat, «+1», score ticks | squish + sparks + «+1» by the feather, giggle, vibration, score ticks | **we win** |
+| The clock | 5 s pill, red at 3 | 6 s big count, red at 3 + tick-tock | even |
+| Suspense | hidden; it fidgets | hidden; snore louder, he stirs, the chip and «¡Me retiro!» warm up, heartbeat | **we win** |
+| Who's ahead | 4 faces + scores, arrow on the turn | 4 seats + scores + feathers, arrow on me | even |
+| Waiting | watch | the quiz earns my feathers + the friend's turn live above it + «¿Se despierta?» | **we win** |
+| Pace | ~1 pat/s, ~5 pats a turn | ~1 tickle a second (one back-and-forth), 5 in the filmed turn, 6 at most | even |
+| Any screen | one TV | phone tall or sideways, laptop, projector: his face always in view | even |
+Nothing left in «we lose». Found and fixed on the way: the first film had 2.3 s of bedroom + text before the close-up
+and the danger chip under the name bar (now the close-up opens on «¡Te toca!» and «¡YA!» says the rest); the fresh-eyes
+review found three more: a natural rub got «¡Despacio!» almost every time (each one-way sweep counted: now a stroke is a
+real back-and-forth), sideways phones and laptops showed only the ghutra (now his whole face, «¡Me retiro!» at the
+side), and «¡A salvo! +N» flashed for 0.7 s (now ~1.8 s before the quiz comes back).
 
 ## The clip (what we copy)
 A sleeping Wiggler, close-up on its face, «Z»s floating. 4 players take turns of 5 s (a 5→0 countdown). On your turn
@@ -59,12 +114,19 @@ patting when it wakes LOSES ALL their points: it turns red and angry, rays, «FI
 ## Timings (core/dormilon.js R)
 INTRO 2.6 s · PRE 2.6 s · TURN 11 s (first 14 s) · after an answer the next question 0.65 s later · POST 1.6 s ·
 WAKE 3.6 s · NIGHT 2.4 s · DROP 3 s · FINAL 2.4 s · last 30 s ×2.
+**v2**: PRE 2.2 s · TURN 6 s (first 9 s) · feathers start 3, max 6 · the next quiz question 0.6 s after a right
+answer, 1.4 s after a wrong one, replaced after 25 s unanswered · a tickle closer than 0.25 s to the last = noise,
+closer than 0.55 s = a scribble · POST 1.5 s · limit 6-10 per kid of the board.
 
 ## Files
 `core/dormilon.js` (rules, no sockets) · server.js «NO DESPIERTES A DRALINGO» block (`dm*`) · `public/host-dormilon.html`
 + `js/host-dormilon.js` · `js/player-dormilon.js` + `js/dormilon-stage.js` (the bedroom, shared by phone and
 projector) · `css/dormilon.css` · `public/assets/dormilon/` (Higgsfield art 2026-10-22, 0 credits; sounds) · tests
 `scripts/test-dormilon.js`, `scripts/test-dormilon-live.js`, bot handler `scripts/playtest/dormilon.js`.
+v2 adds: `closeup-sleep|stir|awake.webp` (his face on the pillow, aligned crops of the same Higgsfield originals,
+0 credits), `giggle-h1..3.mp3` (his sleepy giggle, Higgsfield Mirelo through Supercomputer, 3 credits for 6 takes, one
+kept) and the 4-fps turn film `scripts/record-dormilon-turn.js` (the real-browser check `scripts/check-dormilon-screens.js`
+now rubs on its phones' turns and answers their quiz).
 
 ## As built · 2026-10-22 (branch `dormilon`, not deployed)
 - **Wording**: «cosquilla» (a tickle with the golden feather), not «caricia»: the review read «caricias» on a sleeping,
@@ -128,3 +190,36 @@ Evidence: `.claude/handoff/dormilon-shots/run4/` (+ run1-3), `scripts/test-dormi
 `scripts/test-dormilon-live.js` (38 checks), `scripts/playtest/dormilon.js`, the fresh-eyes review 2026-10-22 (11/14
 before its fixes: the sideways ending, the guided-turn time bomb, «+N» strokes vs points, the «0» card, the ending's
 suspense, the paused clock, the guess refusal, stale wake-up visuals, the late card, the lobby board count).
+
+## Scorecard · v2 «Gana plumas, luego frota con el dedo» · 2026-10-22 · branch `dormilon-v2`
+```
+Hard gates: bots PASS (20 kids · 60 s: 54 turns, 111 tickles, 285 quiz answers, 0 frozen, 0 errors; 30 kids · 150 s:
+            236 turns, 339 tickles, 8 wake-ups, 1074 answers, 0 frozen, 0 errors) · teacher controls ✓ (Pausa, +30 s,
+            −30 s, Saltar, Terminar, Sonido; a dropped turn kid ends the turn after 3 s) · saga only ✓ · Spanish /
+            pinyin without tones / level words from the class pack ✓ (test-wording) · kid-safe ✓ (a feather tickles
+            his head; nobody touches anybody)
+1 Real place ........ 2/2  the palace bedroom; on my turn the camera is on his face on the pillow, the bed is where
+                           points are won and lost
+2 The gang .......... 2/2  full-body cast tiptoeing before each turn, the gang whispers (Aileen in voseo) and cheers quiz
+                           streaks, Dralingo's sleepy giggle on every tickle and his lines when woken
+3 Every tap ......... 2/2  «Así se juega» in 3 pictures, the guided first turn (a hand rubs on his head, then points at
+                           «¡Me retiro!»: «¿Otra más o te retiras?»), my FINGER is the action (or the mouse on a laptop),
+                           the feather follows it, every quiz tap answers with a flying feather
+4 Feedback .......... 2/2  every tickle: squish, sparks, «+1» by the feather, woosh + pop + giggle, a vibration, my score
+                           ticks; a scribble wobbles «¡Despacio!» with a creak; the wake-up (whistle + gong, he bolts up)
+5 Finale ............ 2/2  «¡Te toca!» → «¡YA!» → a 6-s count red at 3 with tick-tock, cues rising, «¡Luna llena!» ×2,
+                           «¡FINAL!», bonus stars → the drum → the winner by the bed → my card; projector podium
+6 Fair, no stall .... 2/2  feathers only from right answers, points only from real tickles with a feather; guided turns
+                           take 3 tickles and never wake him (no seat edge); drops end the turn after 3 s; late joiners
+7 Product feel ...... 2/2  Higgsfield art (his face on the pillow aligned across sleep / stir / awake) and sounds, every
+                           screen shape checked in a real browser (his face in view sideways and on laptops), the turn
+                           filmed at 4 fps beside the video's with nothing left in «we lose»
+Total 14/14 → ships (≥ 12, no 0). For his ears: the giggle (a soft child's giggle cut from one Higgsfield take).
+```
+Evidence: `.claude/handoff/dormilon-shots/v2-side-by-side.jpg` + `turn-4fps/` (the film), `v2run2/` (a whole game in
+headless Chrome at 390×844, 360×640, 844×390, 1366×657 + projector 1600×900 / 1366×657: 26/26 checks, 75 shots),
+`scripts/test-dormilon.js` (99 checks + class simulation), `scripts/test-dormilon-live.js` (44 checks), the bots above,
+the fresh-eyes review 2026-10-22 (10/14 before its fixes: the rub count, wide close-ups, guided-turn seat edge and
+coaching, the short «¡A salvo!», the jumping guess box, the mouse, v1 wording, a re-sync in «¡Te toca!», the band) and
+its verdict pass (all 10 fixed; one new: the open «¿Se despierta?» stayed over a quick wake-up, fixed → 14/14);
+`v2run3/` = the whole game again after the last fix (26/26).

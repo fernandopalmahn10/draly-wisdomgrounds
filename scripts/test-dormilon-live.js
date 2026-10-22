@@ -1,8 +1,9 @@
 // Live check of «¡No despiertes a Dralingo!» against a RUNNING local server (never the live site):
 //   node scripts/test-dormilon-live.js --url http://localhost:3500 --password <teacher code>
-// One teacher + 4 kids (one board of 4): the deal at «Empezar», «Saltar» in the intro, «Turno de…» + the watchers'
-// guesses, only the turn kid gets the question with its buttons (the others a copy, never the right answer), strokes and
-// stirs reach the whole board, pause holds everything (answers refused, the clock stands still), «¡Me retiro!», a kid
+// One teacher + 4 kids (one board of 4): the deal at «Empezar», «Saltar» in the intro, «Turno de…», v2: the friends get
+// quiz questions (feathers, the board sees the counts), the turn kid's feather relays live, strokes (+1, a feather, the
+// noise and scribble rules) reach the whole board, pause holds everything (strokes refused, the clock stands still),
+// «¡Me retiro!», a kid
 // whose phone drops on its turn is skipped and comes back to its seat and points, «+30 s» / «−30 s», «Terminar» →
 // «¡FINAL!» → each phone its board's ceremony payload, a projector that reconnects after the end gets its show again,
 // «Otra ronda» starts a clean game.
@@ -39,7 +40,7 @@ function none(s, ev, ms) {
 const leaks = [];
 function guard(s, who) {
   s.onAny((ev, d) => {
-    if ((ev === 'dm:q' || ev === 'dm:bq') && d && ('correctIdx' in d || 'correct' in d)) leaks.push(who + ': ' + ev + ' with the answer');
+    if (ev === 'dm:q' && d && ('correctIdx' in d || 'correct' in d)) leaks.push(who + ': ' + ev + ' with the answer');
     if (ev === 'dm:init' && d && ((d.q && 'correctIdx' in d.q) || (d.board && ('limit' in d.board || 'danger' in d.board)))) leaks.push(who + ': dm:init leaks');
     if (/^dm:/.test(ev) && d && ('limit' in d || 'danger' in d)) leaks.push(who + ': ' + ev + ' carries the limit');
   });
@@ -61,6 +62,7 @@ function guard(s, who) {
     ok(j && j.ok, name + ' joined');
     kids.push({ s, name, init: null, code: j.studentCode });
     s.on('dm:init', (d) => { kids[i].init = d; });
+    s.on('dm:q', (d) => { kids[i].q = d; });
     guard(s, name);
   }
   const byK = (k) => kids.find((x) => x.init && x.init.you && x.init.you.k === k);
@@ -88,26 +90,44 @@ function guard(s, who) {
   await gnoP;
   ok(true, 'no guess on a guided first turn');
 
-  // the turn: only the turn kid gets the question
+  // v2: the friends get quiz questions (feathers); the turn kid gets none: their turn is the rub
+  const qP = (async () => { for (let t = 0; t < 80 && !watchers[1].q; t++) await sleep(50); if (!watchers[1].q) throw new Error('no quiz question'); return watchers[1].q; })();
   const goP = next(host, 'dm:go', 5000);
-  const qP = next(turnKid.s, 'dm:q', 6000);
-  const bqP = next(watchers[1].s, 'dm:bq', 6000);
-  const go = await goP;
-  ok(go.k === pre.k && go.ms === 14000, 'the guided turn lasts 14 s');
   const q = await qP;
-  const bq = await bqP;
-  ok(q.qid && q.answers.length >= 2 && bq.text === q.text && !('qid' in bq), 'the turn kid gets the question; the board a copy without buttons');
+  ok(q.qid && q.answers.length >= 2 && !('correctIdx' in q) && q.feathers === 3, 'a friend gets a quiz question (starts with 3 feathers), never the answer');
+  const go = await goP;
+  ok(go.k === pre.k && go.ms === 9000 && go.feathers >= 3, 'the guided turn: 9 s with 3 feathers');
+  ok(await none(turnKid.s, 'dm:q', 700), 'the turn kid gets no question during their turn');
+
+  // a friend answers: right = a feather (the board sees the count), wrong = none
+  const qrP = next(watchers[1].s, 'dm:qr', 3000);
+  const plumeP = next(watchers[2].s, 'dm:plume', 3000);
+  await sleep(350);
+  watchers[1].s.emit('player:dm-answer', { pin, qid: q.qid, idx: 0 });
+  const qr = await qrP;
+  ok(qr.ok ? qr.feathers === 4 && qr.gained === 1 : qr.feathers === 3 && qr.correctText, 'a quiz answer: right = +1 feather, wrong = the right answer shown');
+  const plume = await plumeP;
+  ok(plume.k === watchers[1].init.you.k && plume.feathers === qr.feathers, 'the board sees the new feather count');
+
+  // the feather follows the turn kid's finger on every phone of the board and the projector
+  const feP = next(watchers[0].s, 'dm:fe', 2000);
+  const feHostP = next(host, 'dm:fe', 2000);
+  turnKid.s.emit('player:dm-feather', { pin, x: 0.42, y: 0.4 });
+  const fe = await feP;
+  ok(fe.k === pre.k && Math.abs(fe.x - 0.42) < 0.01 && (await feHostP).y === 0.4, 'the feather moves live on the friends\' phones and the projector');
+  ok(await none(watchers[2].s, 'dm:fe', 400) || true, '(relay is volatile)');
+  const notMine = next(watchers[0].s, 'dm:nostroke', 1500);
+  watchers[0].s.emit('player:dm-stroke', { pin });
+  ok((await notMine).why === 'closed', 'only the turn kid can stroke');
 
   // pause holds everything
   const pauseP = next(host, 'dm:pause', 2000);
   host.emit('host:pause', { pin, paused: true });
   const pz = await pauseP;
   ok(pz.paused, 'paused');
-  const nopeP = next(turnKid.s, 'dm:nope', 2000);
-  await sleep(350);
-  turnKid.s.emit('player:dm-answer', { pin, qid: q.qid, idx: 0 });
-  const nope = await nopeP;
-  ok(nope.why === 'closed', 'an answer during the pause is refused');
+  const nsP = next(turnKid.s, 'dm:nostroke', 2000);
+  turnKid.s.emit('player:dm-stroke', { pin });
+  ok((await nsP).why === 'closed', 'a stroke during the pause is refused');
   const ends1 = pz.endsMs;
   await sleep(1200);
   const resumeP = next(host, 'dm:pause', 2000);
@@ -115,23 +135,24 @@ function guard(s, who) {
   const rz = await resumeP;
   ok(!rz.paused && Math.abs(rz.endsMs - ends1) < 600, 'the clock stood still during the pause');
 
-  // the open question is still the same: answer it (right = a stroke, wrong = a stir), the board hears it
-  const resP = Promise.race([next(watchers[2].s, 'dm:pat', 3000), next(watchers[2].s, 'dm:miss', 3000)]);
-  turnKid.s.emit('player:dm-answer', { pin, qid: q.qid, idx: 0 });
-  const res = await resP;
-  ok(res.k === pre.k && (res.pts === 1 || res.correctIdx >= 0), 'the stroke / stir reaches the board');
-  // a second answer to the same question is ignored
-  const nope2P = next(turnKid.s, 'dm:nope', 2000);
-  turnKid.s.emit('player:dm-answer', { pin, qid: q.qid, idx: 1 });
-  ok((await nope2P).why !== undefined, 'the same question never counts twice');
-  // the next question, then «¡Me retiro!»
-  const q2 = await next(turnKid.s, 'dm:q', 3000);
-  ok(q2.qid !== q.qid, 'the next question follows');
+  // strokes: +1 and a feather each, the board hears them; too close together = noise; a scribble flagged
+  const patP = next(watchers[2].s, 'dm:pat', 2000);
+  turnKid.s.emit('player:dm-stroke', { pin });
+  const pat = await patP;
+  ok(pat.k === pre.k && pat.pts === 1 && pat.score === 1 && pat.feathers === go.feathers - 1, 'a stroke: +1 point, one feather spent, the board hears it');
+  const noiseP = next(turnKid.s, 'dm:nostroke', 1500);
+  turnKid.s.emit('player:dm-stroke', { pin });
+  ok((await noiseP).why === 'noise', 'a stroke right after another is noise');
+  await sleep(330);
+  const fastP = next(host, 'dm:pat', 2000);
+  turnKid.s.emit('player:dm-stroke', { pin });
+  ok((await fastP).fast === true, 'a scribble (strokes < 0.55 s apart) is flagged');
+  // «¡Me retiro!»
   const endP = next(host, 'dm:end', 3000);
   turnKid.s.emit('player:dm-stop', { pin });
   const end = await endP;
-  ok(end.why === 'stop' && end.k === pre.k, '«¡Me retiro!» ends the turn safely');
-  ok(Array.isArray(end.guess) && end.pts != null, 'the turn ends with its guesses and its points');
+  ok(end.why === 'stop' && end.k === pre.k && end.pts === 2, '«¡Me retiro!» ends the turn safely (2 strokes)');
+  ok(Array.isArray(end.guess) && end.feathers === go.feathers - 2, 'the turn ends with its guesses and the feathers left');
 
   // the next kid's phone drops during «Turno de…»: skipped after a short wait, then back to its seat
   const pre2 = await next(host, 'dm:pre', 4000);

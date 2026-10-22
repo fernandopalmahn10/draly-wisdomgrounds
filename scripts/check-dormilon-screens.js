@@ -44,21 +44,32 @@ let browser = null;
 function bot(pin, name) {
   const s = io(URL, { transports: ['websocket'], forceNew: true });
   sockets.push(s);
-  let me = null, pats = 0, stopAt = 1 + Math.floor(Math.random() * 4);
+  let me = null, rubT = null, n = 0;
   s.on('dm:init', (d) => { if (d.you) me = d.you.k; });
   s.on('dm:pre', (d) => {
-    if (d.k === me) { pats = 0; stopAt = 1 + Math.floor(Math.random() * 4); return; }
-    if (Math.random() < 0.8) setTimeout(() => s.emit('player:dm-guess', { pin, g: Math.random() < 0.4 ? 'wake' : 'sleep' }), 300 + Math.random() * 1500);
+    if (d.k === me || d.guided) return;
+    if (Math.random() < 0.8) setTimeout(() => s.emit('player:dm-guess', { pin, g: Math.random() < 0.4 ? 'wake' : 'sleep' }), 300 + Math.random() * 1200);
   });
-  s.on('dm:q', (q) => {
-    setTimeout(() => {
-      if (pats >= stopAt && Math.random() < 0.7) { s.emit('player:dm-stop', { pin }); return; }
-      const idx = Math.random() < 0.55 ? Math.floor(Math.random() * q.answers.length) : 0;
-      s.emit('player:dm-answer', { pin, qid: q.qid, idx });
-    }, 900 + Math.random() * 1800);
+  // the quiz: answer like a kid (right about half the time: the bot doesn't know the answer, it guesses with a hint)
+  s.on('dm:q', (q) => setTimeout(() => s.emit('player:dm-answer', { pin, qid: q.qid, idx: Math.random() < 0.5 ? 0 : Math.floor(Math.random() * q.answers.length) }), 1100 + Math.random() * 1600));
+  // my turn: rub (a stroke every 0.5-0.9 s, the feather moving), stop after 2-4 sometimes
+  s.on('dm:go', (d) => {
+    if (d.k !== me) return;
+    n = 0;
+    const stopAt = 2 + Math.floor(Math.random() * 4);
+    const rub = () => {
+      if (n >= stopAt && Math.random() < 0.6) { s.emit('player:dm-stop', { pin }); return; }
+      s.emit('player:dm-feather', { pin, x: 0.34 + Math.random() * 0.14, y: 0.36 + Math.random() * 0.08 });
+      s.emit('player:dm-stroke', { pin });
+      n++;
+      rubT = setTimeout(rub, 500 + Math.random() * 400);
+    };
+    rubT = setTimeout(rub, 600);
   });
-  s.on('dm:pat', (d) => { if (d.k === me) pats++; });
-  s.on('dm:bq', () => { if (Math.random() < 0.25) s.emit('player:dm-react', { pin, e: ['shh', 'wow', 'lol', 'clap'][Math.floor(Math.random() * 4)] }); });
+  const stopRub = (d) => { if (d.k === me && rubT) { clearTimeout(rubT); rubT = null; } };
+  s.on('dm:end', stopRub);
+  s.on('dm:wake', stopRub);
+  s.on('dm:pat', (d) => { if (d.k !== me && Math.random() < 0.15) s.emit('player:dm-react', { pin, e: ['shh', 'wow', 'lol', 'clap'][Math.floor(Math.random() * 4)] }); });
   return new Promise((res) => s.emit('player:join', { pin, name, avatar: '' }, res));
 }
 
@@ -80,10 +91,11 @@ const LOOK = () => {
   const tiles = [...document.querySelectorAll('#dm-tiles .dm-tile')].map((b) => b.getBoundingClientRect());
   const inside = tiles.every((t) => t.top >= 0 && t.bottom <= innerHeight + 1 && t.left >= 0 && t.right <= innerWidth + 1 && t.height >= 44);
   const stop = document.getElementById('dm-stop').getBoundingClientRect();
-  const coach = document.getElementById('dm-coach');
-  const cr = coach && !coach.classList.contains('hidden') ? coach.getBoundingClientRect() : null;
+  const cnt = document.getElementById('dm-count').getBoundingClientRect();
+  const touch = document.getElementById('dm-touch').getBoundingClientRect();
   const wide = document.documentElement.scrollWidth <= innerWidth + 1;
-  return { vis, stage: r ? [Math.round(r.width), Math.round(r.height)] : null, tiles: tiles.length, inside, stopIn: stop.bottom <= innerHeight + 1 || stop.height === 0, coachIn: !cr || (cr.top >= 0 && cr.bottom <= innerHeight + 1), wide };
+  const turnIn = stop.height === 0 || (stop.bottom <= innerHeight + 1 && stop.top >= 0 && cnt.top >= 0 && stop.height >= 44);
+  return { vis, stage: r ? [Math.round(r.width), Math.round(r.height)] : null, tiles: tiles.length, inside, stopIn: turnIn, coachIn: true, touch: Math.round(touch.width) + 'x' + Math.round(touch.height), wide };
 };
 
 async function finish(code) {
@@ -148,10 +160,25 @@ async function finish(code) {
   ok(ll.vis.includes('screen-dormilon') && ll.stage && ll.stage[1] > 100, 'the late joiner sees the game: ' + JSON.stringify(ll));
   await shot(late, 'k03-late-joiner-390x844');
 
-  // play: the browser phones answer like kids; photograph every moment as it happens
+  // play: the browser phones answer the quiz and rub his face on their turn; photograph every moment as it happens
   const t0 = Date.now();
-  let hostWake = false, hostFrenzy = false, hostNight = false, hostMid = false;
+  let hostWake = false, hostFrenzy = false, hostNight = false, hostMid = false, hostCu = false;
   const allPhones = phones.concat([{ name: 'Eli', page: late, tag: 'eli-390x844', seen: {} }]);
+  const REC = path.join(OUT, 'turn-frames');
+  fs.mkdirSync(REC, { recursive: true });
+  // Ana's first ordinary turn at 4 fps (a frame every 250 ms while she rubs), for the side-by-side with the original
+  async function recordTurn(p) {
+    const go = p.page.evaluate(() => window.DormilonPhone.rub(6, 700));
+    for (let i = 0; i < 22; i++) {
+      const t = Date.now();
+      try { await p.page.screenshot({ path: path.join(REC, 'f' + String(i).padStart(2, '0') + '.png'), timeout: 8000 }); } catch (_) { /* next */ }
+      const f2 = await frame(p.page);
+      if (!f2 || !f2.myturn) break;
+      await sleep(Math.max(0, 250 - (Date.now() - t)));
+    }
+    await go.catch(() => {});
+    shots.push('turn-frames');
+  }
   while (Date.now() - t0 < 200000) {
     const hf = await host.evaluate(() => window.DormHost && window.DormHost.frame()).catch(() => null);
     if (hf && hf.phase === 'final') break;
@@ -159,36 +186,44 @@ async function finish(code) {
       const f = await frame(p.page);
       if (!f || !f.on) continue;
       const S = p.seen;
-      // my turn: answer like a kid (pick a tile in ~1.5 s), stop after 2-3 strokes sometimes
-      if (f.turn && f.turn.mine && f.turn.phase === 'turn' && f.q) {
-        if (f.turn.guided && !S.guided) { S.guided = 1; await shot(p.page, 'k10-guided-turn-' + p.tag, true); const L = await p.page.evaluate(LOOK); ok(L.tiles >= 2 && L.inside && L.stopIn && L.coachIn && L.wide, p.name + ' guided turn: the tiles and «¡Me retiro!» fit: ' + JSON.stringify(L)); }
-        else if (!f.turn.guided && !S.turn) { S.turn = 1; await shot(p.page, 'k11-my-turn-' + p.tag, true); const L = await p.page.evaluate(LOOK); ok(L.tiles >= 2 && L.inside && L.stopIn && L.wide, p.name + ' my turn fits: ' + JSON.stringify(L)); }
-        const qk = f.q;
-        if (S.lastQ !== qk) {
-          S.lastQ = qk;
-          await sleep(500);
-          if (Math.random() < 0.15 && S.turn) await p.page.evaluate(() => window.DormilonPhone.stop());
-          else await p.page.evaluate((i) => window.DormilonPhone.answer(i), Math.floor(Math.random() * 3));
+      // MY TURN: his face fills the phone; rub with the finger
+      if (f.myturn && f.turn && f.turn.mine && f.turn.phase === 'turn') {
+        if (f.turn.guided && !S.guided) { S.guided = 1; await sleep(250); await shot(p.page, 'k10-guided-turn-' + p.tag, true); const L = await p.page.evaluate(LOOK); ok(L.stopIn && L.wide, p.name + ' guided turn: the count and «¡Me retiro!» fit: ' + JSON.stringify(L)); }
+        if (!f.turn.guided && !S.turn) {
+          S.turn = 1;
+          if (p === phones[0] && !S.rec) { S.rec = 1; await recordTurn(p); continue; }
+          await shot(p.page, 'k11-my-turn-' + p.tag, true);
+          const L = await p.page.evaluate(LOOK); ok(L.stopIn && L.wide, p.name + ' my turn fits: ' + JSON.stringify(L));
+        }
+        if (!S.rubbing) { S.rubbing = 1; p.page.evaluate(() => window.DormilonPhone.rub(4, 760)).catch(() => {}).then(() => { S.rubbing = 0; }); if (!S.rubShot) { S.rubShot = 1; await sleep(1600); await shot(p.page, 'k12-rubbing-' + p.tag); } }
+        continue;
+      }
+      // the quiz (not my turn): answer; photograph a friend's turn live above the quiz
+      if (f.q && !f.myturn) {
+        if (f.turn && !f.turn.mine && f.turn.phase === 'turn' && !S.friend) { S.friend = 1; await sleep(400); await shot(p.page, 'k20-friend-turn-live-' + p.tag, true); const L = await p.page.evaluate(LOOK); ok(L.tiles >= 2 && L.inside && L.wide, p.name + ' quiz tiles fit under the live turn: ' + JSON.stringify(L)); }
+        if (S.lastQ !== f.q) {
+          S.lastQ = f.q;
+          await sleep(300);
+          await p.page.evaluate((i) => window.DormilonPhone.answer(i), Math.random() < 0.5 ? 0 : Math.floor(Math.random() * 4));
+          if (!S.qshot) { S.qshot = 1; await sleep(250); await shot(p.page, 'k21-quiz-feather-' + p.tag); }
         }
       }
-      if (f.turn && !f.turn.mine && f.panel === 'dm-watch') {
-        if (f.turn.phase === 'pre' && !S.guess) { S.guess = 1; await shot(p.page, 'k20-watch-guess-' + p.tag, true); }
-        if (f.turn.phase === 'turn' && !S.watchQ) {
-          const hasQ = await p.page.evaluate(() => !document.getElementById('dm-bq').classList.contains('hidden'));
-          if (hasQ) { S.watchQ = 1; await p.page.evaluate(() => { const b = document.querySelector('#dm-bq-opts .dm-bqo'); if (b) b.click(); document.querySelector('#dm-reacts button').click(); }); await sleep(300); await shot(p.page, 'k21-watch-question-' + p.tag, true); }
-        }
-      }
+      if (f.turn && !f.turn.mine && f.turn.phase === 'pre' && !f.turn.guided && !S.guess) { S.guess = 1; await shot(p.page, 'k22-guess-' + p.tag, true); }
       if (f.cue >= 2 && f.cue < 4 && !S.danger) { S.danger = 1; await shot(p.page, 'k30-danger-cue' + f.cue + '-' + p.tag, true); }
       if (f.cue >= 4 && !S.wake) {
         S.wake = 1;
         await shot(p.page, 'k31-wake-' + p.tag, true);
         if (!hostWake) { hostWake = true; await shot(host, 'p06-projector-wake', true); }
       }
-      if (f.night >= 2 && f.panel === 'dm-msg' && !S.night) { S.night = 1; await shot(p.page, 'k32-new-night-' + p.tag); if (!hostNight) { hostNight = true; await shot(host, 'p07-projector-new-night'); } }
+      if (f.night >= 2 && !S.night) { S.night = 1; await shot(p.page, 'k32-new-night-' + p.tag); if (!hostNight) { hostNight = true; await shot(host, 'p07-projector-new-night'); } }
       if (f.frenzy && !S.frenzy) { S.frenzy = 1; await shot(p.page, 'k40-last30-' + p.tag, true); if (!hostFrenzy) { hostFrenzy = true; await shot(host, 'p08-projector-last30', true); } }
     }
     if (!hostMid && Date.now() - t0 > 25000) { hostMid = true; await shot(host, 'p05-projector-mid-game', true); }
-    await sleep(250);
+    if (!hostCu && hf && Date.now() - t0 > 12000) {
+      const cu = await host.evaluate(() => document.querySelectorAll('.dmh-board .dms.cu').length).catch(() => 0);
+      if (cu) { hostCu = true; await shot(host, 'p05b-projector-closeup', true); }
+    }
+    await sleep(200);
   }
   // «¡FINAL!» and the ceremony
   await sleep(600);

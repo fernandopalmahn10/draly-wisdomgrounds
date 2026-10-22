@@ -8011,12 +8011,14 @@ function mnFinish(pin, g) {
 // === 😴 ¡NO DESPIERTES A DRALINGO! (gameType 'dormilon') — Super Mario Party «Don't Wake Wiggler», boards of 4 ===
 // Rules in core/dormilon.js (spec docs/specs/no-despiertes-a-dralingo.md). The boards are dealt when the countdown
 // starts (each phone runs in with its own board, dm:init); one 200 ms tick per room runs the clock: intro → play (each
-// board runs its own turns: «Turno de X» → the turn kid's quick questions → a stroke / a stir / «¡Me retiro!» / a wake-up
-// → the next kid) → the last 30 s ×2 → «¡FINAL!» → game-end (each phone its board's ceremony and card, the projector
-// every board's champion + the class podium). The turn kid gets the questions (dm:q, right answer kept here); the other
-// phones of its board and the projector get a copy without it (dm:bq) and every stroke / stir live. Each board is a
-// socket.io room of its own (the game id in its name, so «Otra ronda» never mixes boards). No full-room 'state' push on
-// answers; the class top 3 rides on dm:top to the projector.
+// board runs its own turns: «Turno de X» → the turn kid RUBS his head with a finger (player:dm-stroke = one completed
+// stroke; its finger's position travels as player:dm-feather and is relayed live to the board and the projector) →
+// «¡Me retiro!» / out of feathers / time / a wake-up → the next kid) → the last 30 s ×2 → «¡FINAL!» → game-end (each
+// phone its board's ceremony and card, the projector every board's champion + the class podium). v2 (his pick
+// 2026-10-22): every kid who is not playing answers quiz questions (dm:q to that kid only, the right answer kept here)
+// to earn feathers; the board and the projector see the feather counts (dm:plume). Each board is a socket.io room of
+// its own (the game id in its name, so «Otra ronda» never mixes boards). No full-room 'state' push on answers; the
+// class top 3 rides on dm:top to the projector.
 const DM_TICK_MS = 200;
 function dmEnsureId(g, p) { if (!p.dmK) p.dmK = (g.dmNextK = (g.dmNextK || 0) + 1); return p.dmK; }
 const dmRoom = (pin, m, bid) => `${pin}:dm:${m.id}:${bid}`;
@@ -8056,13 +8058,9 @@ function dmInitPayload(g, pid) {
   if (!r) return out;
   const b = Dorm.boardOf(m, r.b);
   out.board = b ? Dorm.boardView(m, b, online, clock) : null;
-  out.you = { k: r.k, b: r.b, score: r.score, pats: r.pats, first: !!r.first, guess: b && b.guesses[r.k] ? b.guesses[r.k] : null };
+  out.you = { k: r.k, b: r.b, score: r.score, pats: r.pats, feathers: r.feathers, first: !!r.first, guess: b && b.guesses[r.k] ? b.guesses[r.k] : null };
+  out.q = Dorm.openQ(m, r.k);                                       // my open quiz question again (same qid)
   const c = b && b.cur;
-  if (c && c.q) {
-    const q = Dorm.qPublic(c.q);
-    if (c.k === r.k) out.q = Object.assign(q, { ms: Math.max(0, c.until - clock) });    // my open question again (same qid)
-    else out.bq = { b: b.id, k: c.k, text: q.text, answers: q.answers, image: q.image };
-  }
   if (c) out.turnMs = Math.max(0, c.until - clock);
   return out;
 }
@@ -8075,13 +8073,21 @@ function dmEmit(pin, g, evs) {
   let scored = false;
   evs.forEach((e) => {
     try {
+      // the quiz: the question only to its kid; its result to that kid, the new feather count to the board + projector
       if (e.t === 'q') {
         const pid = dmPidOf(g, e.k);
-        const q = Dorm.qPublic(e.q);
-        if (pid) io.to(pid).emit('dm:q', Object.assign({ b: e.b, ms: e.ms }, q));
-        const copy = { b: e.b, k: e.k, text: q.text, answers: q.answers, image: q.image };
-        io.to(dmRoom(pin, m, e.b)).except(pid || '').emit('dm:bq', copy);
-        io.to(g.hostId).emit('dm:bq', copy);
+        if (pid) io.to(pid).emit('dm:q', Object.assign({ b: e.b, feathers: e.feathers }, Dorm.qPublic(e.q)));
+        return;
+      }
+      if (e.t === 'qx') { const pid = dmPidOf(g, e.k); if (pid) io.to(pid).emit('dm:qx', { b: e.b }); return; }
+      if (e.t === 'qr') {
+        const pid = dmPidOf(g, e.k);
+        const payload = Object.assign({ id: m.id }, e);
+        delete payload.t;
+        if (pid) io.to(pid).emit('dm:qr', payload);
+        const plume = { id: m.id, b: e.b, k: e.k, feathers: e.feathers, ok: e.ok };
+        io.to(dmRoom(pin, m, e.b)).except(pid || '').emit('dm:plume', plume);
+        io.to(g.hostId).emit('dm:plume', plume);
         return;
       }
       if (e.t === 'frenzy') { io.to(pin).emit('dm:frenzy', { id: m.id, endsMs: e.endsMs, off: !!e.off }); return; }
@@ -14288,6 +14294,40 @@ io.on('connection', (socket) => {
   });
   // ¡No despiertes a Dralingo!: the turn kid's answer (its qid; a stale or double tap is ignored and the phone hears why),
   // «¡Me retiro!», the watchers' «¿Se despierta?» guess and their reactions (🤫 😱 😂 👏).
+  // v2: one completed stroke of the turn kid's finger on his head (the phone counts a back-and-forth rub); the server
+  // judges gentle / scribble by the time since the last stroke, spends the feather, and may wake him
+  socket.on('player:dm-stroke', (data) => {
+    try {
+      const pin = data && data.pin;
+      const g = games[pin];
+      if (!g || g.gameType !== 'dormilon' || !g.dm || g.state !== 'active') return;
+      const p = g.players[socket.id];
+      if (!p || !p.dmK) return;
+      const res = Dorm.stroke(g.dm, p.dmK, Date.now());
+      if (!res.ok) { io.to(socket.id).emit('dm:nostroke', { why: res.why }); return; }
+      dmEmit(pin, g, res.ev);
+    } catch (e) { console.error('[player:dm-stroke]', e); }
+  });
+  // v2: the turn kid's feather (its finger) at x, y (0-1 of his face picture), ~12 a second: relayed live to the other
+  // phones of the board and the projector (volatile: a late one is just dropped)
+  socket.on('player:dm-feather', (data) => {
+    try {
+      const { pin, x, y } = data || {};
+      const g = games[pin];
+      if (!g || g.gameType !== 'dormilon' || !g.dm || g.state !== 'active') return;
+      const p = g.players[socket.id];
+      const r = p && Dorm.kid(g.dm, p.dmK);
+      const b = r && Dorm.boardOf(g.dm, r.b);
+      if (!b || b.phase !== 'turn' || !b.cur || b.cur.k !== r.k) return;
+      const now = Date.now();
+      if (now - (p.dmFeatherAt || 0) < 50) return;
+      p.dmFeatherAt = now;
+      const fx = Math.max(0, Math.min(1, Number(x) || 0)), fy = Math.max(0, Math.min(1, Number(y) || 0));
+      const ev = { b: b.id, k: r.k, x: Math.round(fx * 1000) / 1000, y: Math.round(fy * 1000) / 1000 };
+      socket.to(dmRoom(pin, g.dm, b.id)).volatile.emit('dm:fe', ev);
+      io.to(g.hostId).volatile.emit('dm:fe', ev);
+    } catch (e) { console.error('[player:dm-feather]', e); }
+  });
   socket.on('player:dm-answer', (data) => {
     try {
       const { pin, qid, idx } = data || {};
