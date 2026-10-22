@@ -12,8 +12,8 @@
   const HB = window.HalconBoard;
   const A = '/assets/dormilon/', H = '/assets/halcon/', K = '/assets/kingdoms/', PARTY = '/assets/party/';
   const SFX = {
-    stroke: A + 'stroke.mp3', pop: H + 'pop.mp3', creak: A + 'creak.mp3', wake: A + 'wake.mp3', aww: H + 'aww.mp3',
-    snore: A + 'snore.mp3', round: H + 'round.mp3', start: H + 'start.mp3', whoosh: K + 'whoosh.mp3', win: K + 'sting-win.mp3',
+    stroke: A + 'stroke.mp3', pop: H + 'pop.mp3', creak: A + 'creak.mp3', wake: A + 'wake-h1.mp3', aww: H + 'aww.mp3',
+    snore: A + 'snore-h1.mp3', round: H + 'round.mp3', start: H + 'start.mp3', whoosh: K + 'whoosh.mp3', win: K + 'sting-win.mp3',
     final: H + 'final.mp3', hurry: PARTY + 'hurry.mp3', tick: PARTY + 'tick.mp3', yes: H + 'yes.mp3',
   };
   const MUSIC = { lobby: K + 'music-lobby.mp3', night: A + 'music-night.mp3', final: K + 'music-final.mp3' };

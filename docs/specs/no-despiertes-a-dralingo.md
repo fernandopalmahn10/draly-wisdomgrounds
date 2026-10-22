@@ -85,10 +85,15 @@ projector) · `css/dormilon.css` · `public/assets/dormilon/` (Higgsfield art 20
   bolts up on stage) → my card: never a «0» («¡La próxima es tuya!», and «Tenías N puntos… ¡y lo despertaste! 😱» when
   that is what happened). A phone seated too late (joined during «¡FINAL!») gets «¡Se acabó la noche! Mira el
   proyector». «Saltar a las tarjetas» on the projector jumps every phone to its card.
-- **Sound**: Kenney «Mishief Stroll» (night loop), Kenney foley woosh + pluck (the tickle), RPG creaks (he stirs), a heavy
-  bell + orchestra stab (he wakes), the platform's pop / aww / lose / tick / hurry / sting. The snore is shaped from noise
-  with ffmpeg (no recorded snore on this PC): **his ears decide** (keep, or a recorded one: Profe Fer snoring, or a CC0
-  recording downloaded with his OK).
+- **Sound**: Kenney «Mishief Stroll» (night loop), Kenney foley woosh + pluck (the tickle), RPG creaks (he stirs), the
+  platform's pop / aww / lose / tick / hurry / sting. **Sounds pass 2026-10-22** (his rule «Higgsfield also makes you
+  audio»): the snores and the wake-up are Higgsfield sound effects (Mirelo, through Higgsfield Supercomputer; 9 credits
+  for 15 takes): `snore-h1.mp3` (a rattling snore + soft breathing, 4.0 s, one breath per replay), `snore-loud-h1.mp3`
+  (a puff + a big rattling snore, 2.5 s, the danger cues), `wake-h1.mp3` (a rising cartoon whistle «fwee-UP?!» into a
+  bright gong, 1.8 s, no voice). New names, so no phone or Cloudflare keeps the old noise snores. Originals and the
+  takes not used: `assets-library/higgsfield/2026-10-22/dormilon-sounds/` (its `web-alternates/` holds Higgsfield
+  creaks and a swish, weaker than the recorded Kenney ones in the game: his ears decide). Loudness matched to the
+  files they replaced (−21.9 / −17.7 / −15.7 LUFS).
 - **Every size**: phone 390×844 and 360×640, sideways 844×390, laptop 1366×657, projector 1600×900 and 1366×657 checked
   in a real browser (`scripts/check-dormilon-screens.js`, a whole game played, 22 checks + 64 shots each run). The
   platform's «🔊 Sonido» sits in the bedroom's corner during the game (never over the tiles or «¡Me retiro!»).
@@ -117,6 +122,8 @@ Hard gates: bots PASS (20 kids · 60 s and 30 kids · 150 s: all joined, 0 froze
                            is synthesized from noise until he hears it / we record one
 Total 13/14 → ships (≥ 12, no 0). To 14: a recorded snore he likes.
 ```
+Sounds pass 2026-10-22: the snore is now a real recorded-style snore made on Higgsfield (see «Sound»); area 7 goes to
+2/2 (14/14) once he has heard it and likes it.
 Evidence: `.claude/handoff/dormilon-shots/run4/` (+ run1-3), `scripts/test-dormilon.js` (107 checks),
 `scripts/test-dormilon-live.js` (38 checks), `scripts/playtest/dormilon.js`, the fresh-eyes review 2026-10-22 (11/14
 before its fixes: the sideways ending, the guided-turn time bomb, «+N» strokes vs points, the «0» card, the ending's

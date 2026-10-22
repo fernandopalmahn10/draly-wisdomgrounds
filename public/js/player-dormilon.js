@@ -135,12 +135,14 @@
   function runClock() { if (!clockT) clockT = setInterval(paintClock, 250); paintClock(); }
   function paintNight() { $('dm-night').textContent = 'Noche ' + night; }
 
-  // the snore: every few seconds while he sleeps, louder when he gets restless (the sound of the danger on MY phone)
+  // the snore: every few seconds while he sleeps, louder when he gets restless (the sound of the danger on MY phone).
+  // Real snores made on Higgsfield 2026-10-22 (-h1 = new names, so no phone or Cloudflare keeps the old noise ones):
+  // snore-h1 = one breath (a rattling snore + soft breathing, 4.0 s), snore-loud-h1 = a puff and a big snore (2.5 s)
   function snoreLoop() {
     stopSnore();
     const go = () => {
       if (!on || paused) { snoreT = setTimeout(go, 1500); return; }
-      if (cue < 4 && g && g.phase === 'play') sfx(A + (cue >= 1 ? 'snore-loud.mp3' : 'snore.mp3'), cue >= 2 ? 0.6 : cue >= 1 ? 0.45 : 0.32);
+      if (cue < 4 && g && g.phase === 'play') sfx(A + (cue >= 1 ? 'snore-loud-h1.mp3' : 'snore-h1.mp3'), cue >= 2 ? 0.6 : cue >= 1 ? 0.45 : 0.32);
       snoreT = setTimeout(go, cue >= 3 ? 2700 : cue >= 1 ? 3200 : 4200);
     };
     snoreT = setTimeout(go, 1200);
@@ -518,7 +520,7 @@
       duck(false);
       turn = null; myQ = null; bq = null;
       paintList();
-      sfx(A + 'wake.mp3', 0.9);
+      sfx(A + 'wake-h1.mp3', 0.9);
       const right = (d.guess || []).includes(g.you);
       if (d.k === g.you) {
         later(500, () => sfx(MO + 'lose.mp3', 0.7));
@@ -715,7 +717,7 @@
       } else {
         scene('¡Nadie ganó esta vez!', 'Dralingo se despertó demasiado 😅 ¡La próxima noche es tuya!', null, 'win');
         if (stg) { stg.wake(); stg.say('¡Se despertó!', 'wake'); }
-        sfx(A + 'wake.mp3', 0.8);
+        sfx(A + 'wake-h1.mp3', 0.8);
       }
     });
     t += 3400;
