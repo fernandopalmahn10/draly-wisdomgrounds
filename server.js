@@ -1865,7 +1865,7 @@ const _kidLevelUndo = new Map();   // token → { code, who, snap, expect, until
 const _sessionWho = (session) => (session && session.teacher ? 't:' + session.teacher.uid : 'super');
 function _levelChangeOf(rec) {
   const lb = rec && rec.levelBy;
-  if (!lb || !lb.to || LevelKeys.classLevel(rec) !== lb.to) return null;
+  if (!lb || lb.undo || !_levelBound(rec)) return null;
   return { at: Number(lb.at) || 0, seen: Number(lb.seen) || 0 };
 }
 // the class code a kid moves to: the same teacher's class of the new level (the teacher of the kid's class code now),
@@ -1900,8 +1900,12 @@ app.post('/api/admin/kid-level', (req, res) => {
   const info = Levels.info(level);
   if (from === level) return res.json({ ok: true, unchanged: true, level, levelName: info.name, teacherName: info.teacherName });
   const keepFrom = !!(from && LevelKeys.goLiveAt() && LevelKeys.recordOpenVia(rec, from) === 'grandfathered');
+  // (review) a level an earlier «Change level» opened and the kid never used closes again: a mis-move never stays open
+  const fa = from && rec.levelAccess ? rec.levelAccess[from] : null;
+  const dropFrom = !!(fa && fa.by === 'level' && !RutaProgress.hasAny(rec, from));
   const before = rec.classroomCode || null;
-  const out = Students.changeLevel(rec.code, { level, from, keepFrom, classroomCode: _kidLevelClass(rec, level), by: _sessionWho(session) });
+  const out = Students.changeLevel(rec.code, { level, from, keepFrom, dropFrom, toGen: LevelKeys.genOf(level),
+    classroomCode: _kidLevelClass(rec, level), by: _sessionWho(session) });
   if (!out) return res.status(500).json({ ok: false, error: 'Could not save the change. Try again.' });
   const token = require('crypto').randomBytes(12).toString('hex');
   const now = Date.now();
@@ -1920,7 +1924,8 @@ app.post('/api/admin/kid-level/undo', (req, res) => {
   const u = /^[a-f0-9]{24}$/.test(token) ? _kidLevelUndo.get(token) : null;
   if (!u || u.until < Date.now() || u.who !== _sessionWho(session)) return res.status(410).json({ ok: false, error: 'Too late to undo. Change the level again instead.' });
   _kidLevelUndo.delete(token);
-  if (!Students.undoLevel(u.code, u.snap, u.expect)) return res.status(409).json({ ok: false, error: 'Something else changed this kid since. Change the level again instead.' });
+  const back = (r) => { const l = LevelKeys.classLevel(r); return l ? { to: l, toGen: LevelKeys.genOf(l) } : {}; };
+  if (!Students.undoLevel(u.code, u.snap, u.expect, back, _sessionWho(session))) return res.status(409).json({ ok: false, error: 'Something else changed this kid since. Change the level again instead.' });
   const rec = Students.peek(u.code).rec;
   const lvl = LevelKeys.classLevel(rec);
   console.log('[kid-level] a level change was undone');
@@ -2815,23 +2820,32 @@ function _hwOwnsStudent(req, rec) {
   ).trim().toUpperCase();
   if (presented === String(rec.classroomCode).trim().toUpperCase()) return true;
   // 🆕 2026-10-22 «Change level» (/maestro): a class code a teacher moved THIS kid away from still holds them on the phone
-  // that saved it (the same proof as before the move; the login then hands that phone its new class code)
-  return !!(presented && rec.levelBy && Array.isArray(rec.levelBy.codes) && rec.levelBy.codes.includes(presented));
+  // that saved it (the same proof as before the move; the login then hands that phone its new class code), only while
+  // her change is still the account's level and class code (review: never a former class code for good)
+  return !!(presented && _levelBound(rec) && Array.isArray(rec.levelBy.codes) && rec.levelBy.codes.includes(presented));
+}
+// 🆕 2026-10-22 «Change level»: is the teacher's last change still the account's state (its level AND its class code)?
+// Only then do the levels and class codes it moved the kid away from still hold the kid, and its notice still shows.
+// A login that re-tags the kid, a level key that moves them, another change: it stops at once.
+function _levelBound(rec) {
+  const lb = rec && rec.levelBy;
+  if (!lb || typeof lb !== 'object' || !lb.to || LevelKeys.classLevel(rec) !== lb.to) return false;
+  const cc = rec.classroomCode ? String(rec.classroomCode).trim().toUpperCase() : null;
+  return (lb.cc == null ? null : String(lb.cc).trim().toUpperCase()) === cc;
 }
 // 🆕 2026-10-22 «Change level»: does a /homework login with this class code keep the level a teacher set? Yes while her
 // change is still the kid's level and the code is the kid's own class code or one she moved them away from (the code a
 // phone saved before the change); no for any other code (it re-tags the kid as always)
 function _levelKept(rec, accessCode) {
-  const lb = rec && rec.levelBy;
   const typed = String(accessCode || '').trim().toUpperCase();
-  if (!lb || !typed || !lb.to || LevelKeys.classLevel(rec) !== lb.to) return false;
-  return typed === String(rec.classroomCode || '').trim().toUpperCase() || (Array.isArray(lb.codes) && lb.codes.includes(typed));
+  if (!typed || !_levelBound(rec)) return false;
+  return typed === String(rec.classroomCode || '').trim().toUpperCase() || (Array.isArray(rec.levelBy.codes) && rec.levelBy.codes.includes(typed));
 }
 // the notice the kid's phone shows once after a teacher's change («Tu profe te cambió a New HSK 1 ✨»): only while that
 // change is still the kid's level and the phone hasn't shown it → { at, level, levelId, name, family } | null
 function _levelNoteOf(rec) {
   const lb = rec && rec.levelBy;
-  if (!lb || lb.seen || !lb.to || LevelKeys.classLevel(rec) !== lb.to) return null;
+  if (!lb || lb.seen || !_levelBound(rec)) return null;
   const i = Levels.info(lb.to);
   return { at: Number(lb.at) || 0, level: i.pack || i.id, levelId: i.id, name: i.name, family: i.family };
 }
@@ -2962,6 +2976,7 @@ app.post('/api/homework/enter', (req, res) => {
     const kept = _levelKept(rec, accessCode);
     const level = kept ? (LevelKeys.classLevel(rec) || Levels.DEFAULT) : Teachers.levelForAccessCode(accessCode);
     if (!kept) {
+      const was = [rec.level || null, rec.classroomCode || null].join('|');
       try { Students.setLevel(rec.code, level, prevLevel); }
       catch (e) { console.warn('[hw:enter] setLevel failed:', e.message); }
       // Tag with their teacher's classroom code. Guard so a failure here
@@ -2970,6 +2985,8 @@ app.post('/api/homework/enter', (req, res) => {
         try { Students.setClassroomCode(rec.code, accessCode); }
         catch (e) { console.warn('[hw:enter] setClassroomCode failed:', e.message); }
       }
+      // (2026-10-22, review) this login moved the kid: nothing a teacher's «Change level» left keeps working
+      if (rec.levelBy && [rec.level || null, rec.classroomCode || null].join('|') !== was) Students.clearLevelBy(rec.code);
     }
     const classMoved = !!(kept && rec.classroomCode && String(accessCode || '').trim().toUpperCase() !== rec.classroomCode);
     // Best-effort device / country / locale capture (client-supplied, since
@@ -6154,9 +6171,13 @@ function _kidState(k, p) {
 // level it came in with. It still holds the kid (never the key screen, never «¿Eres tú?») while that level's key
 // generation is the one it carries (nothing was closed since) and a teacher moved the kid away from that level
 // (rec.levelBy.from). The cookie is re-issued for the new level at the next answer (_kidFollow).
+// (review 2026-10-22: only while that change is still the account's state, _levelBound, and the NEW level's key generation
+// is still the one at the change: a «Cerrar en todos los aparatos» of either level ends a phone that hasn't followed yet.
+// Once followed, the phone is the new level's like any phone that typed it: «Abrir otro nivel» re-issues it the same way)
 function _kidLgMoved(k, rec) {
   const lb = rec && rec.levelBy;
-  if (!k || !lb || !Array.isArray(lb.from) || !lb.from.length) return false;
+  if (!k || !lb || !Array.isArray(lb.from) || !lb.from.length || !_levelBound(rec)) return false;
+  if (String(LevelKeys.genOf(lb.to)) !== String(Number(lb.toGen) || 1)) return false;
   const i = String(k.lg || '').lastIndexOf(':');
   const lvl = i > 0 ? Levels.normalize(k.lg.slice(0, i)) : null;
   return !!(lvl && lb.from.includes(lvl) && String(LevelKeys.genOf(lvl)) === k.lg.slice(i + 1));
@@ -6567,8 +6588,12 @@ function _entradaPinTag(socket, g, rec) {
 }
 // the level of a homework request: its class code's, else (la entrada) the logged-in kid's
 function _hwReqLevel(req, code) {
+  // (2026-10-22, review) a kid a teacher moved with «Change level» while keeping their class code: their own level,
+  // never the code's (moved to Old HSK 1 from a New HSK 1 class, the HSK 1 trainer opens; moved away, it closes)
+  const me = _studentOf(req);
+  if (me && _levelBound(me)) return LevelKeys.classLevel(me);
   if (Assignments.isAccessCodeValid(code)) return Teachers.levelForAccessCode(code);
-  const rec = _studentOf(req);
+  const rec = me;
   return rec ? LevelKeys.classLevel(rec) : Teachers.levelForAccessCode(code);
 }
 // the route state's 2026-10-18 extras: the class mode of El Simulacro Dorado (DORADO_SELF_SERVE off: no player links for

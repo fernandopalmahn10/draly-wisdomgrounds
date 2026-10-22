@@ -3718,7 +3718,9 @@
     if (rw && data.ruta) renderRuta(rw, data);
     if (_rosterByCode[data.code] && lvl) _rosterByCode[data.code].level = lvl;
     if (r.classroomCode !== undefined && _rosterByCode[data.code]) _rosterByCode[data.code].classroomCode = r.classroomCode;
-    try { fetchRoster(); } catch (_) { /* the roster catches up at its next poll */ }
+    // (if this fails, the roster catches up at its next poll; no block comment here: test-ruta-dorada reads this file
+    // with comments stripped, and a «data/*.json» line comment above would swallow the rest of it)
+    try { fetchRoster(); } catch (_) { void 0; }
   }
   function wireLevelBtn(data) {
     const b = $('m-detail-level-btn');

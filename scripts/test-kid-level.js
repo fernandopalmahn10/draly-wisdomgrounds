@@ -51,8 +51,8 @@ const SimLock = require('../core/sim-lock');
 
 // made-up class codes (random, distinct, never a real one), read back from here only
 const CLS = new Set();
-while (CLS.size < 6) CLS.add(String(2000 + crypto.randomInt(7999)));
-const [S_HSK, S_NEW, S_YCT, B_HSK, C_NEW, RENAMED] = [...CLS];
+while (CLS.size < 7) CLS.add(String(2000 + crypto.randomInt(7999)));
+const [S_HSK, S_NEW, S_YCT, B_HSK, C_NEW, RENAMED, S_NEW2] = [...CLS];
 const UID = { super: 'u' + rnd(6), bea: 'u' + rnd(6), caro: 'u' + rnd(6) };
 const NOW = Date.now(), DAY = 86400e3;
 const T0 = (o) => Object.assign({ codeGen: 0, email: null, country: 'MX', createdAt: NOW - 90 * DAY, lastSeen: NOW }, o);
@@ -65,7 +65,7 @@ fs.writeFileSync(path.join(DATA, 'teachers.json'), JSON.stringify({
 fs.writeFileSync(path.join(DATA, 'ruta-settings.json'), JSON.stringify({ trainingLive: true, doradoPct: 70, trainingLaunchAt: NOW - 3 * DAY }));
 // made-up kids: RICA (Ricardo, the super admin's Old HSK 1 class, from before the keys, with progress), BETO (Bea's class),
 // KEYK (a key account tagged to Bea's class, held by a phone's dkid), CARK (Caro's kid), ARCH (Bea's kid resting in the archive)
-const KIDS = { RICA: 'RICA', BETO: 'BETO', KEYK: 'KEY7K4', CARK: 'CARK', ARCH: 'ARCH' };
+const KIDS = { RICA: 'RICA', BETO: 'BETO', KEYK: 'KEY7K4', CARK: 'CARK', ARCH: 'ARCH', UNDK: 'UNDK', KEY3: 'KEY3K3', KEY2: 'KEY2K2' };
 const KEY_BORN = NOW - 20 * DAY;
 const SEEDED = {
   RICA: { code: 'RICA', displayName: 'Ricardo Prueba', avatar: 'aileen', classroomCode: S_HSK, classroomId: null, firstSeen: NOW - 200 * DAY, lastSeen: NOW - DAY,
@@ -76,6 +76,14 @@ const SEEDED = {
   KEY7K4: { code: 'KEY7K4', displayName: 'Kiara Prueba', avatar: 'falcon', classroomCode: B_HSK, classroomId: null, firstSeen: KEY_BORN, lastSeen: NOW - DAY,
     sentencesBuilt: [], byKey: NOW - 20 * DAY, level: 'hsk1', levelSince: KEY_BORN, levelAccess: { hsk1: { via: 'key', at: KEY_BORN, gen: 1 } }, ruta: { hsk1: { s: '1-5', at: NOW - DAY } } },
   CARK: { code: 'CARK', displayName: 'Carla Prueba', avatar: 'latifa', classroomCode: C_NEW, classroomId: null, firstSeen: NOW - 9 * DAY, lastSeen: NOW - DAY, sentencesBuilt: [], level: 'hsk2' },
+  // (review 2026-10-22) phones that follow during the «Undo» window: a class kid (UNDK) and a key kid (KEY3, yct1); and a
+  // key kid whose NEW level is closed before her phone follows (KEY2, yct1)
+  UNDK: { code: 'UNDK', displayName: 'Uri Prueba', avatar: 'adric', classroomCode: S_HSK, classroomId: null, firstSeen: NOW - 9 * DAY, lastSeen: NOW - DAY,
+    sentencesBuilt: [], level: 'hsk1', levelSince: NOW - 9 * DAY, levelAccess: { hsk1: { via: 'teacher', at: NOW - 8 * DAY } } },
+  KEY3K3: { code: 'KEY3K3', displayName: 'Tea Prueba', avatar: 'falcon', classroomCode: null, classroomId: null, firstSeen: KEY_BORN, lastSeen: NOW - DAY,
+    sentencesBuilt: [], byKey: KEY_BORN, level: 'yct1', levelSince: KEY_BORN, levelAccess: { yct1: { via: 'key', at: KEY_BORN, gen: 1 } } },
+  KEY2K2: { code: 'KEY2K2', displayName: 'Dos Prueba', avatar: 'falcon', classroomCode: null, classroomId: null, firstSeen: KEY_BORN, lastSeen: NOW - DAY,
+    sentencesBuilt: [], byKey: KEY_BORN, level: 'yct1', levelSince: KEY_BORN, levelAccess: { yct1: { via: 'key', at: KEY_BORN, gen: 1 } } },
 };
 fs.writeFileSync(path.join(DATA, 'student-records.json'), JSON.stringify(SEEDED));
 fs.writeFileSync(path.join(DATA, 'student-archive.json'), JSON.stringify({
@@ -201,10 +209,15 @@ async function run() {
   rec = records().RICA;
   ok(rec.level === 'hsk2' && rec.classroomCode === S_NEW, '… and that login never undid the change');
   ok((await post('/api/homework/enter', { accessCode: S_YCT, studentCode: 'RICA' }, as(phone()))).json.classMoved === false, 'a class code he was never in: not «his» (as before)');
-  await sleep(200);
+  await sleep(1300);
+  // (a login with another class's code still re-tags a kid, as it always did: that is how kids moved up. Review
+  // 2026-10-22: from then on nothing the teacher's change left keeps working)
   rec = records().RICA;
-  // (a login with another class's code still re-tags a kid, as it always did: that is how kids moved up; put him back)
+  ok(rec.classroomCode === S_YCT && rec.level === 'yct1' && !rec.levelBy, 'that login re-tagged him (as always) and cleared what the change left');
+  r = await post('/api/entrada/hola', { accessCode: S_HSK, studentCode: 'RICA' }, as(phone()));
+  ok(r.status === 401, '… so his former class code no longer holds him (never a former class code for good)');
   ok((await move(SUPER, 'RICA', 'hsk2')).json.ok, '(the super admin puts him back in New HSK 1 after that stranger\'s login)');
+  ok(records().RICA.levelBy.codes.join() === S_YCT && records().RICA.levelBy.cc === S_NEW, '… the change now holds the class code he left (and the one he is in)');
 
   // ── 2. her own teacher, no class of that level: own level, Undo ──
   section('Beto (Bea\'s Old HSK 1 class; Bea has no New HSK 1 class) → New HSK 1 by Bea, then «Undo»');
@@ -219,10 +232,11 @@ async function run() {
   const undo1 = r.json.undo;
   ok((await post('/api/admin/kid-level/undo', { undo: undo1 }, teacher(CARO))).status === 410, 'another teacher can\'t use her undo');
   r = await post('/api/admin/kid-level/undo', { undo: undo1 }, teacher(BEA));
-  ok(r.json && r.json.ok && r.json.level === 'hsk1' && r.json.teacherName === 'Old HSK 1', '«Undo»: back to Old HSK 1');
+  ok(r.json && r.json.ok && r.json.level === 'hsk1' && r.json.teacherName === 'Old HSK 1' && r.json.levelChange === null, '«Undo»: back to Old HSK 1 (the profile shows no change)');
   rec = records().BETO;
-  ok(JSON.stringify([rec.level, rec.levelSince, rec.classroomCode, rec.levelAccess, rec.levelBy]) === JSON.stringify([before.level, before.levelSince, before.classroomCode, before.levelAccess, before.levelBy]),
-    '… exactly what was there before (level, its date, class code, open levels, no notice)');
+  ok(JSON.stringify([rec.level, rec.levelSince, rec.classroomCode, rec.levelAccess]) === JSON.stringify([before.level, before.levelSince, before.classroomCode, before.levelAccess]),
+    '… exactly what was there before (level, its date, class code, open levels)');
+  ok(rec.levelBy && rec.levelBy.to === 'hsk1' && rec.levelBy.from.includes('hsk2') && rec.levelBy.seen > 0, '… a change BACK: a phone that followed still holds him, and nothing to tell (he never saw the first one)');
   ok((await home(P2, 'BETO', B_HSK)).json.levelNote === null, '… so his phone shows no notice');
   ok((await post('/api/admin/kid-level/undo', { undo: undo1 }, teacher(BEA))).status === 410, 'an undo works once');
   r = await move(BEA, 'BETO', 'hsk2');
@@ -230,6 +244,7 @@ async function run() {
   r = await post('/api/homework/enter', { accessCode: B_HSK, studentCode: 'BETO' }, as(phone()));
   ok(r.json && r.json.ok && r.json.level === 'hsk2' && r.json.classMoved === false && records().BETO.level === 'hsk2',
     'a login with his own class code (an Old HSK 1 code) keeps the teacher\'s New HSK 1');
+  ok((await get('/api/homework/trainer/session/x/y?accessCode=' + B_HSK, as(P2))).status === 403, '… and the Old HSK 1 trainer closes for him (his level, not his class code\'s)');
   ok((await move(BEA, 'BETO', 'hsk2')).json.unchanged === true, 'the level he is already in: nothing changes');
 
   // ── 3. a key account held by a phone's dkid ──
@@ -258,6 +273,35 @@ async function run() {
   rec = records()[KIDS.KEYK];
   ok(rec.ruta.hsk1.s === '1-5' && rec.levelAccess.hsk1.via === 'key' && rec.classroomCode === B_HSK && rec.byKey, 'her HSK 1 seals and key stay; still in Bea\'s class; still a key account');
 
+  // ── 3b. (review 2026-10-22) phones that followed during the «Undo» window still hold the kid afterwards ──
+  section('«Undo» after a phone already followed: a change back, never a stranded phone');
+  r = await move(SUPER, 'UNDK', 'hsk2');
+  ok(r.json.ok && r.json.moved && r.json.classroomCode === S_NEW, 'Uri → New HSK 1, moved to the New HSK 1 class');
+  const undo2 = r.json.undo;
+  r = await post('/api/homework/enter', { accessCode: S_HSK, studentCode: 'UNDK' }, as(phone()));
+  ok(r.json.ok && r.json.classMoved && r.json.classroomCode === S_NEW, 'his phone follows at once and saves the NEW class code');
+  ok((await post('/api/admin/kid-level/undo', { undo: undo2 }, teacher(SUPER))).json.ok, 'then the teacher taps «Undo»');
+  rec = records().UNDK;
+  ok(rec.level === 'hsk1' && rec.classroomCode === S_HSK && !rec.levelAccess.hsk2, '… he is back in Old HSK 1, in his old class, New HSK 1 closed again');
+  r = await post('/api/entrada/hola', { accessCode: S_NEW, studentCode: 'UNDK' }, as(phone()));
+  ok(r.json && r.json.ok && r.json.kid.levelId === 'hsk1', 'a phone holding the NEW class code still comes in, in Old HSK 1');
+  r = await post('/api/homework/enter', { accessCode: S_NEW, studentCode: 'UNDK' }, as(phone()));
+  ok(r.json && r.json.ok && r.json.level === 'hsk1' && r.json.classMoved === true && r.json.classroomCode === S_HSK, '… its login keeps Old HSK 1 and hands back his class code');
+  rec = records().UNDK;
+  ok(rec.level === 'hsk1' && rec.classroomCode === S_HSK, '… and never undoes the teacher\'s «Undo»');
+  const P7 = phone();
+  P7.jar.dkid = dkidOf(KIDS.KEY3, KEY_BORN, 'yct1:1', 0);
+  const k3old = P7.jar.dkid;
+  r = await move(SUPER, KIDS.KEY3, 'hsk2');
+  const undo3 = r.json.undo;
+  h = (await get('/api/entrada/hola', as(P7))).json;
+  ok(r.json.ok && h.kid && h.kid.levelId === 'hsk2' && P7.jar.dkid && P7.jar.dkid !== k3old, 'a key kid\'s phone follows to New HSK 1 (its cookie re-issued)');
+  ok((await post('/api/admin/kid-level/undo', { undo: undo3 }, teacher(SUPER))).json.ok, '«Undo»');
+  const P7b = { jar: { dkid: P7.jar.dkid }, headers: { 'CF-Connecting-IP': '198.51.100.' + (ipN++) } };   // (the re-issued cookie, no session)
+  h = (await get('/api/entrada/hola', as(P7b))).json;
+  ok(h.kid && !h.relock && !h.parked && h.kid.levelId === 'yct1', 'her phone with the New HSK 1 cookie still comes in, back in YCT 1 (never the key screen)');
+  ok(!records()[KIDS.KEY3].levelAccess.hsk2 && records()[KIDS.KEY3].levelAccess.yct1.via === 'key', '… New HSK 1 closed again, her YCT 1 key as it was');
+
   // ── 4. who may ──
   section('refused: another teacher, an unknown kid, an archived kid, another site, a bad level');
   const notMine = await move(CARO, 'BETO', 'yct1');
@@ -268,6 +312,13 @@ async function run() {
   ok(records().BETO.level === 'hsk2', '… nothing changed');
   ok((await move(BEA, 'CARK', 'hsk1')).status === 404, 'Bea can\'t move Caro\'s kid');
   ok((await move(CARO, 'CARK', 'yct1')).json.ok, 'Caro can move her own kid');
+  ok(records().CARK.levelAccess.yct1 && records().CARK.levelAccess.yct1.by === 'level', '… YCT 1 opened by the change');
+  ok((await move(CARO, 'CARK', 'hsk1')).json.ok && !records().CARK.levelAccess.yct1 && records().CARK.levelAccess.hsk1.via === 'teacher',
+    'a mis-move fixed later: the level she never used (YCT 1) closes again; Old HSK 1 opens');
+  const P4 = phone();
+  r = await post('/api/homework/enter', { accessCode: C_NEW, studentCode: 'CARK' }, as(P4));
+  ok(r.json && r.json.ok && r.json.level === 'hsk1' && r.json.classroomCode === C_NEW, 'her login with her (New HSK 1) class code: Old HSK 1, the teacher\'s level');
+  ok((await get('/api/homework/trainer/session/x/y?accessCode=' + C_NEW, as(P4))).status === 404, '… so the Old HSK 1 trainer is hers (past the level door: «not found» for a made-up round)');
   const arch = await move(BEA, 'ARCH', 'hsk2');
   ok(arch.status === 409 && arch.json.archived === true, 'an archived kid of hers: refused (409)');
   ok((await move(CARO, 'ARCH', 'hsk2')).text === unknown.text, 'an archived kid of someone else: the same answer as unknown');
@@ -279,10 +330,14 @@ async function run() {
 
   // ── 5. a renamed class code renames the codes a kid was moved away from ──
   section('a renamed class code');
-  r = await put('/api/admin/teacher/' + UID.super + '/class-code', { from: S_HSK, to: RENAMED }, teacher(SUPER));
-  ok(r.json && r.json.ok, 'the super admin renames his Old HSK 1 class code');
+  r = await put('/api/admin/teacher/' + UID.super + '/class-code', { from: S_YCT, to: RENAMED }, teacher(SUPER));
+  ok(r.json && r.json.ok, 'the super admin renames his YCT 1 class code');
   rec = records().RICA;
-  ok(rec.levelBy.codes.includes(RENAMED) && !rec.levelBy.codes.includes(S_HSK) && rec.classroomCode === S_NEW, 'Ricardo\'s «moved from» code is renamed too; his class stays New HSK 1');
+  ok(rec.levelBy.codes.includes(RENAMED) && !rec.levelBy.codes.includes(S_YCT) && rec.classroomCode === S_NEW, 'Ricardo\'s «moved from» code is renamed too; his class stays New HSK 1');
+  r = await put('/api/admin/teacher/' + UID.super + '/class-code', { from: S_NEW, to: S_NEW2 }, teacher(SUPER));
+  rec = records().RICA;
+  ok(r.json && r.json.ok && rec.classroomCode === S_NEW2 && rec.levelBy.cc === S_NEW2, 'his own class code renamed: the change follows it (still his)');
+  ok((await home(P1, 'RICA', S_NEW2)).json.level === 'hsk2', '… and he is still in New HSK 1');
   ok((await post('/api/entrada/hola', { accessCode: RENAMED, studentCode: 'RICA' }, as(phone()))).json.ok, '… so the renamed code still holds him');
 
   // ── 6. nothing weakened: closing the old level's devices still asks an old cookie for the key ──
@@ -293,7 +348,14 @@ async function run() {
   h = (await get('/api/entrada/hola', as(P3c))).json;
   ok(!h.kid && h.relock && h.relock.levelId === 'yct1', 'a phone still holding the HSK 1 cookie: «escribe la clave nueva» (never in by itself)');
   h = (await get('/api/entrada/hola', as(P3))).json;
-  ok(h.kid && h.kid.levelId === 'yct1', 'her phone with the re-issued YCT 1 cookie still comes in');
+  ok(h.kid && h.kid.levelId === 'yct1', 'her phone that followed (its YCT 1 cookie, like a phone that typed the YCT 1 key) still comes in');
+  // (review 2026-10-22) the NEW level closed before a phone followed: that phone asks for the key too
+  const P8 = phone();
+  P8.jar.dkid = dkidOf(KIDS.KEY2, KEY_BORN, 'yct1:1', 0);
+  ok((await move(SUPER, KIDS.KEY2, 'hsk2')).json.ok, 'Dos (a key kid, YCT 1) → New HSK 1');
+  ok((await post('/api/admin/level-keys/hsk2/close-devices', {}, teacher(SUPER))).json.ok, '… then New HSK 1 is closed on every device before her phone opens');
+  h = (await get('/api/entrada/hola', as(P8))).json;
+  ok(!h.kid && h.relock && h.relock.levelId === 'hsk2', 'her phone (still the YCT 1 cookie) asks for the key: a close of the new level counts too');
 
   // ── 7. the pages ──
   section('the pages');

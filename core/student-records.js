@@ -374,10 +374,11 @@ function bumpKidGen(code) {
 //   levelAccess           the new level opened as a teacher's opening (no key needed, like «Desbloquear»; a key grant is
 //                         upgraded, a teacher or grandfathered one stays); ch.keepFrom stamps the old level grandfathered
 //                         (it was open from before the keys: it stays theirs)
-//   levelBy               { to, from: [levels], codes: [class codes], at, seen, by }: the notice the kid's phone shows
-//                         once («Tu profe te cambió a …», seen = when), and the levels and class codes a teacher moved
-//                         this kid away from: the phone's dkid and the class code it saved still hold the kid (server.js
-//                         _kidLgMoved, _hwOwnsStudent, _levelKept). A renamed class code is renamed here too.
+//   levelBy               { to, cc, toGen, from: [levels], codes: [class codes], at, seen, by }: the notice the kid's
+//                         phone shows once («Tu profe te cambió a …», seen = when), and the levels and class codes a
+//                         teacher moved this kid away from: the phone's dkid and the class code it saved still hold the
+//                         kid, only while `to` and `cc` are still the account's level and class code (server.js
+//                         _levelBound, _kidLgMoved, _hwOwnsStudent, _levelKept). A renamed class code is renamed here too.
 // → { snap, expect } (snap: the fields as they were; expect: what was written, for undoLevel) | null
 const LEVEL_FIELDS = ['level', 'levelSince', 'classroomCode', 'levelAccess', 'levelBy'];
 const _jclone = (v) => (v === undefined ? undefined : JSON.parse(JSON.stringify(v)));
@@ -392,41 +393,71 @@ function changeLevel(code, ch) {
   const from = Levels.normalize(ch.from);
   if (!rec.levelAccess || typeof rec.levelAccess !== 'object' || Array.isArray(rec.levelAccess)) rec.levelAccess = {};
   if (from && ch.keepFrom && !rec.levelAccess[from]) rec.levelAccess[from] = { via: 'grandfathered', at: now };
+  // (review 2026-10-22) a level a «Change level» opened and the kid never used (server.js decides: no seals, no
+  // practice there) closes again when they are moved away: a mis-move never leaves a level open for good
+  if (from && ch.dropFrom && rec.levelAccess[from] && rec.levelAccess[from].by === 'level') delete rec.levelAccess[from];
   const cur = rec.levelAccess[lvl];
-  if (!cur || cur.via === 'key') rec.levelAccess[lvl] = { via: 'teacher', at: now };
+  if (!cur || cur.via === 'key') rec.levelAccess[lvl] = { via: 'teacher', at: now, by: 'level' };
   if (rec.level !== lvl) { rec.level = lvl; rec.levelSince = now; }
   const oldCode = rec.classroomCode ? String(rec.classroomCode).trim().toUpperCase() : null;
   const newCode = ch.classroomCode ? String(ch.classroomCode).trim().toUpperCase() : null;
   if (newCode && newCode !== oldCode) rec.classroomCode = newCode;
-  const lb = rec.levelBy && typeof rec.levelBy === 'object' ? rec.levelBy : {};
-  const keep = (list, add, drop) => {
-    const a = (Array.isArray(list) ? list : []).filter((x) => typeof x === 'string' && x !== add && x !== drop);
-    if (add && add !== drop) a.push(add);
-    return a.slice(-6);
-  };
-  rec.levelBy = {
-    to: lvl,
-    from: keep(lb.from, from, lvl),
-    codes: keep(lb.codes, newCode && oldCode && newCode !== oldCode ? oldCode : null, rec.classroomCode || null),
-    at: now, seen: 0, by: String(ch.by || '').slice(0, 40),
-  };
+  rec.levelBy = _levelByAfter(rec, rec.levelBy, { to: lvl, toGen: ch.toGen, from, oldCode, at: now, seen: 0, by: ch.by });
   if (!persistNow()) {                                     // the disk refused: the account goes back as it was
     LEVEL_FIELDS.forEach((k) => { if (snap[k] === undefined) delete rec[k]; else rec[k] = _jclone(snap[k]); });
     return null;
   }
   return { snap, expect: { level: rec.level, classroomCode: rec.classroomCode || null, at: now } };
 }
-// «Undo» (8 s in /maestro): the fields changeLevel replaced come back, only while nothing else changed them since (the
-// same level, class code and change). → true | false
-function undoLevel(code, snap, expect) {
+// levelBy after a change: `to` the level now, `cc` the class code now (the moved-from codes and levels count only while
+// both are still the account's: server.js _levelBound), `toGen` that level's key generation then (a close of the NEW
+// level also ends a phone that hasn't followed yet), the levels and class codes moved away from (never the current ones)
+function _levelByAfter(rec, prev, o) {
+  const lb = prev && typeof prev === 'object' ? prev : {};
+  const cc = rec.classroomCode ? String(rec.classroomCode).trim().toUpperCase() : null;
+  const keep = (list, add, drop) => {
+    const a = (Array.isArray(list) ? list : []).filter((x) => typeof x === 'string' && x !== add && x !== drop);
+    if (add && add !== drop) a.push(add);
+    return a.slice(-6);
+  };
+  return {
+    to: o.to, cc, toGen: Number(o.toGen) || 1,
+    from: keep(lb.from, o.from && o.from !== o.to ? o.from : null, o.to),
+    codes: keep(lb.codes, o.oldCode && o.oldCode !== cc ? o.oldCode : null, cc),
+    at: o.at, seen: o.seen, by: String(o.by || '').slice(0, 40),
+  };
+}
+// «Undo» (8 s in /maestro) = a change BACK (review 2026-10-22): the level, its date, the class code and the open levels
+// are put back as they were, only while nothing else changed them since (the same level, class code and change). A
+// phone that already followed the change (its dkid re-issued, the new class code saved) still holds the kid: the undone
+// level and class code join the moved-from ones. The kid hears about it only if their phone already told them about the
+// change. back(rec) → { to, toGen } (server.js: the level the account is in now, its key generation). → true | false
+function undoLevel(code, snap, expect, back, by) {
   const c = normalizeCode(code);
   const rec = c ? records[c] : null;
-  if (!rec || !snap || !expect) return false;
-  if (rec.level !== expect.level || (rec.classroomCode || null) !== expect.classroomCode || !rec.levelBy || rec.levelBy.at !== expect.at) return false;
+  if (!rec || !snap || !expect || typeof back !== 'function') return false;
+  const lb = rec.levelBy;
+  if (rec.level !== expect.level || (rec.classroomCode || null) !== expect.classroomCode || !lb || lb.at !== expect.at) return false;
   const now = {};
   LEVEL_FIELDS.forEach((k) => { now[k] = rec[k]; });
-  LEVEL_FIELDS.forEach((k) => { if (snap[k] === undefined) delete rec[k]; else rec[k] = _jclone(snap[k]); });
+  LEVEL_FIELDS.forEach((k) => { if (k !== 'levelBy') { if (snap[k] === undefined) delete rec[k]; else rec[k] = _jclone(snap[k]); } });
+  const b = back(rec) || {};
+  const t = Date.now();
+  rec.levelBy = b.to ? _levelByAfter(rec, Object.assign({}, snap.levelBy || {}, { from: ((snap.levelBy && snap.levelBy.from) || []).concat(expect.level) }),
+    { to: b.to, toGen: b.toGen, from: null, oldCode: expect.classroomCode, at: t, seen: lb.seen ? 0 : t, by }) : _jclone(snap.levelBy);
+  if (rec.levelBy === undefined) delete rec.levelBy;
+  else if (b.to && !snap.levelBy) rec.levelBy.undo = 1;   // (no change of a teacher before: /maestro shows none)
   if (!persistNow()) { LEVEL_FIELDS.forEach((k) => { if (now[k] === undefined) delete rec[k]; else rec[k] = now[k]; }); return false; }
+  return true;
+}
+// a /homework login with another class's code re-tagged the kid (server.js): the class code decides again, and nothing a
+// teacher's change left (moved-from codes and levels, an unseen notice) keeps working
+function clearLevelBy(code) {
+  const c = normalizeCode(code);
+  const rec = c ? records[c] : null;
+  if (!rec || !rec.levelBy) return false;
+  delete rec.levelBy;
+  scheduleSave();
   return true;
 }
 // the kid's phone showed «Tu profe te cambió a …» (POST /api/homework/level-note, the kid's own session): once per change
@@ -641,6 +672,11 @@ function renameClassroomCode(fromCode, toCode) {
     if (lb && typeof lb === 'object' && Array.isArray(lb.codes) && lb.codes.some((x) => _ccNorm(x) === from)) {
       undo.push([lb, 'codes', lb.codes.slice()]);
       lb.codes = lb.codes.map((x) => (_ccNorm(x) === from ? to : x));
+      if (where === 'archived') touchedArchive = true;
+    }
+    if (lb && typeof lb === 'object' && lb.cc != null && _ccNorm(lb.cc) === from) {   // (the class the change left them in)
+      undo.push([lb, 'cc', lb.cc]);
+      lb.cc = to;
       if (where === 'archived') touchedArchive = true;
     }
     if (hit) out[where]++;
@@ -1532,6 +1568,7 @@ module.exports = {
   bumpKidGen,      // 🔒 2026-10-18 security review F2
   changeLevel,     // 🆕 2026-10-22 «Change level» in /maestro
   undoLevel,
+  clearLevelBy,
   seeLevelNote,
   ARCHIVE_AFTER_DAYS,
   flushNow: persistNow,   // write now (tests; before a planned shutdown)

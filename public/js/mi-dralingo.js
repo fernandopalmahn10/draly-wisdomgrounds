@@ -325,7 +325,11 @@
         // level on this page; then «Tu profe te cambió a <nivel> ✨» (js/level-note.js), once
         if (d && d.ok && d.level && s.level && d.level !== s.level && H.follow && followed !== d.level) {
           followed = d.level;
-          return H.follow().then((ok) => { if (!ok && seq === loadSeq) { followed = ''; location.reload(); } });
+          // (review 2026-10-22: never a reload loop on a busy school Wi-Fi) one more try a moment later, then the home
+          // draws what the server said; the next visit comes in again by itself
+          const again = () => (H && H.follow ? H.follow() : Promise.resolve(false));
+          return H.follow().then((ok) => ok || new Promise((r) => setTimeout(r, 3000)).then(again))
+            .then((ok) => { if (!ok && seq === loadSeq) load(true); }, () => { if (seq === loadSeq) load(true); });
         }
         if (d && d.ok && d.levelNote && d.level === s.level && window.DralyLevelNote) {
           setTimeout(() => { if (H && H.screen() === 'list') window.DralyLevelNote.show(d.levelNote); }, 450);

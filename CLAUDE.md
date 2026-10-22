@@ -656,13 +656,18 @@ the checklist for any new game mode.
     using the account only; it is never how a level is changed.
   - Built 2026-10-22: `POST /api/admin/kid-level` { code, level } + `/undo` (the code in the body, never an address;
     `_autoSameSite`, `_editRateOk`); core/student-records.js `changeLevel` / `undoLevel` / `seeLevelNote` write
-    `rec.level`, the class code, `levelAccess` and `rec.levelBy` { to, from, codes, at, seen } (the notice and the
-    levels / class codes the kid was moved away from: `_hwOwnsStudent` accepts a moved-from code, `/api/homework/enter`
+    `rec.level`, the class code, `levelAccess` and `rec.levelBy` { to, cc, toGen, from, codes, at, seen } (the notice and
+    the levels / class codes the kid was moved away from: `_hwOwnsStudent` accepts a moved-from code, `/api/homework/enter`
     keeps the teacher's level for the kid's own or moved-from code (`_levelKept`, `classMoved`), dkid holds the kid
-    while its old level's key generation is unchanged (`_kidLgMoved`) and is re-issued (`_kidFollow`); a class-code
-    rename renames `levelBy.codes` too). Kid side: `js/level-note.js` + `css/level-note.css` (home: mi-dralingo.js
-    follows through homework.js `follow`; La Ruta Dorada: audios.js `levelFollow`). `node scripts/test-kid-level.js`
-    (port 4640) must pass.
+    while the old level's AND the new level's key generations are unchanged (`_kidLgMoved`) and is re-issued for the
+    new level (`_kidFollow`, like «Abrir otro nivel»); a class-code rename renames `levelBy.codes` / `cc` too).
+    After the code review that day: all of it counts ONLY while the change is still the account's level and class code
+    (`_levelBound`: a re-tagging login clears it, `Students.clearLevelBy`), so a former class code never proves a kid
+    for good; «Undo» is a change back (a phone that followed in those seconds still holds the kid); a level a change
+    opened (`by: 'level'`) closes again when the kid is moved away without having used it; the HSK 1 trainer reads the
+    moved kid's own level (`_hwReqLevel`). Kid side: `js/level-note.js` + `css/level-note.css` (home: mi-dralingo.js
+    follows through homework.js `follow`, one retry, never a reload loop; La Ruta Dorada: audios.js `levelFollow`).
+    `node scripts/test-kid-level.js` (port 4640) must pass.
 - **The kid's home** (part 3, built 2026-10-18: /homework = «Mi Dralingo», `public/js/mi-dralingo.js`):
   - «Hoy» always comes from `papas-plan.js`, never its own logic. The kid's `today()` follows the ladder inside the
     current experience (1 Palabras → 2 Tu tarea → 3 Práctica, his priority 2026-10-21; `LADDER` in papas-plan.js is

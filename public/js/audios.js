@@ -191,7 +191,8 @@
     fetch('/api/ruta-dorada', { credentials: 'same-origin', cache: 'no-store' })
       .then((r) => (r.ok ? r.json() : null)).then((s) => {
         if (!s || !Array.isArray(s.modules) || !isWorldView()) return;
-        if (noteFor(s)) { ruta = s; firstRoute = true; if (!levelFollow()) route(); return; }   // (2026-10-22: a teacher's «Change level»)
+        // (2026-10-22: a teacher's «Change level»: go to the new level's path; when there is none to go to, the usual checks)
+        if (noteFor(s)) { const was = ruta, fr = firstRoute; ruta = s; firstRoute = true; if (levelFollow()) return; ruta = was; firstRoute = fr; }
         if (force !== true && sig(s) === sig(ruta) && localSig() === drawnLocal) return;
         // (a homework audio playing here is never cut by a redraw: the next return to the tab brings the news)
         if (force !== true && player && !player.paused) return;
