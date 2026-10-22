@@ -17,7 +17,7 @@
   var GAME = {
     'host-kingdoms.html': 'kingdoms', 'host-paint.html': 'paint', 'host-snow.html': 'snow', 'host-escape.html': 'escape',
     'host-halcon.html': 'halcon', 'host-trapdoor.html': 'trapdoor', 'host.html': 'mochi-mash', 'host-pinata.html': 'pinata',
-    'host-dragon.html': 'dragon-eye', 'host-monopoly.html': 'monopoly',
+    'host-dragon.html': 'dragon-eye', 'host-monopoly.html': 'monopoly', 'host-dormilon.html': 'dormilon',
   };
   var NO_PACKS = { 'host-sixseven.html': 1 };   // games without question packs (6-7 makes its own sums): the games list
   var file = location.pathname.split('/').pop() || 'host.html';

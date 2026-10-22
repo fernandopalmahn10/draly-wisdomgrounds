@@ -10,7 +10,7 @@
   const RED_POSES = ['jump', 'flag', 'shocked', 'thinking', 'pointing', 'champion', 'countdown'];
   // La Gran Fuga (co-op, no teams): Dralingo in his platform look (kandura + mustache: hello / power / wise)
   const ES_POSE = { thinking: 'wise', shocked: 'wise', pointing: 'hello', countdown: 'hello', jump: 'power', flag: 'power', champion: 'power' };
-  const TPOSE = (n) => ((game === 'escape' || game === 'halcon' || game === 'monopoly' || game === 'dragon-eye') ? '/assets/dralingo/' + (ES_POSE[n] || 'hello') + '.webp'
+  const TPOSE = (n) => ((game === 'escape' || game === 'halcon' || game === 'dormilon' || game === 'monopoly' || game === 'dragon-eye') ? '/assets/dralingo/' + (ES_POSE[n] || 'hello') + '.webp'
     : POSE(n + (ctx && game !== 'snow' && ctx.getTeam() === 'red' && RED_POSES.includes(n) ? '-red' : '')));
   const ESC = () => (game === 'escape' && window.EscapePhone ? window.EscapePhone : null);
   // Batalla de Nieve: no red/blue kingdoms, two sides that change during the round (counts from the sn:* events)
@@ -58,6 +58,7 @@
       // Batalla de Nieve has its own chase loop; everything else shares the kingdoms music
       music = new Audio(game === 'snow' && name === 'music-battle' ? '/assets/snow/music-battle.mp3'
         : game === 'halcon' && name === 'music-battle' ? '/assets/halcon/music-show.mp3'    // Ojos de Halcón: the show loop
+        : game === 'dormilon' && name === 'music-battle' ? '/assets/dormilon/music-night.mp3'    // ¡No despiertes a Dralingo!: the sneaky night tune
         : game === 'monopoly' && name === 'music-battle' ? '/assets/monopoly/music-board.mp3'    // Dàfùwēng · Monopolio: the board loop
         : game === 'dragon-eye' && name === 'music-battle' ? '/assets/dragon/music-race.mp3'      // Vuelo del Dragón: the race loop
         : game === 'mochi-mash' && name === 'music-battle' ? '/assets/mochi/music-mash.mp3'     // Mochi Mash: the polka
@@ -81,7 +82,7 @@
     wrap('wrong', () => sfx('wrong', 0.6));
     // Ojos de Halcón plays its own studio run-in during the countdown (no 3-2-1 ticks, like the video)
     // (Mochi Mash, Piñata Tigre: their own run-in and «¿Listos?… ¡YA!» after the countdown)
-    const ownIntro = () => game === 'halcon' || game === 'mochi-mash' || game === 'pinata' || game === 'sixseven' || game === 'monopoly' || game === 'dragon-eye';
+    const ownIntro = () => game === 'halcon' || game === 'dormilon' || game === 'mochi-mash' || game === 'pinata' || game === 'sixseven' || game === 'monopoly' || game === 'dragon-eye';
     wrap('countdownNum', () => { if (!ownIntro()) sfx('tick', 0.8); });
     wrap('go', () => { if (!ownIntro()) sfx('whoosh', 0.8); });
     wrap('startGameTheme', () => playMusic('music-battle', 0.32));
@@ -90,7 +91,7 @@
     wrap('stopMusic', () => stopMusic());
     // (Mochi Mash, Piñata Tigre: the ceremony keeps the result secret until the reveal, so no win / lose sound at game-end)
     // (Reinos, Pintores, Nieve, La Gran Fuga since 2026-10-16: the shared ceremony of js/party.js reveals it)
-    const ownReveal = () => game === 'mochi-mash' || game === 'pinata' || game === 'sixseven' || game === 'monopoly' || game === 'dragon-eye' || PARTY_GAMES.includes(game);
+    const ownReveal = () => game === 'mochi-mash' || game === 'pinata' || game === 'sixseven' || game === 'monopoly' || game === 'dragon-eye' || game === 'dormilon' || PARTY_GAMES.includes(game);
     wrap('winMusic', () => { stopMusic(); if (!ownReveal()) sfx('sting-win', 0.9); });
     wrap('winFanfare', () => {});
     wrap('loseMusic', () => { stopMusic(); if (!ownReveal()) sfx('wrong', 0.5); });
@@ -104,7 +105,7 @@
     };
   }
 
-  const SKIN_GAMES = ['kingdoms', 'paint', 'snow', 'escape', 'halcon', 'mochi-mash', 'pinata', 'sixseven', 'monopoly', 'dragon-eye', 'trapdoor'];
+  const SKIN_GAMES = ['kingdoms', 'paint', 'snow', 'escape', 'halcon', 'dormilon', 'mochi-mash', 'pinata', 'sixseven', 'monopoly', 'dragon-eye', 'trapdoor'];
   // the games whose ending is the shared Mario Party ceremony (js/party.js, 2026-10-16; Las Trampillas 2026-10-17)
   const PARTY_GAMES = ['kingdoms', 'paint', 'snow', 'escape', 'trapdoor'];
   const P = () => window.DralyParty || null;
@@ -243,6 +244,7 @@
     if (game === 'snow') { t.className = 'kdp-team sn-team'; t.textContent = '❄️ ¡Batalla de Nieve en Ski Dubái!'; }
     if (game === 'escape') { t.className = 'kdp-team es-team'; t.textContent = '🚀 ¡Eres de la tripulación!'; }
     if (game === 'halcon') { t.className = 'kdp-team hc-team'; t.textContent = '🦅 Ojos de Halcón · ¡tableros de 4!'; }
+    if (game === 'dormilon') { t.className = 'kdp-team dm-team'; t.textContent = '😴 ¡No despiertes a Dralingo! · tableros de 4'; }
     if (game === 'monopoly') { t.className = 'kdp-team mn-team'; t.textContent = '🎲 El Gran Tablero de Dubái'; }
     if (game === 'dragon-eye') { t.className = 'kdp-team dr-team'; t.textContent = '🐉 La Carrera del Cielo de Dubái'; }
     if (game === 'mochi-mash' || game === 'pinata' || game === 'sixseven') t.textContent = team === 'red' ? '¡Eres del Equipo Fuego!' : '¡Eres del Equipo Mar!';
@@ -283,6 +285,7 @@
     snowHow();
     if (window.EscapePhone) window.EscapePhone.lobby(game === 'escape' ? document.querySelector('#screen-lobby .lobby-header') : null);
     if (window.HalconPhone) window.HalconPhone.lobby(game === 'halcon' ? document.querySelector('#screen-lobby .lobby-header') : null);
+    if (window.DormilonPhone) window.DormilonPhone.lobby(game === 'dormilon' ? document.querySelector('#screen-lobby .lobby-header') : null);
     if (window.MonoPhone) window.MonoPhone.lobby(game === 'monopoly' ? document.querySelector('#screen-lobby .lobby-header') : null);
     if (window.DragonPhone) window.DragonPhone.lobby(game === 'dragon-eye' ? document.querySelector('#screen-lobby .lobby-header') : null);
     if (window.PaintPhone && window.PaintPhone.lobby) window.PaintPhone.lobby(game === 'paint' ? document.querySelector('#screen-lobby .lobby-header') : null);
@@ -499,6 +502,7 @@
     if (game === 'snow') { snowEnd(data); return; }
     if (ESC()) { ESC().end(data); return; }
     if (game === 'halcon' && window.HalconPhone) { window.HalconPhone.end(data); return; }
+    if (game === 'dormilon' && window.DormilonPhone) { window.DormilonPhone.end(data); return; }
     if (game === 'monopoly' && window.MonoPhone) { window.MonoPhone.end(data); return; }
     if (game === 'dragon-eye' && window.DragonPhone) { window.DragonPhone.end(data); return; }
     if (game === 'mochi-mash' && window.MochiPhone) { window.MochiPhone.end(data); return; }
@@ -616,6 +620,7 @@
     s.on('sn:captains', (c) => { captains = c; if (on) capDecor(); });
     s.on('es:init', () => { setMode(true, 'escape'); });
     s.on('hc:init', () => { setMode(true, 'halcon'); });
+    s.on('dm:init', () => { setMode(true, 'dormilon'); });
     s.on('pc:paint', (d) => {
       if (d && d.ts) { scores = d.ts; paintBar(); }      // Pintores v2: kingdom points (clouds + islands held)
     });
@@ -663,5 +668,7 @@
     setScores: (s) => { if (s) { scores = { red: s.red || 0, gold: s.gold || 0 }; if (on) paintBar(); } },
     isMuted: () => muted,
     music: (name, vol) => { if (!on) return; if (name) playMusic(name, vol); else stopMusic(); },
+    // ¡No despiertes a Dralingo!: the music steps back during MY turn (the snore and the creaks carry), then comes back
+    musicVol: (vol) => { if (music) { try { music.volume = Math.max(0, Math.min(1, vol)); } catch (_) {} } },
   };
 })();

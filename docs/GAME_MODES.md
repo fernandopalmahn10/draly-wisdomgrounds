@@ -111,7 +111,15 @@ being played nor the next one. Grey «−30 s» out where the server would refus
 
 ## Status (2026-10-11)
 
-Live modes: **Las Trampillas** (`trapdoor`, built 2026-10-17 on a branch, not deployed: #2 of his Mario Party series, the
+Live modes: **¡No despiertes a Dralingo!** (`dormilon`, built 2026-10-22 on a branch, not deployed: #3 of his Mario Party
+series, «Don't Wake Wiggler» (his video 6:14-7:29) — Dralingo sleeps in a Chinese palace bedroom; boards of 4 take
+TURNS: «Turno de X» (the others guess «¿Se despierta?») → 11 s of quick questions (a kid's first turn 14 s, guided),
+every right answer = a stroke of the golden feather = +1 (+2 in the last 30 s), a wrong one = he stirs, «¡Me retiro!»
+any time; a hidden wake limit per night (cues, never the number): whoever wakes him loses ALL their points, then a new
+night; its own board ceremony (bonus stars, the board's winner, my card) and the projector's champions + class podium;
+rules `core/dormilon.js`, server block `dm*`, phone `js/player-dormilon.js`, projector `host-dormilon.html` +
+`js/host-dormilon.js`, both draw `js/dormilon-stage.js` + `css/dormilon.css`; spec `docs/specs/no-despiertes-a-dralingo.md`),
+**Las Trampillas** (`trapdoor`, built 2026-10-17 on a branch, not deployed: #2 of his Mario Party series, the
 round platform whose pie slices drop like trapdoors (his video 4:43-5:41) — the whole class on one platform as their
 full-body characters, Fuego vs Mar on red / blue rings, tap the floor to run there (the server moves everyone), pink
 slices jump around during the 5…0 count and the ones lit at «0» open; a right answer = golden wings that save you once,

@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>¡No despiertes a Dralingo! · Anfitrión</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/app/favicon-32.png">
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/back.css?v=20261018a">
+  <link rel="stylesheet" href="/css/dormilon.css?v=20261022dm">
+</head>
+<body class="dmh">
+  <button class="dmh-btn dmh-mute" id="mute-btn" type="button">🔊 Sonido</button>
+
+  <!-- LOBBY: PIN + QR, the game in 3 pictures, the contestants as full-body characters, the time, start -->
+  <main id="screen-lobby" class="dmh-lobby">
+    <section class="dmh-lobby-left">
+      <h1 class="dmh-title">¡No despiertes a <span>Dralingo</span>!</h1>
+      <p class="dmh-tagline">Dralingo duerme en su palacio. Por turnos, cada respuesta correcta es una cosquilla con la pluma dorada: +1 punto. ¡Pero si se despierta, pierdes todos tus puntos!</p>
+      <div class="dmh-pin-card">
+        <div>
+          <div class="dmh-pin-label">PIN</div>
+          <div class="dmh-pin" id="pin-display">····</div>
+        </div>
+        <div class="dmh-join">Entren desde el teléfono en<br><b id="join-url">esta dirección</b></div>
+        <div class="dmh-qr" id="qr" aria-hidden="true"></div>
+      </div>
+      <ol class="dmh-steps">
+        <li><div class="dm-step s1"><i class="t r">▲</i><i class="t b">◆</i><i class="t y ok">●</i><i class="t g">■</i></div>Responde bien<small>en tu turno</small></li>
+        <li><div class="dm-step s2"><img src="/assets/dormilon/dralingo-sleep.webp" alt=""><img class="f" src="/assets/dormilon/feather.webp" alt=""><b>+1</b></div>Una cosquilla<small>= +1 punto · «¡Me retiro!» y estás a salvo</small></li>
+        <li><div class="dm-step s3"><img src="/assets/dormilon/dralingo-awake.webp" alt=""><b>0</b></div>¡No lo despiertes!<small>si se despierta, pierdes todo</small></li>
+      </ol>
+      <div class="dmh-tools">
+        <div class="dmh-dur" role="group" aria-label="Duración"><span>⏱ Tiempo</span>
+          <button class="dmh-btn" type="button" data-s="180">3 min</button><button class="dmh-btn on" type="button" data-s="240">4 min</button><button class="dmh-btn" type="button" data-s="300">5 min</button>
+        </div>
+        <button class="dmh-btn go" id="start-btn" type="button" disabled>😴 ¡Empezar!</button>
+      </div>
+      <div class="dmh-set" id="set-display">Cargando preguntas…</div>
+    </section>
+    <section class="dmh-lobby-right">
+      <div class="dmh-lstage" id="lobby-stage"></div>
+      <div class="dmh-crew">
+        <div class="dmh-crew-head"><span>Los jugadores</span><b id="count-all">0 jugadores</b></div>
+        <div class="dmh-kids" id="players-all"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- COUNTDOWN: the bedroom, «¡Shhh!» -->
+  <div id="screen-countdown" class="dmh-count hidden"><div class="dmh-cstage" id="count-stage"></div></div>
+
+  <!-- ACTIVE: every board (its bedroom, its kids, whose turn), the class top 3, the teacher's buttons -->
+  <main id="screen-active" class="dmh-stage hidden">
+    <header class="dmh-head">
+      <div class="dmh-clock"><b id="clock">4:00</b><span id="clock-sub">tiempo</span></div>
+      <div class="dmh-headline" id="headline">¡Shhh! Dralingo duerme… Respondan bien para hacerle cosquillas</div>
+      <div class="dmh-fchip hidden" id="frenzy-chip">🌕 Luna llena · cosquillas ×2</div>
+      <div class="dmh-pinmini">PIN <b id="active-pin">····</b></div>
+    </header>
+    <section class="dmh-boards" id="boards"></section>
+    <aside class="dmh-side">
+      <div class="dmh-top3"><h2>🏆 Top 3 de la clase</h2><ol id="top3"></ol></div>
+      <div class="dmh-host-say"><img src="/assets/dralingo/wise.webp" alt="Dralingo"><p id="host-say">¡Shhh! Que no se despierte…</p></div>
+    </aside>
+    <nav class="dmh-controls">
+      <button class="dmh-btn" id="pause-btn" type="button">⏸ Pausa</button>
+      <button class="dmh-btn" id="plus-btn" type="button">+30 s</button>
+      <button class="dmh-btn" id="minus-btn" type="button">−30 s</button>
+      <button class="dmh-btn" id="skip-btn" type="button">⏭ Saltar</button>
+      <span class="sp"></span>
+      <button class="dmh-btn" id="end-now-btn" type="button">⏹ Terminar</button>
+    </nav>
+  </main>
+
+  <div class="dmh-bigband hidden" id="bigband"></div>
+
+  <div class="dmh-paused hidden" id="paused">
+    <div><img src="/assets/dralingo/wise.webp" alt=""><b>⏸ Pausa</b><span>Todos quietos: miren al profe</span>
+      <button class="dmh-btn go" id="resume-btn" type="button">▶ Seguir jugando</button>
+      <button class="dmh-btn" id="paused-end-btn" type="button">⏹ Terminar</button></div>
+  </div>
+
+  <!-- END: each board's champion and the class podium -->
+  <main id="screen-win" class="dmh-end hidden">
+    <section class="dmh-end-main">
+      <h1 class="dmh-end-title" id="end-title">¡Campeones de la noche!</h1>
+      <div class="dmh-champs" id="champs"></div>
+      <img class="dmh-end-bed" src="/assets/dormilon/dralingo-sleep.webp" alt="Dralingo duerme">
+    </section>
+    <aside class="dmh-end-side">
+      <h2>🏆 Podio de la clase</h2>
+      <div class="dmh-podium" id="podium"></div>
+      <div class="dmh-end-tools">
+        <button class="dmh-btn" type="button" onclick="location.href='/'">🏠 Inicio</button>
+        <button class="dmh-btn" id="end-skip-btn" type="button">⏭ Saltar a las tarjetas</button>
+        <button class="dmh-btn go" id="play-again-btn" type="button">🔄 Otra ronda</button>
+      </div>
+    </aside>
+  </main>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <!-- 🔑 creating a game needs a teacher the first time on a device (js/teacher-gate.js) -->
+  <script src="/js/teacher-gate.js?v=20261018a"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+  <script src="/js/sounds.js"></script>
+  <script src="/js/saga.js?v=20261020z3d3"></script>
+  <script src="/js/halcon-board.js?v=20261019zc"></script>
+  <script src="/js/cast.js?v=20261017td"></script>
+  <script src="/js/dormilon-stage.js?v=20261022dm"></script>
+  <script src="/js/host-dormilon.js?v=20261022dm"></script>
+  <script src="/js/live-game.js?v=20261011c"></script>
+  <!-- ← «Volver» while the lobby waits (his rule 2026-10-18: every screen has a way back) -->
+  <script src="/js/host-back.js?v=20261022dm" data-place="title"></script>
+</body>
+</html>

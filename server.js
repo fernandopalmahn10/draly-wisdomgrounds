@@ -46,6 +46,7 @@ const EscapeMap = require('./public/js/escape-map'); // … and its zona segura 
 const Party = require('./core/party');               // the Mario Party ending of Reinos / Pintores / Nieve / Fuga (stars, «¡FINAL!»)
 const Halcon = require('./core/halcon');             // Ojos de Halcón: Mario Party «Looking for Love» in boards of 4 (rules)
 const Mono = require('./core/monopoly');             // Dàfùwēng · Monopolio v2: «El Gran Tablero de Dubái», boards of 4 (rules)
+const Dorm = require('./core/dormilon');             // ¡No despiertes a Dralingo!: Mario Party «Don't Wake Wiggler», boards of 4 (rules)
 const Dragon = require('./core/dragon');               // Vuelo del Dragón v2: «La Carrera del Cielo de Dubái», races of 4 (rules)
 const Mochi = require('./core/mochi');               // Mochi Mash v2: «La Terraza del Mochi», team mash + ceremony (rules)
 const Pinata = require('./core/pinata');             // Piñata Tigre v2: «La Fiesta de las Piñatas», team hits + timing meter (rules)
@@ -7553,6 +7554,7 @@ function nextQuestionFor(game, playerId) {
 
   // 6-7 Swing v2: its room tick deals every sum (ssDeal, core/sixseven.js); never a generic question
   if (game.gameType === 'sixseven') return null;
+  if (game.gameType === 'dormilon') return null;   // ¡No despiertes a Dralingo!: its tick deals the turn kid's questions (dm:q)
 
   const q = game.questions[p.queueIdx % game.questions.length];
   p.queueIdx++;
@@ -7825,6 +7827,268 @@ function mnFinish(pin, g) {
     if (one) io.to(pid).emit('game-end', one);
   });
   _zocoGameEnd(pin, g, end);   // 🪙 El Zoco: a game played for real and its bonus stars pay (core/zoco.js PAY; after the ceremony is sent)
+}
+
+// === 😴 ¡NO DESPIERTES A DRALINGO! (gameType 'dormilon') — Super Mario Party «Don't Wake Wiggler», boards of 4 ===
+// Rules in core/dormilon.js (spec docs/specs/no-despiertes-a-dralingo.md). The boards are dealt when the countdown
+// starts (each phone runs in with its own board, dm:init); one 200 ms tick per room runs the clock: intro → play (each
+// board runs its own turns: «Turno de X» → the turn kid's quick questions → a stroke / a stir / «¡Me retiro!» / a wake-up
+// → the next kid) → the last 30 s ×2 → «¡FINAL!» → game-end (each phone its board's ceremony and card, the projector
+// every board's champion + the class podium). The turn kid gets the questions (dm:q, right answer kept here); the other
+// phones of its board and the projector get a copy without it (dm:bq) and every stroke / stir live. Each board is a
+// socket.io room of its own (the game id in its name, so «Otra ronda» never mixes boards). No full-room 'state' push on
+// answers; the class top 3 rides on dm:top to the projector.
+const DM_TICK_MS = 200;
+function dmEnsureId(g, p) { if (!p.dmK) p.dmK = (g.dmNextK = (g.dmNextK || 0) + 1); return p.dmK; }
+const dmRoom = (pin, m, bid) => `${pin}:dm:${m.id}:${bid}`;
+function dmJoinRoom(pin, g, pid, p) {
+  const m = g.dm;
+  const r = m && Dorm.kid(m, p.dmK);
+  if (!r) return;
+  const s = io.sockets.sockets.get(pid);
+  if (s) s.join(dmRoom(pin, m, r.b));
+}
+function dmOnline(g) {
+  const on = new Set();
+  Object.values(g.players).forEach((p) => { if (p.dmK && !p.disconnected) on.add(p.dmK); });
+  return (k) => on.has(k);
+}
+function dmPidOf(g, k) {
+  for (const [pid, p] of Object.entries(g.players)) if (p.dmK === k && !p.disconnected) return pid;
+  return null;
+}
+const dmClock = (m) => (m.paused ? m.pausedAt : Date.now());
+function dmTop(g, n) {
+  return Object.values(g.dm.kids).slice().sort((a, b) => b.score - a.score || b.pats - a.pats || a.k - b.k).slice(0, n)
+    .map((r) => ({ k: r.k, name: r.name, skin: r.skin, score: r.score, b: r.b }));
+}
+function dmInitPayload(g, pid) {
+  const m = g.dm;
+  const clock = dmClock(m);
+  const online = dmOnline(g);
+  const out = {
+    id: m.id, phase: m.phase, phaseMs: Math.max(0, m.phaseUntil - clock), paused: !!m.paused,
+    endsMs: m.endsAt ? Math.max(0, m.endsAt - clock) : null, frenzy: !!m.frenzy, duration: m.duration, boardsN: m.boards.length,
+    top: dmTop(g, 3),
+  };
+  if (!pid) { out.boards = m.boards.map((b) => Dorm.boardView(m, b, online, clock)); return out; }
+  const p = g.players[pid];
+  const r = p && Dorm.kid(m, p.dmK);
+  if (!r) return out;
+  const b = Dorm.boardOf(m, r.b);
+  out.board = b ? Dorm.boardView(m, b, online, clock) : null;
+  out.you = { k: r.k, b: r.b, score: r.score, pats: r.pats, first: !!r.first, guess: b && b.guesses[r.k] ? b.guesses[r.k] : null };
+  const c = b && b.cur;
+  if (c && c.q) {
+    const q = Dorm.qPublic(c.q);
+    if (c.k === r.k) out.q = Object.assign(q, { ms: Math.max(0, c.until - clock) });    // my open question again (same qid)
+    else out.bq = { b: b.id, k: c.k, text: q.text, answers: q.answers, image: q.image };
+  }
+  if (c) out.turnMs = Math.max(0, c.until - clock);
+  return out;
+}
+function dmStop(g) { if (g && g.dm && g.dm.timer) { clearInterval(g.dm.timer); g.dm.timer = null; } }
+// The events of the rules (core/dormilon.js) to the screens: the board's phones (its room) + the projector; the open
+// question only to the kid who plays (the others get it without the right answer).
+function dmEmit(pin, g, evs) {
+  const m = g.dm;
+  if (!m || !evs || !evs.length) return;
+  let scored = false;
+  evs.forEach((e) => {
+    try {
+      if (e.t === 'q') {
+        const pid = dmPidOf(g, e.k);
+        const q = Dorm.qPublic(e.q);
+        if (pid) io.to(pid).emit('dm:q', Object.assign({ b: e.b, ms: e.ms }, q));
+        const copy = { b: e.b, k: e.k, text: q.text, answers: q.answers, image: q.image };
+        io.to(dmRoom(pin, m, e.b)).except(pid || '').emit('dm:bq', copy);
+        io.to(g.hostId).emit('dm:bq', copy);
+        return;
+      }
+      if (e.t === 'frenzy') { io.to(pin).emit('dm:frenzy', { id: m.id, endsMs: e.endsMs, off: !!e.off }); return; }
+      if (e.t === 'final') { io.to(pin).emit('dm:final', { id: m.id, ms: e.ms }); return; }
+      if (e.t === 'pat' || e.t === 'wake' || e.t === 'end') {
+        const r = Dorm.kid(m, e.k);
+        Object.values(g.players).forEach((p) => { if (r && p.dmK === r.k) p.score = r.score; });
+        scored = true;
+      }
+      const name = 'dm:' + e.t;
+      const payload = Object.assign({ id: m.id }, e);
+      delete payload.t;
+      io.to(dmRoom(pin, m, e.b)).emit(name, payload);
+      io.to(g.hostId).emit(name, payload);
+    } catch (err) { console.error('[dormilon] emit', e && e.t, err); }
+  });
+  if (scored) io.to(g.hostId).emit('dm:top', { top: dmTop(g, 3) });
+}
+// The countdown starts: the boards are dealt now, so every phone runs in with its own board and the projector with all.
+function dmDeal(pin, g) {
+  dmStop(g);
+  const now = Date.now();
+  const m = Dorm.newGame(1 + Math.floor(Math.random() * 1e9), g.duration, now);
+  m.phaseUntil = now + COUNTDOWN_MS;
+  m.timer = null;
+  g.dm = m;
+  Object.values(g.players).forEach((p) => { dmEnsureId(g, p); p.currentQ = null; });
+  Dorm.deal(m, Object.values(g.players).filter((p) => !p.disconnected).map((p) => [p.dmK, p.name, hcSkin(p), p.studentCode || '']));
+  Object.entries(g.players).forEach(([pid, p]) => {
+    if (p.disconnected || !Dorm.inGame(m, p.dmK)) return;
+    dmJoinRoom(pin, g, pid, p);
+    io.to(pid).emit('dm:init', dmInitPayload(g, pid));
+  });
+  io.to(g.hostId).emit('dm:init', dmInitPayload(g, null));
+}
+// A kid who wasn't dealt in (joined late, came back after the deal) sits at the smallest board, last in its turn order;
+// that board's phones and the projector get the new kid. Returns true when the kid got a new seat.
+function dmSeatLate(pin, g, pid, p) {
+  const m = g.dm;
+  const b = Dorm.seatLate(m, dmEnsureId(g, p), p.name, hcSkin(p), p.studentCode || '');
+  if (!b) return false;
+  dmJoinRoom(pin, g, pid, p);
+  const view = Dorm.boardView(m, b, dmOnline(g), dmClock(m));
+  io.to(dmRoom(pin, m, b.id)).except(pid).emit('dm:seat', { board: view });
+  io.to(g.hostId).emit('dm:seat', { board: view });
+  return true;
+}
+// The countdown is over: the intro («¡Shhh! Dralingo duerme…» → «¡YA!»), then dmPlay; the tick runs everything.
+function dmStart(pin, g) {
+  const m = g.dm;
+  if (!m || m.phase !== 'countdown') return;
+  const now = Date.now();
+  m.phase = 'intro';
+  m.phaseAt = now;
+  m.phaseUntil = now + Dorm.R.INTRO_MS;
+  Object.entries(g.players).forEach(([pid, p]) => {
+    dmEnsureId(g, p);
+    p.currentQ = null;
+    if (!p.disconnected && !Dorm.inGame(m, p.dmK)) { dmSeatLate(pin, g, pid, p); io.to(pid).emit('dm:init', dmInitPayload(g, pid)); }
+  });
+  g.endsAt = now + Dorm.R.INTRO_MS + m.duration * 1000;
+  io.to(pin).emit('dm:intro', { id: m.id, ms: Dorm.R.INTRO_MS });
+  dmStop(g);
+  m.timer = setInterval(() => dmTick(pin, m), DM_TICK_MS);
+}
+function dmPlay(pin, g) {
+  const m = g.dm;
+  if (!m || m.phase !== 'intro') return;
+  const now = Date.now();
+  const evs = Dorm.startPlay(m, now);
+  g.endsAt = m.endsAt;
+  io.to(pin).emit('dm:play', { id: m.id, endsMs: m.endsAt - now });
+  dmEmit(pin, g, evs);
+  g._lastBcast = 0;
+  broadcast(pin);
+}
+const dmOpts = (g) => ({ questions: g.questions, imageFor: (q) => Images.urlForQuestion(q), online: dmOnline(g) });
+function dmTick(pin, m) {
+  const g = games[pin];
+  if (!g || g.dm !== m || g.state !== 'active') { clearInterval(m.timer); m.timer = null; return; }
+  if (m.paused) return;
+  const now = Date.now();
+  try {
+    if (m.phase === 'intro') { if (now >= m.phaseUntil) dmPlay(pin, g); return; }
+    if (m.phase === 'play') { dmEmit(pin, g, Dorm.tick(m, now, dmOpts(g))); return; }
+    if (m.phase === 'final' && now >= m.phaseUntil) {
+      dmStop(g);
+      if (g.endTimer) { clearTimeout(g.endTimer); g.endTimer = null; }
+      endGame(pin);
+    }
+  } catch (e) { console.error('[dormilon] tick', e); }
+}
+// «¡FINAL!» on every screen (a turn still running ends safely); the tick ends the game FINAL_MS later.
+function dmFinal(pin, g) {
+  const m = g.dm;
+  if (!m || m.phase === 'final' || m.phase === 'done') return;
+  const now = Date.now();
+  if (m.paused) { Dorm.shiftTimes(m, now - m.pausedAt); m.paused = false; io.to(pin).emit('dm:pause', { id: m.id, paused: false }); }
+  dmEmit(pin, g, Dorm.final(m, now));
+  Object.values(g.players).forEach((p) => { p.currentQ = null; });
+  if (!m.timer) m.timer = setInterval(() => dmTick(pin, m), DM_TICK_MS);
+}
+function dmPause(pin, g, paused) {
+  const m = g.dm;
+  if (!m || !!m.paused === !!paused || m.phase === 'final' || m.phase === 'done' || m.phase === 'countdown') return;
+  const now = Date.now();
+  if (paused) { m.paused = true; m.pausedAt = now; }
+  else {
+    const shift = now - m.pausedAt;
+    Dorm.shiftTimes(m, shift);
+    if (g.endsAt) g.endsAt += shift;
+    m.paused = false;
+  }
+  const clock = dmClock(m);
+  io.to(pin).emit('dm:pause', { id: m.id, paused: !!m.paused, phase: m.phase, endsMs: m.endsAt ? Math.max(0, m.endsAt - clock) : null });
+  // every board again with its time left (the turn's countdown on the phones stands still / runs on)
+  Object.entries(g.players).forEach(([pid, p]) => { if (!p.disconnected && Dorm.inGame(m, p.dmK)) io.to(pid).emit('dm:init', dmInitPayload(g, pid)); });
+  io.to(g.hostId).emit('dm:init', dmInitPayload(g, null));
+  g._lastBcast = 0;
+  broadcast(pin);
+}
+// The end: each board's ranking, bonus stars and winner; the class podium; each phone its own board + its card (built
+// again on demand for a reconnect).
+function dmEndPayloads(g) {
+  const m = g.dm;
+  const fin = Dorm.finish(m);
+  const lite = (x) => x && {
+    k: x.k, name: x.name, skin: x.skin, b: x.b, score: x.score, pats: x.pats, wakes: x.wakes, lost: x.lost, rank: x.rank,
+    classRank: x.classRank, stars: x.stars, best: x.best, big: x.big, safe: x.safe, guessOk: x.guessOk,
+  };
+  const boards = fin.boards.map((bd) => ({
+    id: bd.id, nights: bd.nights, winners: bd.winners, rows: bd.rows.map((k) => lite(fin.byK[k])),
+    stars: bd.stars.map((s) => ({ id: s.id, name: s.name, unit: s.unit, value: s.value, winners: s.winners })),
+  }));
+  const podium = fin.order.slice(0, 3).map((k) => lite(fin.byK[k]));
+  const common = { winner: 'tie', teamScores: { red: 0, gold: 0 } };   // (no teams: the shared phone code reads these)
+  return {
+    byK: fin.byK,
+    // a phone with no row (seated too late, e.g. it joined during «¡FINAL!»): the podium and «mira el proyector»
+    guest: () => Object.assign({}, common, { dormilon: { board: null, podium, count: fin.count, boardsN: boards.length }, me: { guest: true } }),
+    host: Object.assign({
+      leaderboard: fin.order.map((k) => ({ name: fin.byK[k].name, score: fin.byK[k].score, team: 'red' })),
+      dormilon: { boards, podium, count: fin.count, winners: fin.winners },
+    }, common),
+    forPlayer(pid) {
+      const p = g.players[pid];
+      const x = p && fin.byK[p.dmK];
+      if (!x) return null;
+      const board = boards.find((bd) => bd.id === x.b) || null;
+      return Object.assign({}, common, {
+        scores: { [pid]: x.score },
+        dormilon: { board, podium, count: fin.count, boardsN: boards.length },
+        me: {
+          k: x.k, b: x.b, skin: x.skin, rank: x.rank, of: board ? board.rows.length : 1, classRank: x.classRank, classOf: fin.count,
+          score: x.score, pats: x.pats, wakes: x.wakes, lost: x.lost, stars: x.stars, answered: x.answered, right: x.right,
+          best: x.best, big: x.big, safe: x.safe, guessOk: x.guessOk, won: !!(board && board.winners.includes(x.k)),
+        },
+      });
+    },
+  };
+}
+function dmFinish(pin, g) {
+  const m = g.dm;
+  if (!m) return;
+  dmStop(g);
+  m.phase = 'done';
+  const end = dmEndPayloads(g);
+  Object.values(g.players).forEach((p) => { const x = end.byK[p.dmK]; if (x) p.score = x.score; });
+  io.to(g.hostId).emit('game-end', end.host);
+  Object.entries(g.players).forEach(([pid, p]) => {
+    if (p.disconnected) return;
+    io.to(pid).emit('game-end', end.forPlayer(pid) || end.guest());
+  });
+  _zocoGameEnd(pin, g, end);   // 🪙 El Zoco: a game played for real and its bonus stars pay (core/zoco.js PAY; after the ceremony is sent)
+}
+// a kid's phone (re)connects mid-game: its seat (or a late seat), its board room, the board again with an open question
+function dmAttach(pin, g, pid, p) {
+  const m = g.dm;
+  if (!m) return;
+  // a kid the room forgot (away 5+ min: a new player entry) takes its own row back by its student code (points, seat)
+  if (!Dorm.inGame(m, p.dmK) && p.studentCode) { const old = Dorm.byCode(m, p.studentCode, dmOnline(g)); if (old) p.dmK = old.k; }
+  dmEnsureId(g, p);
+  p.currentQ = null;
+  if (!Dorm.inGame(m, p.dmK)) { if (m.phase === 'intro' || m.phase === 'play') dmSeatLate(pin, g, pid, p); }   // (in the countdown dmStart seats them)
+  else dmJoinRoom(pin, g, pid, p);
+  io.to(pid).emit('dm:init', dmInitPayload(g, pid));
 }
 
 // === 🐉 VUELO DEL DRAGÓN v2 (gameType 'dragon-eye') — «La Carrera del Cielo de Dubái», a Mario Party sky race ===
@@ -10765,7 +11029,7 @@ function _gameAvatar(sent, rec, proven) {
   return s ? s.slice(0, 8) : '';
 }
 // The class games that pay (every pin game; never the warm-up, reading or exam rooms: those are class tools)
-const ZOCO_GAMES = ['kingdoms', 'paint', 'snow', 'escape', 'trapdoor', 'halcon', 'mochi-mash', 'pinata', 'sixseven', 'monopoly', 'dragon-eye'];
+const ZOCO_GAMES = ['kingdoms', 'paint', 'snow', 'escape', 'trapdoor', 'halcon', 'mochi-mash', 'pinata', 'sixseven', 'monopoly', 'dragon-eye', 'dormilon'];
 // A pin game's round ended (each game's finisher, right after it built its end payloads): every kid whose account the
 // phone proved and who played for real (Zoco.GAME_MIN answers) gets PAY.game and PAY.star per bonus star of the ceremony, once per
 // round (the room's id + the round's start), within the day's caps. The phone hears it as `zoco:coins` (a small «+N
@@ -10836,6 +11100,13 @@ function endGame(pin, force) {
   if (finGame(g)) {
     if (g.endTimer) { clearTimeout(g.endTimer); g.endTimer = null; }
     finFinish(pin, g);
+    broadcast(pin);
+    return;
+  }
+  // ¡No despiertes a Dralingo!: bonus stars per board, each board's winner, the class podium, each phone its own card.
+  if (g.gameType === 'dormilon' && g.dm) {
+    if (g.endTimer) { clearTimeout(g.endTimer); g.endTimer = null; }
+    dmFinish(pin, g);
     broadcast(pin);
     return;
   }
@@ -10964,7 +11235,7 @@ io.on('connection', (socket) => {
       if (typeof a === 'function') cb = a;
       else if (a && typeof a === 'object') opts = a;
     }
-    const validTypes = ['mochi-mash', 'pinata', 'dragon-eye', 'monopoly', 'sixseven', 'kingdoms', 'paint', 'snow', 'escape', 'halcon', 'trapdoor', 'warmup', 'reading', 'hsksim'];
+    const validTypes = ['mochi-mash', 'pinata', 'dragon-eye', 'monopoly', 'dormilon', 'sixseven', 'kingdoms', 'paint', 'snow', 'escape', 'halcon', 'trapdoor', 'warmup', 'reading', 'hsksim'];
     const type = validTypes.includes(opts.gameType) ? opts.gameType : 'mochi-mash';
     // 🔑 2026-10-15 — creating ANY room needs a teacher (his words: "maestros crear un juego needs first time key access,
     // then it's safe"): a remembered teacher device (the dtd cookie the page's connection carried: a /maestro login
@@ -10991,6 +11262,7 @@ io.on('connection', (socket) => {
       type === 'pinata'       ? Pinata.R.DURATION :  // 3 min (the lobby offers 2 / 3 / 4)
       type === 'dragon-eye'   ? Dragon.R.DURATION :   // 4 min (the lobby offers 3 / 4 / 5)
       type === 'monopoly'     ? Mono.R.DURATION :   // 4 min (the lobby offers 3 / 4 / 5)
+      type === 'dormilon'     ? Dorm.R.DURATION :   // ¡No despiertes a Dralingo!: 4 min (the lobby offers 3 / 4 / 5)
       type === 'sixseven'     ? Sixseven.R.DURATION :   // 2 min (the lobby offers 2 / 3 / 4)
       type === 'kingdoms'     ? 180 :
       type === 'paint'        ? 240 :
@@ -11153,6 +11425,9 @@ io.on('connection', (socket) => {
     // Dàfùwēng · Monopolio: every board again (the countdown or mid-game), or the ceremony again (after the end)
     if (g.gameType === 'monopoly' && g.mn && (g.state === 'active' || g.state === 'countdown')) io.to(socket.id).emit('mn:init', mnInitPayload(g, null));
     if (g.gameType === 'monopoly' && g.mn && g.state === 'ended') io.to(socket.id).emit('game-end', mnEndPayloads(g).host);
+    // ¡No despiertes a Dralingo!: every board again (the countdown or mid-game), or the ceremony again (after the end)
+    if (g.gameType === 'dormilon' && g.dm && (g.state === 'active' || g.state === 'countdown')) io.to(socket.id).emit('dm:init', dmInitPayload(g, null));
+    if (g.gameType === 'dormilon' && g.dm && g.state === 'ended') io.to(socket.id).emit('game-end', dmEndPayloads(g).host);
     // Vuelo del Dragón: every race again (the countdown or mid-game), or the ceremony again (after the end)
     if (g.gameType === 'dragon-eye' && g.dr && (g.state === 'active' || g.state === 'countdown')) io.to(socket.id).emit('dr:init', drInitPayload(g, null));
     if (g.gameType === 'dragon-eye' && g.dr && g.state === 'ended') io.to(socket.id).emit('game-end', drEndPayloads(g).host);
@@ -11334,7 +11609,7 @@ io.on('connection', (socket) => {
   socket.on('host:start', ({ pin }) => {
     const g = games[pin];
     if (!g || g.hostId !== socket.id) return;
-    if ((g.gameType === 'monopoly' || g.gameType === 'dragon-eye') && g.state !== 'lobby') return;   // Monopolio / Vuelo: a second click never deals again
+    if ((g.gameType === 'monopoly' || g.gameType === 'dragon-eye' || g.gameType === 'dormilon') && g.state !== 'lobby') return;   // Monopolio / Vuelo / No despiertes: a second click never deals again
     // Reinos / Pintores: a second click (or a reconnected projector) must not wipe a round that is already running.
     if ((g.gameType === 'kingdoms' || g.gameType === 'paint' || g.gameType === 'snow' || g.gameType === 'escape' || g.gameType === 'halcon' || g.gameType === 'mochi-mash' || g.gameType === 'pinata' || g.gameType === 'sixseven' || g.gameType === 'trapdoor') && g.state !== 'lobby') return;
     // Some game types don't use question sets at all (their content is
@@ -11399,6 +11674,9 @@ io.on('connection', (socket) => {
     // Dàfùwēng · Monopolio: the same (each phone's run-in shows its own board of 4)
     if (g.gameType === 'monopoly') mnDeal(pin, g);
     const mnDealt = g.gameType === 'monopoly' && g.mn ? g.mn.id : null;   // (a reset / new deal during the countdown: this start is void)
+    // ¡No despiertes a Dralingo!: the same (each phone's run-in shows its own board of 4 and the sleeping Dralingo)
+    if (g.gameType === 'dormilon') dmDeal(pin, g);
+    const dmDealt = g.gameType === 'dormilon' && g.dm ? g.dm.id : null;
     // Vuelo del Dragón: the same (each phone's run-in shows its own race of 4)
     if (g.gameType === 'dragon-eye') drDeal(pin, g);
     const drDealt = g.gameType === 'dragon-eye' && g.dr ? g.dr.id : null;
@@ -11406,6 +11684,7 @@ io.on('connection', (socket) => {
     setTimeout(() => {
       if (!games[pin]) return;
       if (g.gameType === 'monopoly' && (g.state !== 'countdown' || !g.mn || g.mn.id !== mnDealt)) return;
+      if (g.gameType === 'dormilon' && (g.state !== 'countdown' || !g.dm || g.dm.id !== dmDealt)) return;
       if (g.gameType === 'dragon-eye' && (g.state !== 'countdown' || !g.dr || g.dr.id !== drDealt)) return;
       g.state = 'active';
       g.startedAt = Date.now();
@@ -11420,6 +11699,8 @@ io.on('connection', (socket) => {
       });
       // Dàfùwēng · Monopolio: the boards were dealt at the countdown; the intro now, then mnPlay (its tick deals the questions)
       if (g.gameType === 'monopoly') mnStart(pin, g);
+      // ¡No despiertes a Dralingo!: the boards were dealt at the countdown; the intro now, then dmPlay (its tick runs the turns)
+      if (g.gameType === 'dormilon') dmStart(pin, g);
 
       // Vuelo del Dragón v2: the races were dealt at the countdown; the intro now, then drPlay (its tick deals the questions)
       if (g.gameType === 'dragon-eye') drStart(pin, g);
@@ -11505,7 +11786,7 @@ io.on('connection', (socket) => {
       }
       broadcast(pin);
       // Every question-driven game auto-deals the first question (Dragones Pintores: kids ask with «Recargar»).
-      if (g.gameType !== 'paint' && g.gameType !== 'snow' && g.gameType !== 'halcon' && g.gameType !== 'mochi-mash' && g.gameType !== 'pinata' && g.gameType !== 'sixseven' && g.gameType !== 'trapdoor') Object.keys(g.players).forEach((pid) => {
+      if (g.gameType !== 'paint' && g.gameType !== 'snow' && g.gameType !== 'halcon' && g.gameType !== 'dormilon' && g.gameType !== 'mochi-mash' && g.gameType !== 'pinata' && g.gameType !== 'sixseven' && g.gameType !== 'trapdoor') Object.keys(g.players).forEach((pid) => {
         const q = nextQuestionFor(g, pid);
         if (q) io.to(pid).emit('question', q);
       });
@@ -11514,7 +11795,7 @@ io.on('connection', (socket) => {
         endGame(pin);
       }, g.duration * 1000);
       // Dàfùwēng · Monopolio: its room tick owns the clock (intro, +30 s, pause, «¡FINAL!»): no generic end timer
-      if ((g.gameType === 'monopoly' || g.gameType === 'dragon-eye' || g.gameType === 'trapdoor') && g.endTimer) { clearTimeout(g.endTimer); g.endTimer = null; }
+      if ((g.gameType === 'monopoly' || g.gameType === 'dragon-eye' || g.gameType === 'trapdoor' || g.gameType === 'dormilon') && g.endTimer) { clearTimeout(g.endTimer); g.endTimer = null; }
     }, COUNTDOWN_MS);
   });
 
@@ -11533,6 +11814,12 @@ io.on('connection', (socket) => {
     if (g.gameType === 'halcon' && g.halcon && !g.halcon.paused) {
       if (g.halcon.phase === 'final') return;      // «¡FINAL!» is already on: the finale follows by itself
       if (g.halcon.phase !== 'done') { hcFinal(pin, g); return; }
+    }
+    // ¡No despiertes a Dralingo!: «Terminar» plays «¡FINAL!» first (also from the pause card), then the ceremony; never twice
+    if (g.gameType === 'dormilon') {
+      if (!g.dm || g.state !== 'active' || g.dm.phase === 'final' || g.dm.phase === 'done') return;
+      dmFinal(pin, g);
+      return;
     }
     // Dàfùwēng · Monopolio: «Terminar» plays «¡FINAL!» first (also from the pause card), then the ceremony; never twice
     if (g.gameType === 'monopoly') {
@@ -11621,6 +11908,7 @@ io.on('connection', (socket) => {
     if (g.gameType === 'escape') { const was = g.escape; esStop(g); g.escape = null; if (was) g.esRoute = EscapeMap.routeIdx((was.route | 0) + 1); io.to(pin).emit('es:route', { route: EscapeMap.routeIdx(g.esRoute) }); }
     if (g.gameType === 'halcon') { hcStop(g); g.halcon = null; }
     if (g.gameType === 'monopoly') { mnStop(g); g.mn = null; }   // (each kid keeps its id k; a new game makes new boards)
+    if (g.gameType === 'dormilon') { dmStop(g); g.dm = null; }   // (the same: a new game deals new boards and new nights)
     if (g.gameType === 'dragon-eye') { drStop(g); g.dr = null; }  // (the same: a new game deals new races)
     if (g.gameType === 'mochi-mash') {
       mmStop(g);
@@ -11669,7 +11957,7 @@ io.on('connection', (socket) => {
     // Dàfùwēng · Monopolio: a kid of this game whose phone dropped around the end (a new socket) gets its slot back and
     // its own board's ceremony + card again, and stays in the room for «Otra ronda»
     // (2026-10-19: never a slot whose name is playing right now on another phone: _slotByName)
-    if (g.state === 'ended' && g.gameType === 'monopoly' && g.mn) {
+    if (g.state === 'ended' && ((g.gameType === 'monopoly' && g.mn) || (g.gameType === 'dormilon' && g.dm))) {
       const sl = _slotByName(g, name, socket.id, sentCode);
       const ex = sl.entry;
       if (ex) {
@@ -11687,7 +11975,7 @@ io.on('connection', (socket) => {
         const mine = _samePhone(pl, sentCode);
         cb({ ok: true, name: pl.name, team: pl.team, playerId: socket.id, gameType: g.gameType, rejoined: true, gameState: 'ended', studentCode: mine ? pl.studentCode : undefined, guest: !mine });
         io.to(socket.id).emit('state', publicState(g));
-        const one = mnEndPayloads(g).forPlayer(socket.id);
+        const one = g.gameType === 'dormilon' ? (() => { const e = dmEndPayloads(g); return e.forPlayer(socket.id) || e.guest(); })() : mnEndPayloads(g).forPlayer(socket.id);
         if (one) setTimeout(() => io.to(socket.id).emit('game-end', one), 60);
         return;
       }
@@ -11865,6 +12153,12 @@ io.on('connection', (socket) => {
     if (g.state === 'countdown' && g.gameType === 'halcon' && g.halcon && Halcon.inGame(g.halcon, player)) {
       io.to(socket.id).emit('hc:init', hcInitPayload(g, socket.id));
     }
+    // ¡No despiertes a Dralingo! during the countdown: a dealt kid who reloads gets its board again (a new kid sits down
+    // when the intro starts, dmStart)
+    if (g.state === 'countdown' && g.gameType === 'dormilon' && g.dm && Dorm.inGame(g.dm, player.dmK)) {
+      dmJoinRoom(pin, g, socket.id, player);
+      io.to(socket.id).emit('dm:init', dmInitPayload(g, socket.id));
+    }
     // Dàfùwēng · Monopolio during the countdown: a dealt kid who reloads gets its board's run-in again (a new kid sits
     // down when the intro starts, mnStart)
     if (g.state === 'countdown' && g.gameType === 'monopoly' && g.mn && Mono.inGame(g.mn, player.mnK)) {
@@ -11937,6 +12231,9 @@ io.on('connection', (socket) => {
           Object.keys(g.wuAnim).forEach((id) => io.to(socket.id).emit('wu:anim', { id, on: true }));
         }
       }
+      // ¡No despiertes a Dralingo!: a late joiner sits at the smallest board (max 5, last in its turn order); a rejoin
+      // keeps its seat, points and an open question (dm:init carries it with the time left). Never a generic question.
+      if (g.gameType === 'dormilon' && g.dm) { dmAttach(pin, g, socket.id, player); return; }
       // Dàfùwēng · Monopolio: a late joiner sits at the smallest board (max 5) and plays from now; a rejoin keeps its seat,
       // piece, coins, stars, an open dice window and a turn still playing (mn:init carries them). Its open question comes
       // back; the room's tick deals every new one (never in the intro, a pause or «¡FINAL!»).
@@ -12407,6 +12704,7 @@ io.on('connection', (socket) => {
       if (g.gameType === 'escape') esPause(pin, g, !!paused);
       if (g.gameType === 'halcon') hcPause(pin, g, !!paused);
       if (g.gameType === 'monopoly') mnPause(pin, g, !!paused);
+      if (g.gameType === 'dormilon') dmPause(pin, g, !!paused);
       if (g.gameType === 'dragon-eye') drPause(pin, g, !!paused);
       if (g.gameType === 'mochi-mash') mmPause(pin, g, !!paused);
       if (g.gameType === 'pinata') pnPause(pin, g, !!paused);
@@ -12628,6 +12926,18 @@ io.on('connection', (socket) => {
       broadcast(pin);
       return;
     }
+    // ¡No despiertes a Dralingo!: its room tick owns the clock; landing inside the last 30 s starts «¡Luna llena!» on the
+    // next tick, as if the clock got there
+    if (g.gameType === 'dormilon' && g.dm) {
+      const clock = dmClock(g.dm);
+      const d = Dorm.addTime(g.dm, add, clock);
+      if (!d) { if (add < 0) io.to(socket.id).emit('host:time-refused', { cut: true }); return; }
+      g.endsAt = g.dm.endsAt;
+      io.to(pin).emit('dm:time', { id: g.dm.id, endsMs: Math.max(0, g.dm.endsAt - clock), frenzy: g.dm.frenzy, add: said(d) });
+      g._lastBcast = 0;
+      broadcast(pin);
+      return;
+    }
     // Las Trampillas counts in rounds: «+30 s» = 2 rondas más (up to 15), «−30 s» = 2 rondas menos (never the round
     // being played nor the next one); neither once the Final Round is on
     if (g.gameType === 'trapdoor' && g.td) {
@@ -12723,6 +13033,18 @@ io.on('connection', (socket) => {
       score:          p.score     || 0,
       inAction
     });
+    // ¡No despiertes a Dralingo!: the board again (seat, points, an open question with its time left); after the end, the
+    // ceremony + card again. The room's tick deals every new question.
+    if (g.gameType === 'dormilon' && g.dm) {
+      if (g.state === 'ended') {
+        const e = dmEndPayloads(g);
+        const one = e.forPlayer(socket.id) || e.guest();
+        if (one) io.to(socket.id).emit('game-end', one);
+        return;
+      }
+      if (g.state === 'active' || g.state === 'countdown') dmAttach(pin, g, socket.id, p);
+      return;
+    }
     // Dàfùwēng · Monopolio: the board again (seat, piece, coins, an open dice window, a turn still playing), the open
     // question again; after the end, the ceremony + card again. The room's tick deals every new question.
     if (g.gameType === 'monopoly' && g.mn) {
@@ -13785,6 +14107,73 @@ io.on('connection', (socket) => {
       else if (g.state === 'ended') io.to(pin).except(g.hostId).emit('dr:skip', { id: g.dr.id });
     } catch (e) { console.error('[host:dr-skip]', e); }
   });
+  // ¡No despiertes a Dralingo!: the turn kid's answer (its qid; a stale or double tap is ignored and the phone hears why),
+  // «¡Me retiro!», the watchers' «¿Se despierta?» guess and their reactions (🤫 😱 😂 👏).
+  socket.on('player:dm-answer', (data) => {
+    try {
+      const { pin, qid, idx } = data || {};
+      const g = games[pin];
+      if (!g || g.gameType !== 'dormilon' || !g.dm || g.state !== 'active') return;
+      const p = g.players[socket.id];
+      if (!p || !p.dmK) return;
+      const res = Dorm.answer(g.dm, p.dmK, String(qid || ''), Number(idx), Date.now());
+      if (!res.ok) { io.to(socket.id).emit('dm:nope', { qid: String(qid || ''), why: res.why }); return; }
+      dmEmit(pin, g, res.ev);
+    } catch (e) { console.error('[player:dm-answer]', e); }
+  });
+  socket.on('player:dm-stop', (data) => {
+    try {
+      const pin = data && data.pin;
+      const g = games[pin];
+      if (!g || g.gameType !== 'dormilon' || !g.dm || g.state !== 'active') return;
+      const p = g.players[socket.id];
+      if (!p || !p.dmK) return;
+      dmEmit(pin, g, Dorm.stop(g.dm, p.dmK, Date.now()));
+    } catch (e) { console.error('[player:dm-stop]', e); }
+  });
+  socket.on('player:dm-guess', (data) => {
+    try {
+      const { pin, g: pick } = data || {};
+      const g = games[pin];
+      if (!g || g.gameType !== 'dormilon' || !g.dm || g.state !== 'active') return;
+      const p = g.players[socket.id];
+      if (!p || !p.dmK) return;
+      const r = Dorm.guess(g.dm, p.dmK, pick, Date.now());
+      if (!r) { io.to(socket.id).emit('dm:guess-no', {}); return; }
+      const ev = { id: g.dm.id, b: r.b, k: r.k, g: r.g, tally: r.tally };
+      io.to(dmRoom(pin, g.dm, r.b)).emit('dm:guess', ev);
+      io.to(g.hostId).emit('dm:guess', ev);
+    } catch (e) { console.error('[player:dm-guess]', e); }
+  });
+  socket.on('player:dm-react', (data) => {
+    try {
+      const { pin, e } = data || {};
+      const g = games[pin];
+      if (!g || g.gameType !== 'dormilon' || !g.dm || g.state !== 'active') return;
+      const p = g.players[socket.id];
+      if (!p || !p.dmK) return;
+      const r = Dorm.react(g.dm, p.dmK, String(e || ''), Date.now());
+      if (!r) return;
+      io.to(dmRoom(pin, g.dm, r.b)).emit('dm:react', r);
+      io.to(g.hostId).emit('dm:react', r);
+    } catch (err) { console.error('[player:dm-react]', err); }
+  });
+  // ¡No despiertes a Dralingo! teacher «Saltar»: the intro → play now; in play every board's moment ends now (a turn's
+  // strokes stand); after the end → every phone jumps to its own card.
+  socket.on('host:dm-skip', (data) => {
+    try {
+      const pin = data && data.pin;
+      const g = games[pin];
+      if (!g || g.hostId !== socket.id || g.gameType !== 'dormilon' || !g.dm) return;
+      const m = g.dm;
+      if (g.state === 'active' && m.phase === 'intro' && !m.paused) dmPlay(pin, g);
+      else if (g.state === 'active' && m.phase === 'play' && !m.paused) {
+        if (Date.now() - (m.skipAt || 0) < 700) return;      // a double tap must not jump over the next kid's turn
+        m.skipAt = Date.now();
+        dmEmit(pin, g, Dorm.skip(m, Date.now(), dmOpts(g)));
+      } else if (g.state === 'ended') io.to(pin).except(g.hostId).emit('dm:skip', { id: m.id });
+    } catch (e) { console.error('[host:dm-skip]', e); }
+  });
   // Dàfùwēng · Monopolio teacher «Saltar»: the intro → play now; after the end → every phone jumps to its own card.
   socket.on('host:mn-skip', (data) => {
     try {
@@ -13881,6 +14270,7 @@ io.on('connection', (socket) => {
           if (stillExists.gameType === 'escape') esStop(stillExists);
           if (stillExists.gameType === 'halcon') hcStop(stillExists);
           if (stillExists.gameType === 'monopoly') mnStop(stillExists);
+          if (stillExists.gameType === 'dormilon') dmStop(stillExists);
           if (stillExists.gameType === 'dragon-eye') drStop(stillExists);
           if (stillExists.gameType === 'mochi-mash') mmStop(stillExists);
           if (stillExists.gameType === 'pinata') pnStop(stillExists);
@@ -13945,6 +14335,7 @@ setInterval(() => {
     if (g.gameType === 'escape' && !(g.escape && g.escape.phase === 'run' && !g.escape.paused)) return;   // only while the crew runs
     if (g.gameType === 'halcon') return;       // no questions on the phones: the boards run the rounds
     if (g.gameType === 'monopoly') return;     // Monopolio: its room tick deals every question (after the turn / the wait)
+    if (g.gameType === 'dormilon') return;     // ¡No despiertes a Dralingo!: its room tick deals the turn kid's questions
     if (g.gameType === 'dragon-eye') return;   // Vuelo del Dragón: the same (after the flight / the wait)
     if (g.gameType === 'mochi-mash' && g.mm && (g.mm.phase !== 'play' || g.mm.paused)) return;   // intro, pause, «¡FINAL!»
     if (g.gameType === 'pinata') return;       // Piñata Tigre: its room tick deals every question (after the hit / the wait)

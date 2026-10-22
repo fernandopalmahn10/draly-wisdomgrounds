@@ -899,6 +899,11 @@ the checklist for any new game mode.
   fallen answer in the pit to come back; each round a kingdom scores its share standing out of 10 (Final Round ×2: a
   share, never a head count, so a kingdom with one kid more never wins by size); three arenas, «Otra ronda» = the next;
   the shared Mario Party ending (it has no last-30-s frenzy: the Final Round is its climax).
+  «¡No despiertes a Dralingo!» (new 2026-10-22, `dormilon`, #3 of the Mario Party series, his video 6:14-7:29 «Don't Wake
+  Wiggler», spec `docs/specs/no-despiertes-a-dralingo.md`): Dralingo asleep in a Chinese palace bedroom, boards of 4 take
+  turns; every right answer = a stroke of the golden feather (+1), «¡Me retiro!» any time, a hidden wake limit per night:
+  whoever wakes him loses ALL their points, then a new night; watchers guess «¿Se despierta?», see the question live and
+  react; the last 30 s every stroke +2; its own board ceremony + the projector's champions and class podium.
 - **The kid's phone is the product** (his correction 2026-10-11: "a beautiful projector is useless if everybody else's
   UI is terrible"). Every game ships a phone experience that feels like a competition, better than Kahoot: big colored
   answer tiles, a per-question timer with ticking, live team score, Dralingo pose reactions (right / wrong / streak /

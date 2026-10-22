@@ -27,6 +27,8 @@
   <link rel="stylesheet" href="/css/snow.css?v=20261018a">
   <link rel="stylesheet" href="/css/escape.css?v=20261019ch">
   <link rel="stylesheet" href="/css/halcon.css?v=20261019zc">
+  <!-- ¡No despiertes a Dralingo! -->
+  <link rel="stylesheet" href="/css/dormilon.css?v=20261022dm">
   <link rel="stylesheet" href="/css/mochi.css?v=20261019zc">
   <link rel="stylesheet" href="/css/party.css?v=20261019zc">
   <link rel="stylesheet" href="/css/pinata.css?v=20261018a">
@@ -676,6 +678,55 @@
     <div class="hc-pause hidden" id="hc-pause"><div><img src="/assets/dralingo/wise.webp" alt=""><b>⏸ Pausa</b><span>Mira al profe</span></div></div>
   </div>
 
+  <!-- ¡No despiertes a Dralingo! (js/player-dormilon.js + js/dormilon-stage.js + css/dormilon.css): my board on top
+       like the video (faces, scores, whose turn), the bedroom with Dralingo asleep and the turn kid tiptoeing with the
+       golden feather, then MY TURN (the question + Kahoot tiles + «¡Me retiro!») or a FRIEND'S TURN (the guess, the
+       question live, reactions). -->
+  <div id="screen-dormilon" class="hidden">
+    <div class="dm-top">
+      <div class="dm-list" id="dm-list"></div>
+      <div class="dm-chips">
+        <b class="dm-clock" id="dm-clock">·:··</b>
+        <span class="dm-night" id="dm-night">Noche 1</span>
+        <span class="dm-me" id="dm-me">0 ⭐</span>
+        <span class="dm-fchip hidden" id="dm-frenzy">🌕 ×2</span>
+      </div>
+    </div>
+    <div class="dm-stagewrap">
+      <div class="dm-stage" id="dm-stage"></div>
+      <div class="dm-meter c0" id="dm-meter" role="status">😴 Duerme profundo</div>
+      <b class="dm-plus" id="dm-plus" aria-live="polite"></b>
+    </div>
+    <div class="dm-panel">
+      <div class="dm-mine hidden" id="dm-mine">
+        <div class="dm-coach hidden" id="dm-coach"><b id="dm-coach-big"></b><span id="dm-coach-small"></span></div>
+        <div class="dm-mq wait" id="dm-mq">
+          <div class="dm-ring" id="dm-ring"><b id="dm-count">11</b></div>
+          <img id="dm-mq-img" class="hidden" alt="">
+          <b id="dm-mq-text">¡Atento!</b>
+        </div>
+        <div class="dm-tiles" id="dm-tiles"></div>
+        <button class="dm-stop" id="dm-stop" type="button">✋ ¡Me retiro!</button>
+        <i class="dm-hand hidden" id="dm-hand" aria-hidden="true"></i>
+      </div>
+      <div class="dm-watch hidden" id="dm-watch">
+        <div class="dm-w-head"><img id="dm-w-img" alt=""><span>Turno de <b id="dm-w-who"></b></span></div>
+        <div class="dm-guess" id="dm-guess">
+          <p id="dm-guess-q">¿Se despierta en este turno?</p>
+          <div class="dm-guess-btns"><button type="button" data-g="sleep">😴 Sigue dormido</button><button type="button" data-g="wake">😱 ¡Se despierta!</button></div>
+          <small id="dm-tally"></small>
+        </div>
+        <div class="dm-bq hidden" id="dm-bq"><b id="dm-bq-text"></b><div class="dm-bq-opts" id="dm-bq-opts"></div><small class="dm-bq-hint" id="dm-bq-hint"></small></div>
+        <div class="dm-reacts" id="dm-reacts" aria-label="Reacciones">
+          <button type="button" data-e="shh" aria-label="Silencio">🤫</button><button type="button" data-e="wow" aria-label="¡Uy!">😱</button><button type="button" data-e="lol" aria-label="Risa">😂</button><button type="button" data-e="clap" aria-label="Aplausos">👏</button>
+        </div>
+        <p class="dm-w-next" id="dm-w-next"></p>
+      </div>
+      <div class="dm-msg calm" id="dm-msg"><img id="dm-msg-img" class="hidden" alt=""><b id="dm-msg-big">¡Shhh!</b><span id="dm-msg-small">Dralingo está durmiendo…</span></div>
+    </div>
+    <div class="dm-pause hidden" id="dm-pause"><div><img src="/assets/dralingo/wise.webp" alt=""><b>⏸ Pausa</b><span>Mira al profe</span></div></div>
+  </div>
+
   <!-- Mochi Mash v2 (js/player-mochi.js + js/mochi-stage.js + css/mochi.css): the mash zone. The whole screen is the
        button: every tap throws a mochi from the kid's full-body character into the team's Dragoncito. -->
   <div id="screen-mochi" class="hidden">
@@ -762,7 +813,7 @@
   <script src="/js/rewards.js?v=20260525c"></script>
   <script src="/js/sentence-categories.js?v=20260606a"></script>
   <script src="/js/kingdoms-board.js?v=20261011d"></script>
-  <script src="/js/player-kingdoms-skin.js?v=20261019zc"></script>
+  <script src="/js/player-kingdoms-skin.js?v=20261022dm"></script>
   <script src="/js/player-kingdoms.js?v=20261016eq"></script>
   <script src="/js/paint-worlds.js?v=20261017pv2"></script>
   <script src="/js/paint-render.js?v=20261017pv2"></script>
@@ -778,6 +829,8 @@
   <script src="/js/player-escape.js?v=20261019zc"></script>
   <script src="/js/halcon-board.js?v=20261019zc"></script>
   <script src="/js/player-halcon.js?v=20261019zc"></script>
+  <script src="/js/dormilon-stage.js?v=20261022dm"></script>
+  <script src="/js/player-dormilon.js?v=20261022dm"></script>
   <script src="/js/monopoly-map.js?v=20261016a"></script>
   <script src="/js/monopoly-board.js?v=20261019zc"></script>
   <script src="/js/player-monopoly.js?v=20261020clk"></script>
@@ -794,7 +847,7 @@
   <script src="/js/cast.js?v=20261017td"></script>
   <script src="/js/dralingo-fx.js?v=20261017art"></script>
   <script src="/js/saga.js?v=20261020z3d3"></script>
-  <script src="/js/player.js?v=20261019zc"></script>
+  <script src="/js/player.js?v=20261022dm"></script>
   <script src="/js/pwa.js?v=20261012a" defer></script>
 </body>
 </html>
