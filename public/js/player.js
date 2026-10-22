@@ -34,6 +34,10 @@
   if (window.EscapePhone) {
     window.EscapePhone.init({ socket, getPin: () => pin, getTeam: () => team, showScreen: (n) => showScreen(n), markActivity: () => markActivity() });
   }
+  // ¡No despiertes a Dralingo! phone module (public/js/player-dormilon.js): my board, the bedroom, my turn / a friend's turn
+  if (window.DormilonPhone) {
+    window.DormilonPhone.init({ socket, getPin: () => pin, getTeam: () => team, showScreen: (n) => showScreen(n), markActivity: () => markActivity() });
+  }
   // Ojos de Halcón phone module (public/js/player-halcon.js): the kid's own Mario Party board
   if (window.HalconPhone) {
     window.HalconPhone.init({ socket, getPin: () => pin, getTeam: () => team, showScreen: (n) => showScreen(n), markActivity: () => markActivity() });
@@ -496,6 +500,7 @@
       'snow':        'snow',
       'escape':      'question',     // the zona segura room comes with es:init when the crew is in one
       'halcon':      'halcon',       // the kid's Mario Party board is the only screen
+      'dormilon':    'dormilon',     // the bedroom + my board is the only screen (player-dormilon.js)
     };
     const target = screenForType[gt];
     if (target) showScreen(target);
@@ -843,6 +848,9 @@
     } else if (gameType === 'escape') {
       teamLabel = 'La Gran Fuga de Dubái';  // co-op: the whole class is one crew
       teamMascot = '🚀';
+    } else if (gameType === 'dormilon') {
+      teamLabel = '¡No despiertes a Dralingo!';   // boards of 4: every kid against the rivals of their board
+      teamMascot = '😴';
     } else if (gameType === 'halcon') {
       teamLabel = 'Ojos de Halcón';         // boards of 4: every kid against the rivals of their board
       teamMascot = '🦅';
@@ -2930,14 +2938,14 @@
       const lobbyVisible = $('screen-lobby') && !$('screen-lobby').classList.contains('hidden');
       const countdownVisible = $('screen-countdown') && !$('screen-countdown').classList.contains('hidden');
       if (lobbyVisible || countdownVisible) {
-        showScreen(gameType === 'snow' ? 'snow' : gameType === 'halcon' ? 'halcon' : gameType === 'sixseven' ? 'sixseven' : gameType === 'dragon-eye' ? 'dragon' : gameType === 'paint' ? 'paint' : gameType === 'trapdoor' ? 'trapdoor' : 'question');   // the snow map / the board is the kid's main screen
+        showScreen(gameType === 'snow' ? 'snow' : gameType === 'halcon' ? 'halcon' : gameType === 'dormilon' ? 'dormilon' : gameType === 'sixseven' ? 'sixseven' : gameType === 'dragon-eye' ? 'dragon' : gameType === 'paint' ? 'paint' : gameType === 'trapdoor' ? 'trapdoor' : 'question');   // the snow map / the board is the kid's main screen
         stopLobbyFlappy();
       }
     }
   });
 
   function showScreen(name) {
-    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'mochi', 'pinata', 'dragon', 'monopoly', 'sixseven', 'kd-plant', 'paint', 'trapdoor', 'snow', 'escape', 'halcon', 'wu', 'rd', 'end'].forEach((n) => {
+    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'mochi', 'pinata', 'dragon', 'monopoly', 'sixseven', 'kd-plant', 'paint', 'trapdoor', 'snow', 'escape', 'halcon', 'dormilon', 'wu', 'rd', 'end'].forEach((n) => {
       const el = $('screen-' + n);
       if (el) el.classList.toggle('hidden', n !== name);
     });

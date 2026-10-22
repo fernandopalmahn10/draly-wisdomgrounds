@@ -357,6 +357,7 @@
     { id: 'trapdoor', label: 'Las Trampillas', emoji: '🕳️', host: '/host-trapdoor.html', blurb: 'Whole class on a round platform: pink trapdoors open at 0; right answers give wings (Mario Party)' },
     // Ojos de Halcón (2026-10-13) replaced the first «Ojo de Halcón» (`look`, retired 2026-10-14)
     { id: 'halcon',   label: 'Ojos de Halcón', emoji: '🦅', host: '/host-halcon.html', blurb: 'Look at the right window first, boards of 4 (Mario Party)' },
+    { id: 'dormilon', label: '¡No despiertes a Dralingo!', emoji: '😴', host: '/host-dormilon.html', blurb: 'Take turns: each right answer strokes sleeping Dralingo (+1); wake him and lose it all. Boards of 4 (Mario Party)' },
     { id: 'escape',   label: 'La Gran Fuga de Dubái', emoji: '🚀', host: '/host-escape.html', blurb: 'Whole class runs from Robotín: Dubai or China route' },
     { id: 'snow',     label: 'Batalla de Nieve', emoji: '❄️', host: '/host-snow.html', blurb: 'Walk Dubai, snowball fight' },
     { id: 'paint',    label: 'Dragones Pintores', emoji: '🎨', host: '/host-paint.html', blurb: 'Tap to fly, paint the sky, win the wonders' },
