@@ -155,7 +155,7 @@ function bot(pin, name) {
     const f = await frame();
     const name = 'f' + String(i).padStart(2, '0') + '.png';
     try { await page.screenshot({ path: path.join(OUT, name), timeout: 4000 }); } catch (_) { /* next */ }
-    log.push({ name, ms: t - tStart, phase: f && f.turn && f.turn.phase, mine: f && f.turn && f.turn.mine, myturn: f && f.myturn, feathers: f && f.feathers, cue: f && f.cue, you: f && f.you && f.you.score, wake: f && f.cue >= 4 });
+    log.push({ name, ms: t - tStart, phase: f && f.turn && f.turn.phase, mine: f && f.turn && f.turn.mine, myturn: f && f.myturn, feathers: f && f.feathers, cue: f && f.cue, seats: f && f.seats, wake: f && f.cue >= 4 });
     i++;
     if (!rubbing && f && f.myturn && f.turn && f.turn.phase === 'turn') {
       rubbing = sleep(500).then(() => finger(async () => { const g = await frame(); return !g || !g.myturn; }));

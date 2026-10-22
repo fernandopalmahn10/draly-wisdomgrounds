@@ -7,9 +7,14 @@
 // (the others guess «¿Se despierta?») → THE TURN (6 s like the video's 5 s, a kid's first one 9 s and guided): his
 // sleeping face fills the phone and the kid RUBS his head with a finger; every completed stroke = +1 point (+2 in the
 // last 30 s) and spends a feather; a gentle stroke is +1 danger, a scribble (strokes closer than GENTLE_MS) +2; out of
-// feathers or out of time ends the turn, «¡Me retiro!» any time. A hidden limit per night (random per board in a fair
-// range, cues without the number): the kid stroking when he wakes LOSES ALL their points; then a new night. The clock ends the game: «¡FINAL!», then each board's
-// ceremony (bonus stars as honours, the board's winner, the class podium).
+// feathers or out of time ends the turn, «¡Me retiro!» any time. v3 (his picks 2026-10-22 15:44, "it's okay if the round
+// ends randomly… someone awakens the dragon in the first round… suspense, the dragon wakes up and you never know when"):
+// every tickle is a dice roll; the chance grows with the danger since he fell asleep (each tickle +1, a scribble +2 =
+// two rolls, a wrong or late quiz answer of anyone on the board +1 = he shifts, no roll), so he can wake in the first
+// round of turns and a 2-minute game sees about two wake-ups per board, never predictable. Only each board's very first
+// turn of the game is safe (it shows how to play). The kid stroking when he wakes LOSES ALL their points; then a new night.
+// A wrong answer or a question left to run out (Q_TIME_MS) also costs a feather («fsss»): answering nothing is never safe.
+// The clock ends the game: «¡FINAL!», then each board's ceremony (bonus stars as honours, the board's winner, the podium).
 // Every kid's numbers live in m.kids[k] (k = the server's stable id p.dmK), so a kid who left still counts at the end.
 // Spec: docs/specs/no-despiertes-a-dralingo.md. The server emits the events every function returns ({ t, b, … }).
 'use strict';
@@ -17,30 +22,31 @@ const Party = require('./party');      // clockShift (the teacher's «−30 s»)
 const Halcon = require('./halcon');    // boards of 4 (boardSizes, splitBoards), mulberry32, shuffle, pickOrder
 
 const R = {
-  DURATIONS: [180, 240, 300], DURATION: 240,
+  DURATIONS: [120, 180, 240], DURATION: 120,   // (his pick 2026-10-22: "3 minutes is a lot")
   INTRO_MS: 2600,            // «¡Shhh! Dralingo duerme…» → «¡YA!» after the 3.5 s run-in countdown
   PRE_MS: 2200,              // «Turno de X»: the camera closes in on his face, the others guess
   TURN_MS: 6000,             // the turn: rub his head (the video's 5 s + a breath; the clock goes red at 3)
-  FIRST_TURN_MS: 9000,       // a kid's very first turn (guided: the hand shows the rub, he never wakes)
+  FIRST_TURN_MS: 9000,       // a kid's very first turn (guided: the hand shows the rub; only the board's very first turn is safe)
   NEXT_Q_MS: 600,            // the quiz: after a right answer the next question comes this soon (the feather flies in)
   WRONG_WAIT_MS: 1400,       // …after a wrong one («¡Casi!» + the right answer)
-  Q_TIMEOUT_MS: 25000,       // a question nobody answers is replaced (a phone in a pocket never blocks its quiz)
+  Q_TIME_MS: 15000,          // a quiz question's time: left to run out = late = it costs a feather, like a wrong answer
+  WRONG_DANGER: 1,           // a wrong / late answer: he shifts in his sleep (the board's danger +1, no roll)
   FEATHERS_START: 3, FEATHERS_MAX: 6,   // every kid starts with 3 feathers; a full quiver = 6 (one 6-s turn of strokes)
-  GUIDED_MAX: 3,             // a guided first turn (he never wakes) takes at most 3 tickles: a later seat's full quiver is no edge
+  GUIDED_MAX: 3,             // the board's safe first turn (he never wakes) takes at most 3 tickles
   MIN_STROKE_MS: 250,        // strokes closer than this are noise (never counted)
   GENTLE_MS: 550,            // a stroke sooner than this after the last one = a scribble: +2 danger
   POST_MS: 1500,             // «¡A salvo! +3» after a turn that ended safely
-  WAKE_MS: 3600,             // «¡Se despertó!»: he bolts up with the pillow, the kid's points → 0
+  WAKE_MS: 4400,             // «¡Se despertó!»: he bolts up ANGRY (the video's red Wiggler ~5 s), the kid's points → 0
   NIGHT_MS: 2400,            // «Dralingo se vuelve a dormir… Noche N»
   DROP_MS: 3000,             // the turn kid's phone is gone: «Turno de X» waits this long, a turn ends this long after
   AWAY_SKIP_MS: 15000,       // a kid gone longer than this is skipped at once (no wait every round)
-  FAST_MS: 300,              // a quiz answer sooner than this after its question = a double tap: ignored
+  FAST_MS: 500,              // a quiz answer sooner than this after its question went out = a blind guess: it counts as wrong
   GUESS_IN_MS: 2000,         // the «¿Se despierta?» guess stays open this long into the turn
   FINAL_MS: 2400,            // «¡FINAL!» before the ceremony (game-end)
   FRENZY_MS: 30000,          // the last 30 s: «¡Luna llena!» every stroke +2
   PAT_DANGER: 1, FAST_DANGER: 2,
-  LIMIT_LO: 6, LIMIT_HI: 10, // the wake limit of a night: between 6 and 10 per kid of the board (a board of 4: 24-40; v2 sim-tuned)
-  CUES: [[0.33, 0.45], [0.58, 0.70], [0.80, 0.90]],   // where the cues 1 · 2 · 3 start (a fraction of the limit, jittered per night)
+  HAZ_BASE: 0.01, HAZ: 0.0025, HAZ_MAX: 0.3,   // the chance a danger unit wakes him = HAZ_BASE + HAZ × the danger since he fell asleep (≤ HAZ_MAX; sim-tuned)
+  CUES: [[0.025, 0.03], [0.045, 0.055], [0.07, 0.08]],   // the chance where the cues 1 · 2 · 3 start (jittered per night; sim-tuned)
   BOARD: 4, BOARD_MAX: 5,    // the size of a Mario Party match; a late joiner can make a board of 5, never 6
   REACTS: ['shh', 'wow', 'lol', 'clap'], REACT_GAP_MS: 1200,
 };
@@ -70,11 +76,8 @@ function newKid(k, name, skin, b, code) {
     feathers: R.FEATHERS_START, earned: 0, fast: 0, q: null, qNextAt: 0, order: [], qi: 0,
   };
 }
-// A night: the danger back to 0, a new hidden limit (4-7 per kid of the board, at least 2 kids counted), new cue cuts.
+// A night: the danger back to 0, new cue cuts (jittered: a cue says «riskier», never how many tickles are left).
 function newNight(m, b) {
-  const n = Math.max(2, b.seats.length);
-  const lo = R.LIMIT_LO * n, hi = R.LIMIT_HI * n;
-  b.limit = Math.round(lo + m.rng() * (hi - lo));
   b.cuts = R.CUES.map(([a, z]) => a + m.rng() * (z - a));
   b.danger = 0;
   b.cue = 0;
@@ -82,7 +85,7 @@ function newNight(m, b) {
 function addBoard(m) {
   const b = {
     id: m.nextBoard++, seats: [], ti: -1, phase: 'wait', phaseAt: 0, phaseUntil: 0, night: 1,
-    danger: 0, limit: 0, cuts: [], cue: 0, cur: null, guesses: {}, waker: null,
+    danger: 0, cuts: [], cue: 0, cur: null, guesses: {}, waker: null, safeDone: false,
   };
   newNight(m, b);
   m.boards.push(b);
@@ -100,7 +103,6 @@ function deal(m, entries) {
   Halcon.splitBoards(entries.map((e) => e[0]), m.rng).forEach((ks) => {
     const b = addBoard(m);
     ks.forEach((k) => seatIn(m, b, k, byK[k][0], byK[k][1], byK[k][2]));
-    newNight(m, b);                  // (the limit counts the kids now seated)
   });
   return m.boards;
 }
@@ -111,9 +113,6 @@ function seatLate(m, k, name, skin, code) {
   const open = m.boards.filter((b) => b.seats.length < R.BOARD_MAX).sort((a, b) => a.seats.length - b.seats.length || a.id - b.id);
   const b = open[0] || addBoard(m);
   seatIn(m, b, k, name, skin, code);
-  // the night's hidden limit grows with the board (it was drawn for fewer kids: a board made for latecomers starts with 2)
-  const n0 = Math.max(2, b.seats.length - 1), n1 = Math.max(2, b.seats.length);
-  if (n1 > n0) { b.limit = Math.max(b.danger + 1, Math.round(b.limit * n1 / n0)); b.cue = cueOf(b); }
   return b;
 }
 // A kid back after the room forgot their phone (5 min away): their own row, by the student code the server proved
@@ -167,6 +166,8 @@ function shiftTimes(m, ms) {
   Object.values(m.kids).forEach((r) => {
     if (r.awaySince) r.awaySince += ms;
     if (r.qNextAt) r.qNextAt += ms;            // (r.q.sentAt stays: it only tells a double tap)
+    m.lastTick = 0;
+    if (r.q && r.q.until) r.q.until += ms;     // the question's time stood still during the pause
   });
 }
 
@@ -203,7 +204,7 @@ function nextTurn(m, b, now, ev, online) {
   const nidx = b.seats.length > 1 ? pickNext(m, b, online, now, idx) : -1;
   if (r.q) { r.q = null; ev.push({ t: 'qx', b: b.id, k: r.k }); }
   if (r.first && r.feathers < R.FEATHERS_START) r.feathers = R.FEATHERS_START;    // the first turn always has its feathers
-  ev.push({ t: 'pre', b: b.id, k: r.k, ms: b.phaseUntil - now, guided: !!r.first, night: b.night, next: nidx >= 0 && nidx !== idx ? b.seats[nidx] : null, here, feathers: r.feathers });
+  ev.push({ t: 'pre', b: b.id, k: r.k, ms: b.phaseUntil - now, guided: !!r.first, safe: !b.safeDone, night: b.night, next: nidx >= 0 && nidx !== idx ? b.seats[nidx] : null, here, feathers: r.feathers });
 }
 function goTurn(m, b, now, ev) {
   const r = kid(m, b.seats[b.ti]);
@@ -211,11 +212,13 @@ function goTurn(m, b, now, ev) {
   const ms = r.first ? R.FIRST_TURN_MS : R.TURN_MS;
   if (r.first && r.feathers < R.FEATHERS_START) r.feathers = R.FEATHERS_START;     // the first turn always has its feathers
   setPhase(b, 'turn', now, ms);
-  b.cur = { k: r.k, guided: !!r.first, startAt: now, until: now + ms, pats: 0, pts: 0, fast: 0, lastStroke: 0, droppedAt: 0 };
+  const safe = !b.safeDone;                  // the board's very first turn of the game shows how to play: he never wakes
+  b.safeDone = true;
+  b.cur = { k: r.k, guided: !!r.first, safe, startAt: now, until: now + ms, pats: 0, pts: 0, fast: 0, lastStroke: 0, droppedAt: 0 };
   r.first = false;
   r.turns++;
   if (r.q) { r.q = null; ev.push({ t: 'qx', b: b.id, k: r.k }); }
-  ev.push({ t: 'go', b: b.id, k: r.k, ms, guided: b.cur.guided, feathers: r.feathers });
+  ev.push({ t: 'go', b: b.id, k: r.k, ms, guided: b.cur.guided, safe, feathers: r.feathers });
   if (r.feathers <= 0) endTurn(m, b, now, 'empty', ev);      // «¡Sin plumas! Responde para ganar más»
 }
 function guessResult(b, woke) {
@@ -262,24 +265,31 @@ function wake(m, b, now, by, ev) {
   b.cue = 4;
   setPhase(b, 'wake', now, R.WAKE_MS);
 }
+// the chance that one more danger unit wakes him now (it grows with every tickle since he fell asleep)
+const chanceAt = (d) => (d > 0 ? Math.min(R.HAZ_MAX, R.HAZ_BASE + R.HAZ * d) : 0);
 function cueOf(b) {
-  if (!b.limit || !b.danger) return 0;
-  const f = b.danger / b.limit;
-  return b.cuts.filter((c) => f >= c).length;
+  if (!b.danger) return 0;
+  const p = chanceAt(b.danger);
+  return b.cuts.filter((c) => p >= c).length;
 }
-// danger rises; true = he wakes up now. A guided first turn never wakes him and never pushes him past the first cue:
-// the danger it adds stops there (review 2026-10-22: moving the limit instead left the next kid a «time bomb», and
-// going first was punished). The limit itself never moves.
+// danger rises by amount units, each one a dice roll; true = he wakes up now. The board's safe first turn adds its
+// danger without rolling (it is the demonstration; at most GUIDED_MAX tickles, so it never leaves a «time bomb»).
 function rise(m, b, amount) {
-  if (b.cur && b.cur.guided) {
-    const cap = Math.max(0, Math.floor(b.limit * b.cuts[0]));
-    b.danger = Math.max(b.danger, Math.min(b.danger + amount, cap));
-    b.cue = cueOf(b);
-    return false;
+  let woke = false;
+  for (let i = 0; i < amount; i++) {
+    b.danger++;
+    if (!(b.cur && b.cur.safe) && !woke && m.rng() < chanceAt(b.danger)) woke = true;
   }
-  b.danger += amount;
   b.cue = cueOf(b);
-  return b.danger >= b.limit;
+  return woke;
+}
+// a wrong or late quiz answer: he shifts in his sleep (danger +WRONG_DANGER for the board, never a roll: only the kid
+// stroking can wake him). → the event for the board, or null while he is awake / between nights.
+function shift(m, b, k, why) {
+  if (!b || b.phase === 'wake' || b.phase === 'night') return null;
+  b.danger += R.WRONG_DANGER;
+  b.cue = cueOf(b);
+  return { t: 'shift', b: b.id, k, why, cue: b.cue };
 }
 
 // ---------- questions ----------
@@ -294,25 +304,26 @@ function nextQ(m, h, questions, imageFor, now) {
   m.qn++;
   return {
     qid: `dm${m.id % 100000}-${h.k}-${m.qn}`, text: String(src.text), answers, correctIdx: answers.indexOf(String(src.correct)),
-    image: imageFor ? imageFor(src) || null : null, sentAt: now,
+    image: imageFor ? imageFor(src) || null : null, sentAt: now, until: now + R.Q_TIME_MS,
   };
 }
 // what a phone may see of a question (never the right answer before it is answered)
 const qPublic = (q) => (q ? { qid: q.qid, text: q.text, answers: q.answers, image: q.image } : null);
 
 // ---------- the actions ----------
-// A quiz answer (any kid who is not playing a turn). Right = one more feather (at most FEATHERS_MAX), wrong = «¡Casi!»
-// and a short wait. → { ok, right, ev } (ev: qr, for the kid; the server tells the board the new feather count).
+// A quiz answer (any kid who is not playing a turn). Right = one more feather (at most FEATHERS_MAX); wrong = «¡Casi!»,
+// one feather flies out of the quiver (if any) and he shifts in his sleep (the board's danger +1), then a short wait.
+// → { ok, right, ev } (ev: qr for the kid, the server tells the board the new feather count; shift for the board).
 function answer(m, k, qid, idx, now) {
   const r = kid(m, k);
   if (!r || m.phase !== 'play' || m.paused || !r.q) return { ok: false, why: 'closed', ev: [] };
   if (r.q.qid !== qid) return { ok: false, why: 'stale', ev: [] };
-  if (now - r.q.sentAt < R.FAST_MS) return { ok: false, why: 'fast', ev: [] };
   if (!Number.isInteger(idx) || idx < 0 || idx >= r.q.answers.length) return { ok: false, why: 'bad', ev: [] };
   const q = r.q;
   r.q = null;
   r.answered++;
-  const ok = idx === q.correctIdx;
+  const tooFast = now - q.sentAt < R.FAST_MS;               // (nobody reads a question that fast: a guess = wrong)
+  const ok = idx === q.correctIdx && !tooFast;
   const before = r.feathers;
   if (ok) {
     r.right++; r.streak++; r.best = Math.max(r.best, r.streak);
@@ -321,12 +332,32 @@ function answer(m, k, qid, idx, now) {
     r.qNextAt = now + R.NEXT_Q_MS;
   } else {
     r.wrong++; r.streak = 0;
+    if (r.feathers > 0) { r.feathers--; r.featherLost = (r.featherLost || 0) + 1; }
     r.qNextAt = now + R.WRONG_WAIT_MS;
   }
-  return {
-    ok: true, right: ok,
-    ev: [{ t: 'qr', b: r.b, k, qid: q.qid, idx, ok, correctIdx: q.correctIdx, correctText: q.answers[q.correctIdx], feathers: r.feathers, gained: r.feathers - before, streak: r.streak, full: r.feathers >= R.FEATHERS_MAX }],
-  };
+  const ev = [{ t: 'qr', b: r.b, k, qid: q.qid, idx, ok, tooFast, correctIdx: q.correctIdx, correctText: q.answers[q.correctIdx], feathers: r.feathers, gained: r.feathers - before, streak: r.streak, full: r.feathers >= R.FEATHERS_MAX }];
+  if (!ok) { const sh = shift(m, boardOf(m, r.b), k, 'wrong'); if (sh) ev.push(sh); }
+  return { ok: true, right: ok, ev };
+}
+// The phone painted its question on a visible screen (a pocketed or locked phone never pays for a late one).
+function seen(m, k, qid) {
+  const r = kid(m, k);
+  if (!r || !r.q || r.q.qid !== qid) return false;
+  r.q.seen = true;
+  return true;
+}
+// A question the phone showed, left to run out (online kids only: a phone that dropped just gets a fresh one later): late = wrong.
+function late(m, r, now) {
+  const q = r.q;
+  r.q = null;
+  r.answered++; r.wrong++; r.late = (r.late || 0) + 1; r.streak = 0;
+  const before = r.feathers;
+  if (r.feathers > 0) { r.feathers--; r.featherLost = (r.featherLost || 0) + 1; }
+  r.qNextAt = now + R.WRONG_WAIT_MS;
+  const ev = [{ t: 'qr', b: r.b, k: r.k, qid: q.qid, idx: -1, ok: false, late: true, correctIdx: q.correctIdx, correctText: q.answers[q.correctIdx], feathers: r.feathers, gained: r.feathers - before, streak: 0, full: false }];
+  const sh = shift(m, boardOf(m, r.b), r.k, 'late');
+  if (sh) ev.push(sh);
+  return ev;
 }
 // A stroke of the golden feather on his head (the turn kid's finger: one back-and-forth rub). +1 point (+2 in the last
 // 30 s), one feather spent; gentle (GENTLE_MS since the last one, or the first) = +1 danger, a scribble = +2. Out of
@@ -350,7 +381,7 @@ function stroke(m, k, now) {
   const ev = [{ t: 'pat', b: b.id, k, pts, score: r.score, cue: woke ? 4 : b.cue, pats: c.pats, x2: m.frenzy, fast, feathers: r.feathers }];
   if (woke) wake(m, b, now, fast ? 'fast' : 'pat', ev);
   else if (r.feathers <= 0) endTurn(m, b, now, 'empty', ev);
-  else if (c.guided && c.pats >= R.GUIDED_MAX) endTurn(m, b, now, 'guided', ev);   // «¡Así se juega!»
+  else if (c.safe && c.pats >= R.GUIDED_MAX) endTurn(m, b, now, 'guided', ev);   // the safe first turn: «¡Así se juega!»
   return { ok: true, ev };
 }
 // «¡Me retiro!»
@@ -370,7 +401,7 @@ function guess(m, k, g, now) {
   const b = boardOf(m, r.b);
   if (!b || b.ti < 0 || b.seats[b.ti] === k) return null;
   const kt = kid(m, b.seats[b.ti]);
-  if ((b.cur && b.cur.guided) || (b.phase === 'pre' && kt && kt.first)) return null;   // a guided turn never wakes him: no guess
+  if ((b.cur && b.cur.safe) || (b.phase === 'pre' && !b.safeDone)) return null;   // the safe first turn never wakes him: no guess
   const open = b.phase === 'pre' || (b.phase === 'turn' && b.cur && now - b.cur.startAt <= R.GUESS_IN_MS);
   if (!open || b.guesses[k]) return null;
   b.guesses[k] = g;
@@ -396,6 +427,8 @@ function tick(m, now, opts) {
   if (m.paused || m.phase !== 'play') return ev;
   const o = opts || {};
   const online = o.online || (() => true);
+  const dt = m.lastTick ? Math.max(0, Math.min(1000, now - m.lastTick)) : 0;   // (time since the last tick: a raging board's quiz waits)
+  m.lastTick = now;
   Object.values(m.kids).forEach((r) => {
     const here = online(r.k);
     if (here) r.awaySince = 0;
@@ -445,10 +478,17 @@ function tick(m, now, opts) {
     if (!b) return;
     const mine = b.ti >= 0 && b.seats[b.ti] === r.k && (b.phase === 'pre' || b.phase === 'turn');
     if (mine) return;
-    if (r.q && now - r.q.sentAt > R.Q_TIMEOUT_MS) r.q = null;          // (never answered: a fresh one)
+    if (b.phase === 'wake') {                                          // he is raging: everyone on the board watches
+      if (r.q && r.q.until) r.q.until += dt;
+      r.qNextAt = Math.max(r.qNextAt || 0, b.phaseUntil);
+      return;
+    }
+    if (r.q && now >= (r.q.until || r.q.sentAt + R.Q_TIME_MS) + 300) {   // the question ran out: late = it costs
+      if (online(r.k) && r.q.seen) ev.push.apply(ev, late(m, r, now)); else r.q = null;   // (only one the phone showed)
+    }
     if (!r.q && r.feathers < R.FEATHERS_MAX && now >= r.qNextAt && online(r.k)) {
       r.q = nextQ(m, r, o.questions || [], o.imageFor, now);
-      if (r.q) ev.push({ t: 'q', b: r.b, k: r.k, q: r.q, feathers: r.feathers });
+      if (r.q) ev.push({ t: 'q', b: r.b, k: r.k, q: r.q, feathers: r.feathers, ms: R.Q_TIME_MS });
       else r.qNextAt = now + 2000;        // (no usable question: try again in a moment)
     }
   });
@@ -489,14 +529,15 @@ function boardView(m, b, online, now) {
   return {
     id: b.id, phase: b.phase, phaseMs: Math.max(0, b.phaseUntil - clock), night: b.night, cue: b.phase === 'wake' ? 4 : b.cue,
     turn: b.ti >= 0 && ['pre', 'turn', 'post', 'wake'].includes(b.phase) ? b.seats[b.ti] : null,
-    guided: !!(c && c.guided), pats: c ? c.pats : 0, tally: tally(b), waker: b.phase === 'wake' || b.phase === 'night' ? b.waker : null,
+    guided: !!(c && c.guided), safe: c ? !!c.safe : (b.phase === 'pre' && !b.safeDone), pats: c ? c.pats : 0, tally: tally(b), waker: b.phase === 'wake' || b.phase === 'night' ? b.waker : null,
     seats: b.seats.map((k) => { const r = kid(m, k); return { k, name: r.name, skin: r.skin, score: r.score, feathers: r.feathers, on: !online || online(k) }; }),
   };
 }
 // the open quiz question of a kid (a reconnect gets it again, the same qid)
-function openQ(m, k) {
+function openQ(m, k, now) {
   const r = kid(m, k);
-  return r && r.q ? qPublic(r.q) : null;
+  if (!r || !r.q) return null;
+  return Object.assign(qPublic(r.q), now != null && r.q.until ? { ms: Math.max(0, r.q.until - now) } : {});
 }
 
 // ---------- the end ----------
@@ -542,5 +583,5 @@ function finish(m) {
 
 module.exports = {
   R, clampDuration, newGame, kid, inGame, boardOf, deal, seatLate, byCode, startPlay, addTime, shiftTimes, tick, final, skip,
-  answer, stroke, stop, guess, react, tally, boardView, openQ, qPublic, finish, cueOf, nextQ, starDefs,
+  answer, seen, stroke, stop, guess, react, tally, boardView, openQ, qPublic, finish, cueOf, chanceAt, rise, nextQ, starDefs,
 };

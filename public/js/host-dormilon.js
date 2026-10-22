@@ -15,7 +15,7 @@
   const A = '/assets/dormilon/', H = '/assets/halcon/', K = '/assets/kingdoms/', PARTY = '/assets/party/';
   const SFX = {
     stroke: A + 'stroke.mp3', pop: H + 'pop.mp3', creak: A + 'creak.mp3', wake: A + 'wake-h1.mp3', aww: H + 'aww.mp3',
-    snore: A + 'snore-h1.mp3', round: H + 'round.mp3', start: H + 'start.mp3', whoosh: K + 'whoosh.mp3', win: K + 'sting-win.mp3',
+    snore: A + 'snore-h1.mp3', angry: A + 'angry-h1.mp3', shift: A + 'creak2.mp3', round: H + 'round.mp3', start: H + 'start.mp3', whoosh: K + 'whoosh.mp3', win: K + 'sting-win.mp3',
     final: H + 'final.mp3', hurry: PARTY + 'hurry.mp3', tick: PARTY + 'tick.mp3', yes: H + 'yes.mp3',
     giggle1: A + 'giggle-h1.mp3', giggle2: A + 'giggle-h2.mp3', giggle3: A + 'giggle-h3.mp3',
   };
@@ -30,7 +30,7 @@
     adric: ['Shhh… ¡hasta mi perro está calladito!', 'Shhh… pasito a pasito.'],
     adrian: ['Shhh… según mi mapa, ¡de puntitas!', 'Shhh… por aquí, sin ruido.'],
   };
-  const WAKE_LINES = ['¡¿Quién me despertó?! Soñaba con dumplings… 🥟', '¡Uaaah! ¡Hasta un dragón sabio necesita su siesta!', '¡Te vi con esa pluma! 😤', '¡Ay, qué cosquillas! …bueno, a dormir otra vez.'];
+  const WAKE_LINES = ['¡¿QUIÉN ME DESPERTÓ?! ¡Soñaba con dumplings! 🥟', '¡Grrr! ¡Hasta un dragón sabio necesita su siesta! 😤', '¡Te vi con esa pluma! 😠', '¡Grrr… cinco minutitos más! 💢', '¡¿Otra vez cosquillas?! ¡Grrr!'];   // (v3: he wakes up ANGRY, funny-angry, never scary)
   const pick1 = (a) => a[Math.floor(Math.random() * a.length)];
   function hostLine(id, text) {
     const C = window.DralingoCast;
@@ -41,7 +41,7 @@
   let lastWhisper = 0;
   const fmtClock = (ms) => { const s = Math.max(0, Math.ceil(ms / 1000)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
 
-  let pin = null, state = null, muted = false, paused = false, duration = 240, endsAt = 0, pausedLeft = 0, frenzy = false;
+  let pin = null, state = null, muted = false, paused = false, duration = 120, endsAt = 0, pausedLeft = 0, frenzy = false;
   let game = null;              // { id, phase }
   let boards = {};              // id → { view, stage, el, turn }
   let lobbyStage = null, countStage = null, lobbyKey = '', seenKids = new Set(), clockT = null, timers = [];
@@ -188,7 +188,7 @@
     box.innerHTML = '';
     $('count-all').textContent = list.length === 1 ? '1 jugador' : `${list.length} jugadores`;
     const nb = list.length <= 5 ? 1 : Math.ceil(list.length / 4);
-    if (list.length) lobbyStage.say(nb === 1 ? `${list.length} jugadores · 1 tablero` : `${list.length} jugadores · ${nb} tableros`, 'calm');
+    if (list.length) lobbyStage.say((list.length === 1 ? "1 jugador" : list.length + " jugadores") + (nb === 1 ? " · 1 tablero" : " · " + nb + " tableros"), "calm");
     list.forEach((p) => {
       const d = document.createElement('div');
       d.className = 'dmh-kid' + (seenKids.has(p.name) ? '' : ' new');
@@ -433,7 +433,9 @@
     b.stage.closeup(true);
     b.stage.featherOff();
     b.stage.wake();
+    b.stage.rage(4000);                                  // he is ANGRY: the tile floods red (ring, lines, steam, sparks)
     b.stage.say('¡Se despertó!', 'wake');
+    flashRed();
     paintCue(b, 4);
     setScore(b, d.k, 0, 'zero');
     b.turn = null;
@@ -441,7 +443,8 @@
     setTurnLabel(b, (s ? s.name : '') + (d.lost ? ' pierde ' + d.lost + (d.lost === 1 ? ' punto' : ' puntos') : ' lo despertó'));
     b.el.querySelector('.dmh-bq').classList.add('hidden');
     sfx('wake', 0.75, 900);
-    later(450, () => sfx('aww', 0.45, 900));
+    later(260, () => sfx('angry', 0.7, 900));
+    later(650, () => sfx('aww', 0.45, 900));
     const line = pick1(WAKE_LINES);
     hostLine('dralingo', 'Dralingo: «' + line + '»');
     later(1100, () => b.stage.speak(line, 2400));
@@ -460,6 +463,27 @@
     const pts = d.pts != null ? d.pts : d.pats;
     if (d.why !== 'final') setTurnLabel(b, (s ? s.name : '') + (pts ? ': ¡a salvo! +' + pts : ': turno terminado'));
   });
+  // a wrong / late answer on a board: he shifts in his sleep there
+  onDm('dm:shift', (d) => {
+    const b = boards[d.b];
+    if (!b) return;
+    b.view.cue = d.cue;
+    b.stage.setCue(d.cue);
+    b.stage.shift();
+    paintCue(b, d.cue);
+    sfx('shift', 0.3, 2500);
+  });
+  // the whole projector pulses red for a beat (the tile itself keeps its anger for ~3 s)
+  let lastFlash = 0;
+  function flashRed() {
+    if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (Date.now() - lastFlash < 7000) return;          // (8 boards: never stacked, never more than one a 7 s)
+    lastFlash = Date.now();
+    const r = document.createElement('div');
+    r.className = 'dmh-rage';
+    document.body.appendChild(r);
+    setTimeout(() => r.remove(), 1700);
+  }
   onDm('dm:night', (d) => {
     const b = boards[d.b];
     if (!b) return;

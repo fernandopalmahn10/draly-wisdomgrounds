@@ -1,4 +1,8 @@
-// Rules check for «¡No despiertes a Dralingo!» v2 (core/dormilon.js). Run: node scripts/test-dormilon.js [--sim]
+// Rules check for «¡No despiertes a Dralingo!» v3 (core/dormilon.js). Run: node scripts/test-dormilon.js [--sim]
+// v3 (his picks 2026-10-22 15:44): every tickle is a dice roll that grows with the danger since he fell asleep (he can
+// wake in the first round), only each board's very first turn is safe, a wrong or late answer costs a feather and makes
+// him shift (danger +1), 2-minute games: the class simulation checks ~2 wake-ups per board of 4 in 2 minutes (sometimes
+// 1, sometimes 3, sometimes in the first round) and that a kid who never answers ends below a careful one.
 // v2 (his pick 2026-10-22): the quiz earns feathers (every kid not playing; start 3, at most 6); the turn is the task:
 // finger strokes on his head, each +1 (+2 in the last 30 s) and one feather; a scribble +2 danger; out of feathers ends
 // the turn. Also: boards, the hidden limit, the waker → 0, nights, guesses, the guided first turn, «¡FINAL!», the
@@ -48,8 +52,7 @@ function strokes(m, k, t0, n, gap) {
     if (want) ok(JSON.stringify(sizes) === JSON.stringify(want), `deal ${n} kids → ${want}`, sizes);
     ok(sizes.reduce((a, b) => a + b, 0) === n && sizes.every((s) => s >= 1 && s <= 5), `deal ${n}: every kid seated once`, sizes);
     m.boards.forEach((b) => {
-      const k = Math.max(2, b.seats.length);
-      ok(b.limit >= R.LIMIT_LO * k && b.limit <= R.LIMIT_HI * k, `the wake limit is fair for a board of ${b.seats.length}`, b.limit);
+      ok(b.danger === 0 && !('limit' in b) && b.cuts.length === 3 && b.cuts.every((c, i) => c >= R.CUES[i][0] && c <= R.CUES[i][1]), `a night starts calm, its cues jittered (board of ${b.seats.length})`, b.cuts);
     });
   });
   const { m } = game(8);
@@ -57,7 +60,7 @@ function strokes(m, k, t0, n, gap) {
   ok(b && b.seats[b.seats.length - 1] === 99 && D.seatLate(m, 99, 'Late', 'fer') === null, 'a late joiner sits last; a seated kid keeps the seat');
   const { m: m1 } = game(1, 41);
   for (let i = 0; i < 4; i++) D.seatLate(m1, 70 + i, 'L' + i, 'fer');
-  ok(m1.boards[0].limit >= R.LIMIT_LO * 5 - 1 && m1.boards[0].limit <= R.LIMIT_HI * 5 + 1, 'late seats grow the hidden limit with the board', m1.boards[0].limit);
+  ok(m1.boards[0].seats.length === 5 && m1.boards.length === 1, 'late seats fill a board up to 5', m1.boards.map((x) => x.seats.length));
   const { m: mc } = game(0, 43);
   D.deal(mc, [[1, 'Ana', 'aileen', 'AB12CD'], [2, 'Beto', 'hamdan', 'XY34ZW']]);
   mc.kids[1].score = 6;
@@ -78,14 +81,22 @@ function strokes(m, k, t0, n, gap) {
   ok(qs.length === 3 && !qs.some((e) => e.k === turnK), 'the 3 friends get a question; the kid of «Turno de…» does not', qs.map((e) => e.k));
   const q = qs.find((e) => e.k === w).q;
   ok(!('correctIdx' in D.qPublic(q)) && D.openQ(m, w).qid === q.qid, 'a phone never sees the right answer; a reconnect gets the same question');
-  ok(D.answer(m, w, q.qid, q.correctIdx, q.sentAt + 50).ok === false, 'a double tap (< 300 ms) is ignored');
+  // a blind tap (the right tile even) before anyone could read the question counts as wrong: it costs
+  const { m: mf, now: tf } = game(4, 5);
+  D.startPlay(mf, tf);
+  const qf = evOf(D.tick(mf, tf + 100, opts()), 'q')[0];
+  const af = D.answer(mf, qf.k, qf.q.qid, qf.q.correctIdx, qf.q.sentAt + 120);
+  ok(af.ok && !af.right && evOf(af.ev, 'qr')[0].tooFast && mf.kids[qf.k].feathers === R.FEATHERS_START - 1, 'a too-fast tap (< 0.5 s) counts as wrong: a feather lost', af.ev);
   let a = D.answer(m, w, q.qid, q.correctIdx, t0 + 1500);
   ok(a.ok && a.right && evOf(a.ev, 'qr')[0].gained === 1 && m.kids[w].feathers === 4, 'a right answer = one more feather', a.ev);
   ok(D.answer(m, w, q.qid, q.correctIdx, t0 + 1600).ok === false, 'the same question never pays twice');
   let r = until(m, t0 + 1500, 'q', 3000, null, (e) => e.k === w);
   ok(r.hit && r.now - (t0 + 1500) >= R.NEXT_Q_MS - 100, 'the next question follows');
+  const d0 = b.danger;
   a = D.answer(m, w, r.hit.q.qid, (r.hit.q.correctIdx + 1) % 4, r.now + 900);
-  ok(a.ok && !a.right && m.kids[w].feathers === 4 && evOf(a.ev, 'qr')[0].correctText, 'a wrong answer: no feather, the right one shown');
+  const sh = evOf(a.ev, 'shift')[0];
+  ok(a.ok && !a.right && m.kids[w].feathers === 3 && evOf(a.ev, 'qr')[0].gained === -1 && evOf(a.ev, 'qr')[0].correctText, 'a wrong answer: a feather flies out (4 → 3), the right one shown', a.ev);
+  ok(sh && sh.k === w && sh.why === 'wrong' && b.danger === d0 + R.WRONG_DANGER, '…and he shifts in his sleep (the board\'s danger +1)', sh);
   const r2 = until(m, r.now + 900, 'q', 3000, null, (e) => e.k === w);
   ok(r2.hit && r2.now - (r.now + 900) >= R.WRONG_WAIT_MS - 100, '…and a short wait before the next');
   // a full quiver rests
@@ -140,57 +151,93 @@ function strokes(m, k, t0, n, gap) {
   ok(tr.hit && tr.hit.why === 'time' && tr.now - r.now >= R.TURN_MS - 100, 'time up (6 s) ends the turn safely');
 }
 
-// ---------- the wake-up ----------
+// ---------- the wake-up: a dice roll on every tickle ----------
 {
   const { m, now: t0 } = game(3, 13);
   D.startPlay(m, t0);
   const b = m.boards[0];
+  b.safeDone = true;
   b.seats.forEach((k) => { m.kids[k].first = false; m.kids[k].feathers = 6; });
   b.ti = -1; b.phase = 'post'; b.phaseUntil = t0;
   let r = until(m, t0, 'go');
+  ok(r.hit && !r.hit.safe, 'an ordinary turn is not safe');
   const k = r.hit.k;
   m.kids[k].score = 9;
-  b.limit = b.danger + 2;
+  m.rng = () => 0.999;                                   // the dice say «sleeps»
   let s = D.stroke(m, k, r.now + 300);
-  ok(!evOf(s.ev, 'wake').length && m.kids[k].score === 10, 'one stroke below the limit: safe');
+  ok(!evOf(s.ev, 'wake').length && m.kids[k].score === 10 && b.danger === 1, 'a tickle he sleeps through: +1, danger +1');
+  ok(D.chanceAt(0) === 0 && Math.abs(D.chanceAt(1) - (R.HAZ_BASE + R.HAZ)) < 1e-9 && D.chanceAt(20) > D.chanceAt(1) && D.chanceAt(1000) === R.HAZ_MAX, 'the chance grows with every tickle since he fell asleep (capped)');
+  m.rng = () => 0;                                       // the dice say «wakes»
   s = D.stroke(m, k, r.now + 1100);
   const w = evOf(s.ev, 'wake')[0];
-  ok(w && w.k === k && w.lost === 11 && m.kids[k].score === 0 && m.kids[k].wakes === 1, 'the stroke that reaches the limit wakes him: ALL points lost', w);
+  ok(w && w.k === k && w.lost === 11 && m.kids[k].score === 0 && m.kids[k].wakes === 1, 'the tickle that wakes him: ALL points lost', w);
   ok(b.phase === 'wake' && D.boardView(m, b, null, r.now).cue === 4, 'the board shows him awake');
+  m.rng = () => 0.999;
   r = until(m, r.now + 1100, 'night');
-  ok(r.hit && r.hit.night === 2 && b.danger === 0, 'a new night: danger back to 0');
+  ok(r.hit && r.hit.night === 2 && b.danger === 0 && b.cue === 0, 'a new night: danger back to 0');
   r = until(m, r.now, 'pre');
-  ok(r.hit.k === b.seats[(b.seats.indexOf(k) + 1) % b.seats.length], 'the kid after the waker plays next');
-  // a scribble can wake him too
+  ok(r.hit.k === b.seats[(b.seats.indexOf(k) + 1) % b.seats.length] && !r.hit.safe, 'the kid after the waker plays next (no safe turn again)');
+  // a scribble = two rolls
   r = until(m, r.now, 'go');
   const k2 = r.hit.k;
-  b.limit = b.danger + 3;
+  const seq = [0.999, 0.999, 0];
+  m.rng = () => (seq.length ? seq.shift() : 0.999);
   D.stroke(m, k2, r.now + 300);
   s = D.stroke(m, k2, r.now + 600);
-  ok(evOf(s.ev, 'wake')[0] && evOf(s.ev, 'wake')[0].by === 'fast', 'a scribble over the limit wakes him (by: fast)');
+  ok(evOf(s.ev, 'wake')[0] && evOf(s.ev, 'wake')[0].by === 'fast' && b.danger === 3, 'a scribble rolls twice (danger +2) and can wake him (by: fast)', b.danger);
+  // statistically: a fresh night wakes on the first tickle about HAZ of the time, and far more often 20 tickles later
+  const { m: ms } = game(4, 99);
+  const bs = ms.boards[0];
+  bs.cur = { k: bs.seats[0], safe: false };
+  let early = 0, late = 0;
+  for (let i = 0; i < 4000; i++) { bs.danger = 0; if (D.rise(ms, bs, 1)) early++; bs.danger = 39; if (D.rise(ms, bs, 1)) late++; }
+  ok(early / 4000 < 0.025 && late / 4000 > 0.07 && late > 4 * early, 'the first tickle seldom wakes him (but it can), the 40th often', [early, late]);
 }
 
-// ---------- the guided first turn ----------
+// ---------- while he rages (the wake-up), the board's quiz waits ----------
+{
+  const { m, now: t0 } = game(4, 71);
+  D.startPlay(m, t0);
+  const b = m.boards[0];
+  const w = b.seats.find((k) => k !== b.seats[b.ti]);
+  let ev = D.tick(m, t0 + 100, opts());
+  const q = evOf(ev, 'q').find((e) => e.k === w).q;
+  const until0 = q.until;
+  b.phase = 'wake'; b.phaseUntil = t0 + 100 + R.WAKE_MS;
+  for (let t = t0 + 300; t <= t0 + 100 + R.WAKE_MS - 100; t += 200) ev = D.tick(m, t, opts());
+  ok(m.kids[w].q && m.kids[w].q.until >= until0 + R.WAKE_MS - 600 && !evOf(ev, 'qr').length, 'while he rages the open question\'s time stands still', [m.kids[w].q && m.kids[w].q.until - until0]);
+  const other = b.seats.find((k) => k !== w && k !== b.seats[b.ti]);
+  m.kids[other].q = null; m.kids[other].qNextAt = 0;
+  ev = D.tick(m, t0 + 100 + R.WAKE_MS - 50, opts());
+  ok(!evOf(ev, 'q').some((e) => e.k === other), 'no new question while he rages');
+}
+
+// ---------- the board's safe first turn; every other turn (guided or not) can wake him ----------
 {
   const { m, now: t0 } = game(4, 3);
   D.startPlay(m, t0);
   const b = m.boards[0];
   const k0 = b.seats[0];
   m.kids[k0].feathers = 0;
-  ok(D.guess(m, b.seats[1], 'sleep', t0 + 5) === null, 'no guess on a guided first turn');
+  ok(D.guess(m, b.seats[1], 'sleep', t0 + 5) === null, 'no guess on the board\'s safe first turn');
   let r = until(m, t0, 'go');
-  ok(r.hit.guided && r.hit.ms === R.FIRST_TURN_MS && r.hit.feathers >= R.FEATHERS_START, 'the first turn is guided, 9 s, with its 3 feathers', r.hit);
-  const cap = Math.floor(b.limit * b.cuts[0]);
-  b.danger = cap - 1;
+  ok(r.hit.guided && r.hit.safe && r.hit.ms === R.FIRST_TURN_MS && r.hit.feathers >= R.FEATHERS_START, 'the first turn is guided and safe, 9 s, with its 3 feathers', r.hit);
+  m.rng = () => 0;                                       // (dice that would always wake him)
   let s = D.stroke(m, r.hit.k, r.now + 400);
   s = D.stroke(m, r.hit.k, r.now + 700);           // a scribble
-  ok(!evOf(s.ev, 'wake').length && b.danger === cap && D.cueOf(b) <= 1, 'a guided turn never wakes him and never passes the first cue', [b.danger, cap]);
-  // a later seat comes with a full quiver: its risk-free guided turn still takes only 3 tickles (no edge for sitting last)
+  ok(!evOf(s.ev, 'wake').length && b.danger === 3, 'the safe turn never wakes him (its danger still counts)', b.danger);
   m.kids[r.hit.k].feathers = 6;
   s = D.stroke(m, r.hit.k, r.now + 1700);
   const ge = evOf(s.ev, 'end')[0];
-  ok(ge && ge.why === 'guided' && ge.pats === R.GUIDED_MAX && m.kids[r.hit.k].feathers === 5, 'a guided turn ends after 3 tickles («¡Así se juega!»), the other feathers kept', ge);
+  ok(ge && ge.why === 'guided' && ge.pats === R.GUIDED_MAX && m.kids[r.hit.k].feathers === 5, 'the safe turn ends after 3 tickles («¡Así se juega!»), the other feathers kept', ge);
   ok(m.kids[r.hit.k].qNextAt >= r.now + 1700 + R.POST_MS, 'the turn kid\'s quiz comes back after «¡A salvo!» was seen', m.kids[r.hit.k].qNextAt - r.now - 1700);
+  m.rng = () => 0.999;
+  r = until(m, r.now + 1700, 'pre');
+  ok(r.hit.guided && !r.hit.safe && D.guess(m, b.seats.find((k) => k !== r.hit.k && k !== k0), 'wake', r.now + 10), 'the next kid\'s first turn is guided but NOT safe: the friends guess', r.hit);
+  r = until(m, r.now, 'go');
+  m.rng = () => 0;
+  s = D.stroke(m, r.hit.k, r.now + 400);
+  ok(evOf(s.ev, 'wake').length === 1, 'he can wake on any turn but the board\'s very first');
 }
 
 // ---------- cues rise; the limit never shows ----------
@@ -198,10 +245,55 @@ function strokes(m, k, t0, n, gap) {
   const { m } = game(4, 5);
   const b = m.boards[0];
   const seen = [];
-  for (let d = 0; d < b.limit; d++) { b.danger = d; seen.push(D.cueOf(b)); }
+  for (let d = 0; d <= 60; d++) { b.danger = d; seen.push(D.cueOf(b)); }
   ok(seen[0] === 0 && seen[seen.length - 1] === 3 && seen.every((c, i) => i === 0 || c >= seen[i - 1]), 'cues 0 → 3 as the danger rises', seen);
   const v = D.boardView(m, b, null, 0);
-  ok(!('limit' in v) && !('danger' in v) && !('cuts' in v) && v.seats.every((x) => typeof x.feathers === 'number'), 'the board shows feathers, never the limit');
+  ok(!('limit' in v) && !('danger' in v) && !('cuts' in v) && v.seats.every((x) => typeof x.feathers === 'number'), 'the board shows feathers, never the danger');
+}
+
+// ---------- a wrong or late answer always costs ----------
+{
+  const { m, now: t0 } = game(4, 61);
+  D.startPlay(m, t0);
+  const b = m.boards[0];
+  const turnK = b.seats[b.ti];
+  const [w1, w2, w3] = b.seats.filter((k) => k !== turnK);
+  const gone = new Set();
+  const o = opts((k) => !gone.has(k));
+  let ev = D.tick(m, t0 + 100, o);
+  const q1 = evOf(ev, 'q').find((e) => e.k === w1);
+  ok(q1 && q1.ms === R.Q_TIME_MS && D.openQ(m, w1, t0 + 1100).ms === R.Q_TIME_MS - 1000, 'a question comes with its time (and a reconnect gets what is left)', q1 && q1.ms);
+  m.kids[w2].feathers = 0;
+  const q2 = evOf(ev, 'q').find((e) => e.k === w2);
+  const d0 = b.danger;
+  const a2 = D.answer(m, w2, q2.q.qid, (q2.q.correctIdx + 1) % 4, t0 + 2000);
+  ok(m.kids[w2].feathers === 0 && evOf(a2.ev, 'shift').length === 1 && b.danger === d0 + 1, 'no feather to lose: he still shifts');
+  // nobody answers: the time runs out = late = the same cost
+  m.kids[w1].feathers = 3;
+  gone.add(w3);                                            // (this phone dropped: its question just goes)
+  D.shiftTimes(m, 0);
+  ok(D.seen(m, w1, q1.q.qid) && !D.seen(m, w1, 'nope'), 'the phone says its question is on screen');
+  const q2b = evOf(D.tick(m, q1.q.until - 2000, o), 'q');
+  ev = D.tick(m, q1.q.until + 350, o);
+  const late = evOf(ev, 'qr').find((e) => e.k === w1);
+  ok(late && late.late && !late.ok && late.idx === -1 && m.kids[w1].feathers === 2 && evOf(ev, 'shift').some((e) => e.k === w1 && e.why === 'late'), 'a question left to run out costs a feather and he shifts (late)', late);
+  ok(!evOf(ev, 'qr').some((e) => e.k === w3) && !m.kids[w3].q && m.kids[w3].feathers === R.FEATHERS_START, 'a phone that dropped loses nothing (its question just goes)');
+  // a question that never reached a visible screen (a pocketed phone) runs out for free
+  const { m: mp, now: tp } = game(4, 62);
+  D.startPlay(mp, tp);
+  const qp = evOf(D.tick(mp, tp + 100, opts()), 'q')[0];
+  const evp = D.tick(mp, qp.q.until + 350, opts());
+  ok(!evOf(evp, 'qr').length && mp.kids[qp.k].feathers === R.FEATHERS_START && (!mp.kids[qp.k].q || mp.kids[qp.k].q.qid !== qp.q.qid), 'a question never shown (a locked phone) costs nothing when it runs out');
+  // the pause stops a question's clock
+  const r = until(m, q1.q.until + 50, 'q', 4000, o, (e) => e.k === w1);
+  const until0 = m.kids[w1].q.until;
+  D.shiftTimes(m, 7000);
+  ok(m.kids[w1].q.until === until0 + 7000, 'a pause moves the question\'s time too');
+  // while he is awake a wrong answer doesn't stir him (the danger restarts at the new night anyway)
+  b.phase = 'wake';
+  const qw = m.kids[w1].q;
+  const aw = D.answer(m, w1, qw.qid, (qw.correctIdx + 1) % 4, r.now + 2000);
+  ok(aw.ok && !evOf(aw.ev, 'shift').length, 'no shift while he is awake');
 }
 
 // ---------- the last 30 s, the clock, the pause ----------
@@ -283,9 +375,11 @@ function strokes(m, k, t0, n, gap) {
 }
 
 // ---------- a class simulation (the pace) ----------
-function simulate(nKids, seed, style) {
+// styles: greedy (never stops), careful (stops at 2 tickles or when he stirs), normal (4 or «¡Casi!»), mixed (the three),
+// quiz (k % 4: silent = never answers, careful, normal, greedy). Kids answer in 1.6-3.8 s, 80 % right.
+function simulate(nKids, seed, style, durS) {
   const t0 = 5000000;
-  const m = D.newGame(seed, 240, t0);
+  const m = D.newGame(seed, durS || 120, t0);
   D.deal(m, Array.from({ length: nKids }, (_, i) => [i + 1, 'K' + i, 'dralingo']));
   let now = t0;
   D.startPlay(m, now);
@@ -293,50 +387,68 @@ function simulate(nKids, seed, style) {
   const rand = () => { rng = (rng * 9301 + 49297) % 233280; return rng / 233280; };
   const pending = {};            // quiz answers due
   const stroking = {};           // k → next stroke time
-  const st = { turns: 0, strokes: [], wakes: 0, empties: 0, emptyStarts: 0, stops: 0, featherAtGo: [] };
-  const kidStyle = (k) => (style === 'mixed' ? ['greedy', 'careful', 'normal'][k % 3] : style);
+  const st = { turns: 0, strokes: [], wakes: 0, empties: 0, emptyStarts: 0, stops: 0, featherAtGo: [], wakeBoards: {}, firstRound: 0, turnsOf: {} };
+  const kidStyle = (k) => (style === 'mixed' ? ['greedy', 'careful', 'normal'][k % 3] : style === 'quiz' ? ['silent', 'careful', 'normal', 'greedy'][k % 4] : style);
   const endTurn = (e) => { st.turns++; st.strokes.push(e.pats || 0); if (e.why === 'empty') st.empties++; if (e.why === 'stop') st.stops++; delete stroking[e.k]; };
   const take = (ev) => ev.forEach((e) => {
-    if (e.t === 'q') pending[e.k] = { at: now + 1600 + rand() * 2200, qid: e.q.qid, idx: rand() < 0.8 ? e.q.correctIdx : (e.q.correctIdx + 1) % 4 };
-    if (e.t === 'go') { st.featherAtGo.push(e.feathers); if (!e.feathers) st.emptyStarts++; stroking[e.k] = now + 500 + rand() * 500; }
+    if (e.t === 'q') D.seen(m, e.k, e.q.qid);              // (every phone shows its question; a silent kid just ignores it)
+    if (e.t === 'q' && kidStyle(e.k) !== 'silent') pending[e.k] = { at: now + 1600 + rand() * 2200, qid: e.q.qid, idx: rand() < 0.8 ? e.q.correctIdx : (e.q.correctIdx + 1) % 4 };
+    if (e.t === 'go') { st.featherAtGo.push(e.feathers); if (!e.feathers) st.emptyStarts++; stroking[e.k] = now + 500 + rand() * 500; st.turnsOf[e.b] = (st.turnsOf[e.b] || 0) + 1; }
     if (e.t === 'end') endTurn(e);
-    if (e.t === 'wake') { st.turns++; st.strokes.push(e.pats || 0); st.wakes++; delete stroking[e.k]; }
+    if (e.t === 'wake') {
+      st.turns++; st.strokes.push(e.pats || 0); st.wakes++; delete stroking[e.k];
+      st.wakeBoards[e.b] = (st.wakeBoards[e.b] || 0) + 1;
+      const bb = D.boardOf(m, e.b);
+      if (st.wakeBoards[e.b] === 1 && st.turnsOf[e.b] <= bb.seats.length) st.firstRound++;
+    }
   });
-  for (let step = 0; step < 300000 / 100 && m.phase === 'play'; step++) {
+  for (let step = 0; step < (durS || 120) * 1000 / 100 + 20 && m.phase === 'play'; step++) {
     now += 100;
     take(D.tick(m, now, opts()));
     Object.entries(pending).forEach(([k, p]) => { if (now >= p.at) { delete pending[k]; take(D.answer(m, Number(k), p.qid, p.idx, now).ev); } });
     Object.entries(stroking).forEach(([k, at]) => {
       if (now < at) return;
-      const s = kidStyle(Number(k));
+      const s2 = kidStyle(Number(k));
       const b = D.boardOf(m, m.kids[k].b);
       const c = b.cur;
       if (!c || c.k !== Number(k)) { delete stroking[k]; return; }
-      if (s === 'careful' && (c.pats >= 2 || b.cue >= 2)) { take(D.stop(m, Number(k), now)); return; }
-      if (s === 'normal' && (c.pats >= 4 || b.cue >= 3)) { take(D.stop(m, Number(k), now)); return; }
+      if (s2 === 'careful' && (c.pats >= 2 || b.cue >= 2)) { take(D.stop(m, Number(k), now)); return; }
+      if (s2 === 'normal' && (c.pats >= 4 || b.cue >= 3)) { take(D.stop(m, Number(k), now)); return; }
       take(D.stroke(m, Number(k), now).ev);
-      if (stroking[k] != null) stroking[k] = now + (s === 'greedy' ? 380 + rand() * 300 : 650 + rand() * 400);
+      if (stroking[k] != null) stroking[k] = now + (s2 === 'greedy' ? 380 + rand() * 300 : 650 + rand() * 400);
     });
   }
   const avg = st.strokes.reduce((a, b) => a + b, 0) / Math.max(1, st.strokes.length);
   const fAvg = st.featherAtGo.reduce((a, b) => a + b, 0) / Math.max(1, st.featherAtGo.length);
-  return { kids: nKids, boards: m.boards.length, style, turns: st.turns, avgStrokes: Math.round(avg * 10) / 10, wakes: st.wakes, empties: st.empties, emptyStarts: st.emptyStarts, featherAtGo: Math.round(fAvg * 10) / 10, perBoardTurns: Math.round(st.turns / m.boards.length) };
+  const perBoard = m.boards.filter((b) => b.seats.length === 4).map((b) => st.wakeBoards[b.id] || 0);
+  const scoreBy = {};
+  Object.values(m.kids).forEach((r) => { const s3 = kidStyle(r.k); (scoreBy[s3] = scoreBy[s3] || []).push(r.score); });
+  return { kids: nKids, boards: m.boards.length, style, turns: st.turns, avgStrokes: Math.round(avg * 10) / 10, wakes: st.wakes, perBoard, firstRound: st.firstRound, empties: st.empties, emptyStarts: st.emptyStarts, featherAtGo: Math.round(fAvg * 10) / 10, perBoardTurns: Math.round(st.turns / m.boards.length), scoreBy };
 }
 const SIM = process.argv.includes('--sim');
 const runs = [];
-['greedy', 'normal', 'careful', 'mixed'].forEach((style) => [4, 12, 30].forEach((n) => [1, 2, 3].forEach((seed) => runs.push(simulate(n, seed * 17 + n, style)))));
+['greedy', 'normal', 'careful', 'mixed', 'quiz'].forEach((style) => [4, 12, 30].forEach((n) => [1, 2, 3, 4, 5, 6].forEach((seed) => runs.push(simulate(n, seed * 17 + n, style)))));
 const by = (style) => runs.filter((r) => r.style === style);
 const mean = (rs, f) => rs.reduce((a, r) => a + f(r), 0) / rs.length;
-const greedy = by('greedy'), mixed = by('mixed'), careful = by('careful');
+const greedy = by('greedy'), mixed = by('mixed'), careful = by('careful'), quiz = by('quiz');
+const boardsOf4 = (rs) => rs.reduce((a, r) => a.concat(r.perBoard), []);
+const hist = (xs) => xs.reduce((h, x) => { h[x] = (h[x] || 0) + 1; return h; }, {});
+const mixed4 = boardsOf4(mixed), all4 = boardsOf4(mixed.concat(by('normal'), quiz));
+const meanW = mixed4.reduce((a, b) => a + b, 0) / mixed4.length;
+const firstRoundShare = mean(mixed.concat(by('normal'), quiz), (r) => r.firstRound / r.boards);
+const avgScore = (style) => { const xs = quiz.reduce((a, r) => a.concat(r.scoreBy[style] || []), []); return xs.reduce((a, b) => a + b, 0) / Math.max(1, xs.length); };
 if (SIM) runs.forEach((r) => console.log(JSON.stringify(r)));
-ok(mean(greedy, (r) => r.avgStrokes) >= 3 && mean(greedy, (r) => r.avgStrokes) <= 6, 'a kid who keeps stroking: 3-6 strokes a turn', mean(greedy, (r) => r.avgStrokes));
-ok(mean(mixed, (r) => r.featherAtGo) >= 3, 'the quiz fills the quiver between turns (3+ feathers at a turn)', mean(mixed, (r) => r.featherAtGo));
-ok(mean(mixed, (r) => r.emptyStarts / Math.max(1, r.turns)) < 0.15, 'a turn rarely starts with no feathers', mean(mixed, (r) => r.emptyStarts / Math.max(1, r.turns)));
-ok(mean(greedy, (r) => r.wakes / r.boards) >= 1.5, 'greedy boards wake him up more than once a game', mean(greedy, (r) => r.wakes / r.boards));
+ok(mean(greedy, (r) => r.avgStrokes) >= 2 && mean(greedy, (r) => r.avgStrokes) <= 6, 'a kid who keeps stroking: 2-6 tickles a turn', mean(greedy, (r) => r.avgStrokes));
+ok(mean(mixed, (r) => r.featherAtGo) >= 2.5, 'the quiz fills the quiver between turns (2.5+ feathers at a turn)', mean(mixed, (r) => r.featherAtGo));
+ok(meanW >= 1.5 && meanW <= 2.7, 'a board of 4 sees about 2 wake-ups in a 2-minute game', meanW);
+ok(Math.min(...all4) <= 1 && Math.max(...all4) >= 3, 'sometimes 1, sometimes 3 (never predictable)', hist(all4));
+ok(firstRoundShare >= 0.1, 'sometimes he wakes in the very first round of turns', firstRoundShare);
 ok(mean(careful, (r) => r.wakes / r.boards) < mean(greedy, (r) => r.wakes / r.boards), 'careful boards wake him less');
-ok(mean(mixed, (r) => r.perBoardTurns) >= 14, 'a 4-minute game: ~14+ turns per board (each kid plays 3-5 times)', mean(mixed, (r) => r.perBoardTurns));
-if (SIM) console.log('greedy strokes', mean(greedy, (r) => r.avgStrokes).toFixed(2), 'wakes/board', mean(greedy, (r) => r.wakes / r.boards).toFixed(2),
-  '| mixed strokes', mean(mixed, (r) => r.avgStrokes).toFixed(2), 'wakes/board', mean(mixed, (r) => r.wakes / r.boards).toFixed(2), 'turns/board', mean(mixed, (r) => r.perBoardTurns).toFixed(1), 'feathers at go', mean(mixed, (r) => r.featherAtGo).toFixed(1),
-  '| careful wakes/board', mean(careful, (r) => r.wakes / r.boards).toFixed(2));
+ok(avgScore('silent') < avgScore('careful'), 'a kid who never answers ends below a careful one (answering nothing is never safe)', [avgScore('silent'), avgScore('careful')]);
+ok(mean(mixed, (r) => r.perBoardTurns) >= 7, 'a 2-minute game: ~7+ turns per board (each kid plays about twice)', mean(mixed, (r) => r.perBoardTurns));
+if (SIM) console.log('greedy tickles', mean(greedy, (r) => r.avgStrokes).toFixed(2), 'wakes/board', mean(greedy, (r) => r.wakes / r.boards).toFixed(2),
+  '| mixed tickles', mean(mixed, (r) => r.avgStrokes).toFixed(2), 'wakes/board(4)', meanW.toFixed(2), 'hist', JSON.stringify(hist(mixed4)), 'all boards of 4', JSON.stringify(hist(all4)), 'first round', firstRoundShare.toFixed(2),
+  'turns/board', mean(mixed, (r) => r.perBoardTurns).toFixed(1), 'feathers at go', mean(mixed, (r) => r.featherAtGo).toFixed(1),
+  '| careful wakes/board', mean(careful, (r) => r.wakes / r.boards).toFixed(2), '| scores silent', avgScore('silent').toFixed(2), 'careful', avgScore('careful').toFixed(2), 'normal', avgScore('normal').toFixed(2), 'greedy', avgScore('greedy').toFixed(2));
 
 console.log(`test-dormilon: ${checks} checks OK`);

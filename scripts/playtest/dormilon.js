@@ -1,5 +1,7 @@
-// Playtest handler for «¡No despiertes a Dralingo!» v2: every bot plays like a kid of a board. While it is not its turn
-// it answers the quiz (dm:q) after a human delay (1.2-3 s; it doesn't know the right one) to earn feathers; on its turn
+// Playtest handler for «¡No despiertes a Dralingo!» v3: every bot plays like a kid of a board. While it is not its turn
+// it answers the quiz (dm:q) after a human delay (1.2-3 s; it read the class pack: right 80 % of the time) to earn
+// feathers; 15 % of the bots are «silent» and never answer (their questions run out: late = a feather lost, so they must
+// end below the careful ones: E.byStyle in the report). A wrong or late answer costs a feather (checked). On its turn
 // (dm:go) it RUBS: one player:dm-stroke every 0.45-1 s (greedy bots scribble, careful bots stop after 2 strokes with
 // «¡Me retiro!»), and moves its feather (player:dm-feather); it guesses «¿Se despierta?» and reacts.
 // Frozen = the bot's board shows no turn event (pre / go / stroke / end / wake / night) for 20 s while the game runs; a
@@ -9,6 +11,20 @@
 // feather; a right answer = one feather (max 6); the waker loses exactly its points; the end payload has the bot's board,
 // its place and its card.
 'use strict';
+const os = require('os');
+const fs = require('fs');
+const path = require('path');
+let RIGHT = null;                 // question text → the right answer (the pack the room loaded; read once per process)
+function rightOf(ctx) {
+  if (RIGHT) return RIGHT;
+  RIGHT = new Map();
+  try {
+    if (!process.env.DRALY_DATA_DIR) process.env.DRALY_DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'dm-bots-'));
+    const setId = ctx.report.set && ctx.report.set.setId;
+    (require('../../core/sets').loadSet(setId).questions || []).forEach((q) => RIGHT.set(String(q.text), String(q.correct)));
+  } catch (_) { /* no pack: the bots guess */ }
+  return RIGHT;
+}
 
 module.exports = (bot, ctx) => {
   const st = ctx.state;
@@ -17,11 +33,13 @@ module.exports = (bot, ctx) => {
   const E = ctx.report.dormilon || (ctx.report.dormilon = {
     inits: 0, seated: 0, boards: {}, turns: 0, strokes: 0, fast: 0, wakes: 0, stops: 0, empties: 0, quiz: 0, right: 0,
     guesses: 0, reacts: 0, feRelays: 0, turnStrokes: [], frenzy: 0, finals: 0, ends: 0, endChecks: 0, ruleChecks: 0, maxBoardGapS: 0,
+    late: 0, lostFeathers: 0, shifts: 0, byStyle: {},
   });
   const fail = (what, d) => ctx.report.errors.push({ who: ctx.name, ev: 'rule:' + what, d });
   let me = null, b = null, myTurn = false, myScore = 0, feathers = 3, strokes = 0, active = false, ended = false, flagged = false;
   let lastBoardEv = Date.now(), goAt = 0, firstStrokeAt = 0, lastAnswerAt = Date.now(), hasQ = false, timers = [], rubT = null, playing = false;
-  const style = Math.random() < 0.3 ? 'careful' : Math.random() < 0.5 ? 'greedy' : 'normal';
+  const botN = parseInt(String(ctx.name).replace(/\D/g, ''), 10) || 0;   // (every 6th bot never answers: the proof always has some)
+  const style = botN % 6 === 3 ? 'silent' : Math.random() < 0.35 ? 'careful' : Math.random() < 0.5 ? 'greedy' : 'normal';
   const clear = () => { timers.forEach(clearTimeout); timers = []; if (rubT) { clearTimeout(rubT); rubT = null; } };
   const mine = (d) => d && d.b === b;
   const seen = () => { lastBoardEv = Date.now(); };
@@ -46,10 +64,15 @@ module.exports = (bot, ctx) => {
     st.questions++;
     st.lastQAt = Date.now();
     st.waiting = false;
+    bot.emit('player:dm-seen', { pin: ctx.pin, qid: q.qid });   // (the phone shows it)
+    if (style === 'silent') return;                     // (never answers: its questions run out)
+    const right = rightOf(ctx).get(String(q.text));
+    const ri = right != null ? q.answers.indexOf(right) : -1;
+    const idx = ri >= 0 && Math.random() < 0.8 ? ri : Math.floor(Math.random() * q.answers.length);
     timers.push(setTimeout(() => {
       st.answers++;
       E.quiz++;
-      bot.emit('player:dm-answer', { pin: ctx.pin, qid: q.qid, idx: Math.random() < 0.6 ? Math.floor(Math.random() * q.answers.length) : 0 });
+      bot.emit('player:dm-answer', { pin: ctx.pin, qid: q.qid, idx });
     }, 1200 + Math.random() * 1800));
   });
   bot.on('dm:qx', () => { hasQ = false; });
@@ -58,7 +81,12 @@ module.exports = (bot, ctx) => {
     lastAnswerAt = Date.now();
     E.ruleChecks++;
     if (d.ok) { E.right++; st.correct++; if (d.feathers !== Math.min(6, feathers + 1)) fail('a right answer = one feather (max 6)', { d, feathers }); }
-    else { st.wrong++; if (d.feathers !== feathers) fail('a wrong answer = no feather', { d, feathers }); }
+    else {
+      st.wrong++;
+      if (d.late) E.late++;
+      if (d.feathers !== Math.max(0, feathers - 1)) fail('a wrong or late answer costs a feather', { d, feathers });
+      if (feathers > 0) E.lostFeathers++;
+    }
     feathers = d.feathers;
   });
   bot.on('dm:nope', () => { hasQ = false; lastAnswerAt = Date.now(); });
@@ -118,6 +146,7 @@ module.exports = (bot, ctx) => {
       myTurn = false; clear(); lastAnswerAt = Date.now();
     }
   });
+  bot.on('dm:shift', (d) => { if (mine(d)) { seen(); if (d.k === me) E.shifts++; } });
   bot.on('dm:nostroke', (d) => { E.nostroke = E.nostroke || {}; E.nostroke[d.why] = (E.nostroke[d.why] || 0) + 1; });
   bot.on('dm:night', (d) => { if (mine(d)) seen(); });
   bot.on('dm:skip', (d) => { if (mine(d)) seen(); });
@@ -128,6 +157,7 @@ module.exports = (bot, ctx) => {
     const dm = d && d.dormilon;
     E.endChecks++;
     if (!dm || !dm.board || !d.me) { fail('end payload', d); return; }
+    (E.byStyle[style] = E.byStyle[style] || []).push(d.me.score);
     const rows = dm.board.rows || [];
     const row = rows.find((r) => r.k === me);
     if (!row) fail('end payload: my row in my board', dm.board);
@@ -144,7 +174,7 @@ module.exports = (bot, ctx) => {
     const now = Date.now();
     if (active) E.maxBoardGapS = Math.max(E.maxBoardGapS, Math.round((now - lastBoardEv) / 100) / 10);
     const noStroke = myTurn && goAt && feathers > 0 && !firstStrokeAt && now - goAt > 3000;
-    const noQuiz = playing && active && !myTurn && !hasQ && feathers < 6 && now - lastAnswerAt > 6000;
+    const noQuiz = playing && active && !myTurn && !hasQ && feathers < 6 && now - lastAnswerAt > 6000 && style !== 'silent';
     if (active && !flagged && (now - lastBoardEv > 20000 || noStroke || noQuiz)) {
       flagged = true;
       ctx.report.stalls.push({ name: ctx.name, secondsWithoutBoardEvent: Math.round((now - lastBoardEv) / 1000), noStroke, noQuiz, lastEvent: st.lastEvent, style, feathers, strokes, sinceGo: goAt ? now - goAt : null });

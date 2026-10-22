@@ -937,7 +937,12 @@ the checklist for any new game mode.
   playing v1, «Gana plumas, luego frota con el dedo»)**: between turns the quiz earns golden feathers (3 to start, 6 max)
   with the friend's turn live above it; on my turn his face fills my phone and I RUB his head with my finger (each sweep
   = +1 and a feather, a scribble = double danger, «¡Me retiro!» any time, 6 s), the board and the projector watch my
-  feather live; the turn was filmed at 4 fps beside the video's (`scripts/record-dormilon-turn.js`).
+  feather live; the turn was filmed at 4 fps beside the video's (`scripts/record-dormilon-turn.js`). **v3 (his picks
+  2026-10-22 15:44)**: the wake-up is a dice roll that grows with every tickle since he fell asleep (~2 a board in a
+  2-minute game, sometimes in the first round; only each board's very first turn is safe), 2 / 3 / 4 min (default 2),
+  a wrong, late or blind answer costs a feather and makes him shift, he wakes up ANGRY on every screen for ~4 s (filmed
+  beside the video's red Wiggler: `scripts/record-dormilon-wake.js`), and the projector lobby fits and scrolls at every
+  laptop size and zoom (`scripts/check-dormilon-lobby.js`).
 - **The kid's phone is the product** (his correction 2026-10-11: "a beautiful projector is useless if everybody else's
   UI is terrible"). Every game ships a phone experience that feels like a competition, better than Kahoot: big colored
   answer tiles, a per-question timer with ticking, live team score, Dralingo pose reactions (right / wrong / streak /
@@ -964,7 +969,20 @@ the checklist for any new game mode.
   the screen (rub, swipe, aim, time, move), your character does it in real time, and the suspense lands on you; the
   questions feed the game (they earn the moves, the tries, the turn), they never replace the task. Before showing him,
   watch the original minigame's turn side by side with ours (frames of both) and list where it wins and where we lose;
-  a «we lose» left = not done, whatever the checklist score says.
+  a «we lose» left = not done, whatever the checklist score says. **Big moments take over the whole screen with their
+  emotion** (his words 2026-10-22: "whenever the dragon wakes up… red that keeps angry, red things follow around the
+  screen… make it feel like he's angry, that's what Mario does really good, the feelings"): a wake-up, a fall, a hit, a
+  win floods every screen with its feeling (colour, shake, rays, particles that move around, sound) for a beat, on the
+  phones as much as on the projector.
+- **A wrong or late answer always costs you something** (his standing rule 2026-10-22: "make the whole point of the game
+  make sense, you somehow get punished if you don't answer correctly / in time"; then, shown a per-game plan for the 11
+  existing games: "just do it in this one you're working on, and from here forward"). It applies to «¡No despiertes a
+  Dralingo!» and to every pin game built or rebuilt from 2026-10-22 on; the 11 older games keep how they work until he
+  asks (the per-game plan waits in memory `project_penalty_audit`). In each game's own terms, a wrong answer or a question left to run out takes something you can see and feel
+  away from you (a feather flies off, your piece slips back, the robot gains on you, your team's meter drops, the
+  danger rises), on your own phone with its sound, never just «no points». Answering right must be clearly the way to
+  win, and answering nothing must never be a safe strategy. Kid-friendly: a setback with a funny reaction, never
+  humiliation, and fair (the same rule for everyone; a too-fast guess counts as wrong).
 - **Feelings at the end of class** (his words 2026-10-14, after playing Ojos de Halcón: "the Mario Party feeling is so
   important because it makes feelings at the end of a class"): every pin game ends with a Mario Party style ceremony,
   not a plain score list: «¡FINAL!», a suspenseful reveal, the winners celebrating and the others reacting, bonus stars

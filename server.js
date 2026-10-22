@@ -8059,7 +8059,7 @@ function dmInitPayload(g, pid) {
   const b = Dorm.boardOf(m, r.b);
   out.board = b ? Dorm.boardView(m, b, online, clock) : null;
   out.you = { k: r.k, b: r.b, score: r.score, pats: r.pats, feathers: r.feathers, first: !!r.first, guess: b && b.guesses[r.k] ? b.guesses[r.k] : null };
-  out.q = Dorm.openQ(m, r.k);                                       // my open quiz question again (same qid)
+  out.q = Dorm.openQ(m, r.k, clock);                                // my open quiz question again (same qid, the time left)
   const c = b && b.cur;
   if (c) out.turnMs = Math.max(0, c.until - clock);
   return out;
@@ -8076,7 +8076,7 @@ function dmEmit(pin, g, evs) {
       // the quiz: the question only to its kid; its result to that kid, the new feather count to the board + projector
       if (e.t === 'q') {
         const pid = dmPidOf(g, e.k);
-        if (pid) io.to(pid).emit('dm:q', Object.assign({ b: e.b, feathers: e.feathers }, Dorm.qPublic(e.q)));
+        if (pid) io.to(pid).emit('dm:q', Object.assign({ b: e.b, feathers: e.feathers, ms: e.ms }, Dorm.qPublic(e.q)));
         return;
       }
       if (e.t === 'qx') { const pid = dmPidOf(g, e.k); if (pid) io.to(pid).emit('dm:qx', { b: e.b }); return; }
@@ -11447,7 +11447,7 @@ io.on('connection', (socket) => {
       type === 'pinata'       ? Pinata.R.DURATION :  // 3 min (the lobby offers 2 / 3 / 4)
       type === 'dragon-eye'   ? Dragon.R.DURATION :   // 4 min (the lobby offers 3 / 4 / 5)
       type === 'monopoly'     ? Mono.R.DURATION :   // 4 min (the lobby offers 3 / 4 / 5)
-      type === 'dormilon'     ? Dorm.R.DURATION :   // ¡No despiertes a Dralingo!: 4 min (the lobby offers 3 / 4 / 5)
+      type === 'dormilon'     ? Dorm.R.DURATION :   // ¡No despiertes a Dralingo!: 2 min (the lobby offers 2 / 3 / 4)
       type === 'sixseven'     ? Sixseven.R.DURATION :   // 2 min (the lobby offers 2 / 3 / 4)
       type === 'kingdoms'     ? 180 :
       type === 'paint'        ? 240 :
@@ -14339,6 +14339,17 @@ io.on('connection', (socket) => {
       if (!res.ok) { io.to(socket.id).emit('dm:nope', { qid: String(qid || ''), why: res.why }); return; }
       dmEmit(pin, g, res.ev);
     } catch (e) { console.error('[player:dm-answer]', e); }
+  });
+  // the phone shows its quiz question on a visible screen (only then can it run out and cost a feather)
+  socket.on('player:dm-seen', (data) => {
+    try {
+      const { pin, qid } = data || {};
+      const g = games[pin];
+      if (!g || g.gameType !== 'dormilon' || !g.dm || g.state !== 'active') return;
+      const p = g.players[socket.id];
+      if (!p || !p.dmK) return;
+      Dorm.seen(g.dm, p.dmK, String(qid || ''));
+    } catch (e) { console.error('[player:dm-seen]', e); }
   });
   socket.on('player:dm-stop', (data) => {
     try {

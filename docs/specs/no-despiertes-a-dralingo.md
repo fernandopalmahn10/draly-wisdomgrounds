@@ -1,10 +1,69 @@
 # «¡No despiertes a Dralingo!» (gameType `dormilon`) · spec
 
 #3 of his Mario Party series (his video https://www.youtube.com/watch?v=y9BKCVx_mNk 6:14-7:29, Super Mario Party
-«Don't Wake Wiggler»), his picks 2026-10-22. Status: v1 live 2026-10-22 08:37 (219cee484, sounds ab51bf2cc); **v2 «Gana
-plumas, luego frota con el dedo»** built the same day on branch `dormilon-v2` (bundle), not deployed. v2 replaces the
-turn below («Our version» keeps v1's text for the parts v2 did not change: the place, boards, the danger, the wake-up,
-the clock, the ending); read «v2» first.
+«Don't Wake Wiggler»), his picks 2026-10-22. Status: v1 live 2026-10-22 08:37 (219cee484, sounds ab51bf2cc); v2 «Gana
+plumas, luego frota con el dedo» live the same day (6254b16c9, giggle d774da097: "it feels more interactive now");
+**v3** (his picks 15:44: random early wake-ups, 2 minutes, an ANGRY wake-up on every screen, a wrong or late answer
+costs, the projector lobby fixed) on branch `dormilon-v3` (bundle), not deployed. Read «v3», then «v2»; «Our version»
+keeps v1's text for what neither changed (the place, boards, the clock, the ending).
+
+## v3 · random wake-ups, 2 minutes, he wakes up ANGRY, a wrong answer costs (his picks 2026-10-22 15:44)
+His words after playing v2: "it's okay if the round ends randomly… someone awakens the dragon in the first round… you
+don't need to wait for the whole 3 or 4 minutes… 3 minutes is a lot… in 2 minutes it can wake up randomly twice…
+suspense, the dragon wakes up and you never know when"; "whenever the dragon wakes up, you get red that keeps angry,
+red things follow around the screen… make it feel like he's angry… that's what Mario does really good, the
+feelings"; "make the whole point of the game make sense, you somehow get punished if you don't answer correctly / in
+time"; and the projector lobby "the button gets lost… it's unscrollable… you cannot find the button to press start".
+- **The wake-up is a dice roll** (no hidden number any more): every danger unit (a tickle +1, a scribble +2 = two
+  rolls) wakes him with a chance of HAZ_BASE + HAZ × the danger since he fell asleep (1 % + 0.25 % a unit, at most 30 %).
+  A wrong or late quiz answer of anyone on the board makes him shift in his sleep (danger +1, never a roll: only the
+  kid tickling can wake him). Class simulation, 2-minute games, boards of 4 with mixed kids: **2.25 wake-ups a board**
+  (0: 7 · 1: 8 · 2: 18 · 3: 20 · 4+: 7 of 60 boards), **28 % wake him in the very first round of turns**, greedy boards
+  3.0, careful 0.2. The cues follow the chance (jittered per night): louder snore at 2.5-3 %, he stirs at 4.5-5.5 %,
+  «¡Casi se despierta!» at 7-8 %: they say «riskier», never «safe».
+- **Only each board's very first turn of the game is safe** (it shows how to play: 3 tickles at most, no guess). Every
+  other turn can wake him, a kid's own first turn too (it is still guided: the hand on his head, then on «¡Me retiro!»).
+- **2 minutes by default**: the lobby offers 2 / 3 / 4.
+- **A wrong or late answer always costs** (his standing rule): a wrong answer, a question left to run out (15 s, a
+  draining time bar on the question, red near the end) or a blind tap (< 0.5 s after the question went out: a guess)
+  makes a feather fly OUT of the quiver with a «fsss» (Higgsfield), my head shakes sad 😖 with «¡Casi! Era …», and he
+  shifts in his sleep on every phone of the board and the projector («¡Dralingo se movió! 😬», never who failed, a
+  creak; on the turn kid's phone «¡Se movió!»). The time bar is drawn from the question's own deadline (a repaint, the
+  pause or the wake-up never refill it; the server allows 300 ms of grace), and only a question the phone really showed
+  on a visible screen can run out and cost (`player:dm-seen`): a pocketed, locked or dropped phone loses nothing. A tap
+  in the first 0.35 s of a new question is ignored on the phone (a double tap meant for the last one). Bots prove it:
+  a bot that never answers ends far below a careful one (30 kids · 2 min: 2.4 vs 6.3 points; 20 kids · 60 s: 3.0 vs
+  5.6; class simulation: 2.8 vs 4.9).
+- **He wakes up ANGRY on every screen, ~4 s** (the video's red Wiggler): his close-up turns into the angry Dralingo
+  (Higgsfield, 0 credits: face and ears tomato red, angry brows, steam puffs, an anger mark), the WHOLE phone floods red
+  (a pulsing vignette, the quiz panel steps aside so his face fills the phone, the board's quiz waits on the server),
+  a jagged white burst ring pulses on his face every 0.5 s, speed lines fly in from the edges, steam puffs and red
+  sparks move around, 💢 marks pop, a camera push-in and a strong shake, «¡Se despertó!» under his face, his funny-angry
+  line («¡¿QUIÉN ME DESPERTÓ?! ¡Soñaba con dumplings! 🥟», «¡Te vi con esa pluma! 😠»…), the whistle-and-gong then his
+  growl (Higgsfield), and on the waker's phone «−N 😱» lands on his face while their score drops to 0. The projector:
+  the board's tile takes the same rage and the whole projector pulses red. Then he calms back to night («Noche N»).
+  Transform / opacity only; reduced motion keeps the red and the angry face, still.
+- **The projector lobby fits and scrolls**: the PIN + QR, then the time and «¡Empezar!» right under them (the pictured
+  steps after), a compact head on short windows, and the page scrolls by wheel when it is taller. Checked at 1366×657,
+  1280×720, 1440×900, 1600×900, 1920×1080 and zoomed 125 % / 150 % (`scripts/check-dormilon-lobby.js`: 19/19, the
+  in-game toolbar with «−30 s» fully visible at every size too). Before: at 1366×657 zoomed 125 % «¡Empezar!» was below
+  the window and the page did not scroll (his bug).
+
+## v3 · the wake-up side by side with the video (7:18-7:22)
+Our wake-up filmed at 4 fps on Ana's phone when SHE wakes him (`scripts/record-dormilon-wake.js`), next to the video's
+loose frames: `.claude/handoff/dormilon-shots/v3-wake-side-by-side.jpg` (six matched moments + our whole wake-up).
+| Moment | The video | Ours (v3) | |
+|---|---|---|---|
+| It comes | after one pat, no warning | any tickle (1 % on the first, more with every tickle); often in the first round | even |
+| The colour | Wiggler instantly maroon-red, glowing angry eyes | his close-up instantly the angry red Dralingo, steam, anger mark | even |
+| The takeover | white burst ring + speed lines, push-in, shake, steam (~5 s) | the same + the whole phone floods red, sparks and 💢 fly around, his growl (~4 s) | **we win** (his «red that keeps angry») |
+| The loss | the waker's score 10 → 0 on the same frame | the waker's score → 0 on the same frame + «−N 😱» on his face + «¡Lo despertaste! Pierdes tus N puntos» | **we win** |
+| His word | «FINISH!» stamped on the face | «¡Se despertó!» under his face + his funny-angry line in a bubble | even |
+| Where | one shared TV | every phone of the board (the waker's and the watchers', the panel steps aside) + the projector tile and a red pulse | **we win** |
+| After | the game ends | he calms back to sleep, a new night, the game goes on | (our game goes on by design) |
+Nothing left in «we lose». Found and fixed while filming: his angry face was hidden under the red tint and the
+«¡Se despertó!» band (the band now sits under his face, the tint keeps his face clear), the waker's finger kept moving
+the feather over the rage, and his wake lines were still sleepy («…bueno, a dormir otra vez»).
 
 ## v2 · «Gana plumas, luego frota con el dedo» (his pick 2026-10-22, after playing v1)
 His words after playing v1: "it's not feeling like you are there in the game… you need to pet the dragon… you need to
@@ -115,8 +174,11 @@ patting when it wakes LOSES ALL their points: it turns red and angry, rays, «FI
 INTRO 2.6 s · PRE 2.6 s · TURN 11 s (first 14 s) · after an answer the next question 0.65 s later · POST 1.6 s ·
 WAKE 3.6 s · NIGHT 2.4 s · DROP 3 s · FINAL 2.4 s · last 30 s ×2.
 **v2**: PRE 2.2 s · TURN 6 s (first 9 s) · feathers start 3, max 6 · the next quiz question 0.6 s after a right
-answer, 1.4 s after a wrong one, replaced after 25 s unanswered · a tickle closer than 0.25 s to the last = noise,
-closer than 0.55 s = a scribble · POST 1.5 s · limit 6-10 per kid of the board.
+answer, 1.4 s after a wrong one · a tickle closer than 0.25 s to the last = noise, closer than 0.55 s = a scribble ·
+POST 1.5 s.
+**v3**: 2 / 3 / 4 min (default 2) · a question's time 15 s (late = wrong) · an answer < 0.5 s after the question = a
+guess = wrong · the wake chance 1 % + 0.25 % × the danger since he fell asleep (≤ 30 %), a wrong / late answer +1
+danger · WAKE 4.4 s (the rage ~4 s, the board's quiz waits) · NIGHT 2.4 s.
 
 ## Files
 `core/dormilon.js` (rules, no sockets) · server.js «NO DESPIERTES A DRALINGO» block (`dm*`) · `public/host-dormilon.html`
@@ -127,6 +189,10 @@ v2 adds: `closeup-sleep|stir|awake.webp` (his face on the pillow, aligned crops 
 0 credits), `giggle-h1..3.mp3` (his sleepy giggle, Higgsfield Mirelo through Supercomputer, 3 credits for 6 takes, one
 kept) and the 4-fps turn film `scripts/record-dormilon-turn.js` (the real-browser check `scripts/check-dormilon-screens.js`
 now rubs on its phones' turns and answers their quiz).
+v3 adds: `closeup-angry.webp` (the angry red Dralingo, Higgsfield Unlimited 0 credits, registered to the same crop by
+`assets-library/higgsfield/2026-10-22/dormilon/_how-made/closeup_extra.py`), `angry-h1/h2.mp3` (his growl) and `lose-feather-h1.mp3` (the «fsss»), Higgsfield
+Mirelo via Supercomputer, 3 credits for 6 takes; `scripts/check-dormilon-lobby.js` (the projector at 8 sizes and zooms) and
+`scripts/record-dormilon-wake.js` (a wake-up filmed at 4 fps on the waker's phone).
 
 ## As built · 2026-10-22 (branch `dormilon`, not deployed)
 - **Wording**: «cosquilla» (a tickle with the golden feather), not «caricia»: the review read «caricias» on a sleeping,
@@ -223,3 +289,30 @@ the fresh-eyes review 2026-10-22 (10/14 before its fixes: the rub count, wide cl
 coaching, the short «¡A salvo!», the jumping guess box, the mouse, v1 wording, a re-sync in «¡Te toca!», the band) and
 its verdict pass (all 10 fixed; one new: the open «¿Se despierta?» stayed over a quick wake-up, fixed → 14/14);
 `v2run3/` = the whole game again after the last fix (26/26).
+
+## Scorecard · v3 · 2026-10-22 · branch `dormilon-v3`
+```
+Hard gates: bots PASS (30 kids · 2 min: 8 boards, 136 turns, 369 tickles, 27 wake-ups, 555 answers, 11 late, 64
+            feathers lost, 0 frozen, 0 errors; 20 kids · 60 s PASS) · teacher controls ✓ (Pausa, +30 s, −30 s, Saltar,
+            Terminar, Sonido fully visible at 8 laptop / projector sizes incl. 125 % and 150 % zoom) · saga only ✓ ·
+            Spanish / pinyin without tones / level words ✓ · kid-safe ✓ (funny-angry, never scary; a miss never names anyone)
+1 Real place ........ 2/2  the palace bedroom; his face on the pillow on my turn; the angry close-up when he wakes
+2 The gang .......... 2/2  the cast tiptoes, whispers and cheers; Dralingo's funny-angry lines and growl when woken
+3 Every tap ......... 2/2  my finger rubs; a right answer flies a feather in, a wrong / late one flies it out («fsss»)
+4 Feedback .......... 2/2  every tickle answers; he wakes up ANGRY on every phone and the projector (~4 s, the whole
+                           screen red, ring, lines, steam, sparks, shake); the projector's full-screen pulse ≤ 1 a 7 s
+5 Finale ............ 2/2  random wake-ups keep every turn tense (28 % of boards in the first round), «¡Luna llena!»,
+                           «¡FINAL!», bonus stars, the winner by the bed, my card
+6 Fair, no stall .... 2/2  only the kid tickling can wake him; the board's first turn safe; a late answer costs only a
+                           question that was really on screen; the quiz waits while he rages; never naming who failed
+7 Product feel ...... 2/2  Higgsfield art (the angry Dralingo) and sounds (growl, «fsss»), the lobby fits and scrolls
+                           everywhere, the turn and the wake-up filmed at 4 fps beside the video's
+Total 14/14 → ships. For his ears: the growl (one Higgsfield take, «grumpy creature») and the «fsss».
+```
+Evidence: `.claude/handoff/dormilon-shots/v3-wake-side-by-side.jpg` + `wake-4fps/`, `v3run2/` (a whole game at 5 phone /
+laptop sizes + the projector: 24/24), `lobby-before/` + `lobby-after/` (`scripts/check-dormilon-lobby.js`: 19/19),
+`scripts/test-dormilon.js` (117 checks + the 2-minute class simulation), `scripts/test-dormilon-live.js` (46 checks),
+the fresh-eyes review 2026-10-22 (12/14 before its fixes: the time bar refilled on repaints, a pocketed phone paying for a
+late question, the projector's stacked red pulses and creaks, steam over his eyes and a clipped bubble, naming who
+failed, the danger chip hidden on first turns that can wake him, a double tap counting as a blind guess, stacked sounds,
+a reconnect during the wake without the whole-phone rage).

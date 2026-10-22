@@ -80,7 +80,7 @@ function guard(s, who) {
   host.emit('host:dm-skip', { pin });                                  // «Saltar» in the intro → play at once
   await playP;
   const pre = await preP;
-  ok(pre.guided && pre.k === hi.boards[0].seats[0].k, 'the first seat plays first, a guided turn');
+  ok(pre.guided && pre.safe && pre.k === hi.boards[0].seats[0].k, 'the first seat plays first, a guided turn, the board safe one');
   const turnKid = byK(pre.k);
   const watchers = kids.filter((x) => x !== turnKid);
 
@@ -99,13 +99,16 @@ function guard(s, who) {
   ok(go.k === pre.k && go.ms === 9000 && go.feathers >= 3, 'the guided turn: 9 s with 3 feathers');
   ok(await none(turnKid.s, 'dm:q', 700), 'the turn kid gets no question during their turn');
 
-  // a friend answers: right = a feather (the board sees the count), wrong = none
+  // a friend answers: right = a feather (the board sees the count), wrong = a feather flies out and he shifts
   const qrP = next(watchers[1].s, 'dm:qr', 3000);
   const plumeP = next(watchers[2].s, 'dm:plume', 3000);
-  await sleep(350);
+  const shiftP = next(watchers[2].s, 'dm:shift', 3000).catch(() => null);
+  ok(q.ms === 15000, 'a question comes with its 15 s');
+  await sleep(750);
   watchers[1].s.emit('player:dm-answer', { pin, qid: q.qid, idx: 0 });
   const qr = await qrP;
-  ok(qr.ok ? qr.feathers === 4 && qr.gained === 1 : qr.feathers === 3 && qr.correctText, 'a quiz answer: right = +1 feather, wrong = the right answer shown');
+  ok(qr.ok ? qr.feathers === 4 && qr.gained === 1 : qr.feathers === 2 && qr.gained === -1 && qr.correctText, 'a quiz answer: right = +1 feather, wrong = a feather flies out and the right one shown', qr);
+  if (!qr.ok) { const sh = await shiftP; ok(sh && sh.k === watchers[1].init.you.k && sh.why === 'wrong', 'the board sees him shift (a wrong answer)'); }
   const plume = await plumeP;
   ok(plume.k === watchers[1].init.you.k && plume.feathers === qr.feathers, 'the board sees the new feather count');
 

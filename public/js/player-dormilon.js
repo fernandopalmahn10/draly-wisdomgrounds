@@ -29,7 +29,7 @@
   // the music steps back during MY turn so the snore, the creaks and my heartbeat carry (player-kingdoms-skin.js musicVol)
   const duck = (low) => { const k = window.KingdomsSkin; if (k && k.musicVol) k.musicVol(low ? 0.08 : 0.32); };
   // Dralingo woken up: funny-grumpy, never scary (his personality: wise, super friendly — cast.md)
-  const WAKE_LINES = ['¡¿Quién me despertó?! Soñaba con dumplings… 🥟', '¡Uaaah! ¡Hasta un dragón sabio necesita su siesta!', '¡Te vi con esa pluma! 😤', '¡Ay, qué cosquillas! …bueno, a dormir otra vez.', '¡Shhh! ¡Mañana tengo clase de Chino Mandarín!'];
+  const WAKE_LINES = ['¡¿QUIÉN ME DESPERTÓ?! ¡Soñaba con dumplings! 🥟', '¡Grrr! ¡Hasta un dragón sabio necesita su siesta! 😤', '¡Te vi con esa pluma! 😠', '¡Grrr… cinco minutitos más! 💢', '¡¿Otra vez cosquillas?! ¡Grrr!'];   // (v3: he wakes up ANGRY, funny-angry, never scary)
   const fmtClock = (ms) => { const s = Math.max(0, Math.ceil(ms / 1000)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
 
   let ctx = null, on = false, stage = null;
@@ -166,6 +166,99 @@
     f.animate([{ transform: 'translate(0,0) rotate(-30deg) scale(1.3)', opacity: 1 }, { transform: `translate(${dx * 0.5}px, ${dy * 0.5 - 60}px) rotate(160deg) scale(1)`, opacity: 1, offset: 0.55 }, { transform: `translate(${dx}px, ${dy}px) rotate(330deg) scale(0.6)`, opacity: 0.9 }], { duration: 620, easing: 'cubic-bezier(.3,.7,.4,1)' });
     setTimeout(() => f.remove(), 640);
   }
+  // the question's time bar, drawn from its own deadline (myQ.until): a repaint, the rage or a pause never refill it
+  let paintedQid = null, qShownAt = 0;
+  function qbar() {
+    const qt = $('dm-qtime');
+    if (!qt || !myQ) return;
+    const total = 15000, left = Math.max(0, Math.min(total, (myQ.until || Date.now() + total) - Date.now()));
+    qt.style.setProperty('--ms', total + 'ms');
+    qt.style.setProperty('--qd', (left - total) + 'ms');
+    qt.classList.remove('run', 'done'); void qt.offsetWidth; qt.classList.add('run');
+    if (myLocked) qt.classList.add('done');
+  }
+  // tell the server my question is on a visible screen (a pocketed / locked phone is never charged for a late one)
+  function seenQ() {
+    if (!myQ || myQ.seenSent || document.visibilityState !== 'visible') return;
+    myQ.seenSent = true;
+    ctx.socket.emit('player:dm-seen', { pin: ctx.getPin(), qid: myQ.qid });
+  }
+  // the board's wake-up froze my question's time on the server: the same here
+  let frozeAt = 0;
+  function freezeQ(on) {
+    if (on) { if (!frozeAt) frozeAt = Date.now(); return; }
+    if (frozeAt && myQ && myQ.until) myQ.until += Date.now() - frozeAt;
+    frozeAt = 0;
+  }
+  // a wrong / late answer: the feather at the top of my quiver flies out and away («fsss»)
+  function featherOut() {
+    const q = $('dm-quiver');
+    if (!q || reduced()) return;
+    const slots = q.querySelectorAll('.dm-qs');
+    const from = slots[Math.max(0, Math.min(slots.length - 1, feathers))] || q;
+    const a = from.getBoundingClientRect();
+    const fl = document.createElement('img');
+    fl.src = A + 'feather.webp';
+    fl.alt = '';
+    fl.className = 'dm-outf';
+    fl.style.left = (a.left + a.width / 2 - 20) + 'px';
+    fl.style.top = (a.top + a.height / 2 - 20) + 'px';
+    document.body.appendChild(fl);
+    const dx = (Math.random() < 0.5 ? -1 : 1) * (60 + Math.random() * 60);
+    fl.animate([{ transform: 'translate(0,0) rotate(0deg) scale(1.1)', opacity: 1 }, { transform: `translate(${dx * 0.4}px, -70px) rotate(${dx > 0 ? 140 : -140}deg) scale(1)`, opacity: 1, offset: 0.4 }, { transform: `translate(${dx}px, 90px) rotate(${dx > 0 ? 320 : -320}deg) scale(.7)`, opacity: 0 }], { duration: 900, easing: 'cubic-bezier(.3,.6,.5,1)' });
+    setTimeout(() => fl.remove(), 920);
+  }
+  // the ANGRY wake-up on the whole phone: the screen floods red, sparks and anger marks fly around, the panel shakes
+  let rageT = null;
+  function rageOn(ms) {
+    const r = $('dm-rage');
+    if (!r) return;
+    if (rageT) clearTimeout(rageT);
+    r.innerHTML = '';
+    if (!reduced()) {
+      const W = innerWidth, Hh = innerHeight;
+      for (let i = 0; i < 12; i++) {
+        const e = document.createElement('i');
+        e.className = 'fly';
+        const x = Math.random() * W, y = Math.random() * Hh;
+        e.style.setProperty('--x', Math.round(x) + 'px');
+        e.style.setProperty('--y', Math.round(y) + 'px');
+        e.style.setProperty('--dx', Math.round((Math.random() - 0.5) * W * 0.8) + 'px');
+        e.style.setProperty('--dy', Math.round((Math.random() - 0.5) * Hh * 0.6) + 'px');
+        e.style.setProperty('--t', (1.1 + Math.random() * 0.9).toFixed(2) + 's');
+        e.style.setProperty('--d', Math.round(Math.random() * 900) + 'ms');
+        r.appendChild(e);
+      }
+      [[0.12, 0.2], [0.78, 0.16], [0.18, 0.62], [0.8, 0.55]].forEach(([fx, fy], i) => {
+        const mk = document.createElement('b');
+        mk.className = 'mark';
+        mk.textContent = '💢';
+        mk.style.setProperty('--x', Math.round(fx * innerWidth - 22) + 'px');
+        mk.style.setProperty('--y', Math.round(fy * innerHeight - 22) + 'px');
+        mk.style.setProperty('--d', (i * 230) + 'ms');
+        r.appendChild(mk);
+      });
+      const scr = $('screen-dormilon');
+      scr.classList.remove('dm-rageshake'); void scr.offsetWidth; scr.classList.add('dm-rageshake');
+      setTimeout(() => scr.classList.remove('dm-rageshake'), 1150);
+    }
+    r.className = 'dm-rage';
+    const scr2 = $('screen-dormilon');
+    scr2.classList.add('dm-raging');                             // (the panel steps aside: his angry face fills the phone)
+    freezeQ(true);
+    requestAnimationFrame(() => { if (stage) stage.fit(); });
+    rageT = setTimeout(() => { r.classList.add('out'); scr2.classList.remove('dm-raging'); requestAnimationFrame(() => { if (stage) stage.fit(); }); rageT = setTimeout(rageOff, 520); }, ms || 3300);
+    // (the server keeps the board's quiz waiting until the new night: dm:night thaws my question's time)
+  }
+  function rageOff() {
+    if (rageT) { clearTimeout(rageT); rageT = null; }
+    const r = $('dm-rage');
+    if (r) { r.className = 'dm-rage hidden'; r.innerHTML = ''; }
+    const scr3 = $('screen-dormilon');
+    if (scr3 && scr3.classList.contains('dm-raging')) { scr3.classList.remove('dm-raging'); requestAnimationFrame(() => { if (stage) stage.fit(); }); }
+    requestAnimationFrame(qbar);
+    if (stage) stage.calm();
+  }
   let pausedTurn = 0;
   function paintClock() {
     const left = endsAt ? (paused ? pausedLeft : endsAt - Date.now()) : 0;
@@ -253,7 +346,7 @@
   function paintGuess() {
     const box = $('dm-guess');
     const watching = turn && turn.k !== (g && g.you);
-    if (!watching || (turn.guided)) { box.classList.add('hidden'); return; }
+    if (!watching || turn.safe) { box.classList.add('hidden'); return; }       // (only the board's first turn can't wake him)
     const open = turn.phase === 'pre' || (turn.phase === 'turn' && Date.now() - turn.startAt < 1500);
     box.classList.toggle('hidden', !open && !guessed);
     box.classList.toggle('done', !!guessed);
@@ -274,6 +367,11 @@
     }
     if (!myQ) { box.classList.add('wait'); $('dm-mq-text').textContent = '…'; $('dm-tiles').innerHTML = ''; $('dm-mq-img').classList.add('hidden'); return; }
     box.classList.remove('wait');
+    if (paintedQid === myQ.qid && $('dm-tiles').children.length) { qbar(); return; }   // (the same question: keep its tiles and its time)
+    paintedQid = myQ.qid;
+    qShownAt = Date.now();
+    qbar();
+    seenQ();
     const qf = $('dm-qfeed');                                  // a new question: the last answer's «+1 pluma» / «¡Casi!» goes
     if (qf.classList.contains('ans')) { qf.textContent = ''; qf.className = 'dm-qfeed'; }
     $('dm-mq-text').textContent = myQ.text;
@@ -298,7 +396,9 @@
   }
   function answer(i) {
     if (!myQ || myLocked || paused) return;
+    if (Date.now() - qShownAt < 350) return;                   // (a tap meant for the last question never lands on the new one)
     myLocked = true;
+    if ($('dm-qtime')) $('dm-qtime').classList.add('done');
     const b = document.querySelectorAll('#dm-tiles .dm-tile')[i];
     if (b) b.classList.add('chosen');
     document.querySelectorAll('#dm-tiles .dm-tile').forEach((x) => { x.disabled = true; });
@@ -339,6 +439,7 @@
     rubMove(e);
   }
   function rubMove(e) {
+    if (rub && !canRub()) { rub = null; return; }              // (my turn ended / he woke up: the finger no longer moves the feather)
     if (!rub && e.pointerType === 'mouse' && canRub()) rub = newRub(e);
     if (!rub || e.pointerId !== rub.id || !stage) return;
     e.preventDefault();
@@ -400,7 +501,7 @@
   function paintHud() {
     // the name bar only on the guided first turn (an ordinary turn says it with «¡YA!»); the danger chip then steps aside
     const guided = !!(turn && turn.guided);
-    $('dm-hudname').textContent = guided ? 'Tu primer turno: ¡frota su cabeza con el dedo!' : '';
+    $('dm-hudname').textContent = guided ? (turn.safe ? 'Tu primer turno: ¡frota su cabeza con el dedo!' : 'Tu primer turno: ¡frota su cabeza! Cuidado: se puede despertar') : '';
     $('dm-hudname').classList.toggle('hidden', !guided);
     $('screen-dormilon').classList.toggle('dm-guided', guided);
   }
@@ -429,6 +530,7 @@
     if (fresh) { guessed = null; myQ = null; streak = 0; }
     paused = !!d.paused;
     $('dm-pause').classList.toggle('hidden', !paused);
+    $('screen-dormilon').classList.toggle('dm-paused', paused);
     if (d.endsMs != null) { endsAt = Date.now() + d.endsMs; pausedLeft = d.endsMs; }
     frenzy = !!d.frenzy;
     document.body.classList.toggle('dm-frenzy', frenzy);
@@ -443,12 +545,12 @@
       const tk = bd.turn;
       if (tk && (bd.phase === 'pre' || bd.phase === 'turn')) {
         const total = bd.phase === 'turn' ? (d.turnMs || bd.phaseMs) : bd.phaseMs;
-        turn = { k: tk, phase: bd.phase, until: Date.now() + (bd.phase === 'turn' ? (d.turnMs || 0) : bd.phaseMs), startAt: bd.phase === 'turn' ? 0 : Date.now(), guided: !!bd.guided, pats: bd.pats || 0, total: Math.max(total, 1) };
+        turn = { k: tk, phase: bd.phase, until: Date.now() + (bd.phase === 'turn' ? (d.turnMs || 0) : bd.phaseMs), startAt: bd.phase === 'turn' ? 0 : Date.now(), guided: !!bd.guided, safe: !!bd.safe, pats: bd.pats || 0, total: Math.max(total, 1) };
         pausedTurn = d.turnMs || 0;
         const meNow = tk === g.you;                    // (my «¡Te toca!» is already the close-up, like dm:pre)
         if (stage) { stage.kid(skinOf(tk), nameOf(tk), { me: meNow }); stage.closeup(bd.phase === 'turn' || meNow); if (bd.phase === 'turn' || meNow) stage.featherAt(null, null, skinOf(tk)); }
       } else { turn = null; if (stage) { stage.kid(null); stage.closeup(false); } }
-      if (bd.phase === 'wake' && stage) stage.wake();
+      if (bd.phase === 'wake' && stage) { stage.closeup(true); stage.wake(); stage.rage(Math.min(4000, bd.phaseMs || 0)); rageOn(Math.min(4000, bd.phaseMs || 0)); } else rageOff();
       if (d.you) guessed = d.you.guess || guessed;
     }
     paintList();
@@ -461,7 +563,7 @@
       $('dm-stop').disabled = turn.phase !== 'turn';
       if (turn.phase === 'pre') { const big = $('dm-count'); big.textContent = turn.guided ? 9 : 6; big.dataset.s = ''; big.classList.remove('hurry'); }
     }
-    if (d.q) { if (!myQ || myQ.qid !== d.q.qid || $('dm-quiz').classList.contains('hidden')) { myQ = d.q; paintMyQ(); } }
+    if (d.q) { if (!myQ || myQ.qid !== d.q.qid || $('dm-quiz').classList.contains('hidden')) { myQ = d.q; myQ.until = Date.now() + (d.q.ms != null ? d.q.ms : 15000); paintMyQ(); } }
     else if (!myTurnNow) { myQ = null; if (d.phase === 'play') paintMyQ(); else msg('¡Shhh!', 'Dralingo está durmiendo…', 'calm'); }
     paintStatus();
     paintGuess();
@@ -484,6 +586,7 @@
     touch.addEventListener('pointerup', rubEnd);
     touch.addEventListener('pointercancel', rubEnd);
     touch.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') rubEnd(e); });
+    document.addEventListener('visibilitychange', () => { if (on && myQ && !$('dm-quiz').classList.contains('hidden')) seenQ(); });
     window.addEventListener('draly:elsewhere', () => { stopAll(); duck(false); setOn(false); });
     document.querySelectorAll('#dm-guess button').forEach((b) => b.addEventListener('click', () => {
       if (guessed || !turn) return;
@@ -553,7 +656,7 @@
     s.on('dm:pre', (d) => {
       if (!on || !g || d.b !== g.b) return;
       ctx.markActivity();
-      turn = { k: d.k, phase: 'pre', until: Date.now() + d.ms, startAt: Date.now(), guided: !!d.guided, pats: 0, total: d.ms };
+      turn = { k: d.k, phase: 'pre', until: Date.now() + d.ms, startAt: Date.now(), guided: !!d.guided, safe: !!d.safe, pats: 0, total: d.ms };
       guessed = null;
       if (stage) { stage.closeup(false); stage.kid(skinOf(d.k), nameOf(d.k), { me: d.k === g.you }); stage.say(''); }
       paintList();
@@ -592,7 +695,7 @@
     s.on('dm:go', (d) => {
       if (!on || !g || d.b !== g.b) return;
       ctx.markActivity();
-      turn = { k: d.k, phase: 'turn', until: Date.now() + d.ms, startAt: Date.now(), guided: !!d.guided, pats: 0, total: d.ms };
+      turn = { k: d.k, phase: 'turn', until: Date.now() + d.ms, startAt: Date.now(), guided: !!d.guided, safe: !!d.safe, pats: 0, total: d.ms };
       if (stage) { stage.closeup(true); stage.say(''); stage.featherAt(null, null, skinOf(d.k)); }
       if (d.k === g.you) {
         if (d.feathers != null) feathers = d.feathers;
@@ -618,6 +721,7 @@
       if (!on || !g || d.b !== g.b) return;
       ctx.markActivity();
       myQ = d;
+      myQ.until = Date.now() + (d.ms || 15000);
       if (d.feathers != null) feathers = d.feathers;
       paintMyQ();
     });
@@ -639,16 +743,46 @@
         $('dm-qfeed').className = 'dm-qfeed ok ans';
         cheer(streak);
       } else {
+        // it costs: a feather flies out of my quiver («fsss»), my head looks sad, the right one shown; he shifts (dm:shift)
         if (ts[d.idx]) ts[d.idx].classList.add('no');
         if (ts[d.correctIdx]) ts[d.correctIdx].classList.add('ok');
+        document.querySelectorAll('#dm-tiles .dm-tile').forEach((x) => { x.disabled = true; });
+        if ($('dm-qtime')) $('dm-qtime').classList.add('done');
         sfx(K + 'wrong.mp3', 0.4);
-        $('dm-qfeed').textContent = '¡Casi! Era «' + d.correctText + '»';
-        $('dm-qfeed').className = 'dm-qfeed no ans';
+        const lost = d.gained < 0;
+        if (lost) { featherOut(); later(120, () => sfx(A + 'lose-feather-h1.mp3', 0.8)); }
+        paintQuiver();
+        buzz(lost ? [30, 40, 30] : 25);
+        const fb = $('dm-qfeed');
+        fb.innerHTML = '';
+        const sad = document.createElement('span');
+        sad.className = 'sad';
+        const im = document.createElement('img');
+        im.alt = '';
+        im.src = S() ? S().head(skinOf(g.you)) : '';
+        const em = document.createElement('em');
+        em.textContent = '😖';
+        const tx = document.createElement('span');
+        tx.textContent = (d.late ? '¡Se acabó el tiempo! ' : d.tooFast ? '¡Muy rápido! Primero lee. ' : '¡Casi! ') + 'Era «' + d.correctText + '»' + (lost ? ' · se fue una pluma 🪶💨' : '');
+        sad.append(im, em, tx);
+        fb.appendChild(sad);
+        fb.className = 'dm-qfeed no ans';
       }
       myQ = null;
       later(d.ok ? 560 : 1300, () => { if (!myQ) paintMyQ(); });
     });
     s.on('dm:plume', (d) => { if (on && g && d.b === g.b) setSeatFeathers(d.k, d.feathers); });
+    // a wrong / late answer on my board: he shifts in his sleep (everyone sees it, the danger rose)
+    s.on('dm:shift', (d) => {
+      if (!on || !g || d.b !== g.b) return;
+      setCue(d.cue);
+      if (stage) stage.shift();
+      if (d.k === g.you) return;
+      sfx(A + 'creak2.mp3', 0.3);
+      if (mine() && turn && turn.phase === 'turn') { splash('¡Se movió!', 'no', 800); return; }
+      const fb = $('dm-qfeed');
+      if (fb && !fb.classList.contains('ans')) { fb.textContent = '¡Dralingo se movió! 😬'; fb.className = 'dm-qfeed no'; }   // (never who failed)
+    });
     s.on('dm:nostroke', (d) => {
       if (!on || !d) return;
       if (d.why === 'empty') { rubHint(false); $('dm-rubhint').textContent = '¡Sin plumas!'; }
@@ -687,7 +821,10 @@
       const name = nameOf(d.k);
       setScore(d.k, 0, 'zero');
       setCue(4);
-      if (stage) { stage.closeup(true); stage.featherOff(); stage.wake(); stage.say('¡Se despertó!', 'wake'); later(1100, () => { if (stage) stage.speak(WAKE_LINES[Math.floor(Math.random() * WAKE_LINES.length)], 2400); }); }
+      if (stage) { stage.closeup(true); stage.featherOff(); stage.wake(); stage.rage(4000); stage.say('¡Se despertó!', 'wake'); later(1100, () => { if (stage) stage.speak(WAKE_LINES[Math.floor(Math.random() * WAKE_LINES.length)], 2400); }); }
+      rageOn(4000);                                            // he is ANGRY: the whole phone floods red
+      if (d.k === g.you && d.lost) later(150, () => splash('−' + d.lost + ' 😱', 'no', 1600));   // (my points vanish on his face)
+      later(260, () => sfx(A + (Math.random() < 0.5 ? 'angry-h1.mp3' : 'angry-h2.mp3'), 0.85));
       const wasMine = d.k === g.you;
       turn = null;
       paintGuess();                                          // (the open «¿Se despierta?» closes: its 1.6-s timer was just cleared)
@@ -697,7 +834,7 @@
       sfx(A + 'wake-h1.mp3', 0.9);
       const right = (d.guess || []).includes(g.you);
       if (wasMine) {
-        later(500, () => sfx(MO + 'lose.mp3', 0.7));
+        later(1600, () => sfx(MO + 'lose.mp3', 0.6));
         buzz([80, 60, 200]);
         msg('¡Lo despertaste! 😱', d.lost ? (d.lost === 1 ? 'Pierdes tu punto… ¡a recuperarlo!' : 'Pierdes tus ' + d.lost + ' puntos… ¡a recuperarlos!') : 'No tenías puntos: ¡nada que perder!', 'wake', A + 'dralingo-awake.webp');
       } else {
@@ -741,6 +878,8 @@
       night = d.night;
       paintNight();
       setCue(0);
+      freezeQ(false);
+      rageOff();
       if (stage) { stage.closeup(false); stage.sleep(); stage.kid(null); stage.say('Noche ' + d.night + ' 🌙 Se vuelve a dormir…', 'calm', 2200); }
       paintGuess();
       paintMyQ();
@@ -775,10 +914,13 @@
       paused = !!d.paused;
       if (paused) { pausedLeft = endsAt - Date.now(); if (turn) pausedTurn = turn.until - Date.now(); }
       $('dm-pause').classList.toggle('hidden', !paused);
+      $('screen-dormilon').classList.toggle('dm-paused', paused);     // (the question's time stands still too)
+      freezeQ(paused);
+      if (!paused) qbar();
     });
     s.on('dm:final', (d) => {
       if (!on || !g) return;
-      clearTimers(); stopSnore(); duck(false);
+      clearTimers(); stopSnore(); duck(false); rageOff();
       turn = null; myQ = null;
       setMyTurn(false);
       document.querySelectorAll('#dm-tiles .dm-tile').forEach((x) => { x.disabled = true; });
@@ -799,7 +941,7 @@
       box.id = 'dm-how';
       box.innerHTML = '<div class="dm-you"><img id="dm-you-img" alt=""><span>Vas a jugar como<b id="dm-you-name"></b></span></div>'
         + '<div class="dm-how-title">Así se juega</div><ol>'
-        + '<li><div class="dm-step s1"><i class="t r">▲</i><i class="t b">◆</i><i class="t y ok">●</i><i class="t g">■</i><img class="fl" src="' + A + 'feather.webp" alt=""></div><span>Responde bien<small>= una pluma 🪶</small></span></li>'
+        + '<li><div class="dm-step s1"><i class="t r">▲</i><i class="t b">◆</i><i class="t y ok">●</i><i class="t g">■</i><img class="fl" src="' + A + 'feather.webp" alt=""></div><span>Responde bien<small>= una pluma 🪶 · si fallas, se va una</small></span></li>'
         + '<li><div class="dm-step s2"><img src="' + A + 'closeup-sleep.webp" alt=""><img class="f" src="' + A + 'feather.webp" alt=""><b>+1</b></div><span>Tu turno: ¡frota!<small>ida y vuelta = +1</small></span></li>'
         + '<li><div class="dm-step s3"><img src="' + A + 'closeup-awake.webp" alt=""><b>0</b></div><span>¡No lo despiertes!<small>si se despierta, pierdes todo</small></span></li>'
         + '</ol>';
@@ -986,7 +1128,7 @@
     init, lobby, end,
     frame: () => ({
       on, phase: g && g.phase, you: g && g.you, board: g && g.b, seats: seats.map((x) => x.name + ':' + x.score + ':' + x.feathers),
-      turn: turn && { k: turn.k, phase: turn.phase, mine: mine(), guided: turn.guided }, q: myQ && myQ.text, answers: myQ && myQ.answers, feathers, cue, night, paused, frenzy,
+      turn: turn && { k: turn.k, phase: turn.phase, mine: mine(), guided: turn.guided, safe: turn.safe }, q: myQ && myQ.text, answers: myQ && myQ.answers, feathers, cue, night, paused, frenzy,
       myturn: !!(document.getElementById('screen-dormilon') && document.getElementById('screen-dormilon').classList.contains('dm-myturn')),
     }),
     answer: (i) => answer(i),

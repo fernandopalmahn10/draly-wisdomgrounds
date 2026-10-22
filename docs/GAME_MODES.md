@@ -111,8 +111,8 @@ being played nor the next one. Grey «−30 s» out where the server would refus
 
 ## Status (2026-10-11)
 
-Live modes: **¡No despiertes a Dralingo!** (`dormilon`, live 2026-10-22; v2 «Gana plumas, luego frota con el dedo» on
-branch `dormilon-v2`, not deployed: #3 of his Mario Party series, «Don't Wake Wiggler» (his video 6:14-7:29) — Dralingo
+Live modes: **¡No despiertes a Dralingo!** (`dormilon`, live 2026-10-22, v2 «Gana plumas, luego frota con el dedo» live
+the same day; v3 (his picks 2026-10-22 15:44, branch `dormilon-v3`): the wake-up is a dice roll that grows with every tickle since he fell asleep (about 2 a board in a 2-minute game, sometimes in the first round; only each board's very first turn is safe), 2 / 3 / 4 min (default 2), a wrong, late (15 s) or blind (< 0.5 s) answer makes a feather fly out and him shift, and he wakes up ANGRY on every screen (the angry red Dralingo, the whole phone floods red, burst ring, speed lines, steam, sparks, shake, his growl, ~4 s); the projector lobby keeps PIN, QR and «¡Empezar!» on the first screen and scrolls: #3 of his Mario Party series, «Don't Wake Wiggler» (his video 6:14-7:29) — Dralingo
 sleeps in a Chinese palace bedroom; boards of 4 take TURNS. v2: between turns every kid answers quick questions from the
 pack (a right answer = a golden feather, 3 to start, 6 max) while the friend's turn plays live above; on MY turn his face
 fills my phone («¡Te toca!» → «¡YA!», 6 s, the first 9 s guided) and I rub his head with my finger: every sweep = a

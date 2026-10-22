@@ -20,7 +20,7 @@
   const BED_AR = 1000 / 777;
   // the close-up (1000×844): where his head is per pose (fractions of the picture), the zone a stroke must touch
   const CU_AR = 1000 / 844;
-  const CU_HEAD = { sleep: [0.40, 0.40], stir: [0.45, 0.43], awake: [0.55, 0.36] };
+  const CU_HEAD = { sleep: [0.40, 0.40], stir: [0.45, 0.43], awake: [0.55, 0.36], angry: [0.55, 0.36] };
   const CU_ZONE = 0.3;               // a stroke counts within this distance of his head (a fraction of the picture's width)
   const reduced = () => !!(root.matchMedia && root.matchMedia('(prefers-reduced-motion: reduce)').matches);
   const HB = () => root.HalconBoard || null;
@@ -75,7 +75,8 @@
     this.cu = el('div', 'dms-cu');
     this.cuImgs = {};
     this.cuBox = el('div', 'dms-cubox');
-    ['sleep', 'stir', 'awake'].forEach((k) => { this.cuImgs[k] = img('dms-cuimg dms-cu-' + k, A + 'closeup-' + k + '.webp'); this.cuBox.appendChild(this.cuImgs[k]); });
+    ['sleep', 'stir', 'awake', 'angry'].forEach((k) => { this.cuImgs[k] = img('dms-cuimg dms-cu-' + k, A + 'closeup-' + k + '.webp'); this.cuBox.appendChild(this.cuImgs[k]); });
+    this.cuImgs.angry.addEventListener('error', () => { this.noAngry = true; this.setCue(this.cueN); });   // (no angry art: the awake one)
     this.cuZs = el('div', 'dms-cuzs');
     for (let i = 0; i < 3; i++) this.cuZs.appendChild(el('span', 'dms-z z' + i, 'Z'));
     this.cuBox.appendChild(this.cuZs);
@@ -93,6 +94,15 @@
     this.fit();
     if (root.ResizeObserver) { this.ro = new ResizeObserver(() => this.fit()); this.ro.observe(box); }
     else { this._onr = () => this.fit(); root.addEventListener('resize', this._onr); }
+  }
+  function jag(n, r1, r2) {
+    const pts = [];
+    for (let i = 0; i < n * 2; i++) {
+      const a = (i / (n * 2)) * Math.PI * 2;
+      const r = i % 2 ? r2 : r1 - (i % 4 === 0 ? 6 : 0);
+      pts.push((Math.cos(a) * r).toFixed(1) + ',' + (Math.sin(a) * r).toFixed(1));
+    }
+    return pts.join(' ');
   }
   Stage.prototype.later = function (ms, fn) {
     const t = setTimeout(() => { this.timers = this.timers.filter((x) => x !== t); fn(); }, Math.max(0, ms));
@@ -140,6 +150,7 @@
     Object.assign(this.cuFeather.style, { width: fs + 'px', height: fs + 'px' });
     this.placeFeather();
     if (this.cuAt) this.featherAt(this.cuAt[0], this.cuAt[1]);
+    if (this.rageEl) this.placeRage();
   };
   // v2: the close-up on / off (a turn on this board = the camera closes in on his face)
   Stage.prototype.closeup = function (on) {
@@ -217,8 +228,9 @@
     n = Math.max(0, Math.min(4, n | 0));
     this.cueN = n;
     const pose = n >= 4 ? 'awake' : n >= 2 ? 'stir' : 'sleep';
+    const cuPose = n >= 4 && !this.noAngry ? 'angry' : pose;                 // (the close-up: he wakes up ANGRY)
     Object.entries(this.beds).forEach(([k, i]) => i.classList.toggle('on', k === pose));
-    if (this.cuImgs) Object.entries(this.cuImgs).forEach(([k, i]) => i.classList.toggle('on', k === pose));
+    if (this.cuImgs) Object.entries(this.cuImgs).forEach(([k, i]) => i.classList.toggle('on', k === cuPose));
     for (let i = 0; i <= 4; i++) this.root.classList.toggle('cue-' + i, i === n);
     this.placeFeather();
   };
@@ -266,8 +278,74 @@
       this.later(700, () => this.root.classList.remove('shake'));
     }
   };
+  // v3 · the ANGRY wake-up takes over the whole stage for ms: red flood, a jagged burst ring pulsing on his face, speed
+  // lines from the edges, steam puffs off his head, red sparks flying out, a push-in and a strong shake
+  Stage.prototype.rage = function (ms) {
+    this.calm();
+    const r = el('div', 'dms-rage');
+    const geo = this.geo || { W: 400, H: 300 };
+    r.appendChild(el('i', 'dms-rage-tint'));
+    r.appendChild(el('i', 'dms-rage-lines'));
+    const ring = el('i', 'dms-rage-ring');
+    ring.innerHTML = '<svg viewBox="-100 -100 200 200" aria-hidden="true"><polygon points="' + jag(18, 96, 70) + '" /></svg>';
+    r.appendChild(ring);
+    this.rageRing = ring;
+    this.placeRage();
+    if (!reduced()) {
+      const size = Math.max(geo.W, geo.H);
+      for (let i = 0; i < 6; i++) {
+        const p = el('i', 'dms-puff');                       // (from the top of his head: his eyes stay clear)
+        const ang = -Math.PI / 2 + (i - 2.5) * 0.55 + (Math.random() - 0.5) * 0.3;
+        p.style.setProperty('--dx', Math.round(Math.cos(ang) * size * (0.35 + Math.random() * 0.25)) + 'px');
+        p.style.setProperty('--dy', Math.round(Math.sin(ang) * size * (0.3 + Math.random() * 0.2)) + 'px');
+        p.style.animationDelay = (i * 160) + 'ms';
+        r.appendChild(p);
+      }
+      for (let i = 0; i < 14; i++) {
+        const e = el('i', 'dms-ember');
+        const ang = Math.random() * Math.PI * 2;
+        const d = size * (0.35 + Math.random() * 0.45);
+        e.style.setProperty('--dx', Math.round(Math.cos(ang) * d) + 'px');
+        e.style.setProperty('--dy', Math.round(Math.sin(ang) * d) + 'px');
+        e.style.animationDelay = Math.round(Math.random() * 1400) + 'ms';
+        r.appendChild(e);
+      }
+    }
+    this.root.appendChild(r);
+    this.rageEl = r;
+    this.root.classList.add('rage');
+    if (!reduced()) { this.root.classList.remove('rageshake'); void this.root.offsetWidth; this.root.classList.add('rageshake'); }
+    this._rageT = this.later(ms || 3400, () => this.calm(true));
+  };
+  // the centre of his angry face (the ring, the steam, the sparks and the push-in) and the ring's size, for this view
+  Stage.prototype.placeRage = function () {
+    const [hx, hy] = this.cuPoint(CU_HEAD.angry[0] - 0.03, CU_HEAD.angry[1] + 0.12);
+    const geo = this.geo || { W: 400, H: 300 };
+    this.root.style.setProperty('--hx', Math.round(hx) + 'px');
+    this.root.style.setProperty('--hy', Math.round(hy) + 'px');
+    const [tx, ty] = this.cuPoint(CU_HEAD.angry[0] - 0.02, CU_HEAD.angry[1] - 0.06);
+    this.root.style.setProperty('--px', Math.round(tx) + 'px');
+    this.root.style.setProperty('--py', Math.round(ty) + 'px');
+    if (this.rageRing) this.rageRing.style.width = Math.round(Math.min(geo.W, geo.H) * 1.55) + 'px';
+  };
+  // the anger fades (soft = a short fade-out)
+  Stage.prototype.calm = function (soft) {
+    if (this._rageT) { clearTimeout(this._rageT); this._rageT = null; }
+    const r = this.rageEl;
+    this.rageEl = null;
+    this.root.classList.remove('rage', 'rageshake');
+    if (!r) return;
+    if (soft && !reduced()) { r.classList.add('out'); this.later(450, () => r.remove()); } else r.remove();
+  };
+  // v3 · a wrong or late answer on the board: he shifts in his sleep (a wiggle of whatever view is on, a «¿…?» pop)
+  Stage.prototype.shift = function () {
+    if (reduced()) return;
+    const tgt = this.isCu ? this.cuBox : this.bedbox;
+    tgt.classList.remove('dms-shift'); void tgt.offsetWidth; tgt.classList.add('dms-shift');
+    this.later(700, () => tgt.classList.remove('dms-shift'));
+  };
   // back to sleep (a new night)
-  Stage.prototype.sleep = function () { this.root.classList.remove('awake'); this.setCue(0); if (this.bubble) this.bubble.classList.add('hidden'); };
+  Stage.prototype.sleep = function () { this.calm(); this.root.classList.remove('awake'); this.setCue(0); if (this.bubble) this.bubble.classList.add('hidden'); };
   Stage.prototype.say = function (text, kind, ms) {
     const b = this.band;
     if (!text) { b.classList.add('hidden'); return; }
@@ -281,11 +359,17 @@
     if (!this.bubble) { this.bubble = el('div', 'dms-bubble hidden'); this.root.appendChild(this.bubble); }
     const b = this.bubble;
     if (!text) { b.classList.add('hidden'); return; }
-    const [x, y] = this.headAt();
     const g = this.geo || { W: 300 };
     b.textContent = text;
-    b.style.left = Math.max(8, Math.min(g.W - 8, x)) + 'px';
-    b.style.top = Math.max(6, y - (g.bedW || 200) * 0.36) + 'px';
+    if (this.isCu) {                                       // (the close-up: by his face, always inside the view)
+      const [cx, cy] = this.cuPoint(CU_HEAD.angry[0] + 0.12, CU_HEAD.angry[1] + 0.05);
+      b.style.left = Math.max(Math.min(170, g.W / 2), Math.min(g.W - Math.min(170, g.W / 2), cx)) + 'px';   // (its whole width inside the view)
+      b.style.top = Math.max(72, Math.min((g.H || 300) - 20, cy)) + 'px';
+    } else {
+      const [x, y] = this.headAt();
+      b.style.left = Math.max(8, Math.min(g.W - 8, x)) + 'px';
+      b.style.top = Math.max(6, y - (g.bedW || 200) * 0.36) + 'px';
+    }
     b.classList.remove('hidden');
     if (this._bubT) clearTimeout(this._bubT);
     this._bubT = this.later(ms || 2400, () => b.classList.add('hidden'));
@@ -309,7 +393,7 @@
     document.getAnimations().forEach((a) => { try { if (frozen) { a.pause(); a.currentTime = Math.min(400, Number(a.currentTime) || 0) + 400; } else a.play(); } catch (_) {} });
   }
   function preload() {
-    ['dralingo-sleep', 'dralingo-stir', 'dralingo-awake', 'feather', 'closeup-sleep', 'closeup-stir', 'closeup-awake'].forEach((n) => { const i = new Image(); i.src = A + n + '.webp'; });
+    ['dralingo-sleep', 'dralingo-stir', 'dralingo-awake', 'feather', 'closeup-sleep', 'closeup-stir', 'closeup-awake', 'closeup-angry'].forEach((n) => { const i = new Image(); i.src = A + n + '.webp'; });
   }
   root.DormStage = { Stage, tiptoe, head, flip, REACT, freeze, preload, skinOk, CU_HEAD, CU_ZONE };
 })(typeof window !== 'undefined' ? window : this);

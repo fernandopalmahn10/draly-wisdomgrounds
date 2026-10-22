@@ -28,7 +28,7 @@
   <link rel="stylesheet" href="/css/escape.css?v=20261019ch">
   <link rel="stylesheet" href="/css/halcon.css?v=20261019zc">
   <!-- ¡No despiertes a Dralingo! -->
-  <link rel="stylesheet" href="/css/dormilon.css?v=20261022v2">
+  <link rel="stylesheet" href="/css/dormilon.css?v=20261023v3">
   <link rel="stylesheet" href="/css/mochi.css?v=20261019zc">
   <link rel="stylesheet" href="/css/party.css?v=20261019zc">
   <link rel="stylesheet" href="/css/pinata.css?v=20261018a">
@@ -683,6 +683,7 @@
        with my finger (the touch layer; the HUD: the 6-s count, my feathers, «¡Me retiro!»). NOT MY TURN: my friend's turn
        live above, the quiz below (each right answer = a feather), the «¿Se despierta?» guess, reactions. -->
   <div id="screen-dormilon" class="hidden">
+    <div class="dm-rage hidden" id="dm-rage" aria-hidden="true"></div>
     <div class="dm-top">
       <div class="dm-list" id="dm-list"></div>
       <div class="dm-chips">
@@ -716,7 +717,7 @@
       <div class="dm-status" id="dm-status"></div>
       <div class="dm-quiz" id="dm-quiz">
         <div class="dm-qhead"><span>Gana plumas:</span><div class="dm-quiver" id="dm-quiver" aria-label="Tus plumas"></div><b id="dm-qcount">3 de 6</b></div>
-        <div class="dm-mq wait" id="dm-mq"><img id="dm-mq-img" class="hidden" alt=""><b id="dm-mq-text">…</b></div>
+        <div class="dm-mq wait" id="dm-mq"><img id="dm-mq-img" class="hidden" alt=""><b id="dm-mq-text">…</b><i class="dm-qtime" id="dm-qtime" aria-hidden="true"><i></i></i></div>
         <div class="dm-tiles" id="dm-tiles"></div>
         <p class="dm-qfeed" id="dm-qfeed"></p>
       </div>
@@ -831,8 +832,8 @@
   <script src="/js/player-escape.js?v=20261019zc"></script>
   <script src="/js/halcon-board.js?v=20261019zc"></script>
   <script src="/js/player-halcon.js?v=20261019zc"></script>
-  <script src="/js/dormilon-stage.js?v=20261022v2"></script>
-  <script src="/js/player-dormilon.js?v=20261022v2"></script>
+  <script src="/js/dormilon-stage.js?v=20261023v3"></script>
+  <script src="/js/player-dormilon.js?v=20261023v3"></script>
   <script src="/js/monopoly-map.js?v=20261016a"></script>
   <script src="/js/monopoly-board.js?v=20261019zc"></script>
   <script src="/js/player-monopoly.js?v=20261020clk"></script>
