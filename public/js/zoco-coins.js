@@ -8,7 +8,8 @@
   'use strict';
   let sum = 0, total = null, timer = null, hide = null, el = null;
   const calm = () => !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
-  const COIN = '<svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true" focusable="false"><circle cx="16" cy="16" r="14" fill="#e8c878" stroke="#b88b2c" stroke-width="2.5"/><circle cx="16" cy="16" r="9" fill="none" stroke="#b88b2c" stroke-width="1.8"/><path d="M16 10.5l1.7 3.5 3.8.5-2.8 2.6.7 3.8L16 19l-3.4 1.9.7-3.8-2.8-2.6 3.8-.5z" fill="#b88b2c"/></svg>';
+  // the DralyDirham coin picture (2026-10-23), inside the svg so the toasts' svg sizes still apply
+  const COIN = '<svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true" focusable="false"><image href="/assets/zoco/dralydirham.webp" x="0" y="0" width="32" height="32"/></svg>';
   function sound() {
     if (sum <= 0) return;
     try { const a = new Audio('/assets/sixseven/coins.mp3'); a.volume = 0.5; const p = a.play(); if (p && p.catch) p.catch(() => {}); } catch (_) { /* the pill still shows */ }
