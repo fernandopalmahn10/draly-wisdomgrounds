@@ -835,10 +835,10 @@
       teamLabel = isRed ? 'Equipo Fuego' : 'Equipo Mar';
       teamMascot = isRed ? '🔥' : '🌊';
     } else if (gameType === 'dragon-eye') {
-      teamLabel = 'Vuelo del Dragón';       // races of 4: every kid on their own dragoncito (no teams)
+      teamLabel = 'Draly Vuelo · La Carrera del Cielo';       // races of 4: every kid on their own dragoncito (no teams)
       teamMascot = '🐉';
     } else if (gameType === 'monopoly') {
-      teamLabel = 'Dàfùwēng · Monopolio';   // boards of 4: every kid against the rivals of their board (no teams)
+      teamLabel = 'Draly Tablero · El Gran Tablero de Dubái';   // boards of 4: every kid against the rivals of their board (no teams)
       teamMascot = '🎲';
     } else if (gameType === 'sixseven') {
       // 6-7 Swing (since the 2026-10-15 remake: Fuego vs Mar fill the pans of the golden balance)
@@ -848,19 +848,19 @@
       teamLabel = isRed ? 'Reino del Fuego' : 'Reino del Mar';
       teamMascot = isRed ? '🔥' : '🌊';
     } else if (gameType === 'snow') {
-      teamLabel = 'Batalla de Nieve';      // no teams in the lobby: everyone starts as a survivor
+      teamLabel = 'Draly Nieve · Batalla en Ski Dubái';      // no teams in the lobby: everyone starts as a survivor
       teamMascot = '❄️';
     } else if (gameType === 'escape') {
-      teamLabel = 'La Gran Fuga de Dubái';  // co-op: the whole class is one crew
+      teamLabel = 'Draly Fuga · Las rutas de la fuga';  // co-op: the whole class is one crew
       teamMascot = '🚀';
     } else if (gameType === 'dormilon') {
-      teamLabel = '¡No despiertes a Dralingo!';   // boards of 4: every kid against the rivals of their board
+      teamLabel = 'Draly Siesta · ¡No despiertes a Dralingo!';   // boards of 4: every kid against the rivals of their board
       teamMascot = '😴';
     } else if (gameType === 'teamcrab') {
       teamLabel = 'Draly Cangrejo · ¡Atrapa a Fénec!';   // crews of 4: every kid with the crew of their crab
       teamMascot = '🦀';
     } else if (gameType === 'halcon') {
-      teamLabel = 'Ojos de Halcón';         // boards of 4: every kid against the rivals of their board
+      teamLabel = 'Draly Halcón';         // boards of 4: every kid against the rivals of their board
       teamMascot = '🦅';
     } else if (gameType === 'mochi-mash') {
       // Mochi Mash (since the 2026-10-14 remake: Fuego vs Mar, each team feeds its Dragoncito)

@@ -31,7 +31,7 @@
   };
   const GAMES = {
     kingdoms: {
-      title: 'Reinos de Colores', reveal: 'columns', sides: KD_SIDES, order: ['red', 'gold'],
+      title: 'Draly Reinos', reveal: 'columns', sides: KD_SIDES, order: ['red', 'gold'],
       unit: ['punto', 'puntos'], question: '¿Qué reino conquistó más de Dubái?',
       winTitle: (s) => `¡El ${s.name} conquista Dubái!`, tieTitle: '¡Empate de reinos!',
       champion: (s) => `¡Campeón: ${s.name}!`, tieChampion: '¡Empate en Dubái!',
@@ -43,7 +43,7 @@
       podium: (r) => pl(r.value, 'punto', 'puntos'),
     },
     paint: {
-      title: 'Dragones Pintores', reveal: 'columns', sides: KD_SIDES, order: ['red', 'gold'],
+      title: 'Draly Pintores · El Cielo de las Maravillas', reveal: 'columns', sides: KD_SIDES, order: ['red', 'gold'],
       unit: ['punto', 'puntos'], question: '¿Qué reino ganó el cielo?',     // v2: clouds + 10 per island held
       winTitle: (s) => `¡El ${s.name} pintó el cielo!`, tieTitle: '¡Empate en el cielo!',
       champion: (s) => `¡Campeón del cielo: ${s.name}!`, tieChampion: '¡Empate en el cielo!',
@@ -55,7 +55,7 @@
       podium: (r) => `${pl(r.value, 'nube', 'nubes')} al final`,
     },
     snow: {
-      title: 'Batalla de Nieve en Ski Dubái', reveal: 'frost',
+      title: 'Draly Nieve · Batalla en Ski Dubái', reveal: 'frost',
       sides: {
         sun: { id: 'sun', name: 'Supervivientes', short: 'Sol', fig: 'sun', ico: '☀️' },
         ice: { id: 'ice', name: 'Equipo Hielo', short: 'Hielo', fig: 'ice', ico: '❄️' },
@@ -72,7 +72,7 @@
     },
     // Las Trampillas (2026-10-17): after each drop every kid still standing = 1 point for their kingdom (Final Round ×2)
     trapdoor: {
-      title: 'Las Trampillas', reveal: 'columns', sides: KD_SIDES, order: ['red', 'gold'],
+      title: 'Draly Trampillas', reveal: 'columns', sides: KD_SIDES, order: ['red', 'gold'],
       unit: ['punto', 'puntos'], question: '¿Qué reino aguantó más?',
       winTitle: (s) => `¡Gana el ${s.name}!`, tieTitle: '¡Empate en las trampillas!',
       champion: (s) => `¡Campeón: ${s.name}!`, tieChampion: '¡Empate en las trampillas!',
@@ -84,7 +84,7 @@
       podium: (r) => pl(r.value, 'punto', 'puntos'),
     },
     escape: {
-      title: 'La Gran Fuga de Dubái', reveal: 'route', coop: true, sides: { crew: { id: 'crew', name: 'La tripulación', fig: 'crew', ico: '🚀' } },
+      title: 'Draly Fuga · Las rutas de la fuga', reveal: 'route', coop: true, sides: { crew: { id: 'crew', name: 'La tripulación', fig: 'crew', ico: '🚀' } },
       order: ['crew'], unit: ['turbo', 'turbos'], question: '¿Hasta dónde llegó la tripulación?',
       mood: 'chase', myLabel: 'Tu tripulación',
       ico: { turbos: '🚀', fast: '⚡', streak: '🔥', safe: '🟢' },

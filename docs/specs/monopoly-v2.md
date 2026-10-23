@@ -1,5 +1,7 @@
 # Dàfùwēng · Monopolio v2 · «El Gran Tablero de Dubái» (a Mario Party board night, boards of 4)
 
+**Name since 2026-10-23: «Draly Tablero · El Gran Tablero de Dubái»**, short «Draly Tablero» (the «Draly Party» names, his «Approve all»; `core/game-names.js`). The text below keeps the name it had when it was written. «Monopolio» (another company's brand) is gone from every screen; the id and the file names stay.
+
 gameType `monopoly` · address `/host-monopoly.html?setId=…` (unchanged: games.html, packs.html, sets.html and /maestro's
 launcher keep working, `?livegame=1` kept; no set → `/packs.html?game=monopoly`) · remade 2026-10-16 on a branch, not
 deployed.

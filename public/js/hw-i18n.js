@@ -234,8 +234,8 @@
       'Ayer': 'Yesterday', 'Tu profe': 'Your teacher', 'Nuevo': 'New', 'Mis oraciones': 'My sentences', 'Mías': 'Mine',
       '«Escuchá cada oración y decila en voz alta. ¡Vos podés!»': '«Listen to each sentence and say it out loud. You can do it!»',
       'Desafío del día': 'Daily challenge', 'Muy pronto': 'Coming soon', 'Los juegos de la clase llegan a tu casa': 'The class games are coming to your home',
-      'Estamos preparando un desafío nuevo cada día: el Vuelo del Dragón, La Gran Fuga, Las Trampillas… para jugar en casa con tus palabras.':
-        'We are preparing a new challenge every day: the Dragon Flight, the Great Escape, the Trapdoors… to play at home with your words.',
+      'Estamos preparando un desafío nuevo cada día: Draly Vuelo, Draly Fuga, Draly Trampillas… para jugar en casa con tus palabras.':
+        'We are preparing a new challenge every day: Draly Vuelo, Draly Fuga, Draly Trampillas… to play at home with your words.',
       'Mientras tanto: lo que toca hoy': 'Meanwhile: today\'s step', 'Tuyas y de tu profe': 'Yours and your teacher\'s',
       'Muy pronto: los juegos de la clase': 'Coming soon: the class games', 'Más cosas': 'More', 'La Ruta': 'The Route', 'Oraciones': 'Sentences',
       'Desafío': 'Challenge', 'pronto': 'soon', 'Menú': 'Menu', 'Cargando tu Ruta Dorada…': 'Loading your Golden Route…',

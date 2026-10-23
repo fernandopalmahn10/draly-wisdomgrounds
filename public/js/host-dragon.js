@@ -123,7 +123,7 @@
     $('active-pin').textContent = p;
     const url = `${location.origin}/?pin=${p}`;
     $('join-url').replaceChildren(location.host, document.createElement('wbr'), `/?pin=${p}`);
-    document.title = `Vuelo del Dragón · ${p}`;
+    document.title = `Draly Vuelo · ${p}`;
     drawQr(url);
     try { sessionStorage.setItem('draly.dragonHost', JSON.stringify({ pin: p, setId })); } catch (_) {}
   }

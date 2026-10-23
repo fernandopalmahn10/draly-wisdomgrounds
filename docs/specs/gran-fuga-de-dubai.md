@@ -1,5 +1,7 @@
 # La Gran Fuga de Dubái · new pin game
 
+**Name since 2026-10-23: «Draly Fuga · Las rutas de la fuga»**, short «Draly Fuga» (the «Draly Party» names, his «Approve all»; `core/game-names.js`). The text below keeps the name it had when it was written.
+
 > **v2 «Las rutas de la fuga» (2026-10-17): `docs/specs/gran-fuga-v2.md`** (routes of real places drawn as art, the
 > painted rooms, the phone's chase strip, pacing from the clock). This file is v1 and its history.
 

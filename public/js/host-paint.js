@@ -66,7 +66,7 @@
     $('pin-display').textContent = p;
     $('active-pin-display').textContent = p;
     $('join-url').textContent = `${location.origin}/?pin=${p}`;
-    document.title = `Dragones Pintores · ${p}`;
+    document.title = `Draly Pintores · ${p}`;
     try { sessionStorage.setItem('draly.paintHost', JSON.stringify({ pin: p, setId })); } catch (_) {}
   }
   function createRoom() {

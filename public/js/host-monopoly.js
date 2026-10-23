@@ -126,7 +126,7 @@
     $('active-pin').textContent = p;
     const url = `${location.origin}/?pin=${p}`;
     $('join-url').replaceChildren(location.host, document.createElement('wbr'), `/?pin=${p}`);
-    document.title = `Dàfùwēng · ${p}`;
+    document.title = `Draly Tablero · ${p}`;
     drawQr(url);
     try { sessionStorage.setItem('draly.monopolyHost', JSON.stringify({ pin: p, setId })); } catch (_) {}
   }

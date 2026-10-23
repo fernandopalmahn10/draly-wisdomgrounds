@@ -1239,7 +1239,7 @@
       box = document.createElement('div');
       box.className = 'es-pintro'; box.id = 'es-pintro';
       // 2026-10-13: the phone's own VS card, like the projector's split (crew on the warm side, Robotín on the cool side)
-      box.innerHTML = '<div class="es-pintro-title">La Gran Fuga<small>de Dubái</small></div><div class="es-pintro-route" id="es-pintro-route"></div>'
+      box.innerHTML = '<div class="es-pintro-title">Draly Fuga<small>Las rutas de la fuga</small></div><div class="es-pintro-route" id="es-pintro-route"></div>'
         + '<div class="es-pintro-row" id="es-pintro-row"></div><div class="es-pintro-you">¡Tú vas en la tripulación!</div>'
         + '<div class="es-pintro-vs">VS</div><div class="es-pintro-robo" id="es-pintro-robo"></div>';
       ov.prepend(box);

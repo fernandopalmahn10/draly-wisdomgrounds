@@ -168,7 +168,7 @@
     map.style.height = MAP.H + 'px';
     map.appendChild(terrain());
     const plaque = el('div', 'mnb-plaque');
-    plaque.append(el('b', null, 'Dàfùwēng'), el('span', null, 'El Gran Tablero de Dubái'));
+    plaque.append(el('b', null, 'Draly Tablero'), el('span', null, 'El Gran Tablero de Dubái'));
     plaque.setAttribute('translate', 'no');
     map.appendChild(plaque);
     const camel = el('img', 'mnb-deco mnb-camel');

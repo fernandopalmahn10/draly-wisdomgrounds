@@ -109,6 +109,33 @@ being played nor the next one. Grey «−30 s» out where the server would refus
 
 ---
 
+## Names: the «Draly Party» games (his naming 2026-10-23, «Approve all»)
+
+What kids, parents and teachers read; the `gameType` ids never change. The list lives in `core/game-names.js`
+(`NAMES`: `full` where there is room — the games list, /maestro's launcher, a lobby title, a ceremony header — and
+`short` in tight spots — a chip, a small label, a projector tab with its PIN; `OLD`: the names before). A new game gets
+its «Draly …» name from the start and an entry there. `node scripts/test-game-names.js` checks every page that names a
+game against that list (and that «Monopolio», another company's brand, is gone from what kids and teachers see); kids'
+inboxes keep invites with the old names, and /api/homework/inbox shows them with today's (`GameNames.inboxMessage`).
+
+| gameType | full | short |
+|---|---|---|
+| `teamcrab` | Draly Cangrejo · ¡Atrapa a Fénec! | Draly Cangrejo |
+| `dormilon` | Draly Siesta · ¡No despiertes a Dralingo! | Draly Siesta |
+| `trapdoor` | Draly Trampillas | Draly Trampillas |
+| `halcon` | Draly Halcón | Draly Halcón |
+| `escape` | Draly Fuga · Las rutas de la fuga | Draly Fuga |
+| `snow` | Draly Nieve · Batalla en Ski Dubái | Draly Nieve |
+| `paint` | Draly Pintores · El Cielo de las Maravillas | Draly Pintores |
+| `kingdoms` | Draly Reinos | Draly Reinos |
+| `mochi-mash` | Draly Mochi · La Terraza del Mochi | Draly Mochi |
+| `monopoly` | Draly Tablero · El Gran Tablero de Dubái | Draly Tablero |
+| `dragon-eye` | Draly Vuelo · La Carrera del Cielo | Draly Vuelo |
+| `pinata` | Draly Piñata · La Fiesta de las Piñatas | Draly Piñata |
+| `sixseven` | Draly 67 · La Balanza de Oro | Draly 67 |
+
+---
+
 ## Status (2026-10-11)
 
 Live modes: **Draly Cangrejo · ¡Atrapa a Fénec!** (`teamcrab`, v1 live 2026-10-23 c8bdf147b; **v2** built the same day on
@@ -128,7 +155,7 @@ martillazo / capitán / trampa / racha) + the crews' leaderboard; «🤖 Probar 
 crewmates that play like an average kid and never count; the skill simulation `node scripts/test-teamcrab.js --sim`;
 rules `core/teamcrab.js`, server block `tc*`, phone `js/player-teamcrab.js`, projector `host-teamcrab.html` +
 `js/host-teamcrab.js`, both draw `js/teamcrab-stage.js` + `css/teamcrab.css`; spec `docs/specs/atrapa-a-fenec.md`),
-**¡No despiertes a Dralingo!** (`dormilon`, live 2026-10-22, v2 «Gana plumas, luego frota con el dedo» live
+**Draly Siesta · ¡No despiertes a Dralingo!** (`dormilon`, live 2026-10-22, v2 «Gana plumas, luego frota con el dedo» live
 the same day; v3 (his picks 2026-10-22 15:44, branch `dormilon-v3`): the wake-up is a dice roll that grows with every tickle since he fell asleep (about 2 a board in a 2-minute game, sometimes in the first round; only each board's very first turn is safe), 2 / 3 / 4 min (default 2), a wrong, late (15 s) or blind (< 0.5 s) answer makes a feather fly out and him shift, and he wakes up ANGRY on every screen (the angry red Dralingo, the whole phone floods red, burst ring, speed lines, steam, sparks, shake, his growl, ~4 s); the projector lobby keeps PIN, QR and «¡Empezar!» on the first screen and scrolls: #3 of his Mario Party series, «Don't Wake Wiggler» (his video 6:14-7:29) — Dralingo
 sleeps in a Chinese palace bedroom; boards of 4 take TURNS. v2: between turns every kid answers quick questions from the
 pack (a right answer = a golden feather, 3 to start, 6 max) while the friend's turn plays live above; on MY turn his face
@@ -138,7 +165,7 @@ feather move live (relayed), the projector shows each board's close-up; a hidden
 night; its own board ceremony (bonus stars, the board's winner, my card) and the projector's champions + class podium;
 rules `core/dormilon.js`, server block `dm*`, phone `js/player-dormilon.js`, projector `host-dormilon.html` +
 `js/host-dormilon.js`, both draw `js/dormilon-stage.js` + `css/dormilon.css`; spec `docs/specs/no-despiertes-a-dralingo.md`),
-**Las Trampillas** (`trapdoor`, built 2026-10-17 on a branch, not deployed: #2 of his Mario Party series, the
+**Draly Trampillas** (was «Las Trampillas», `trapdoor`, built 2026-10-17 on a branch, not deployed: #2 of his Mario Party series, the
 round platform whose pie slices drop like trapdoors (his video 4:43-5:41) — the whole class on one platform as their
 full-body characters, Fuego vs Mar on red / blue rings, tap the floor to run there (the server moves everyone), pink
 slices jump around during the 5…0 count and the ones lit at «0» open; a right answer = golden wings that save you once,
@@ -146,31 +173,31 @@ the fallen answer in the pit to come back; each round a kingdom scores its share
 Round ×2); three arenas (El Palacio de Dubái, El Templo del Cielo, El Jardín de la Luna); the shared Mario Party
 ending; rules `core/trapdoor.js` + the platform `js/trapdoor-arena.js`, phone `js/player-trapdoor.js`, projector
 `host-trapdoor.html` + `js/host-trapdoor.js`, both draw `js/trapdoor-render.js` + `css/trapdoor.css`; spec
-`docs/specs/las-trampillas.md`), **Ojos de Halcón** (`halcon`, built 2026-10-13 on a branch, not deployed: Super Mario Party «Looking for Love»
+`docs/specs/las-trampillas.md`), **Draly Halcón** (was «Ojos de Halcón», `halcon`, built 2026-10-13 on a branch, not deployed: Super Mario Party «Looking for Love»
 recreated board by board — the class is dealt into boards of 4, every kid plays as their full-body saga character on
 their own board, +5/+3/+2/+1 by speed inside the board; spec `docs/specs/ojos-de-halcon.md`; it replaced the first
-attempt «Ojo de Halcón» (`look`), retired and removed 2026-10-14 by his decision), **Reinos de Colores** (`kingdoms`, built 2026-10-10, Dubai upgrade 2026-10-11: landmarks, captains, zoom on
-the phone; spec `docs/specs/reinos-de-colores.md`), **Dragones
-Pintores** (`paint`, Gimkit Color Clash in Dralingo style, built 2026-10-11, spec `docs/specs/dragones-pintores.md`; remade 2026-10-17 as
+attempt «Ojo de Halcón» (`look`), retired and removed 2026-10-14 by his decision), **Draly Reinos** (was «Reinos de Colores», `kingdoms`, built 2026-10-10, Dubai upgrade 2026-10-11: landmarks, captains, zoom on
+the phone; spec `docs/specs/reinos-de-colores.md`), **Draly
+Pintores** (was «Dragones Pintores», `paint`, Gimkit Color Clash in Dralingo style, built 2026-10-11, spec `docs/specs/dragones-pintores.md`; remade 2026-10-17 as
 «El Cielo de las Maravillas»: a new world each round — Dubái de noche, la Gran Muralla, el río Li, Shanghái — tap the sky
-and the dragon flies there painting clouds, three landmark islands to capture; spec `docs/specs/dragones-pintores-v2.md`), **Batalla de Nieve en
-Ski Dubái** (`snow`, Gimkit 2D-map infection game, built 2026-10-12 on a branch, not deployed yet, spec `docs/specs/batalla-de-nieve.md`), **La Gran Fuga de Dubái** (`escape`, Kahoot «Robot Run» co-op chase, built
+and the dragon flies there painting clouds, three landmark islands to capture; spec `docs/specs/dragones-pintores-v2.md`), **Draly Nieve · Batalla en
+Ski Dubái** (was «Batalla de Nieve en Ski Dubái», `snow`, Gimkit 2D-map infection game, built 2026-10-12 on a branch, not deployed yet, spec `docs/specs/batalla-de-nieve.md`), **Draly Fuga** (was «La Gran Fuga de Dubái», `escape`, Kahoot «Robot Run» co-op chase, built
 2026-10-13, spec `docs/specs/gran-fuga-de-dubai.md`; remade 2026-10-17 as «Las rutas de la fuga»: a route of three real
 places per round — Dubái or China — drawn as art for the run and the zona segura rooms, a live chase strip on every
 phone, pacing from the clock; spec `docs/specs/gran-fuga-v2.md`; these four got the Mario Party ending on
 2026-10-16, branch `ending-pass`: «¡FINAL!», a reveal, winners vs the others, bonus stars, the projector's podium and each
 phone's card, all from one shared ceremony `js/party.js` + `css/party.css` + `core/party.js`, plus the last 30 s doubled
 (Banderas dobles · Fuego doble · Copos dobles · Súper turbos) and live news between questions; «As built · 2026-10-16» in
-each spec), **Mochi Mash** (`mochi-mash`, remade
+each spec), **Draly Mochi** (was «Mochi Mash», `mochi-mash`, remade
 2026-10-14 on a branch, not deployed: «La Terraza del Mochi», Fuego vs Mar feed their Dragoncitos in a mash zone, landmark
 race, comeback golden mochis, Mario Party ceremony with bonus stars; rules `core/mochi.js`, phone `js/player-mochi.js`,
 projector `host.html` + `js/host-mochi.js`, shared `js/mochi-stage.js` + `css/mochi.css`; spec `docs/specs/mochi-mash-v2.md`),
-**Piñata Tigre** (`pinata`, remade 2026-10-15 on a branch, not deployed: «La Fiesta de las Piñatas», Fuego vs Mar break a
+**Draly Piñata** (was «Piñata Tigre», `pinata`, remade 2026-10-15 on a branch, not deployed: «La Fiesta de las Piñatas», Fuego vs Mar break a
 ladder of tiger piñatas under Dubai landmarks; every right answer = a hit with a server-judged timing meter (critical in
 the gold), bursts with candy jackpots, landmark race, comeback wide golden zone, Mario Party ceremony with bonus stars;
 rules `core/pinata.js`, phone `js/player-pinata.js`, projector `host-pinata.html` + `js/host-pinata.js`, shared
 `js/pinata-stage.js` + `css/pinata.css` (+ `js/mochi-stage.js` / `css/mochi.css` for the kid figures); spec
-`docs/specs/pinata-tigre-v2.md`), **6-7 Swing** (`sixseven`, remade 2026-10-15 on a branch, not deployed: «La Balanza de
+`docs/specs/pinata-tigre-v2.md`), **Draly 67** (was «6-7 Swing», `sixseven`, remade 2026-10-15 on a branch, not deployed: «La Balanza de
 Oro», rapid-fire sums whose answer is always 6 or 7 (numbers 1-10, + / −; digits, pinyin words without tone marks, or both,
 the teacher's pick), two giant buttons «6 · liu» / «7 · qi», Fuego vs Mar fill a golden balance on Dubai Creek; server-judged
 with a too-fast rule, a streak multiplier and wrong-answer waits so random tapping loses to thinking; Dralingo's «6-7» art,
@@ -181,7 +208,7 @@ SEVEN!» moments during play (racha 7, the 67th coin, team waves at 67 gold); si
 lobby, the intro and the ceremony, and join into **el 67** on every «¡SIX SEVEN!»; rules `core/sixseven.js` (no question pack),
 phone `js/player-sixseven.js`, projector `host-sixseven.html` + `js/host-sixseven.js`, shared `js/sixseven-stage.js` +
 `css/sixseven.css` (+ `js/mochi-stage.js` / `css/mochi.css` for the kid figures); spec `docs/specs/six-seven-v2.md`),
-**Vuelo del Dragón** (`dragon-eye`, remade 2026-10-16 on a branch, not deployed: «La Carrera del Cielo de Dubái», a Mario Party sky race in races of 4 dealt like Ojos de Halcón; every right answer is a flight where each swipe up (or tap) is a wing beat of the kid's own dragoncito, the kid's full-body character standing on it; one score = metres; the server caps the beats a second and judges every metre; golden rings, a tailwind for the last dragon (capped at the gap), a 12 s star sprint every 40 s at the next landmark, lead alarms, «¡Alas dobles!» + fireworks in the last 30 s, three bonus stars per race, each race's winner, the class podium; rules `core/dragon.js` + the course `js/dragon-course.js`, phone `js/player-dragon.js`, projector `host-dragon.html` + `js/host-dragon.js`, both draw `js/dragon-sky.js` + `css/dragon.css`; spec `docs/specs/dragon-v2.md`), **Dàfùwēng · Monopolio** (`monopoly`, remade 2026-10-16 on a
+**Draly Vuelo** (was «Vuelo del Dragón», `dragon-eye`, remade 2026-10-16 on a branch, not deployed: «La Carrera del Cielo de Dubái», a Mario Party sky race in races of 4 dealt like Ojos de Halcón; every right answer is a flight where each swipe up (or tap) is a wing beat of the kid's own dragoncito, the kid's full-body character standing on it; one score = metres; the server caps the beats a second and judges every metre; golden rings, a tailwind for the last dragon (capped at the gap), a 12 s star sprint every 40 s at the next landmark, lead alarms, «¡Alas dobles!» + fireworks in the last 30 s, three bonus stars per race, each race's winner, the class podium; rules `core/dragon.js` + the course `js/dragon-course.js`, phone `js/player-dragon.js`, projector `host-dragon.html` + `js/host-dragon.js`, both draw `js/dragon-sky.js` + `css/dragon.css`; spec `docs/specs/dragon-v2.md`), **Draly Tablero** (was «Dàfùwēng · Monopolio», `monopoly`, remade 2026-10-16 on a
 branch, not deployed: «El Gran Tablero de Dubái», a Mario Party board night in boards of 4 dealt like Ojos de Halcón; every
 right answer opens a dice window (the server rolls; no tap in 3 s = the same dice), the kid's full-body piece walks a
 24-space Dubai loop on its own phone (the board is the screen, the question a sheet under it): Salida, the star (10 coins,

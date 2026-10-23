@@ -1,5 +1,7 @@
 # Piñata Tigre v2 · «La Fiesta de las Piñatas» (team hits + timing meter, Mario Party style)
 
+**Name since 2026-10-23: «Draly Piñata · La Fiesta de las Piñatas»**, short «Draly Piñata» (the «Draly Party» names, his «Approve all»; `core/game-names.js`). The text below keeps the name it had when it was written.
+
 gameType `pinata` · address `/host-pinata.html?setId=…` (unchanged: games.html, packs.html, sets.html, /maestro keep
 working) · remade 2026-10-15 on a worktree branch, not deployed.
 

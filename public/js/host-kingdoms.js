@@ -85,7 +85,7 @@
     $('pin-display').textContent = p;
     $('active-pin-display').textContent = p;
     $('join-url').textContent = `${location.origin}/?pin=${p}`;
-    document.title = `Reinos de Colores · ${p}`;
+    document.title = `Draly Reinos · ${p}`;
     socket.emit('host:set-duration', { pin, duration: +$('duration-slider').value });
     socket.emit('host:load-set', { pin, setId }, (resp) => {
       if (!resp || !resp.ok) {

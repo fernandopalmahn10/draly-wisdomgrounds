@@ -134,7 +134,7 @@
     const url = `${location.origin}/?pin=${p}`;
     // the address breaks before «/?pin=», never inside the site name
     $('join-url').replaceChildren(location.host, document.createElement('wbr'), `/?pin=${p}`);
-    document.title = `6-7 Swing · ${p}`;
+    document.title = `Draly 67 · ${p}`;
     drawQr(url);
     try { sessionStorage.setItem('draly.sixsevenHost', JSON.stringify({ pin: p })); } catch (_) {}
   }

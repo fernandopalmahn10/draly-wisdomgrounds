@@ -85,7 +85,7 @@
     $('pin-display').textContent = p;
     $('active-pin-display').textContent = p;
     $('join-url').textContent = `${location.origin}/?pin=${p}`;
-    document.title = `Las Trampillas · ${p}`;
+    document.title = `Draly Trampillas · ${p}`;
     try { sessionStorage.setItem('draly.trapdoorHost', JSON.stringify({ pin: p, setId })); } catch (_) {}
   }
   function createRoom() {

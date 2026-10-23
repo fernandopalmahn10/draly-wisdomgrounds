@@ -1,5 +1,7 @@
 # Mochi Mash v2 · «La Terraza del Mochi» (team mash, Mario Party style)
 
+**Name since 2026-10-23: «Draly Mochi · La Terraza del Mochi»**, short «Draly Mochi» (the «Draly Party» names, his «Approve all»; `core/game-names.js`). The text below keeps the name it had when it was written.
+
 gameType `mochi-mash` · address `/host.html?setId=…` (unchanged: games.html, packs.html, sets.html, /maestro keep working) ·
 remade 2026-10-14 on a worktree branch, not deployed.
 

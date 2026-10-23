@@ -1,5 +1,7 @@
 # Batalla de Nieve en Ski Dubái · new pin game
 
+**Name since 2026-10-23: «Draly Nieve · Batalla en Ski Dubái»**, short «Draly Nieve» (the «Draly Party» names, his «Approve all»; `core/game-names.js`). The text below keeps the name it had when it was written.
+
 Status: **BUILT 2026-10-12 on a worktree branch, local only, not deployed** (gameType `snow`). What was built and how
 it differs from this proposal: § «As built» at the end, with the scorecard (13/14, all gates passed).
 His brief: "recreate this game, with all the elements I love"

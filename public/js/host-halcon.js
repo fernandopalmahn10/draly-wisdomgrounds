@@ -89,7 +89,7 @@
     $('active-pin').textContent = p;
     const url = `${location.origin}/?pin=${p}`;
     $('join-url').textContent = url;
-    document.title = `Ojos de Halcón · ${p}`;
+    document.title = `Draly Halcón · ${p}`;
     drawQr(url);
     socket.emit('host:hc-rounds', { pin, rounds });
     socket.emit('host:load-set', { pin, setId }, (resp) => {

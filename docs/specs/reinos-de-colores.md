@@ -1,5 +1,7 @@
 # Reinos de Colores · build plan (new game mode)
 
+**Name since 2026-10-23: «Draly Reinos»** (the «Draly Party» names, his «Approve all»; `core/game-names.js`). The text below keeps the name it had when it was written.
+
 Status: **BUILT 2026-10-10** (gameType `kingdoms`). Files: `core/kingdoms.js` (board rules), server.js `kd*` functions,
 `public/host-kingdoms.html` + `js/host-kingdoms.js`, `js/kingdoms-board.js` (shared SVG board), `js/player-kingdoms.js`
 (phone), `css/kingdoms.css`, `assets/kingdoms/` (Kenney grass/castle/sounds + small Dralingo). Bot playtest:

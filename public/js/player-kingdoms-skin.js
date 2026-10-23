@@ -242,13 +242,13 @@
     t.className = 'kdp-team ' + team;
     if ($('kdp-lobby-img')) $('kdp-lobby-img').src = TPOSE('pointing');
     t.textContent = team === 'red' ? '¡Eres del Reino del Fuego! 🔥' : '¡Eres del Reino del Mar! 🌊';
-    if (game === 'snow') { t.className = 'kdp-team sn-team'; t.textContent = '❄️ ¡Batalla de Nieve en Ski Dubái!'; }
+    if (game === 'snow') { t.className = 'kdp-team sn-team'; t.textContent = '❄️ Draly Nieve · todos contra el hielo'; }
     if (game === 'escape') { t.className = 'kdp-team es-team'; t.textContent = '🚀 ¡Eres de la tripulación!'; }
-    if (game === 'halcon') { t.className = 'kdp-team hc-team'; t.textContent = '🦅 Ojos de Halcón · ¡tableros de 4!'; }
-    if (game === 'dormilon') { t.className = 'kdp-team dm-team'; t.textContent = '😴 ¡No despiertes a Dralingo! · tableros de 4'; }
+    if (game === 'halcon') { t.className = 'kdp-team hc-team'; t.textContent = '🦅 Draly Halcón · ¡tableros de 4!'; }
+    if (game === 'dormilon') { t.className = 'kdp-team dm-team'; t.textContent = '😴 Draly Siesta · tableros de 4'; }
     if (game === 'teamcrab') { t.className = 'kdp-team tc-team'; t.textContent = '🦀 Draly Cangrejo · tripulaciones de 4'; }
-    if (game === 'monopoly') { t.className = 'kdp-team mn-team'; t.textContent = '🎲 El Gran Tablero de Dubái'; }
-    if (game === 'dragon-eye') { t.className = 'kdp-team dr-team'; t.textContent = '🐉 La Carrera del Cielo de Dubái'; }
+    if (game === 'monopoly') { t.className = 'kdp-team mn-team'; t.textContent = '🎲 Draly Tablero · dados y estrellas'; }
+    if (game === 'dragon-eye') { t.className = 'kdp-team dr-team'; t.textContent = '🐉 Draly Vuelo · carreras de 4'; }
     if (game === 'mochi-mash' || game === 'pinata' || game === 'sixseven') t.textContent = team === 'red' ? '¡Eres del Equipo Fuego!' : '¡Eres del Equipo Mar!';
     howDecor();
   }

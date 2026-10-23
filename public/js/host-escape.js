@@ -157,7 +157,7 @@
     $('pin-display').textContent = p;
     $('active-pin-display').textContent = p;
     $('join-url').textContent = `${location.origin}/?pin=${p}`;
-    document.title = `La Gran Fuga · ${p}`;
+    document.title = `Draly Fuga · ${p}`;
     try { sessionStorage.setItem('draly.escapeHost', JSON.stringify({ pin: p, setId })); } catch (_) {}
   }
   function createRoom() {

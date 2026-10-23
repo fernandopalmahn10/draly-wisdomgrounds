@@ -272,7 +272,7 @@
     studio.intro(seats, g.you);
     const n = seats.length;
     const mates = seats.filter((x) => x.id !== g.you).map((x) => x.name);
-    studio.say(n > 1 ? `¡Tu tablero: ${mates.slice(0, 3).join(', ')}${mates.length > 3 ? '…' : ''}!` : '¡Bienvenido a Ojos de Halcón!');
+    studio.say(n > 1 ? `¡Tu tablero: ${mates.slice(0, 3).join(', ')}${mates.length > 3 ? '…' : ''}!` : '¡Bienvenido a Draly Halcón!');
     setQ(null);
     hint(n > 1 ? `Compites contra ${n - 1} ${n === 2 ? 'rival' : 'rivales'} de tu tablero` : 'Compites en tu tablero', '');
     B.newRound();

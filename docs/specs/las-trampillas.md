@@ -1,5 +1,7 @@
 # Las Trampillas · ¡Que no te trague el suelo! (gameType `trapdoor`)
 
+**Name since 2026-10-23: «Draly Trampillas»** (the «Draly Party» names, his «Approve all»; `core/game-names.js`). The text below keeps the name it had when it was written.
+
 Mario Party recreation #2 of his series (2026-10-17): the minigame of his video at 4:43-5:41
 (https://www.youtube.com/watch?v=y9BKCVx_mNk), the round platform whose pie slices drop like trapdoors. Analysis and his
 picks: `.claude/handoff/trapdoor-video/next-minigame-analysis.md` (root repo, this PC). Built on a branch, not deployed.

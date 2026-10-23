@@ -1,5 +1,7 @@
 # Dragones Pintores v2 · «El Cielo de las Maravillas» (gameType `paint`)
 
+**Name since 2026-10-23: «Draly Pintores · El Cielo de las Maravillas»**, short «Draly Pintores» (the «Draly Party» names, his «Approve all»; `core/game-names.js`). The text below keeps the name it had when it was written.
+
 Address `/host-paint.html?setId=…` and gameType `paint` unchanged (games.html, packs.html, /maestro's launcher and
 `?livegame=1` keep working). Remade 2026-10-17 on a branch, not deployed. v1: `docs/specs/dragones-pintores.md`.
 

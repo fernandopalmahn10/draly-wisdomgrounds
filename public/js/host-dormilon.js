@@ -107,7 +107,7 @@
     $('active-pin').textContent = p;
     const url = `${location.origin}/?pin=${p}`;
     $('join-url').textContent = url;
-    document.title = `¡No despiertes a Dralingo! · ${p}`;
+    document.title = `Draly Siesta · ${p}`;
     drawQr(url);
     socket.emit('host:set-duration', { pin, duration });
     socket.emit('host:load-set', { pin, setId }, (resp) => {

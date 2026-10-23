@@ -783,7 +783,7 @@
         '<span class="md-des-lock">' + I.lock + '</span>' +
         '<div class="md-des-t"><span class="md-des-soon">Muy pronto</span><p class="md-des-h">Los juegos de la clase llegan a tu casa</p></div></div>' +
         '<div class="md-say"><img src="' + ART.hamdan + '" alt="Hamdan" width="200" height="280" loading="lazy" decoding="async">' +
-          '<p>Estamos preparando un desafío nuevo cada día: el Vuelo del Dragón, La Gran Fuga, Las Trampillas… para jugar en casa con tus palabras.</p></div>' +
+          '<p>Estamos preparando un desafío nuevo cada día: Draly Vuelo, Draly Fuga, Draly Trampillas… para jugar en casa con tus palabras.</p></div>' +
         '<button type="button" class="md-btn is-gold md-btn-wide" data-act="today">Mientras tanto: lo que toca hoy</button></div></section>';
   }
   function dockHtml(sel) {

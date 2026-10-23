@@ -1,5 +1,7 @@
 # Vuelo del Dragón v2 · «La Carrera del Cielo de Dubái» (a Mario Party sky race, races of 4)
 
+**Name since 2026-10-23: «Draly Vuelo · La Carrera del Cielo»**, short «Draly Vuelo» (the «Draly Party» names, his «Approve all»; `core/game-names.js`). The text below keeps the name it had when it was written.
+
 gameType `dragon-eye` · address `/host-dragon.html?setId=…` (unchanged: games.html, packs.html, sets.html and /maestro's
 launcher keep working, `?livegame=1` kept; no set → `/packs.html?game=dragon-eye`) · remade 2026-10-16 on a branch, not
 deployed.

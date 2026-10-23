@@ -1,5 +1,7 @@
 # La Gran Fuga de Dubái v2 · «Las rutas de la fuga» (gameType `escape`)
 
+**Name since 2026-10-23: «Draly Fuga · Las rutas de la fuga»**, short «Draly Fuga» (the «Draly Party» names, his «Approve all»; `core/game-names.js`). The text below keeps the name it had when it was written.
+
 Address `/host-escape.html?setId=…`, gameType `escape`, the teacher flow (/maestro launcher, `/packs.html?game=escape`,
 `?livegame=1`) unchanged. Remade 2026-10-17 on a branch, not deployed. v1 and its «As built» notes:
 `docs/specs/gran-fuga-de-dubai.md`. Model: Dragones Pintores v2 (`docs/specs/dragones-pintores-v2.md`).

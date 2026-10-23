@@ -69,7 +69,7 @@
   background: linear-gradient(180deg, #fffaf0, #fbe8bd); border: 6px solid #c98a26; box-shadow: 0 0 0 4px var(--mn-ink), 0 10px 0 rgba(29, 36, 64, .25); }
 /* on a phone the plaque is scenery: smaller and quieter, the kid's piece is what matters */
 .mnx-view .mnb-plaque { transform: translate(-50%, -50%) scale(.62); opacity: .55; }
-.mnb-plaque b { display: block; font: 800 74px/1 'Baloo 2', sans-serif; color: var(--mn-ink); letter-spacing: .01em; }
+.mnb-plaque b { display: block; font: 800 56px/1 'Baloo 2', sans-serif; color: var(--mn-ink); letter-spacing: .01em; white-space: nowrap; }   /* «Draly Tablero» (2026-10-23) fits the 440 px plaque */
 .mnb-plaque span { display: block; margin-top: 6px; font: 800 26px/1.2 'Nunito', sans-serif; color: #8a5a10; }
 .mnb-deco { position: absolute; pointer-events: none; user-select: none; }
 .mnb-camel { left: 238px; top: 520px; height: 96px; filter: drop-shadow(0 6px 3px rgba(80, 50, 10, .3)); }

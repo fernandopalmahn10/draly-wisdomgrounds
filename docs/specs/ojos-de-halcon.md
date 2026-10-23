@@ -1,5 +1,7 @@
 # Ojos de Halcón · new pin game (Super Mario Party «Looking for Love», recreated in boards of 4)
 
+**Name since 2026-10-23: «Draly Halcón»** (the «Draly Party» names, his «Approve all»; `core/game-names.js`). The text below keeps the name it had when it was written.
+
 gameType `halcon` · built 2026-10-13 on a worktree branch (not deployed) · replaced the first attempt «Ojo de Halcón»
 (`look`), which was retired and removed on 2026-10-14 by his decision (recover it from commit 83dbcbd04 if ever needed).
 

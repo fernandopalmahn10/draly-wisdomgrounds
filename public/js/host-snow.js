@@ -92,7 +92,7 @@
     $('pin-display').textContent = p;
     $('active-pin-display').textContent = p;
     $('join-url').textContent = `${location.origin}/?pin=${p}`;
-    document.title = `Batalla de Nieve · ${p}`;
+    document.title = `Draly Nieve · ${p}`;
     socket.emit('host:set-duration', { pin, duration: +$('duration-slider').value });
     socket.emit('host:load-set', { pin, setId }, (resp) => {
       if (!resp || !resp.ok) { alert('No se pudo cargar la serie de preguntas.'); location.href = '/packs.html?game=snow' + LIVE; return; }

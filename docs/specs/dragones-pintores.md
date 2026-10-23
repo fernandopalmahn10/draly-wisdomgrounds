@@ -1,5 +1,7 @@
 # Dragones Pintores · new pin game (Gimkit «Color Clash», Dralingo style)
 
+**Name since 2026-10-23: «Draly Pintores · El Cielo de las Maravillas»**, short «Draly Pintores» (the «Draly Party» names, his «Approve all»; `core/game-names.js`). The text below keeps the name it had when it was written.
+
 Status: **REPLACED 2026-10-17 by v2 «El Cielo de las Maravillas»** (`docs/specs/dragones-pintores-v2.md`: worlds with
 landmark prizes, tap to fly). This file is v1's history (built 2026-10-11, gameType `paint`). His brief: "design and improve this same game,
 dralingo style … a new pin game" after watching Gimkit Color Clash (https://www.youtube.com/watch?v=SyAyV0LcRQQ).

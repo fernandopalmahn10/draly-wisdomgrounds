@@ -354,20 +354,20 @@
     { id: 'reading', label: 'Class Reading', emoji: '📖', host: '/host-reading.html', blurb: 'Read a story together, with a quiz at the end' },
     { id: 'hsksim',  label: 'Official tests', emoji: '🏆', official: true, blurb: 'YCT, New HSK and Old HSK exam rooms' },
     // Las Trampillas (2026-10-17): Mario Party's trapdoor platform
-    { id: 'trapdoor', label: 'Las Trampillas', emoji: '🕳️', host: '/host-trapdoor.html', blurb: 'Whole class on a round platform: pink trapdoors open at 0; right answers give wings (Mario Party)' },
+    { id: 'trapdoor', label: 'Draly Trampillas', emoji: '🕳️', host: '/host-trapdoor.html', blurb: 'Whole class on a round platform: pink trapdoors open at 0; right answers give wings (Mario Party)' },
     // Ojos de Halcón (2026-10-13) replaced the first «Ojo de Halcón» (`look`, retired 2026-10-14)
-    { id: 'halcon',   label: 'Ojos de Halcón', emoji: '🦅', host: '/host-halcon.html', blurb: 'Look at the right window first, boards of 4 (Mario Party)' },
+    { id: 'halcon',   label: 'Draly Halcón', emoji: '🦅', host: '/host-halcon.html', blurb: 'Look at the right window first, boards of 4 (Mario Party)' },
     { id: 'teamcrab', label: 'Draly Cangrejo · ¡Atrapa a Fénec!', emoji: '🦀', host: '/host-teamcrab.html', blurb: 'Crews of 4 pilot a robot crab. Each round: quick questions (right = a hammer charge, a miss = El Péndulo eats one), then 10 s to slam Fénec; the best answerer is Capitán and steers the crab. Mario Party «Team Crab»' },
-    { id: 'dormilon', label: '¡No despiertes a Dralingo!', emoji: '😴', host: '/host-dormilon.html', blurb: 'Take turns: each right answer strokes sleeping Dralingo (+1); wake him and lose it all. Boards of 4 (Mario Party)' },
-    { id: 'escape',   label: 'La Gran Fuga de Dubái', emoji: '🚀', host: '/host-escape.html', blurb: 'Whole class runs from Robotín: Dubai or China route' },
-    { id: 'snow',     label: 'Batalla de Nieve', emoji: '❄️', host: '/host-snow.html', blurb: 'Walk Dubai, snowball fight' },
-    { id: 'paint',    label: 'Dragones Pintores', emoji: '🎨', host: '/host-paint.html', blurb: 'Tap to fly, paint the sky, win the wonders' },
-    { id: 'kingdoms', label: 'Reinos de Colores', emoji: '🏰', host: '/host-kingdoms.html', blurb: 'Plant flags, conquer the map' },
-    { id: 'sixseven', label: '6-7 Swing', emoji: '🤙', host: '/host-sixseven.html', blurb: 'Sums that are always 6 or 7, digits or pinyin, fill your team balance (Mario Party)' },
-    { id: 'monopoly', label: 'Dàfùwēng · Monopolio', emoji: '🎲', host: '/host-monopoly.html', blurb: 'Dubai board night in boards of 4: answer, roll the dice, buy landmarks, collect stars (Mario Party)' },
-    { id: 'mochi',    label: 'Mochi Mash', emoji: '🍡', host: '/host.html', blurb: 'Answer, tap fast, feed your team dragon (Mario Party)' },
-    { id: 'pinata',   label: 'Piñata Tigre', emoji: '🐯', host: '/host-pinata.html', blurb: 'Answer, stop the arrow on gold, break your team piñata (Mario Party)' },
-    { id: 'dragon',   label: 'Vuelo del Dragón', emoji: '🐉', host: '/host-dragon.html', blurb: 'Sky race over Dubai in races of 4: answer, swipe up to flap, win Dralingo\'s stars (Mario Party)' },
+    { id: 'dormilon', label: 'Draly Siesta · ¡No despiertes a Dralingo!', emoji: '😴', host: '/host-dormilon.html', blurb: 'Take turns: each right answer strokes sleeping Dralingo (+1); wake him and lose it all. Boards of 4 (Mario Party)' },
+    { id: 'escape',   label: 'Draly Fuga · Las rutas de la fuga', emoji: '🚀', host: '/host-escape.html', blurb: 'Whole class runs from Robotín: Dubai or China route' },
+    { id: 'snow',     label: 'Draly Nieve · Batalla en Ski Dubái', emoji: '❄️', host: '/host-snow.html', blurb: 'Walk Dubai, snowball fight' },
+    { id: 'paint',    label: 'Draly Pintores · El Cielo de las Maravillas', emoji: '🎨', host: '/host-paint.html', blurb: 'Tap to fly, paint the sky, win the wonders' },
+    { id: 'kingdoms', label: 'Draly Reinos', emoji: '🏰', host: '/host-kingdoms.html', blurb: 'Plant flags, conquer the map' },
+    { id: 'sixseven', label: 'Draly 67 · La Balanza de Oro', emoji: '🤙', host: '/host-sixseven.html', blurb: 'Sums that are always 6 or 7, digits or pinyin, fill your team balance (Mario Party)' },
+    { id: 'monopoly', label: 'Draly Tablero · El Gran Tablero de Dubái', emoji: '🎲', host: '/host-monopoly.html', blurb: 'Dubai board night in boards of 4: answer, roll the dice, buy landmarks, collect stars (Mario Party)' },
+    { id: 'mochi',    label: 'Draly Mochi · La Terraza del Mochi', emoji: '🍡', host: '/host.html', blurb: 'Answer, tap fast, feed your team dragon (Mario Party)' },
+    { id: 'pinata',   label: 'Draly Piñata · La Fiesta de las Piñatas', emoji: '🐯', host: '/host-pinata.html', blurb: 'Answer, stop the arrow on gold, break your team piñata (Mario Party)' },
+    { id: 'dragon',   label: 'Draly Vuelo · La Carrera del Cielo', emoji: '🐉', host: '/host-dragon.html', blurb: 'Sky race over Dubai in races of 4: answer, swipe up to flap, win Dralingo\'s stars (Mario Party)' },
   ];
   // the old force-launch (kept for the checkbox): stash the kids, open the host page with ?livegame=1, and
   // /js/live-game.js calls them in the moment the PIN appears. SAME tab on purpose (2026-06-04: mobile browsers

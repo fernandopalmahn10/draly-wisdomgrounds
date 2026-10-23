@@ -1,5 +1,7 @@
 # 6-7 Swing v2 · «La Balanza de Oro» (rapid-fire 6-or-7 sums, Mario Party style)
 
+**Name since 2026-10-23: «Draly 67 · La Balanza de Oro»**, short «Draly 67» (the «Draly Party» names, his «Approve all»; `core/game-names.js`). The text below keeps the name it had when it was written.
+
 gameType `sixseven` · address `/host-sixseven.html` (unchanged; no question pack: games.html «▶ Jugar» and /maestro's
 launcher keep working, `?livegame=1` kept) · remade 2026-10-15 on a worktree branch, not deployed.
 

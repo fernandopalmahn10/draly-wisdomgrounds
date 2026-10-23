@@ -104,7 +104,7 @@
     $('active-pin').textContent = p;
     const url = `${location.origin}/?pin=${p}`;
     $('join-url').textContent = url;
-    document.title = `Mochi Mash · ${p}`;
+    document.title = `Draly Mochi · ${p}`;
     drawQr(url);
     try { sessionStorage.setItem('mochi.host', JSON.stringify({ pin: p, setId })); } catch (_) {}
   }

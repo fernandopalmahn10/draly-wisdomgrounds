@@ -53,6 +53,7 @@ const Mochi = require('./core/mochi');               // Mochi Mash v2: «La Terr
 const Pinata = require('./core/pinata');             // Piñata Tigre v2: «La Fiesta de las Piñatas», team hits + timing meter (rules)
 const Sixseven = require('./core/sixseven');         // 6-7 Swing v2: «La Balanza de Oro», sums that are always 6 or 7 (rules)
 const Trap = require('./core/trapdoor');             // Las Trampillas: Mario Party's trapdoor platform, Fuego vs Mar (rules)
+const GameNames = require('./core/game-names');      // the «Draly Party» names (2026-10-23) + the old ones kids' inboxes kept
 // Tiny persistence for the owner's Emirati Arabic gateway (single global
 // profile, since this is a super-admin-only personal feature). Lives on the
 // same data disk as the rest of the JSON state.
@@ -2332,7 +2333,9 @@ app.get('/api/homework/inbox', (req, res) => {
   if (!rec) return;
   rec.lastSeen = Date.now();   // ← presence heartbeat
   // 🔒 2026-10-15: `from` held the sending teacher's CODE on messages older than today: never sent to a phone
-  const inbox = Students.getInbox(rec.code, 30).map((m) => { const o = Object.assign({}, m); delete o.from; return o; });
+  // 🎮 2026-10-23 (the «Draly Party» names): an invite saved with a game's old name («La maestra está abriendo Mochi Mash
+  // ahora…», «📚 Dàfùwēng · Monopolio») reads today's name (core/game-names.js); the record keeps what it saved
+  const inbox = Students.getInbox(rec.code, 30).map((m) => { const o = Object.assign({}, GameNames.inboxMessage(m)); delete o.from; return o; });
   const unread = inbox.filter((m) => !m.readAt).length;
   res.json({ ok: true, inbox, unread });
 });
@@ -11776,7 +11779,7 @@ io.on('connection', (socket) => {
         correct: '6',
         answers: ['6', '7'],
       }];
-      games[pin].setTitle = '6-7 Swing · La Balanza de Oro';
+      games[pin].setTitle = 'Draly 67 · La Balanza de Oro';
       games[pin].ssStyle = Sixseven.cleanStyle(opts.style);
     }
     // HSKSIM — full mock exam. The host page emits host:create with

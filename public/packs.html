@@ -51,18 +51,18 @@
 <script>
   // Curriculum picker: family → level → world → round → opens the game's host page with that question pack.
   const GAMES = {
-    'kingdoms':   { emoji: '🏰', name: 'Reinos de Colores', host: '/host-kingdoms.html' },
-    'paint':      { emoji: '🎨', name: 'Dragones Pintores', host: '/host-paint.html' },
-    'snow':       { emoji: '❄️', name: 'Batalla de Nieve', host: '/host-snow.html' },
-    'escape':     { emoji: '🚀', name: 'La Gran Fuga de Dubái', host: '/host-escape.html' },
-    'halcon':     { emoji: '🦅', name: 'Ojos de Halcón', host: '/host-halcon.html' },
-    'dormilon':   { emoji: '😴', name: '¡No despiertes a Dralingo!', host: '/host-dormilon.html' },
+    'kingdoms':   { emoji: '🏰', name: 'Draly Reinos', host: '/host-kingdoms.html' },
+    'paint':      { emoji: '🎨', name: 'Draly Pintores · El Cielo de las Maravillas', host: '/host-paint.html' },
+    'snow':       { emoji: '❄️', name: 'Draly Nieve · Batalla en Ski Dubái', host: '/host-snow.html' },
+    'escape':     { emoji: '🚀', name: 'Draly Fuga · Las rutas de la fuga', host: '/host-escape.html' },
+    'halcon':     { emoji: '🦅', name: 'Draly Halcón', host: '/host-halcon.html' },
+    'dormilon':   { emoji: '😴', name: 'Draly Siesta · ¡No despiertes a Dralingo!', host: '/host-dormilon.html' },
     'teamcrab':   { emoji: '🦀', name: 'Draly Cangrejo · ¡Atrapa a Fénec!', host: '/host-teamcrab.html' },
-    'trapdoor':   { emoji: '🕳️', name: 'Las Trampillas', host: '/host-trapdoor.html' },
-    'mochi-mash': { emoji: '🍡', name: 'Mochi Mash', host: '/host.html' },
-    'pinata':     { emoji: '🐯', name: 'Piñata Tigre', host: '/host-pinata.html' },
-    'dragon-eye': { emoji: '🐉', name: 'Vuelo del Dragón', host: '/host-dragon.html' },
-    'monopoly':   { emoji: '🎲', name: 'Dàfùwēng · Monopolio', host: '/host-monopoly.html' },
+    'trapdoor':   { emoji: '🕳️', name: 'Draly Trampillas', host: '/host-trapdoor.html' },
+    'mochi-mash': { emoji: '🍡', name: 'Draly Mochi · La Terraza del Mochi', host: '/host.html' },
+    'pinata':     { emoji: '🐯', name: 'Draly Piñata · La Fiesta de las Piñatas', host: '/host-pinata.html' },
+    'dragon-eye': { emoji: '🐉', name: 'Draly Vuelo · La Carrera del Cielo', host: '/host-dragon.html' },
+    'monopoly':   { emoji: '🎲', name: 'Draly Tablero · El Gran Tablero de Dubái', host: '/host-monopoly.html' },
   };
   const game = new URLSearchParams(location.search).get('game') || 'kingdoms';
   // Launched from /maestro: the host page must keep ?livegame=1 so the class is pulled into the game.

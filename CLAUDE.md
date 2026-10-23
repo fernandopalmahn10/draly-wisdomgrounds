@@ -893,18 +893,18 @@ the checklist for any new game mode.
   to «⏸ Pausa»; «−30 s» never ends a round by itself (it stops at a few seconds left and is greyed out there or once
   «¡FINAL!» is on), and landing inside the last 30 s starts that game's last-30-s moment as if the clock got there.
   Games that count in rounds (Las Trampillas, Ojos de Halcón) take away rounds the same way «+30 s» adds them.
-- **Game roster (his decision 2026-10-10):** Reinos de Colores (new, `kingdoms`), Dragones Pintores (new 2026-10-11,
-  `paint`), Batalla de Nieve en Ski Dubái (new 2026-10-12, `snow`), La Gran Fuga de Dubái
-  (new 2026-10-13, `escape`), «Ojos de Halcón» (new 2026-10-13, `halcon`: Super Mario Party «Looking for Love» played
+- **Game roster (his decision 2026-10-10):** Reinos de Colores (now «Draly Reinos»; new, `kingdoms`), Dragones Pintores (now «Draly Pintores»; new 2026-10-11,
+  `paint`), Batalla de Nieve en Ski Dubái (now «Draly Nieve»; new 2026-10-12, `snow`), La Gran Fuga de Dubái
+  (now «Draly Fuga»; new 2026-10-13, `escape`), «Ojos de Halcón» (now «Draly Halcón»; new 2026-10-13, `halcon`: Super Mario Party «Looking for Love» played
   in boards of 4, the first of his Mario Party series, one minigame at a time from
   https://www.youtube.com/watch?v=y9BKCVx_mNk; it replaced the first attempt «Ojo de Halcón», `look`, retired and
   removed 2026-10-14, his decision; recover it from git commit 83dbcbd04 if ever needed) + the 5 kept games Mochi Mash
-  (remade 2026-10-14 as «La Terraza del Mochi», Fuego vs Mar feed their Dragoncitos, Mario Party ceremony; Panda vs Kitsune
-  retired), Dàfùwēng · Monopolio Chino, 6-7 Swing (remade 2026-10-15 as «La Balanza de Oro»: rapid-fire sums that are always
+  (now «Draly Mochi»; remade 2026-10-14 as «La Terraza del Mochi», Fuego vs Mar feed their Dragoncitos, Mario Party ceremony; Panda vs Kitsune
+  retired), Dàfùwēng · Monopolio Chino (now «Draly Tablero»), 6-7 Swing (now «Draly 67»; remade 2026-10-15 as «La Balanza de Oro»: rapid-fire sums that are always
   6 or 7, digits or pinyin, two giant buttons «6 · liu» / «7 · qi», Fuego vs Mar fill a golden balance, Dralingo does the 6-7;
   the blocky meme figure retired; its stars are Dralingo's friends «Liu» the 6 and «Qi» the 7, his pick 2026-10-20
   «same style, our own» = blue, blocky, brick-built number buddies with big goofy eyes that a kid reads as «¡el 67!»,
-  drawn as OUR design, never a copy of the Roblox «Steal a Brainrot» 67 figure), Vuelo del Dragón, Piñata Tigre (remade 2026-10-15 as «La Fiesta de las
+  drawn as OUR design, never a copy of the Roblox «Steal a Brainrot» 67 figure), Vuelo del Dragón (now «Draly Vuelo»), Piñata Tigre (now «Draly Piñata»; remade 2026-10-15 as «La Fiesta de las
   Piñatas»: Fuego vs Mar break a ladder of tiger piñatas, every right answer a hit with a server-judged timing meter;
   Bastón vs Arco retired) (plus the class tools Warm-up, Lectura, HSK/YCT rooms); 11 older games were retired to free room.
   The 5 kept games each get a full overhaul ("second run"); new games replace the retired ones. Quality over quantity:
@@ -926,13 +926,13 @@ the checklist for any new game mode.
   Reinos de Colores, Dragones Pintores, Batalla de Nieve and La Gran Fuga got the Mario Party ending 2026-10-16 (branch
   `ending-pass`): one shared ceremony (`js/party.js` + `css/party.css` + `core/party.js`), the last 30 s doubled, live
   news between questions; «As built · 2026-10-16» in each spec.
-  «Las Trampillas» (new 2026-10-17, `trapdoor`, #2 of the Mario Party series, his video 4:43-5:41, spec
+  «Las Trampillas» (now «Draly Trampillas»; new 2026-10-17, `trapdoor`, #2 of the Mario Party series, his video 4:43-5:41, spec
   `docs/specs/las-trampillas.md`): the whole class on one round platform whose pie slices drop like trapdoors at «0»,
   Fuego vs Mar; tap the floor to run (the server moves everyone); a right answer = wings that save you once; the
   fallen answer in the pit to come back; each round a kingdom scores its share standing out of 10 (Final Round ×2: a
   share, never a head count, so a kingdom with one kid more never wins by size); three arenas, «Otra ronda» = the next;
   the shared Mario Party ending (it has no last-30-s frenzy: the Final Round is its climax).
-  «¡No despiertes a Dralingo!» (new 2026-10-22, `dormilon`, #3 of the Mario Party series, his video 6:14-7:29 «Don't Wake
+  «¡No despiertes a Dralingo!» (now «Draly Siesta · ¡No despiertes a Dralingo!»; new 2026-10-22, `dormilon`, #3 of the Mario Party series, his video 6:14-7:29 «Don't Wake
   Wiggler», spec `docs/specs/no-despiertes-a-dralingo.md`): Dralingo asleep in a Chinese palace bedroom, boards of 4 take
   turns; a hidden wake limit per night: whoever wakes him loses ALL their points, then a new night; the last 30 s every
   tickle +2; its own board ceremony + the projector's champions and class podium. **v2 (2026-10-22, his pick after
@@ -1024,7 +1024,11 @@ the checklist for any new game mode.
   Reinos · Draly Mochi · La Terraza del Mochi · Draly Tablero · El Gran Tablero de Dubái (no «Monopolio»: another
   company's brand) · Draly Vuelo · La Carrera del Cielo · Draly Piñata · La Fiesta de las Piñatas · Draly 67 · La
   Balanza de Oro. Renames follow «Removing or renaming something kids saw»; gameType ids never change. «Draly» is the
-  platform's name, never the mascot's (he is Dralingo).
+  platform's name, never the mascot's (he is Dralingo). The list (full + short + the old names) lives in
+  `core/game-names.js`: a new game joins it, and `node scripts/test-game-names.js` checks every page that names a game
+  (games.html, /maestro's launcher, sets/packs, the projector titles, the phone lobbies, the ceremonies) and that no
+  old name or «Monopolio» is left where kids and teachers read. Kids' inboxes keep old invites («La maestra está
+  abriendo Mochi Mash ahora…»): /api/homework/inbox shows them with today's name (renamed 2026-10-23).
 - **Feelings at the end of class** (his words 2026-10-14, after playing Ojos de Halcón: "the Mario Party feeling is so
   important because it makes feelings at the end of a class"): every pin game ends with a Mario Party style ceremony,
   not a plain score list: «¡FINAL!», a suspenseful reveal, the winners celebrating and the others reacting, bonus stars

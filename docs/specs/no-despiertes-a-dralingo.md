@@ -1,5 +1,7 @@
 # «¡No despiertes a Dralingo!» (gameType `dormilon`) · spec
 
+**Name since 2026-10-23: «Draly Siesta · ¡No despiertes a Dralingo!»**, short «Draly Siesta» (the «Draly Party» names, his «Approve all»; `core/game-names.js`). The text below keeps the name it had when it was written.
+
 #3 of his Mario Party series (his video https://www.youtube.com/watch?v=y9BKCVx_mNk 6:14-7:29, Super Mario Party
 «Don't Wake Wiggler»), his picks 2026-10-22. Status: v1 live 2026-10-22 08:37 (219cee484, sounds ab51bf2cc); v2 «Gana
 plumas, luego frota con el dedo» live the same day (6254b16c9, giggle d774da097: "it feels more interactive now");
