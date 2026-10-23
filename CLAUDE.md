@@ -1018,9 +1018,13 @@ the checklist for any new game mode.
   play), which a question would interrupt. Either way answers buy the power, and the play shows who earned what.
 - **«Draly Party»** (his naming 2026-10-23: "good, cool nomenclatures to every mini game that involve the words DRALY"):
   the minigames are the «Draly Party» games (like Mario Party), each with a name that carries Draly, e.g. «Draly
-  Cangrejo · ¡Atrapa a Fénec!». A new game gets its Draly name from the start; the existing games get theirs once he
-  approves the list (renames follow «Removing or renaming something kids saw»). «Draly» is the platform's name, never
-  the mascot's (he is Dralingo).
+  Cangrejo · ¡Atrapa a Fénec!». A new game gets its Draly name from the start. The existing games' names, approved by
+  him 2026-10-23 («Approve all»): Draly Siesta · ¡No despiertes a Dralingo! · Draly Trampillas · Draly Halcón · Draly
+  Fuga · Las rutas de la fuga · Draly Nieve · Batalla en Ski Dubái · Draly Pintores · El Cielo de las Maravillas · Draly
+  Reinos · Draly Mochi · La Terraza del Mochi · Draly Tablero · El Gran Tablero de Dubái (no «Monopolio»: another
+  company's brand) · Draly Vuelo · La Carrera del Cielo · Draly Piñata · La Fiesta de las Piñatas · Draly 67 · La
+  Balanza de Oro. Renames follow «Removing or renaming something kids saw»; gameType ids never change. «Draly» is the
+  platform's name, never the mascot's (he is Dralingo).
 - **Feelings at the end of class** (his words 2026-10-14, after playing Ojos de Halcón: "the Mario Party feeling is so
   important because it makes feelings at the end of a class"): every pin game ends with a Mario Party style ceremony,
   not a plain score list: «¡FINAL!», a suspenseful reveal, the winners celebrating and the others reacting, bonus stars
