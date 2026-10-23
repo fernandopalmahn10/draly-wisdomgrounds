@@ -615,7 +615,12 @@
     else if (role === 'cap') bigCard(S() ? S().head(skinOf(g.you)) : null, '⭐ ¡Eres el Capitán!', runName ? '🦊 ' + runName + ' es Fénec: ¡llévale el cangrejo encima!' : 'Fuiste el mejor: ¡tú manejas el cangrejo!', 'gold me', 1600);
     else if (role === 'mart') bigCard(A + 'hammer.webp', runName ? '🦊 ¡' + runName + ' es Fénec!' : '¡A martillar! 🔨 ×' + charges, runName ? '¡Martíllalo! 🔨 ×' + charges + (capName ? ' · ⭐ Capitán: ' + capName : '') : capName ? '⭐ Capitán: ' + capName : 'Toca a Fénec cuando tu sombra esté sobre él', 'gold', 1600);
     else bigCard(A + 'crab-hero.webp', '¡A martillar!', 'Esta ronda miras · responde bien para subir al cangrejo', 'calm', 1600);
-    if (role === 'runner') { msg('🦊 ¡Prepárate para correr!', 'Mira las sombras de los martillos: ¡ahí caen!', 'go', A + 'fenec-back.webp'); sfx(A + 'giggle.mp3', 0.5); return; }
+    if (role === 'runner') {
+      msg('🦊 ¡Prepárate para correr!', 'Mira las sombras de los martillos: ¡ahí caen!', 'go', A + 'fenec-back.webp');
+      $('tc-touch').classList.add('live');   // (the stage takes his finger already: put down now, it runs him from «¡YA!»; never a page pan)
+      sfx(A + 'giggle.mp3', 0.5);
+      return;
+    }
     msg('¡A martillar! 🔨', role === 'cap' ? '⭐ Tú manejas el cangrejo' : role === 'mart' ? 'Tienes ' + charges + (charges === 1 ? ' martillazo' : ' martillazos') : '👀 Esta ronda miras', 'go', A + 'hammer.webp');
   }
 
