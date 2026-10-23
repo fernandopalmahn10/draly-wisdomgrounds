@@ -10,6 +10,10 @@
 // planks is where it lands, and it bonks him when its shadow is on him at the impact.
 // window.CrabStage = { Stage, head, fig, freeze, preload }. Modes: 'phone' (the kid's screen), 'tile' (a projector
 // crew), 'big' (the projector's lobby / a one-crew class).
+// v3 «1 contra 3» (his idea 2026-10-23): setRunner(k, me) — a kid is Fénec this round. me = MY phone runs him: the
+// video's camera (Fénec from behind on the dock, the crab and its hammers in front), runTarget(x) / dash(dir) / myX()
+// (the phone is the truth for where he is), stunMe(ms) after a hit; a hammer's slam(k, x, ms, onLand) calls onLand at
+// the landing ON THIS SCREEN (his verdict). Others: runAt(x) = the relayed spot, drawn ahead by his speed.
 (function (root) {
   'use strict';
   const A = '/assets/teamcrab/';
@@ -18,7 +22,7 @@
   const HB = () => root.HalconBoard || null;
   const head = (skin) => (HB() ? HB().head(HB().skinOk ? HB().skinOk(skin) : skin) : '/assets/saga/avatars/dralingo.webp');
   const fig = (skin, pose) => (HB() ? HB().art(skin, pose || 'idle', pose === 'win') : '/assets/dralingo/hello.webp');
-  const FENEC = { idle: 'fenec-idle', left: 'fenec-left', right: 'fenec-right', bonk: 'fenec-bonk', spill: 'fenec-spill', laugh: 'fenec-laugh', run: 'fenec-run', kick: 'fenec-kick', crouch: 'fenec-crouch' };
+  const FENEC = { idle: 'fenec-idle', left: 'fenec-left', right: 'fenec-right', bonk: 'fenec-bonk', spill: 'fenec-spill', laugh: 'fenec-laugh', run: 'fenec-run', kick: 'fenec-kick', crouch: 'fenec-crouch', back: 'fenec-back', backrun: 'fenec-backrun' };
   const PEND = { idle: 'pendulo-idle', angry: 'pendulo-angry', eat: 'pendulo-eat', squeak: 'pendulo-squeak', dizzy: 'pendulo-dizzy' };
   // what Fénec says (cast.md: «¡Mías, mías!», «¡No me atrapan!», «¡La próxima vez, Dralingo!»; funny, never mean)
   const LINES = {
@@ -33,7 +37,8 @@
   function img(cls, src) { const i = el('img', cls); i.alt = ''; i.draggable = false; if (src) i.src = src; return i; }
 
   function Stage(box, o) {
-    this.o = Object.assign({ reach: 1.0, speed: 4.2, hit: 0.45, fall: 350 }, o || {});
+    this.o = Object.assign({ reach: 1.0, speed: 4.2, hit: 0.45, fall: 350, vs: { run: 1.5, dashX: 1.2, dashMs: 220 } }, o || {});
+    this.runK = null; this.runMe = false; this.me = null; this.runS = [];   // («1 contra 3»: the runner this round)
     this.box = box;
     this.timers = [];
     this.crew = [];           // [{ k, skin, name, me, dome, arm, ham, shadow, st, off, x, charges }]
@@ -61,6 +66,10 @@
     this.fenStars = el('div', 'tcs-dizzy hidden');
     for (let i = 0; i < 3; i++) this.fenStars.appendChild(el('i', 's' + i, '★'));
     this.fen.append(this.fenImg, this.fenStars);
+    this.runTag = el('b', 'tcs-runtag hidden');      // (the runner's face and name over Fénec: the crew's screens)
+    this.runTagImg = img('tcs-rthead');
+    this.runTagName = el('span');
+    this.runTag.append(el('i', null, '🦊'), this.runTagImg, this.runTagName);
     this.hams = el('div', 'tcs-hams');
     this.fxl = el('div', 'tcs-fx');
     this.under = el('div', 'tcs-under');           // (the bonk's rays and the dust: behind Fénec)
@@ -68,7 +77,7 @@
     this.pbubble = el('div', 'tcs-bubble p hidden');
     this.band = el('div', 'tcs-band hidden');
     this.reacts = el('div', 'tcs-reacts');
-    r.append(this.bg, this.pend, this.rig, this.arms, this.reach, this.shadows, this.under, this.fen, this.hams, this.fxl, this.bubble, this.pbubble, this.reacts, this.band);
+    r.append(this.bg, this.pend, this.rig, this.arms, this.reach, this.shadows, this.under, this.fen, this.runTag, this.hams, this.fxl, this.bubble, this.pbubble, this.reacts, this.band);
     box.appendChild(r);
     this.fit();
     if (root.ResizeObserver) { this.ro = new ResizeObserver(() => this.fit()); this.ro.observe(box); }
@@ -98,6 +107,7 @@
     const iw = wide ? 1600 : 1000, ih = wide ? 900 : 1000;
     // a tall phone stage (the play window) frames the action tighter, like the video's camera: less sky, a bigger crab
     const tall = H / W > 1.15;
+    this.root.classList.toggle('tall', tall);          // (a tall phone: my runner is drawn closer to the camera)
     const sc = Math.max(W / iw, H / ih) * (tall ? 1.22 : 1), pw = iw * sc, ph = ih * sc, pl = (W - pw) / 2, pt = H - ph;
     this.bg.style.backgroundImage = 'url(' + A + (wide ? 'beach-wide.webp' : 'beach-square.webp') + ')';
     Object.assign(this.bg.style, { width: pw + 'px', height: ph + 'px', left: pl + 'px', top: pt + 'px' });
@@ -171,6 +181,7 @@
     });
     this.layoutCrew();
     this.setCaptain(this.captain);
+    this.markRunner();
     this.crew.forEach((c) => { this.pips(c); this.paintHam(c, false); });
   };
   Stage.prototype.cr = function (k) { return this.crew.find((c) => c.k === k) || null; };
@@ -187,6 +198,7 @@
       c.dy = g.crabT + g.crabH * 0.5 + (Math.abs(fx - 0.5) * g.crabH * 0.1);
       c.d = d;
       Object.assign(c.dome.style, { width: d + 'px', height: d + 'px', left: c.rx - d / 2 + 'px', top: c.dy - d / 2 + 'px' });
+      c.dome.style.setProperty('--dd', d + 'px');
       Object.assign(c.ham.style, { width: g.hamW + 'px', height: g.hamH + 'px' });
       Object.assign(c.shadow.style, { width: g.shadowW + 'px', height: Math.max(8, g.shadowW * 0.3) + 'px', top: g.feet - Math.max(8, g.shadowW * 0.3) * 0.6 + 'px' });
     });
@@ -240,7 +252,8 @@
     this.paintArm(c, p);
     // the shadow on the planks = where it lands (its width = the hit zone): an armed / falling hammer casts one
     const sh = c.st === 'armed' || c.st === 'fall';
-    c.shadow.style.opacity = sh ? (c.st === 'fall' ? '1' : c.me ? '0.95' : '0.38') : '0';
+    c.shadow.style.opacity = sh ? (c.st === 'fall' ? '1' : c.me ? '0.95' : this.runMe ? '0.6' : '0.38') : '0';
+    if (c.shadow.classList.contains('falling') !== (c.st === 'fall')) c.shadow.classList.toggle('falling', c.st === 'fall');
     c.shadow.style.transform = `translate(${(p.x - g.shadowW / 2).toFixed(1)}px, 0) scale(${c.st === 'fall' ? 1.08 : 1})`;
   };
   // the arm: from under its cockpit (which walks with the crab) to the claw (the hammer's top centre)
@@ -288,10 +301,12 @@
       this.root.classList.toggle('walk-l', walking && this.walkDir < 0);
       this.root.classList.toggle('walk-r', walking && this.walkDir > 0);
     }
-    // Fénec: his plan (run = exactly from x0 to x1 over its time)
+    // Fénec: his plan (run = exactly from x0 to x1 over its time); in «1 contra 3» the runner's own phone, or his relay
     const f = this.f;
     let fx = f.x;
-    if (f.mode === 'run') { const now = Date.now(); const p = f.t1 > f.t0 ? clamp((now - f.t0) / (f.t1 - f.t0), 0, 1) : 1; fx = f.x0 + (f.x1 - f.x0) * p; }
+    if (this.runMe && this.me) fx = this.stepMe(dt);
+    else if (this.runK != null && this.runS.length) fx = this.relayX(dt);
+    else if (f.mode === 'run') { const now = Date.now(); const p = f.t1 > f.t0 ? clamp((now - f.t0) / (f.t1 - f.t0), 0, 1) : 1; fx = f.x0 + (f.x1 - f.x0) * p; }
     if (Math.abs(fx - this.fx) > 0.0005) { this.fx = fx; this.placeFenPx(); }
     if (moved) this.paintAll();
   };
@@ -327,9 +342,9 @@
     this.paintHam(c, true, 90);
   };
   // the slam: it falls on x over ms (shadow → hammer), then the impact (dust, splinters, a shake)
-  Stage.prototype.slam = function (k, x, ms) {
+  Stage.prototype.slam = function (k, x, ms, onLand) {
     const c = this.cr(k);
-    if (!c) return;
+    if (!c) { if (onLand) this.later(ms || this.o.fall, onLand); return; }
     ms = ms || this.o.fall;
     c.fallX = x != null ? x : clamp(this.crabX + c.off, 0, MAXX);
     c.off = clamp(c.fallX - this.crabX, -this.o.reach, this.o.reach);
@@ -338,6 +353,7 @@
     this.light(k);
     this.paintHam(c, !reduced(), ms);
     this.later(ms, () => {
+      if (onLand) onLand();
       if (c.st !== 'fall') { c._landing = false; return; }
       c.st = 'hit';
       this.paintHam(c, false);
@@ -390,12 +406,14 @@
     if (!g) return;
     const x = this.xPx(this.fx) - g.fenH * 0.75;
     this.fen.style.transform = `translateX(${x.toFixed(1)}px)`;
+    // (his name rides on his legs, on the dock: never on the row of cockpits)
+    if (this.runK != null && !this.runMe) this.runTag.style.transform = `translate(${(this.xPx(this.fx)).toFixed(1)}px, ${Math.min(g.feet - g.fenH * 0.08, g.H - 4).toFixed(1)}px) translate(-50%, -100%)`;
     if (this.bubble && !this.bubble.classList.contains('hidden')) this.placeBubble();
   };
   Stage.prototype.placeFen = function (x) { this.fx = x; this.f = { mode: 'idle', x, x0: x, x1: x, dir: 1, t0: 0, t1: 0 }; this.placeFenPx(); };
   // ev: { mode, x, x0, x1, dir, ms (left), dur }
   Stage.prototype.fenec = function (ev) {
-    if (!ev) return;
+    if (!ev || this.runK != null) return;
     const now = Date.now();
     const f = { mode: ev.mode, x: ev.x, x0: ev.x0, x1: ev.x1, dir: ev.dir || 1, t0: now, t1: now + (ev.ms || 0) };
     if (ev.mode === 'run') { f.t0 = now - Math.max(0, (ev.dur || 0) - (ev.ms || 0)); f.t1 = f.t0 + (ev.dur || 1); }
@@ -515,7 +533,110 @@
       });
       if (c && !reduced()) { c.dome.classList.remove('glow'); void c.dome.offsetWidth; c.dome.classList.add('glow'); this.later(1500, () => c.dome.classList.remove('glow')); }
     });
-    this.later(ms + 200, () => this.root.classList.remove('bonking'));
+    this.later(ms + 200, () => { this.root.classList.remove('bonking'); if (this.runK != null) this.runPose(); });
+  };
+  // ---------- «1 contra 3»: a kid is Fénec this round ----------
+  // k = the runner (null = the computer's Fénec again); me = my phone runs him (the camera from behind); x = his start
+  Stage.prototype.setRunner = function (k, me, x, name, skin) {
+    if (k == null && this.runK == null) return;          // (the computer's Fénec keeps his pose: crew mode never notices)
+    this.runK = k != null ? k : null;
+    this.runMe = this.runK != null && !!me;
+    this.runS = [];
+    this.root.classList.toggle('vs-run', this.runK != null);
+    this.root.classList.toggle('run-me', this.runMe);
+    this.markRunner();
+    this.fen.classList.remove('crouch', 'running', 'stunned', 'dashing');
+    this.fenStars.classList.add('hidden');
+    if (this.runK == null) { this.me = null; this.runTag.classList.add('hidden'); this.fenPose('idle'); this.fen.classList.remove('flip'); if (this.g) this.placeFenPx(); return; }
+    const sx = clamp(x != null ? x : this.fx, 0, MAXX);
+    this.f = { mode: 'idle', x: sx, x0: sx, x1: sx, dir: 1, t0: 0, t1: 0 };
+    this.fx = sx;
+    this.me = this.runMe ? { x: sx, tx: sx, dashTo: null, dashFrom: 0, dashAt: 0, stunUntil: 0, dir: 1, moving: false } : null;
+    if (!this.runMe) { this.runS = [{ t: Date.now(), x: sx }]; this.runTagName.textContent = name || ''; this.runTagImg.src = head(skin || 'dralingo'); }
+    this.runTag.classList.toggle('hidden', this.runMe);
+    this.runPose();
+    if (this.g) this.placeFenPx();
+  };
+  // the runner is out on the dock this round: his cockpit stands empty (a 🦊 in the glass)
+  Stage.prototype.markRunner = function () { this.crew.forEach((c) => c.dome.classList.toggle('running', this.runK != null && c.k === this.runK)); };
+  Stage.prototype.runPose = function () {
+    if (this.runK == null) return;
+    const m = this.me;
+    if (this.runMe) { this.fenPose(m && m.moving ? 'backrun' : 'back'); this.fen.classList.toggle('flip', !!(m && m.dir < 0)); }
+    else { const v = this._rv || 0; this.fenPose(Math.abs(v) > 0.0004 ? (v < 0 ? 'left' : 'right') : 'idle'); this.fen.classList.remove('flip'); }
+  };
+  // my finger: he runs there at his speed (never faster: the server clamps the same)
+  Stage.prototype.runTarget = function (x) { if (this.me) this.me.tx = clamp(x, 0, MAXX); };
+  Stage.prototype.myX = function () { return this.me ? Math.round(this.me.x * 1000) / 1000 : null; };
+  Stage.prototype.stepMe = function (dt) {
+    const m = this.me, now = Date.now(), v = this.o.vs || {};
+    let moving = false;
+    if (now < m.stunUntil) { m.tx = m.x; }
+    else if (m.dashTo != null) {
+      const p = clamp((now - m.dashAt) / Math.max(1, v.dashMs || 220), 0, 1);
+      m.x = m.dashFrom + (m.dashTo - m.dashFrom) * p;
+      moving = true;
+      if (p >= 1) { m.dashTo = null; m.tx = m.x; this.fen.classList.remove('dashing'); }
+    } else {
+      const step = ((v.run || 1.5) * dt) / 1000, d = m.tx - m.x;
+      if (Math.abs(d) > 0.004) { m.x = Math.abs(d) <= step ? m.tx : m.x + Math.sign(d) * step; m.dir = Math.sign(d); moving = true; }
+    }
+    if (moving !== m.moving) { m.moving = moving; this.runPose(); }
+    else if (moving && this.fen.classList.contains('flip') !== (m.dir < 0)) this.runPose();
+    return m.x;
+  };
+  // a dash: a quick burst (dir -1 / 1); false when he can't (stunned, already dashing)
+  Stage.prototype.dash = function (dir) {
+    const m = this.me, v = this.o.vs || {};
+    if (!m || Date.now() < m.stunUntil || m.dashTo != null) return false;
+    m.dashFrom = m.x; m.dashTo = clamp(m.x + (dir < 0 ? -1 : 1) * (v.dashX || 1.2), 0, MAXX); m.dashAt = Date.now(); m.dir = dir < 0 ? -1 : 1;
+    this.dashFx(m.dir);
+    return true;
+  };
+  Stage.prototype.dashFx = function (dir) {
+    if (reduced()) return;
+    this.fen.classList.toggle('dash-l', dir < 0);
+    this.fen.classList.remove('dashing'); void this.fen.offsetWidth; this.fen.classList.add('dashing');
+    this.later(420, () => this.fen.classList.remove('dashing'));
+  };
+  // the relayed runner (a crewmate's phone or the projector): his last spots, drawn ahead by his speed over the trip
+  Stage.prototype.runAt = function (x) {
+    const now = Date.now();
+    this.runS.push({ t: now, x: clamp(x, 0, MAXX) });
+    while (this.runS.length > 6 || (this.runS.length > 2 && now - this.runS[0].t > 600)) this.runS.shift();
+  };
+  Stage.prototype.relayX = function (dt) {
+    const S2 = this.runS, a = S2[0], b = S2[S2.length - 1], now = Date.now();
+    let v = S2.length > 1 && b.t > a.t ? (b.x - a.x) / (b.t - a.t) : 0;                          // (spots per ms)
+    if (now - b.t > 400) v = 0;
+    const want = clamp(b.x + v * clamp(now - b.t + (this.o.lead || 120), 0, 350), 0, MAXX);
+    const k = clamp(dt / 90, 0, 1);
+    const x = this.fx + (want - this.fx) * k;
+    const was = this._rv || 0;
+    this._rv = v;
+    if ((Math.abs(v) > 0.0004) !== (Math.abs(was) > 0.0004) || Math.sign(v) !== Math.sign(was)) this.runPose();
+    return x;
+  };
+  // a hit on MY runner: he is stunned (dizzy stars, he can't move for ms); the words fly out of his sack to the crab
+  Stage.prototype.stunMe = function (ms, words) {
+    const g = this.g, m = this.me;
+    if (m) { m.stunUntil = Date.now() + (ms || 1000); m.dashTo = null; m.tx = m.x; }
+    this.fen.classList.remove('stunned'); void this.fen.offsetWidth; this.fen.classList.add('stunned');
+    this.fenStars.classList.remove('hidden');
+    this.shake('big');
+    this.later(ms || 1000, () => { this.fen.classList.remove('stunned'); this.fenStars.classList.add('hidden'); });
+    if (!g || reduced()) return;
+    const px = this.xPx(this.fx), bx = this.bodyPx(this.crabX);
+    (words || []).slice(0, 4).forEach((w, i) => {
+      const chip = el('b', 'tcs-word', w);
+      chip.style.left = px + 'px'; chip.style.top = g.feet - g.fenH * 0.5 + 'px';
+      const dest = this.crew[i % Math.max(1, this.crew.length)];
+      chip.style.setProperty('--dx', Math.round((dest ? bx + dest.rx : g.W / 2) - px) + 'px');
+      chip.style.setProperty('--dy', Math.round((dest ? dest.dy : g.H * 0.1) - (g.feet - g.fenH * 0.5)) + 'px');
+      chip.style.animationDelay = (i * 120) + 'ms';
+      this.fxl.appendChild(chip);
+      this.later(1700 + i * 120, () => chip.remove());
+    });
   };
   // ---------- El Péndulo ----------
   Stage.prototype.paintAnger = function () {
@@ -629,6 +750,7 @@
     }
   };
   Stage.prototype.reset = function () {
+    this.setRunner(null);
     this.crabImg.src = A + 'crab-body.webp';
     this.root.classList.remove('broken', 'bonking', 'walking', 'walk-l', 'walk-r');
     this.fen.classList.remove('runoff', 'crouch', 'running', 'flip');

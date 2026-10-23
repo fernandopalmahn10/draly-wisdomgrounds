@@ -9,6 +9,11 @@
 // hammer can't slam, «Terminar» → «¡FINAL!» → the endings, a projector that reconnects after the end gets its show again.
 // Game 2 («Otra ronda» with «🤖 Probar con robots», the teacher only): 1 kid + 3 robots = one crew; the robots answer and
 // slam; the end has them in their crew's line only: never in the rows, the stars, the podium or the leaderboard.
+// Game 3 («1 contra 3», v3: the teacher's «🎮 Modo», a kid can't pick it): 4 new kids; the phones' lobby hears the mode;
+// the window's best answerer is Fénec (his right answers = dashes); his phone streams where he is (relayed to the crew
+// and the projector, a crewmate's stream ignored); a hammer shows its shadow 0.75 s and waits for HIS verdict: away on
+// his screen = a miss even when his last stream was under it, under it = a hit that stuns him (no hit while stunned);
+// a dash; «¡Tiempo!» banks his seconds; the next round another kid runs; the end has «Mejor corredor» and no catch.
 'use strict';
 const assert = require('assert');
 const { io } = require('socket.io-client');
@@ -299,6 +304,123 @@ try { (require('../core/packs').loadPack('yct1-familia-r1').questions || []).for
   const robOffP = next(host2, 'tc:robots', 2000);
   host2.emit('host:tc-robots', { pin, on: false });
   ok(!(await robOffP).on, 'a second tap sends the robots home');
+
+  // ---------- game 3: «1 contra 3» ----------
+  try { a.s.disconnect(); } catch (_) {}
+  {
+  const vk = [];
+  for (let i = 0; i < 4; i++) {
+    const sk = connect();
+    const j = await ack(sk, 'player:join', { pin, name: 'Zorro' + i, avatar: '🐉' });
+    ok(j && j.ok, 'Zorro' + i + ' joined');
+    const kd = { s: sk, name: 'Zorro' + i, init: null, q: null, st: null };
+    sk.on('tc:init', (d) => { kd.init = d; });
+    sk.on('tc:q', (d) => { kd.q = d; });
+    sk.on('tc:qx', () => { kd.q = null; });
+    sk.on('state', (d) => { kd.st = d; });
+    guard(sk, kd.name);
+    vk.push(kd);
+  }
+  vk[0].s.emit('host:tc-mode', { pin, mode: 'vs' });
+  ok(await none(host2, 'tc:mode', 600), 'only the teacher picks the mode');
+  const modeP = next(host2, 'tc:mode', 2000);
+  const stP = next(vk[1].s, 'state', 3000, (d) => d && d.tcMode === 'vs');
+  host2.emit('host:tc-mode', { pin, mode: 'vs' });
+  ok((await modeP).mode === 'vs', '«🎮 Modo» → «1 contra 3»');
+  ok((await stP).tcMode === 'vs', 'the phones\' lobby hears the mode (the steps of «1 contra 3»)');
+  const hi3P = next(host2, 'tc:init', 4000);
+  host2.emit('host:start', { pin });
+  const hi3 = await hi3P;
+  ok(hi3.mode === 'vs' && hi3.boards.length === 1 && hi3.boards[0].seats.length === 4 && hi3.rules.vs && hi3.rules.vs.fall === 750, 'the game is dealt in «1 contra 3» (the rules carry the runner\'s)');
+  await next(host2, 'tc:intro', 6000);
+  host2.emit('host:tc-skip', { pin });
+  await sleep(900);
+  const kOf3 = (x) => x.init && x.init.you && x.init.you.k;
+  const ansRight = async (x) => { for (let t = 0; t < 60 && !x.q; t++) await sleep(50); if (!x.q) return false; await sleep(700); const q = x.q; const p = next(x.s, 'tc:qr', 3000).catch(() => null); x.s.emit('player:tc-answer', { pin, qid: q.qid, idx: q.answers.indexOf(right.get(q.text)) }); const r = await p; for (let t = 0; t < 40 && x.q && x.q.qid === q.qid; t++) await sleep(50); return !!(r && r.ok); };
+  // Zorro0: 3 right (the runner), Zorro2: 2 right (Capitán, 2 hammers), Zorro1: 1 right (a martillero)
+  ok(await ansRight(vk[0]) && await ansRight(vk[0]) && await ansRight(vk[0]), 'Zorro0 answers three right');
+  ok(await ansRight(vk[2]) && await ansRight(vk[2]) && await ansRight(vk[1]), 'the crewmates answer (2 and 1 right)');
+  const rolesP = next(vk[1].s, 'tc:roles', 4000);
+  const pwP = next(vk[0].s, 'tc:round', 6000, (d) => d.phase === 'pw');
+  host2.emit('host:tc-skip', { pin });
+  const ro = await rolesP;
+  ok(ro.runner === kOf3(vk[0]) && ro.dashes === 3 && !ro.mart.some((x) => x.k === ro.runner), 'the best answerer is Fénec this round (3 right = 3 dashes), with no hammer', ro);
+  ok(ro.captain === kOf3(vk[1]) || ro.captain === kOf3(vk[2]), 'the Capitán is the best of the others');
+  await pwP;
+  const runner = vk[0], slammer = ro.mart.slice().sort((p, q) => q.charges - p.charges)[0];
+  const sl = vk.find((x) => kOf3(x) === slammer.k);
+  // his phone streams where he is: relayed to the crew and the projector; a crewmate's stream is ignored
+  const goal = Math.max(0, ro.rx - 0.48);
+  const relP = next(vk[2].s, 'tc:runner', 3000, (d) => d.k === ro.runner && Math.abs(d.x - goal) < 0.05);
+  const relH = next(host2, 'tc:runner', 3000, (d) => d.k === ro.runner);
+  let rx = ro.rx;
+  for (let i = 1; i <= 6; i++) { rx = Math.max(0, rx - 0.08); runner.s.emit('player:tc-run', { pin, x: rx }); await sleep(70); }
+  const rel = await relP;
+  ok(Math.abs(rel.x - rx) < 0.2 && (await relH).k === ro.runner, 'his phone streams where he is: the crew and the projector see him move');
+  ok(await (vk[3].s.emit('player:tc-run', { pin, x: 0 }), none(vk[2].s, 'tc:runner', 500, (d) => d.k === kOf3(vk[3]))), 'only the runner moves the runner');
+  // a hammer on him: its shadow 0.75 s; HIS phone says he got away → a miss
+  const slamP = next(runner.s, 'tc:slam', 3000, (d) => d.k === slammer.k);
+  sl.s.emit('player:tc-slam', { pin, x: rx });
+  const sm = await slamP;
+  ok(sm.ms === 750 && sm.sid > 0, 'the runner\'s phone sees the hammer\'s shadow 0.75 s before it lands', sm);
+  const impP = next(host2, 'tc:impact', 4000, (d) => d.sid === sm.sid);
+  await sleep(sm.ms + 60);
+  runner.s.emit('player:tc-land', { pin, sid: sm.sid, x: Math.min(4, sm.x + 0.8) });
+  const imp = await impP;
+  ok(!imp.hit, '«¡Pero si lo esquivé!» never: away on his own screen = a miss (his last stream was under it)', imp);
+  // the next hammer: under it on his screen → a hit that stuns him, never the end of his round
+  await sleep(600);
+  const slam2P = next(runner.s, 'tc:slam', 3000, (d) => d.k === slammer.k);
+  sl.s.emit('player:tc-slam', { pin, x: rx });
+  const sm2 = await slam2P.catch(() => null);
+  ok(sm2, 'a second hammer (it came back up)');
+  const bonkP = next(vk[2].s, 'tc:bonk', 4000, (d) => d.sid === sm2.sid);
+  await sleep(sm2.ms + 60);
+  runner.s.emit('player:tc-land', { pin, sid: sm2.sid, x: sm2.x });
+  const bk = await bonkP;
+  ok(bk.runner === ro.runner && bk.k === slammer.k && bk.pts === 3 && bk.ms === 1000, 'under it on his screen = a hit: the slammer\'s points, he is stunned 1 s', bk);
+  // a dash
+  await sleep(1100);
+  const dashP = next(vk[2].s, 'tc:dash', 3000);
+  runner.s.emit('player:tc-dash', { pin, dir: 1 });
+  const da = await dashP;
+  ok(da.k === ro.runner && da.dashes === 2, 'a dash spends one of his dashes (the crew sees it)');
+  // «¡Tiempo!»: his seconds
+  const reP = next(vk[1].s, 'tc:runend', 6000);
+  host2.emit('host:tc-skip', { pin });
+  const re = await reP;
+  ok(re.k === ro.runner && re.secs >= 1 && !re.untouched && re.pts === re.secs && re.charges >= 2, '«¡Tiempo!»: a point for each second he survived; the dashes he kept are charges again', re);
+  // the next round: another kid runs
+  await next(vk[0].s, 'tc:round', 6000, (d) => d.phase === 'qw');
+  await sleep(400);
+  ok(await ansRight(vk[0]) && await ansRight(vk[3]), 'answers in the next window');
+  const ro2P = next(vk[1].s, 'tc:roles', 4000);
+  host2.emit('host:tc-skip', { pin });
+  const ro2 = await ro2P;
+  ok(ro2.runner === kOf3(vk[3]), 'no one runs twice before everyone has run: the best of the rest runs', ro2);
+  // a dropped runner phone: the computer runs for him (never a sitting duck); back, he gets his runner screen
+  await next(vk[3].s, 'tc:round', 4000, (d) => d.phase === 'pw');
+  const autoP = next(host2, 'tc:runner', 4000, (d) => d.k === ro2.runner);
+  vk[3].s.disconnect();
+  ok(await autoP.then(() => true).catch(() => false), 'a runner whose phone dropped is run by the computer');
+  // the end
+  const end3P = next(host2, 'game-end', 8000);
+  const kEnd3P = next(vk[0].s, 'game-end', 8000);
+  const fin3P = next(host2, 'tc:final', 3000);
+  host2.emit('host:end-now', { pin });
+  const fin3 = await fin3P;
+  ok(fin3.mode === 'vs' && fin3.boards[0].caught === null, '«¡FINAL!» in «1 contra 3»: no caught / escaped');
+  host2.emit('host:end-now', { pin });
+  const e3 = await end3P;
+  const k3 = await kEnd3P;
+  ok(e3.teamcrab.mode === 'vs' && e3.teamcrab.boards[0].stars.some((x) => x.id === 'corredor') && e3.teamcrab.boards[0].caught === null, 'the ceremony has «Mejor corredor»', e3.teamcrab.boards[0].stars);
+  ok(k3.me && k3.me.runs === 1 && k3.me.survived >= 1 && k3.teamcrab.mode === 'vs', 'my card knows I ran as Fénec', k3.me);
+  host2.emit('host:reset', { pin });
+  await sleep(300);
+  host2.emit('host:tc-mode', { pin, mode: 'crew' });
+  ok((await next(host2, 'tc:mode', 2000)).mode === 'crew', 'back to «Todos contra Fénec»');
+  vk.forEach((x) => { try { x.s.disconnect(); } catch (_) {} });
+  }
 
   ok(!leaks.length, 'no right answer, no charges in the race and no name of who missed ever reached a screen: ' + leaks.join(', '));
   [host2, a.s].forEach((s) => { try { s.disconnect(); } catch (_) {} });

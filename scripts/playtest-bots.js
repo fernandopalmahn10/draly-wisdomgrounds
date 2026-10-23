@@ -113,6 +113,7 @@ const count = (bag, ev) => { bag[ev] = (bag[ev] || 0) + 1; };
   }
 
   await sleep(800);
+  if (handler && handler.host) await handler.host(host, { pin, report, args });   // (a game's lobby step before «Empezar», e.g. a mode)
   host.emit('host:start', { pin });
   const startedAt = Date.now();
 

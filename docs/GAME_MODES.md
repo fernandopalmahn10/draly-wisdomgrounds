@@ -153,6 +153,11 @@ is on him at the impact BONKS him (+2, «trampa» +1 for a claw beside him, +1 f
 last ×2; caught (the crew got its target of words back) or he kicks the crab to pieces; each crew's ceremony (stars
 martillazo / capitán / trampa / racha) + the crews' leaderboard; «🤖 Probar con robots» (teacher, lobby) fills a crew of 1-2 phones with robot
 crewmates that play like an average kid and never count; the skill simulation `node scripts/test-teamcrab.js --sim`;
+**v3 «1 contra 3»** (branch `teamcrab-v3`, not deployed; the teacher's «🎮 Modo» in the lobby): each round the crew's
+best answerer who hasn't run yet IS Fénec (his right answers = dashes, max 3; his phone shows the video's camera, Fénec
+from behind, and is the truth for where he is: streamed ~14/s, each hammer's 0.75-s shadow judged where he was when it
+landed on his own screen, in doubt the runner wins), the others martillan; 1 point a second survived (+3 untouched), a
+hit = 3 for the slammer and a 1-s stun; «Mejor corredor» in the ceremony;
 rules `core/teamcrab.js`, server block `tc*`, phone `js/player-teamcrab.js`, projector `host-teamcrab.html` +
 `js/host-teamcrab.js`, both draw `js/teamcrab-stage.js` + `css/teamcrab.css`; spec `docs/specs/atrapa-a-fenec.md`),
 **Draly Siesta · ¡No despiertes a Dralingo!** (`dormilon`, live 2026-10-22, v2 «Gana plumas, luego frota con el dedo» live

@@ -5,6 +5,8 @@
 // back) + the round bar (questions / «¡A martillar!») + the crews' standings → «¡FINAL!» → each crew's ending (caught /
 // escaped) and champion, the crews, the class podium. Teacher buttons always work: Pausa, +30 s, −30 s, Saltar (the
 // current window), Terminar, Sonido. Test hooks: CrabHost.frame(), CrabHost.freeze(v), CrabHost.boardStage(id).
+// v3 «1 contra 3» (the lobby's «🎮 Modo», host:tc-mode): each round one kid of every crew is Fénec (his face and name
+// ride over him; he runs where his phone says), the others martillan; «¡Tiempo!» shows how long he lasted.
 (function () {
   'use strict';
   const socket = io();
@@ -32,7 +34,7 @@
   const fmtClock = (ms) => { const s = Math.max(0, Math.ceil(ms / 1000)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
 
   let pin = null, state = null, muted = false, paused = false, duration = 120, endsAt = 0, pausedLeft = 0, frenzy = false;
-  let game = null, rules = null, robots = [];
+  let game = null, rules = null, robots = [], gmode = 'crew';
   let rd = { n: 0, total: 0, phase: 'none', final: false, until: 0, ms: 1 };
   let boards = {};               // id → { view, stage, el }
   let lobbyStage = null, countStage = null, lobbyKey = '', seenKids = new Set(), clockT = null, timers = [];
@@ -132,6 +134,19 @@
   $('start-btn').addEventListener('click', () => { $('start-btn').disabled = true; socket.emit('host:start', { pin }); });
   // «🤖 Probar con robots»: 3 robot crewmates (he can try the game with one phone); a second tap takes them away
   $('robots-btn').addEventListener('click', () => { if (pin) socket.emit('host:tc-robots', { pin, on: !robots.length }); });
+  // «🎮 Modo»: «Todos contra Fénec» (v2) or «1 contra 3» (a kid is Fénec each round); it stays for «Otra ronda»
+  function paintMode(m) {
+    gmode = m === 'vs' ? 'vs' : 'crew';
+    document.querySelectorAll('.tch-mode button').forEach((x) => { const onB = x.dataset.mode === gmode; x.classList.toggle('on', onB); x.setAttribute('aria-pressed', onB ? 'true' : 'false'); });
+    document.body.classList.toggle('tch-vs', gmode === 'vs');
+    const tl = $('tagline');
+    if (tl) { if (!tl.dataset.crew) tl.dataset.crew = tl.textContent; tl.textContent = gmode === 'vs' ? '1 contra 3: cada ronda, preguntas rápidas (cada respuesta buena = un martillazo o un turbo); luego el mejor de cada cangrejo ES Fénec por 10 segundos y corre por el muelle esquivando las sombras, y los demás manejan el cangrejo y lo martillan. Todos corren por turnos. Si fallan, El Péndulo se come su martillazo.' : tl.dataset.crew; }
+    const st = document.querySelectorAll('.tch-steps li');
+    if (st[0]) { const sm0 = st[0].querySelector('small'); if (sm0) sm0.textContent = gmode === 'vs' ? '= +1 martillazo 🔨 o +1 turbo ⚡' : '= +1 martillazo 🔨'; }
+    if (st[2]) { const im = st[2].querySelector('img.fx'); if (im) im.src = A + (gmode === 'vs' ? 'fenec-back.webp' : 'fenec-idle.webp'); const sm = st[2].querySelector('small'); if (sm) sm.textContent = gmode === 'vs' ? 'el mejor de la ronda es Fénec 🦊 y corre · los demás lo martillan' : 'toca a Fénec: ¡BONK! · el mejor es ⭐ Capitán y mueve el cangrejo'; }
+  }
+  document.querySelectorAll('.tch-mode button').forEach((b) => b.addEventListener('click', () => { if (!pin) return; paintMode(b.dataset.mode); socket.emit('host:tc-mode', { pin, mode: b.dataset.mode }); }));
+  socket.on('tc:mode', (d) => paintMode(d && d.mode));
   socket.on('tc:robots', (d) => {
     robots = (d && d.on && d.robots) || [];
     const b = $('robots-btn');
@@ -175,6 +190,8 @@
     state = s;
     if (s.state === 'lobby') { renderLobby(s.players); updateStartBtn(); }
     $('robots-btn').disabled = s.state !== 'lobby';
+    document.querySelectorAll('.tch-mode button').forEach((x) => { x.disabled = s.state !== 'lobby'; });
+    if (s.state === 'lobby' && s.tcMode && s.tcMode !== gmode) paintMode(s.tcMode);
     if (s.state === 'active' && game) {
       const off = {};
       Object.values(s.players || {}).forEach((p) => { off[String(p.name).toLowerCase()] = !!p.off; });
@@ -266,7 +283,7 @@
   function addBoardEl(v, i, total) {
     const el = document.createElement('div');
     el.className = 'tch-board';
-    el.innerHTML = '<div class="tch-bstage"></div><div class="tch-bhead"><b class="tch-bname"></b><span class="tch-bcap"></span><div class="tch-bsack"><i></i></div><span class="tch-bwords"></span></div>';
+    el.innerHTML = '<div class="tch-bstage"></div><div class="tch-bhead"><b class="tch-bname"></b><span class="tch-brun"></span><span class="tch-bcap"></span><div class="tch-bsack"><i></i></div><span class="tch-bwords"></span></div>';
     $('boards').appendChild(el);
     const b = { view: v, el, stage: null, idx: i };
     el.querySelector('.tch-bname').textContent = total > 1 ? 'Cangrejo ' + (i + 1) : 'El cangrejo';
@@ -280,9 +297,12 @@
     b.stage.setCaptain(v.captain);
     b.stage.crabTo(v.crab, v.crab, true);
     if (v.fen) b.stage.fenec(v.fen);
-    (v.claws || []).forEach((c) => b.stage.claw(c.k, c.st === 'fall' ? 'armed' : c.st, c.off, c.charges));
+    (v.claws || []).forEach((c) => b.stage.claw(c.k, c.st === 'fall' || c.st === 'wait' ? 'armed' : c.st, c.off, c.charges));
     b.stage.setAnger(v.anger || 0);
     b.stage.setPlaying(rd.phase === 'pw' || rd.phase === 'pwin');
+    const run = v.runner != null && (rd.phase === 'pw' || rd.phase === 'pwin') ? (v.seats || []).find((x) => x.k === v.runner) : null;
+    b.stage.setRunner(run ? run.k : null, false, v.rx, run ? run.name : '', run ? run.skin : null);
+    paintRun(b, run ? run.name : '');
     paintCap(b);
     paintWords(b);
   }
@@ -290,8 +310,10 @@
     const s = (b.view.seats || []).find((x) => x.k === b.view.captain);
     b.el.querySelector('.tch-bcap').textContent = s ? '⭐ ' + s.name : '';
   }
+  function paintRun(b, name) { b.el.querySelector('.tch-brun').textContent = name ? '🦊 ' + name + ' corre' : ''; }
   function paintWords(b, pop) {
     const v = b.view;
+    if (gmode === 'vs') { b.el.querySelector('.tch-bsack').style.display = 'none'; b.el.querySelector('.tch-bwords').textContent = '🔨 ' + (v.bonks || 0) + (v.bonks === 1 ? ' martillazo' : ' martillazos'); return; }
     const f = b.el.querySelector('.tch-bsack i');
     f.style.width = Math.min(100, Math.round((100 * v.words) / Math.max(1, v.target))) + '%';
     b.el.querySelector('.tch-bwords').textContent = '📚 ' + v.words + ' / ' + v.target + (v.words >= v.target ? ' ✓' : '');
@@ -311,7 +333,7 @@
       const heads = document.createElement('em');
       (b ? b.view.seats : []).slice(0, 5).forEach((x) => { const im = document.createElement('img'); im.alt = ''; im.src = S.head(x.skin); heads.appendChild(im); });
       const sc = document.createElement('b');
-      sc.textContent = c.words + ' / ' + c.target + ' 📚';
+      sc.textContent = gmode === 'vs' ? (b ? (b.view.bonks || 0) : 0) + ' 🔨' : c.words + ' / ' + c.target + ' 📚';
       li.append(n, heads, sc);
       box.appendChild(li);
     });
@@ -338,7 +360,9 @@
     const c = $('round-chip');
     c.textContent = !rd.n ? '' : rd.phase === 'pw' || rd.phase === 'pwin' ? '🔨 ¡A martillar!' + (rd.final ? ' ×2' : '') : (rd.final ? '¡Ronda final!' : 'Ronda ' + rd.n + (rd.total ? ' de ' + rd.total : '')) + ' · preguntas';
     c.className = 'tch-round ' + rd.phase + (rd.final ? ' final' : '');
-    $('headline').textContent = rd.phase === 'qw' ? '¡Respondan bien para ganar martillazos! (si fallan, El Péndulo se los come)'
+    $('headline').textContent = gmode === 'vs' ? (rd.phase === 'qw' ? '¡Respondan bien! El mejor de cada cangrejo será Fénec 🦊 (si fallan, El Péndulo se come el martillazo)'
+      : rd.phase === 'pwout' ? '¡Tiempo! Ahora, a responder otra vez.' : '🦊 Fénec: ¡esquiva las sombras! · los demás: ¡cúbranle los dos lados!')
+      : rd.phase === 'qw' ? '¡Respondan bien para ganar martillazos! (si fallan, El Péndulo se los come)'
       : rd.phase === 'pwout' ? '¡Tiempo! Ahora, a responder otra vez.'
         : 'Capitán ⭐: lleva el cangrejo debajo de Fénec · los demás: ¡toquen a Fénec!';
     document.body.classList.toggle('tch-pw', rd.phase === 'pw' || rd.phase === 'pwin');
@@ -360,8 +384,11 @@
   });
   onTc('tc:init', (d) => {
     if (!d) return;
+    if (!game || game.id !== d.id) Object.keys(runEnds).forEach((k) => delete runEnds[k]);
     game = { id: d.id, phase: d.phase };
     if (d.rules) rules = d.rules;
+    if (d.mode) gmode = d.mode;
+    document.body.classList.toggle('tch-vs', gmode === 'vs');
     paused = !!d.paused;
     $('paused').classList.toggle('hidden', !paused);
     if (d.endsMs != null) { endsAt = Date.now() + d.endsMs; pausedLeft = d.endsMs; }
@@ -405,11 +432,14 @@
       if ((!again && d.n > 1) || (again && d.final && !wasFinal)) { bigBand(d.final ? '¡Ronda final! Martillazos ×2' : 'Ronda ' + d.n + ' · ¡a responder!', 'calm', 1300); sfx('whoosh', 0.4); }
       if (!again && d.n > 1) later(1500, () => { const id = pick1(Object.keys(GANG)); say(pick1(GANG[id]), id); });
     } else if (d.phase === 'pwin') {
-      bigBand('🔨 ¡A martillar!', 'go', 1300);
+      bigBand(gmode === 'vs' ? '🦊 ¡1 contra 3! ¡A martillar!' : '🔨 ¡A martillar!', 'go', 1300);
       sfx('clank', 0.75); later(120, () => sfx('start', 0.55));
     } else if (d.phase === 'pwout') {
       const n = (d.tally || []).reduce((a, x) => a + (x.bonks || 0), 0);
-      bigBand('¡Tiempo! ' + (n ? n + (n === 1 ? ' martillazo' : ' martillazos') + ' a Fénec' : 'Fénec se salvó…'), 'calm', 1300);
+      const one = Object.keys(boards).length === 1 && runEnds[Object.keys(boards)[0]];
+      if (gmode === 'vs' && one) bigBand('¡Tiempo! 🦊 ' + one.name + ' aguantó ' + one.secs + ' s' + (n ? ' · ' + n + (n === 1 ? ' martillazo' : ' martillazos') : ' ¡intacto!'), 'calm', 1500);
+      else bigBand('¡Tiempo! ' + (n ? n + (n === 1 ? ' martillazo' : ' martillazos') + ' a Fénec' : 'Fénec se salvó…'), 'calm', 1300);
+      Object.keys(runEnds).forEach((k) => delete runEnds[k]);
       sfx('pop', 0.5);
     }
     paintClock();
@@ -418,12 +448,30 @@
     const b = boards[d.b];
     if (!b) return;
     b.view.captain = d.captain;
+    b.view.runner = d.runner != null ? d.runner : null;
+    const run = d.runner != null ? (b.view.seats || []).find((x) => x.k === d.runner) : null;
+    b.stage.setRunner(run ? run.k : null, false, d.rx, run ? run.name : '', run ? run.skin : null);
+    paintRun(b, run ? run.name : '');
     b.stage.setCaptain(d.captain);
     (d.mart || []).forEach((x) => b.stage.claw(x.k, 'armed', x.off, x.charges));
     if (d.crab != null) b.stage.crabTo(d.crab, d.crab);
     paintCap(b);
   });
   onTc('tc:crab', (d) => { const b = boards[d.b]; if (b) b.stage.crabTo(d.x, d.tx); });
+  onTc('tc:runner', (d) => { const b = boards[d.b]; if (b) b.stage.runAt(d.x); });
+  onTc('tc:dash', (d) => { const b = boards[d.b]; if (b) { b.stage.dashFx(d.dir); sfx('whoosh', 0.3, 400); } });
+  // «¡Tiempo!» in «1 contra 3»: how long the runner lasted (never who got hit)
+  const runEnds = {};
+  onTc('tc:runend', (d) => {
+    const b = boards[d.b];
+    if (!b) return;
+    const s = (b.view.seats || []).find((x) => x.k === d.k);
+    runEnds[d.b] = { name: s ? s.name : '', secs: d.secs, untouched: d.untouched };
+    b.view.runner = null;
+    b.stage.setRunner(null);
+    paintRun(b, '');
+    if (Object.keys(boards).length <= 4) b.stage.say('🦊 ' + (s ? s.name : 'Fénec') + ': ' + d.secs + ' s' + (d.untouched ? ' ¡intacto! ⭐' : ''), d.untouched ? 'win' : 'calm', 1800);
+  });
   onTc('tc:steer', (d) => { const b = boards[d.b]; if (b) { b.stage.steer(d.tx); b.stage.light(d.k); } });
   onTc('tc:fen', (d) => { const b = boards[d.b]; if (b) b.stage.fenec(d); });
   onTc('tc:claw', (d) => { const b = boards[d.b]; if (b) b.stage.claw(d.k, d.st, null, d.charges); });
@@ -439,7 +487,7 @@
   onTc('tc:bonk', (d) => {
     const b = boards[d.b];
     if (!b) return;
-    b.view.words = d.words; b.view.target = d.target;
+    b.view.words = d.words; b.view.target = d.target; b.view.bonks = d.n || ((b.view.bonks || 0) + 1);
     paintWords(b, 'pop');
     b.stage.bonk(d.k, d.flying, d.pts, d.ms, d.x);
     b.el.classList.remove('bonked'); void b.el.offsetWidth; b.el.classList.add('bonked');
@@ -449,7 +497,7 @@
     const s = (b.view.seats || []).find((x) => x.k === d.k);
     if (Date.now() - lastGang > 4000) {
       lastGang = Date.now();
-      say('¡' + (s ? s.name : 'La tripulación') + ' le dio a Fénec! +' + d.pts + ' palabras 📚' + ((d.assists || []).length ? ' · ¡con trampa!' : ''), s ? null : 'fer');
+      say(d.runner != null ? '¡Martillazo de ' + (s ? s.name : 'la tripulación') + '! +' + d.pts + ' 📚' + ((d.assists || []).length ? ' · ¡le cerraron el paso! 🪤' : '') : '¡' + (s ? s.name : 'La tripulación') + ' le dio a Fénec! +' + d.pts + ' palabras 📚' + ((d.assists || []).length ? ' · ¡con trampa!' : ''), s ? null : 'fer');
     }
   });
   onTc('tc:full', (d) => { const b = boards[d.b]; if (b) { bigBand('🎒 ¡Cangrejo ' + (b.idx + 1) + ' llenó la bolsa!', 'go', 1800); sfx('win', 0.5, 2000); } });
@@ -486,7 +534,7 @@
     if (game) game.phase = 'final';
     paintMinus();
     stopMusic();
-    Object.values(boards).forEach((b) => b.stage.setPlaying(false));
+    Object.values(boards).forEach((b) => { b.stage.setPlaying(false); b.stage.setRunner(null); paintRun(b, ''); });
     document.body.classList.remove('tch-pw');
     bigBand('¡FINAL!', 'final', d.ms || 2400);
     sfx('final', 0.8);
@@ -511,27 +559,29 @@
     const n = (tc.boards || []).length;
     box.classList.toggle('one', n === 1);
     box.classList.toggle('few', n === 2);
-    const ICO = { martillo: '🔨', capitan: '⭐', trampa: '🪤', racha: '🔥' };
+    const vsEnd = tc.mode === 'vs';
+    const ICO = { martillo: '🔨', capitan: '⭐', trampa: '🪤', racha: '🔥', corredor: '🦊' };
     (tc.boards || []).forEach((bd, i) => {
       const c = document.createElement('div');
-      c.className = 'tch-champ ' + (bd.caught ? 'caught' : 'escaped');
+      c.className = 'tch-champ ' + (vsEnd ? 'vs' : bd.caught ? 'caught' : 'escaped');
       const h = document.createElement('h3');
-      h.textContent = (n > 1 ? 'Cangrejo ' + (i + 1) : 'El cangrejo') + (bd.caught ? ' · ¡Atrapado! 🎉' : ' · se escapó 😜');
+      h.textContent = (n > 1 ? 'Cangrejo ' + (i + 1) : 'El cangrejo') + (vsEnd ? ' · 1 contra 3 🦊' : bd.caught ? ' · ¡Atrapado! 🎉' : ' · se escapó 😜');
       c.appendChild(h);
       const res = document.createElement('div');
       res.className = 'tch-champ-res';
       const fx = document.createElement('img');
       fx.alt = '';
-      fx.src = A + (bd.caught ? 'fenec-run.webp' : 'fenec-kick.webp');
+      fx.src = A + (vsEnd ? 'fenec-laugh.webp' : bd.caught ? 'fenec-run.webp' : 'fenec-kick.webp');
       const cr = document.createElement('img');
       cr.alt = '';
       cr.className = 'crab';
-      cr.src = A + (bd.caught ? 'crab-hero.webp' : 'crab-broken.webp');
+      cr.src = A + (vsEnd || bd.caught ? 'crab-hero.webp' : 'crab-broken.webp');
       res.append(cr, fx);
       c.appendChild(res);
       const w = document.createElement('p');
       w.className = 'tch-champ-words';
-      w.textContent = bd.caught ? '📚 ¡' + bd.words + ' palabras recuperadas! (meta: ' + bd.target + ')' : '📚 ' + bd.words + ' de ' + bd.target + ' palabras · ¡la próxima!';
+      const runs = (bd.rows || []).reduce((a, r) => a + (r.runs || 0), 0);
+      w.textContent = vsEnd ? '🔨 ' + (bd.bonks || 0) + ((bd.bonks || 0) === 1 ? ' martillazo' : ' martillazos') + ' · 🦊 ' + runs + (runs === 1 ? ' carrera' : ' carreras') + ' como Fénec' : bd.caught ? '📚 ¡' + bd.words + ' palabras recuperadas! (meta: ' + bd.target + ')' : '📚 ' + bd.words + ' de ' + bd.target + ' palabras · ¡la próxima!';
       c.appendChild(w);
       const win = (bd.rows || []).filter((r) => (bd.winners || []).includes(r.k));
       const figs = document.createElement('div');
@@ -568,7 +618,7 @@
       li.className = c.caught ? 'caught' : '';
       const idx = (tc.boards || []).findIndex((b) => b.id === c.id);
       li.innerHTML = '<i>' + c.rank + '</i>';
-      li.appendChild(document.createTextNode((n > 1 ? 'Cangrejo ' + (idx + 1) : 'El cangrejo') + (c.caught ? ' 🎉' : '')));
+      li.appendChild(document.createTextNode((n > 1 ? 'Cangrejo ' + (idx + 1) : 'El cangrejo') + (c.caught && !vsEnd ? ' 🎉' : '')));
       const b = document.createElement('b');
       b.textContent = c.words + ' 📚';
       li.appendChild(b);
@@ -597,11 +647,12 @@
       pod.appendChild(col);
     });
     const got = (tc.boards || []).filter((b) => b.caught).length;
+    if (vsEnd) { $('end-title').textContent = '¡Se acabó la carrera! 🦊 ¿Quién corrió y martilló mejor?'; return; }
     $('end-title').textContent = !got ? '¡Fénec se escapó esta vez! 😜' : n === 1 ? '¡Atrapamos a Fénec! 🎉' : got === n ? '¡Todos atraparon a Fénec! 🎉' : '¡' + got + ' de ' + n + ' cangrejos atraparon a Fénec! 🎉';
   }
 
   window.CrabHost = {
-    frame: () => ({ pin, phase: game && game.phase, boards: Object.keys(boards).length, paused, frenzy, clock: $('clock').textContent, round: rd.n, window: rd.phase, robots: robots.length }),
+    frame: () => ({ pin, phase: game && game.phase, boards: Object.keys(boards).length, paused, frenzy, clock: $('clock').textContent, round: rd.n, window: rd.phase, robots: robots.length, mode: gmode }),
     freeze: (v) => { frozen = !!v; if (!frozen) { const q = queue; queue = []; q.forEach(([fn, d]) => fn(d)); } if (S.freeze) S.freeze(v); return queue.length; },
     boardStage: (id) => (boards[id] ? boards[id].stage : null),
   };

@@ -673,3 +673,53 @@ body.tch-pw .tch-board { border-color: #ff9a3c; }
 }
 /* a hammer going back up after its slam passes behind the cockpits (never over a face) */
 .tcs-ham.rising { z-index: 2; }
+
+/* v3 «1 contra 3» (his idea 2026-10-23): a kid is Fénec for a round. MY runner: the video's camera (Fénec from behind,
+   bigger, in front of the dock); a falling hammer's shadow has a closing ring (when it closes, it lands); a dash leaves
+   speed lines; a hit = dizzy stars, a blink. Others: the runner's face and name over Fénec. */
+.tcs.run-me .tcs-fimg { animation: none; }
+.tcs.run-me.tall .tcs-fimg { height: 118%; }
+.tcs.run-me .tcs-fen[data-pose='backrun'] .tcs-fimg { animation: tcs-run .22s ease-in-out infinite; }
+.tcs.run-me .tcs-fen[data-pose='back'] .tcs-fimg { animation: tcs-fbob 1.2s ease-in-out infinite; }
+.tcs.run-me .tcs-fen { z-index: 9; }
+.tcs.run-me .tcs-dizzy { bottom: 92%; }
+.tcs-fen.stunned .tcs-fimg { animation: tcs-stun .25s steps(2) 4 !important; filter: drop-shadow(0 0 10px rgba(255, 90, 80, .9)); }
+@keyframes tcs-stun { 50% { opacity: .45; } }
+.tcs-fen.dashing::before { content: ''; position: absolute; top: 30%; bottom: 12%; width: 80%; right: 70%; border-radius: 40%;
+  background: repeating-linear-gradient(180deg, rgba(255, 255, 255, .9) 0 4px, transparent 4px 11px); filter: blur(.5px); animation: tcs-dash .42s ease-out forwards; }
+.tcs-fen.dashing.dash-l::before { right: auto; left: 70%; }
+@keyframes tcs-dash { from { opacity: 1; transform: scaleX(1.2); } to { opacity: 0; transform: scaleX(.3); } }
+.tcs.vs-run .tcs-shadow.falling::after { content: ''; position: absolute; inset: -60% -45%; border-radius: 50%; border: 3px solid rgba(255, 70, 50, .95);
+  box-shadow: 0 0 10px rgba(255, 80, 60, .8); animation: tcs-close var(--tcfall, .75s) linear forwards; }
+.tcs.vs-run .tcs-shadow.falling { background: radial-gradient(ellipse, rgba(120, 10, 0, .9) 0 36%, rgba(255, 60, 40, .5) 56%, rgba(255, 60, 40, 0) 72%); }
+@keyframes tcs-close { from { transform: scale(1); opacity: .5; } to { transform: scale(.32); opacity: 1; } }
+.tcs-runtag { position: absolute; left: 0; top: 0; z-index: 10; display: flex; align-items: center; gap: 4px; padding: 2px 8px 2px 4px; border-radius: 999px;
+  background: #ff8a1f; color: #fff; font: 900 clamp(11px, 2.8vmin, 20px)/1.1 'Nunito', sans-serif; box-shadow: 0 2px 0 #9c4a00, 0 0 0 2px #fff; white-space: nowrap; pointer-events: none; }
+.tcs-runtag i { font-style: normal; }
+.tcs-runtag img { width: 1.5em; height: 1.5em; border-radius: 50%; object-fit: cover; background: #fff3d6; }
+.tcs-runtag.hidden { display: none; }
+.tcs.tcs-tile .tcs-runtag { font-size: clamp(10px, 1.1vw, 15px); }
+/* the phone: «1 contra 3» has no crew sack (each kid plays for points); the runner's TURBO button and his turbo meter */
+#screen-teamcrab.tc-vs .tc-sack { display: none; }
+.tc-golpe.turbo { background: linear-gradient(180deg, #ffd25a, #ff9a1f 55%, #d86a00); box-shadow: 0 6px 0 #8a4300; color: #fff; }
+.tc-golpe.turbo:active { box-shadow: 0 2px 0 #8a4300; }
+.tc-meter.turbo .tc-slots i.full { background: linear-gradient(180deg, #fff1a8, #ffb21f); box-shadow: 0 0 8px rgba(255, 190, 40, .9); display: flex; align-items: center; justify-content: center; font-style: normal; font-size: 18px; }
+.tc-meter.turbo .tc-slots i.full::after { content: '⚡'; }
+.tc-plus.ok { color: #9ff0b8; }
+.tc-how.vs .tc-step.s3 .fx { transform: scale(1.1); }
+/* the projector's lobby: the teacher picks the mode */
+.tch-mode { display: flex; align-items: stretch; gap: 8px; flex-wrap: wrap; }
+.tch-mode > span { align-self: center; font-weight: 900; }
+.tch-mode button { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; line-height: 1.1; }
+.tch-mode button small { font-weight: 700; font-size: .72em; opacity: .85; }
+.tch-mode button.on { background: linear-gradient(180deg, #fff3b0, var(--tc-gold)); box-shadow: 0 4px 0 #a8640b, 0 0 0 3px #fff inset; color: var(--tc-ink); }
+.tch-brun { white-space: nowrap; font-weight: 900; color: #ffd7a8; overflow: hidden; text-overflow: ellipsis; max-width: 40%; }
+.tch-brun:empty { display: none; }
+/* the runner's cockpit stands empty while he is out on the dock; on his own screen a falling hammer looms big */
+.tcs-dome.running .tcs-dhead { opacity: 0; }
+.tcs-dome.running { filter: saturate(.6); }
+.tcs-dome.running::after { content: '🦊'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: calc(var(--dd, 40px) * .55); opacity: .9; }
+/* a mallet that comes down reads big (like the video's): it grows as it falls, bigger on the runner's own screen */
+.tcs-ham .tcs-himg { transition: scale .3s ease-in; }
+.tcs-ham.st-fall .tcs-himg, .tcs-ham.st-hit .tcs-himg { scale: 1.32; transform-origin: 50% 90%; }
+.tcs.run-me .tcs-ham.st-fall .tcs-himg, .tcs.run-me .tcs-ham.st-hit .tcs-himg { scale: 1.55; }

@@ -2,13 +2,14 @@
 //   node scripts/test-teamcrab.js          → the checks
 //   node scripts/test-teamcrab.js --sim    → + the skill simulation (his rule «Skill decides, never luck»): crews of 4
 //                                            for 2 minutes, skilful (a Capitán who drives under Fénec, claws that lead
-//                                            the target and take turns) vs random tappers vs never-answer vs robots
+//                                            the target and take turns) vs random tappers vs never-answer vs robots;
+//                                            + «1 contra 3»'s fairness on a slow Wi-Fi (runner bots at 150 ms)
 'use strict';
 const assert = require('assert');
 const T = require('../core/teamcrab');
 const R = T.R;
 let checks = 0;
-const ok = (c, m) => { checks++; assert.ok(c, m); };
+const ok = (c, m) => { checks++; if (process.env.TC_SOFT && !c) { console.log('FAIL', m); return; } assert.ok(c, m); };   // (TC_SOFT=1: list every failure, for debugging)
 const Q = (n) => Array.from({ length: n || 12 }, (_, i) => ({ text: 'Pregunta ' + i, correct: 'w' + i, answers: ['w' + i, 'x' + i, 'y' + i, 'z' + i] }));
 const QS = Q(12);
 const opts = { questions: QS, imageFor: () => null, online: () => true };
@@ -385,6 +386,355 @@ function toPW(seed, charges) {
   ok(T.react(m, 1, 'wow', 100) && !T.react(m, 1, 'wow', 300) && !T.react(m, 1, 'boo', 2000), 'cheers: one at a time, only the four emoji');
 }
 
+// ---------- «1 contra 3» (v3, his idea 2026-10-23): a kid is Fénec for a round; his phone is the truth ----------
+const VS = R.VS;
+const mkVs = (n, seed, robots, dur) => {
+  const m = T.newGame(seed || 5, dur || 120, 0, ['baba', 'mama', 'gege'], 'vs');
+  T.deal(m, Array.from({ length: n }, (_, i) => [i + 1, 'K' + i, 'dralingo', '', !!(robots && i >= n - robots)]));
+  return m;
+};
+// the question window: kid k answers `want[k]` questions right (fastest first in the order given), then on to «¡A martillar!»
+function vsWindow(m, t0, want, order) {
+  let t = t0;
+  const ev = [];
+  const left = Object.assign({}, want);
+  while (t < t0 + 60000 && !(m.round && m.round.phase === 'pwin')) {
+    t += 40;
+    ev.push(...T.tick(m, t, opts));
+    (order || Object.keys(left).map(Number)).forEach((k, i) => {
+      const r = m.kids[k];
+      if (left[k] > 0 && r.q && t >= r.q.sentAt + 1200 + i * 120) { const res = right(m, k, t); if (res.ok && res.right) left[k]--; }
+    });
+  }
+  return { t, ev, roles: ev.filter((e) => e.t === 'roles') };
+}
+{
+  ok(mk(4).mode === 'crew' && mkVs(4).mode === 'vs', 'the mode: «Todos contra Fénec» by default, «1 contra 3» when the teacher picks it');
+  const m = mkVs(4, 5, 0, 240);
+  T.startPlay(m, 0);
+  let w = vsWindow(m, 0, { 1: 1, 2: 3, 3: 2, 4: 2 }, [2, 3, 4, 1]);
+  const ro = w.roles[0];
+  const b = m.boards[0];
+  ok(ro && ro.runner === 2 && b.runner === 2, 'the best answerer of the window is Fénec this round («¡Eres Fénec por esta ronda!»)');
+  ok(ro.dashes === 3 && m.kids[2].dashes === 3 && m.kids[2].charges === 0, 'his right answers became dashes (1 each, max 3)');
+  ok(ro.captain === 3 && !ro.mart.some((x) => x.k === 2), 'the Capitán is the best of the others; the runner has no hammer');
+  ok(m.kids[2].role === 'runner' && m.kids[3].role === 'cap', 'roles: runner, Capitán, martilleros');
+  ok(T.slam(m, 2, 1, w.t).ok === false && T.steer(m, 2, 1, w.t) === null, 'the runner cannot slam or steer');
+  ok(T.runnerPos(m, 2, 1, w.t + 100) === null, 'he waits for «¡YA!»: no running in «¡A martillar!»');
+  let t = until(m, w.t, 'pw').t;
+  const rx0 = b.rx;
+  ok(T.runnerPos(m, 3, 0, t) === null, 'only the runner moves the runner');
+  const p1 = T.runnerPos(m, 2, rx0 - 4, t + 70);
+  ok(p1 && rx0 - b.rx > 0.1 && rx0 - b.rx <= (VS.RUN_SPEED * VS.SPEED_SLACK * 0.07) + 0.1, 'his phone streams where he is, clamped to how fast he can run (no teleport)');
+  // a slam in «1 contra 3»: a longer shadow, an id for his verdict
+  b.crab.x = b.crab.tx = b.rx; m.kids[3].claw.readyAt = 0; m.kids[4].claw.readyAt = 0;
+  const s1 = T.slam(m, 4, b.rx, t + 100);
+  const se = s1.ev[0];
+  ok(s1.ok && se.ms === VS.FALL_MS && se.sid > 0, 'a hammer shows its shadow ' + VS.FALL_MS + ' ms before it lands (a runner who reacts can always get away)');
+  // his phone says he got away: the server believes his phone, even though its last position is under the hammer
+  let ev = run(m, t + 180, t + 100 + VS.FALL_MS + 40, 20);
+  ok(m.kids[4].claw.st === 'wait' && !ev.some((e) => e.t === 'bonk' || e.t === 'impact'), 'the hammer waits for his phone\'s own verdict (his round trip + a little)');
+  const evl = [];
+  ok(T.runnerLand(m, 2, se.sid, b.rx + 0.6, t + 100 + VS.FALL_MS + 120, evl), 'his phone reports where he was when it landed on his screen');
+  ok(evl.some((e) => e.t === 'impact' && !e.hit) && !evl.some((e) => e.t === 'bonk'), '«¡Pero si lo esquivé!» is never true: away on his screen = away');
+  // a report far from his stream is not believed beyond what he could have run
+  m.kids[4].claw.st = 'armed'; m.kids[4].claw.readyAt = 0; m.kids[4].charges = 2;
+  t += 1500;
+  const s2 = T.slam(m, 4, b.rx, t);
+  run(m, t + 80, t + VS.FALL_MS + 80, 20);
+  const evh = [];
+  T.runnerLand(m, 2, s2.ev[0].sid, b.rx, t + VS.FALL_MS + 100, evh);
+  const bk = evh.find((e) => e.t === 'bonk');
+  ok(bk && bk.k === 4 && bk.runner === 2 && bk.pts === VS.HIT && bk.flying.length >= 1, 'under the hammer on his own screen = a hit: the slammer\'s points, the words fly');
+  ok(b.stunUntil > t + VS.FALL_MS && m.kids[2].hitsTaken === 1 && b.runner === 2, 'a hit stuns him briefly and never ends the round');
+  ok(T.runnerPos(m, 2, b.rx + 1, t + VS.FALL_MS + 200) === null, 'stunned: he cannot move for a moment');
+  // a second hammer during the stun never hits
+  m.kids[3].claw.st = 'armed'; m.kids[3].charges = 1; m.kids[3].claw.readyAt = 0;
+  const s3 = T.slam(m, 3, b.rx, t + VS.FALL_MS + 150);
+  const evs = [];
+  T.runnerLand(m, 2, s3.ev[0].sid, b.rx, t + VS.FALL_MS + 150 + VS.FALL_MS + 50, evs);
+  ok(evs.some((e) => e.t === 'impact' && !e.hit), 'no hit while he is stunned (no pile-on)');
+  // a dash
+  t += 3000;
+  const d = T.runnerDash(m, 2, -1, t);
+  ok(d && d.dashes === 2 && m.kids[2].dashes === 2, 'a dash spends one of his dashes');
+  const before = b.rx;
+  T.runnerPos(m, 2, before - VS.DASH_X, t + 60);
+  ok(before - b.rx > 1, 'a dash lets him move a quick burst');
+  // «¡Tiempo!»: the seconds he was on his feet, no untouched bonus (he was hit), unused dashes are charges again
+  const out = until(m, t, 'pwout');
+  const re = out.ev.find((e) => e.t === 'runend');
+  ok(re && re.k === 2 && re.secs >= 5 && !re.untouched && re.pts === re.secs * VS.SURVIVE, '«¡Tiempo!»: a point for every second he survived');
+  ok(m.kids[2].charges === 2 && m.kids[2].dashes === 0 && b.runner == null, 'the dashes he did not use are charges again; the round ends with no runner');
+  // the next window: the next best who hasn't run yet
+  w = vsWindow(m, out.t, { 1: 1, 2: 3, 3: 2, 4: 2 }, [2, 3, 4, 1]);
+  ok(w.roles[0].runner === 3, 'merit decides the order, and no one runs twice before everyone has run');
+  t = until(m, w.t, 'pwout').t;
+  w = vsWindow(m, t, { 1: 1, 2: 3, 3: 2, 4: 2 }, [2, 3, 4, 1]);
+  ok(w.roles[0].runner === 4, '(the third runner)');
+  t = until(m, w.t, 'pwout').t;
+  w = vsWindow(m, t, { 1: 0, 2: 3, 3: 2, 4: 2 }, [2, 3, 4]);
+  ok(w.roles[0].runner === 1, 'everyone gets a turn, even a kid with no right answer this window');
+  t = until(m, w.t, 'pwout');
+  const re4 = t.ev.find((e) => e.t === 'runend');
+  ok(re4 && re4.untouched && re4.pts === re4.secs * VS.SURVIVE + VS.UNTOUCHED, 'a round untouched: +' + VS.UNTOUCHED + ' bonus');
+  w = vsWindow(m, t.t, { 1: 1, 2: 3, 3: 2, 4: 2 }, [2, 3, 4, 1]);
+  ok(w.roles[0].runner === 2, 'a new turn of runners starts with the best again');
+}
+// without his phone's verdict (a lost message): the farthest he was from the hammer counts, and the zone shrinks
+{
+  const m = mkVs(4, 9);
+  T.startPlay(m, 0);
+  const w = vsWindow(m, 0, { 1: 3, 2: 2, 3: 2, 4: 2 }, [1, 2, 3, 4]);
+  let t = until(m, w.t, 'pw').t;
+  const b = m.boards[0];
+  T.setRtt(m, 1, 200);
+  b.crab.x = b.crab.tx = b.rx;
+  const fall = b.rx + R.HIT_R - VS.DOUBT / 2;         // (inside the hit zone, but inside the doubt band)
+  m.kids[2].claw.readyAt = 0;
+  T.slam(m, 2, fall, t);
+  const ev = run(m, t + 40, t + VS.FALL_MS + 200 + VS.LAND_WAIT + 200, 20);
+  ok(ev.some((e) => e.t === 'impact' && !e.hit) && !ev.some((e) => e.t === 'bonk'), 'no verdict from his phone: in doubt, the runner wins');
+  t += 3000;
+  m.kids[3].claw.readyAt = 0; b.crab.x = b.crab.tx = b.rx;
+  T.slam(m, 3, b.rx, t);
+  const ev2 = run(m, t + 40, t + VS.FALL_MS + 200 + VS.LAND_WAIT + 200, 20);
+  ok(ev2.some((e) => e.t === 'bonk'), 'no verdict, but he stood right under it all along: a hit');
+}
+// robots: a robot can be the runner (it reacts like a kid) or crew; a runner whose phone is gone is run by the computer
+{
+  const m = mkVs(4, 21, 3);
+  T.startPlay(m, 0);
+  let t = 0;
+  let runnerRobot = 0, runnerKid = 0, robotMoves = 0, robotSlams = 0;
+  for (; m.phase === 'play' && t < 125000; t += 80) {
+    const ev = T.tick(m, t, opts);
+    ev.forEach((e) => {
+      if (e.t === 'roles' && e.runner != null) { if (m.kids[e.runner].robot) runnerRobot++; else runnerKid++; }
+      if (e.t === 'runner') robotMoves++;
+      if (e.t === 'slam' && m.kids[e.k].robot) robotSlams++;
+      if (e.t === 'q' && !m.kids[e.k].robot) T.seen(m, e.k, e.q.qid);
+    });
+    const me = m.kids[1];
+    if (me.q && t >= me.q.sentAt + 2000) right(m, 1, t);
+    if (m.boards[0].runner === 1 && m.round.phase === 'pw') T.runnerPos(m, 1, 2 + Math.sin(t / 700) * 1.5, t);
+  }
+  ok(runnerRobot >= 2 && runnerKid >= 1, 'with robots, a robot runs some rounds and the kid others');
+  ok(robotMoves > 20 && robotSlams > 5, 'a robot runner runs, robot crewmates slam at the runner');
+  const fin = T.finish(T.final(m, t) && m);
+  ok(fin.boards[0].stars.some((s) => s.id === 'corredor') && fin.boards[0].caught == null, 'the ceremony has «Mejor corredor» (no caught/escaped in «1 contra 3»)');
+  ok(fin.boards[0].rows.every((k) => !m.kids[k].robot) && fin.order.every((k) => !m.kids[k].robot) && fin.boards[0].stars.every((st) => st.winners.every((k) => !m.kids[k].robot)), 'robots never in the ranking, stars or podium');
+}
+{
+  const m = mkVs(4, 31);
+  T.startPlay(m, 0);
+  const w = vsWindow(m, 0, { 1: 2, 2: 1, 3: 1, 4: 1 }, [1, 2, 3, 4]);
+  const away = Object.assign({}, opts, { online: (k) => k !== 1 });
+  let t = w.t;
+  const ev = [];
+  for (; m.round.phase !== 'pwout' && t < w.t + 20000; t += 80) ev.push(...T.tick(m, t, away));
+  ok(ev.some((e) => e.t === 'runner' && e.k === 1), 'a runner whose phone dropped is run by the computer (never a sitting duck)');
+}
+// the code review's cases (2026-10-23): a pause, «Saltar», «Terminar» never pay time he didn't run; the stun counts at
+// the landing; a flood of positions can't teleport him; a crew with one kid online keeps the computer's Fénec
+{
+  const runRound = (seed) => { const m = mkVs(4, seed, 0, 240); T.startPlay(m, 0); const w = vsWindow(m, 0, { 1: 2, 2: 1, 3: 1, 4: 1 }, [1, 2, 3, 4]); return { m, b: m.boards[0], t: until(m, w.t, 'pw').t }; };
+  // a 60-s pause in the middle of his run
+  let { m, b, t } = runRound(41);
+  run(m, t + 80, t + 3000);
+  m.paused = true; m.pausedAt = t + 3000;
+  T.shiftTimes(m, 60000); m.paused = false;
+  let out = until(m, t + 63000, 'pwout');
+  let re = out.ev.find((e) => e.t === 'runend');
+  ok(re && re.secs <= 10, 'a pause is never paid as seconds he ran (' + (re && re.secs) + ' s)');
+  // «Saltar» 0.1 s into his run: no free window, no untouched bonus
+  ({ m, b, t } = runRound(43));
+  let ev = T.skip(m, t + 100, opts);
+  re = ev.find((e) => e.t === 'runend');
+  ok(re && re.secs === 0 && !re.untouched && re.pts === 0, '«Saltar» right away pays him nothing he didn\'t run', re);
+  // «Terminar» in «¡A martillar!» (he never ran)
+  const m2 = mkVs(4, 44, 0, 240); T.startPlay(m2, 0);
+  const w2 = vsWindow(m2, 0, { 1: 2, 2: 1, 3: 1, 4: 1 }, [1, 2, 3, 4]);
+  ev = T.final(m2, w2.t + 200);
+  re = ev.find((e) => e.t === 'runend');
+  ok(re && re.pts === 0, '«Terminar» before «¡YA!»: no points for a run that never started', re);
+  // the stun: a hammer that LANDS inside it never hits, even when his verdict arrives after it ended
+  ({ m, b, t } = runRound(45));
+  b.crab.x = b.crab.tx = b.rx;
+  const sl = [2, 3, 4].map((k) => m.kids[k]).filter((x) => x.claw.st === 'armed' && x.charges > 0);
+  sl.forEach((x) => { x.claw.readyAt = 0; });
+  const A = T.slam(m, sl[0].k, b.rx, t + 100).ev[0];
+  run(m, t + 120, t + 100 + VS.FALL_MS, 20);
+  const e1 = [];
+  T.runnerLand(m, 1, A.sid, b.rx, t + 100 + VS.FALL_MS + 20, e1);
+  ok(e1.some((e) => e.t === 'bonk'), '(the first hammer hits)');
+  const stunEnd = b.stunUntil;
+  const B = T.slam(m, sl[1].k, b.rx, stunEnd - 50 - VS.FALL_MS).ev[0];
+  run(m, stunEnd - 50 - VS.FALL_MS + 20, stunEnd - 40, 10);
+  const e2 = [];
+  T.runnerLand(m, 1, B.sid, b.rx, stunEnd + 150, e2);
+  ok(e2.some((e) => e.t === 'impact' && !e.hit) && !e2.some((e) => e.t === 'bonk'), 'a hammer that lands during his stun never hits, even judged after it');
+  // a flood of positions (a modified phone): no teleport
+  ({ m, b, t } = runRound(46));
+  const x0 = b.rx;
+  for (let i = 1; i <= 100; i++) T.runnerPos(m, 1, x0 > 2 ? 0 : 4, t + i);   // (one message a millisecond for 0.1 s after «¡YA!»)
+  ok(Math.abs(b.rx - x0) <= (VS.RUN_SPEED * VS.SPEED_SLACK * 100) / 1000 + 1e-9, 'a flood of positions moves him no faster than he runs (' + Math.abs(b.rx - x0).toFixed(2) + ' spots in 0.1 s)');
+  // one kid online in his crew: no free runs alone (the computer's Fénec)
+  const m3 = mkVs(4, 47, 0, 240); T.startPlay(m3, 0);
+  const alone = Object.assign({}, opts, { online: (k) => k === 1 });
+  let t3 = 0;
+  for (; t3 < 60000 && !(m3.round && m3.round.phase === 'pwin'); t3 += 80) T.tick(m3, t3, alone);
+  ok(m3.boards[0].runner == null, 'a crew with only one kid online keeps the computer\'s Fénec (no free runs alone)');
+}
+// the fairness simulation (his rule: fair on school Wi-Fi). A runner bot whose phone sees each hammer L ms late:
+// a reactive one escapes single hammers nearly always, a sleepy one gets hit; a skilful crew traps him with two hammers
+function simulateVs(o) {
+  const L = o.lag || 0;
+  const res = { hammers: 0, hits: 0, phoneAway: 0, wrongHits: 0, traps: 0, trapHits: 0, dashes: 0, runPts: [], crewPts: [] };
+  for (let gi = 0; gi < o.games; gi++) {
+    const m = T.newGame(4000 + gi, o.dur || 120, 0, ['baba'], 'vs');
+    T.deal(m, [1, 2, 3, 4].map((k) => [k, 'K' + k, 'dralingo', '', false]));
+    const b = m.boards[0];
+    let s = 91 + gi * 7;
+    const rng = () => { s = (s * 1664525 + 1013904223) % 4294967296; return s / 4294967296; };
+    const net = [];                                    // messages on the way: { at, fn }
+    const send = (fn) => net.push({ at: t + L + rng() * (o.jitter || 0), fn });
+    const ph = { k: null, x: 0, to: null, shadows: [], stunTo: 0, sentAt: 0, dashes: 0, pw: false };   // the runner's phone
+    const crew = { seen: 2, steerAt: 0, plan: {} };
+    const ansAt = {};
+    let t = 0;
+    let ev = T.startPlay(m, 0);
+    for (; m.phase === 'play' && t < 400000; t += 10) {
+      for (let i = net.length - 1; i >= 0; i--) if (net[i].at <= t) { const n = net.splice(i, 1)[0]; n.fn(); }
+      if (t % 80 === 0 && t) ev = ev.concat(T.tick(m, t, opts));
+      const evNow = ev; ev = [];
+      evNow.forEach((e) => {
+        if (e.t === 'q') { T.seen(m, e.k, e.q.qid); ansAt[e.k] = { at: t + 1500 + rng() * 2000, qid: e.q.qid, ok: rng() < 0.85 }; }
+        if (e.t === 'roles' && e.runner != null) send(() => { ph.k = e.runner; ph.x = e.rx; ph.to = null; ph.shadows = []; ph.dashes = e.dashes; ph.stunTo = 0; });
+        if (e.t === 'round') send(() => { ph.pw = e.phase === 'pw'; });
+        if (e.t === 'slam' && e.sid) {
+          res.hammers++;
+          send(() => { ph.shadows.push({ sid: e.sid, x: e.x, seenAt: t, landAt: t + e.ms, px0: ph.x, crab: b.crab.x, react: o.runner === 'sleepy' ? 900 + rng() * 600 : o.runner === 'kid' ? 300 + rng() * 250 : 220 + rng() * 200, wrongWay: o.runner === 'kid' && rng() < 0.15 }); });
+        }
+        if (e.t === 'bonk' && e.runner != null) { res.hits++; if (ph.verdict && ph.verdict[e.sid] === 'away') res.wrongHits++; send(() => { ph.stunTo = t + VS.STUN_MS; ph.to = null; }); }
+        if (e.t === 'runend') res.runPts.push(e.pts);
+      });
+      // answers
+      Object.keys(ansAt).forEach((k) => { const a = ansAt[k], r = m.kids[k]; if (a && t >= a.at) { if (r.q && r.q.qid === a.qid) T.answer(m, +k, a.qid, a.ok ? r.q.correctIdx : (r.q.correctIdx + 1) % 4, t); ansAt[k] = null; } });
+      if (!m.round || m.round.phase !== 'pw' || b.runner == null) continue;
+      // ---- the runner's phone (its own clock: everything from the server arrives L late) ----
+      if (ph.k != null && ph.pw && t >= ph.stunTo) {
+        // the hammers whose shadow he has noticed
+        const live = ph.shadows.filter((h) => t < h.landAt && t >= h.seenAt + h.react);
+        if (live.length) {
+          const lo = Math.min(...live.map((h) => h.x)) - R.HIT_R - 0.12, hi = Math.max(...live.map((h) => h.x)) + R.HIT_R + 0.12;
+          if (ph.x > lo && ph.x < hi) {
+            const best = lo >= 0 && (ph.x - lo <= hi - ph.x || hi > T.MAXX);
+            const goL = live.some((h) => h.wrongWay) && lo >= 0 && hi <= T.MAXX ? !best : best;   // (a kid sometimes runs the long way out)
+            const goal = goL ? lo : hi;
+            const soon = Math.min(...live.map((h) => h.landAt)) - t;
+            if (ph.dashes > 0 && Math.abs(goal - ph.x) > (VS.RUN_SPEED * soon) / 1000 && !o.noDash) {
+              ph.dashes--; res.dashes++;
+              const dir = goL ? -1 : 1;
+              send(() => T.runnerDash(m, ph.k, dir, t));
+              ph.x = Math.max(0, Math.min(T.MAXX, ph.x + dir * VS.DASH_X));
+            }
+            ph.to = goal;
+          }
+          ph.dodge = true;
+        } else if (ph.to == null || Math.abs(ph.to - ph.x) < 0.05) {
+          ph.dodge = false;
+          if (o.runner === 'sleepy') ph.to = ph.x;
+          else if (o.runner === 'sprinter') ph.to = ph.x < T.MAXX / 2 ? T.MAXX - 0.3 - rng() * 0.8 : 0.3 + rng() * 0.8;
+          else if (t >= (ph.waitTo || 0)) { ph.to = Math.max(0.3, Math.min(T.MAXX - 0.3, ph.x + (rng() - 0.5) * 1.6)); ph.waitTo = t + 300 + rng() * 700; }
+        }
+        if (ph.to != null) { const sp = ph.dodge || o.runner === 'sprinter' ? VS.RUN_SPEED : VS.RUN_SPEED * 0.45; const st = (sp * 10) / 1000; ph.x += Math.abs(ph.to - ph.x) <= st ? ph.to - ph.x : Math.sign(ph.to - ph.x) * st; }
+      }
+      // each hammer that lands on his screen: his own verdict, sent to the server (some lost on a bad Wi-Fi)
+      ph.shadows = ph.shadows.filter((h) => {
+        if (t < h.landAt) return true;
+        const away = Math.abs(ph.x - h.x) > R.HIT_R;
+        if (o.debug && o.debug.length < 40) o.debug.push([h.sid, +h.x.toFixed(2), +h.px0.toFixed(2), +ph.x.toFixed(2), +h.crab.toFixed(2)]);
+        ph.verdict = ph.verdict || {}; ph.verdict[h.sid] = away ? 'away' : 'under';
+        if (away) res.phoneAway++;
+        const x = ph.x;
+        if (rng() >= (o.loss || 0)) send(() => { const e2 = []; T.runnerLand(m, ph.k, h.sid, x, t, e2); ev.push(...e2); });
+        return false;
+      });
+      if (ph.k != null && t - ph.sentAt >= 70) { ph.sentAt = t; const x = ph.x; send(() => T.runnerPos(m, ph.k, x, t)); }
+      if (crew.trapAt && t - crew.trapAt > VS.FALL_MS + 2 * L + VS.LAND_WAIT + 200) { if (res.hits > crew.trapHits0) res.trapHits++; crew.trapAt = 0; }
+      // ---- the crew: its phones get the runner one relay late and draw him ahead by his speed (dead reckoning over
+      // the round trip); a skilful kid leads him to where he will be when the shadow shows on HIS screen (two more trips),
+      // and a trap goes a little ahead of a runner on the move (so running on is no way out) ----
+      crew.hist = crew.hist || [];
+      crew.hist.push({ t, x: b.rx });
+      while (crew.hist.length && crew.hist[0].t < t - L - 400) crew.hist.shift();
+      const at = (tt) => { let h = crew.hist[0]; for (const e of crew.hist) { if (e.t <= tt) h = e; else break; } return h ? h.x : b.rx; };
+      const xL = at(t - L), v = (xL - at(t - L - 150)) / 150;
+      const clampX = (x) => Math.max(0, Math.min(T.MAXX, x));
+      const seen = clampX(xL + v * Math.min(400, 2 * L));
+      const ahead = o.crew === 'trap' ? Math.sign(v) * (o.ahead || 0.65) * Math.min(1, Math.abs(v * 1000) / 1.5) : 0;
+      const aimAt = clampX(seen + (v * 2 * L + ahead) * (o.lead == null ? 1 : o.lead));
+      if (t >= crew.steerAt && b.captain != null) { crew.steerAt = t + 200; const x = aimAt; send(() => T.steer(m, b.captain, x, t)); }
+      const armed = b.seats.map((k) => m.kids[k]).filter((r) => r.k !== b.runner && r.claw.st === 'armed' && r.charges > 0 && t >= r.claw.readyAt);
+      const busy = b.seats.some((k) => ['fall', 'wait'].includes(m.kids[k].claw.st)) || Object.values(crew.plan).some((p) => p && p.at > t);
+      if (busy || Math.abs(b.crab.x - aimAt) > (o.crew === 'trap' ? R.REACH - 0.45 : R.REACH) || t < (crew.next || 0)) continue;
+      crew.next = t + 400 + rng() * 500;
+      const vs1 = v * 1000, end = aimAt < 0.9 ? 0.9 : aimAt > T.MAXX - 0.9 ? T.MAXX - 0.9 : null;
+      const trapAt = end != null ? end : aimAt;
+      const trapOk = end != null || Math.abs(vs1) > 0.8 || o.runner !== 'sprinter';
+      if (o.crew === 'trap' && armed.length >= 2 && trapOk && Math.abs(b.crab.x - trapAt) <= R.REACH - 0.45) {
+        res.traps++;
+        const [a1, a2] = armed;
+        const tag = { n: 0 };
+        crew.plan[a1.k] = { at: t + L };
+        crew.plan[a2.k] = { at: t + L };
+        send(() => { [[a1.k, trapAt - 0.45], [a2.k, trapAt + 0.45]].forEach(([k, x]) => { const r = T.slam(m, k, x, t); if (r.ok) ev.push(...r.ev); }); tag.n = 1; });
+        crew.trapAt = t; crew.trapHits0 = res.hits;
+      } else if (armed.length && o.crew !== 'trap') {
+        const a = armed[0];
+        crew.plan[a.k] = { at: t + L };
+        const x = aimAt + (rng() - 0.5) * 0.3;
+        send(() => { const r = T.slam(m, a.k, x, t); if (r.ok) ev.push(...r.ev); });
+      }
+    }
+    T.final(m, m.endsAt + 1);
+  }
+  const avg = (a) => (a.length ? Math.round((a.reduce((x, y) => x + y, 0) / a.length) * 10) / 10 : 0);
+  return {
+    hammers: res.hammers, hitPct: Math.round((100 * res.hits) / Math.max(1, res.hammers)), escapePct: Math.round((100 * (res.hammers - res.hits)) / Math.max(1, res.hammers)),
+    wrongHits: res.wrongHits, traps: res.traps, trapCatchPct: res.traps ? Math.round((100 * res.trapHits) / res.traps) : null, dashes: res.dashes, runPtsPerRun: avg(res.runPts),
+  };
+}
+const VS_SIMS = [
+  // (index 6+: the always-sprinting runner, for the record)
+  ['reactive runner vs single aimed hammers, 150 ms each way', { runner: 'reactive', crew: 'aim', lag: 150 }],
+  ['sleepy runner vs single aimed hammers, 150 ms', { runner: 'sleepy', crew: 'aim', lag: 150 }],
+  ['reactive runner vs a skilful crew (two hammers, both sides), 150 ms', { runner: 'reactive', crew: 'trap', lag: 150 }],
+  ['reactive runner with no dashes vs two-hammer traps, 150 ms', { runner: 'reactive', crew: 'trap', lag: 150, noDash: true }],
+  ['reactive runner, 150 ms + 60 ms jitter, 25 % of his verdicts lost', { runner: 'reactive', crew: 'aim', lag: 150, jitter: 60, loss: 0.25 }],
+  ['reactive runner on a good Wi-Fi (20 ms)', { runner: 'reactive', crew: 'aim', lag: 20 }],
+  ['a runner who never stops sprinting vs single hammers, 150 ms', { runner: 'sprinter', crew: 'aim', lag: 150 }],
+  ['a runner who never stops sprinting, no dashes, vs two-hammer traps, 150 ms', { runner: 'sprinter', crew: 'trap', lag: 150, noDash: true }],
+  ['a kid-like runner (reacts in 0.3-0.55 s, 15 % the long way out) vs single hammers, 150 ms', { runner: 'kid', crew: 'aim', lag: 150 }],
+  ['a kid-like runner vs a skilful crew (two-hammer traps), 150 ms', { runner: 'kid', crew: 'trap', lag: 150 }],
+  ['a runner who never stops sprinting vs two-hammer traps, 150 ms', { runner: 'sprinter', crew: 'trap', lag: 150 }],
+];
+{
+  const games = process.argv.includes('--sim') ? (+(process.argv[process.argv.indexOf('--sim') + 1]) || 40) : 4;
+  const vs = VS_SIMS.map(([name, o]) => [name, simulateVs(Object.assign({ games }, o))]);
+  if (process.argv.includes('--sim')) vs.forEach(([name, r]) => console.log('  vs sim ·', name, JSON.stringify(r)));
+  const by = vs.map(([, r]) => r);
+  ok(by.every((r) => r.wrongHits === 0), '«¡Pero si lo esquivé!» never: no hit is ever given when his own screen had him away (every Wi-Fi case)');
+  ok(by[0].escapePct >= 90, 'a reactive runner escapes single hammers nearly always at 150 ms (' + by[0].escapePct + ' %)');
+  // (a sleepy runner is hit by every hammer that doesn't land inside his 1-s stun: no pile-on)
+  ok(by[1].hitPct >= 45 && by[1].runPtsPerRun < by[0].runPtsPerRun * 0.6, 'a sleepy runner gets hit (' + by[1].hitPct + ' % of hammers, the rest fall in his stun) and banks far fewer points (' + by[1].runPtsPerRun + ' vs ' + by[0].runPtsPerRun + ')');
+  ok(by[3].trapCatchPct >= 50, 'a skilful crew traps a runner with two hammers covering both sides (' + by[3].trapCatchPct + ' % with no dash left)');
+  ok(by[2].trapCatchPct < by[3].trapCatchPct, 'his dashes are his way out of a trap');
+  ok(by[4].escapePct >= 85, 'with jitter and lost verdicts, a reactive runner still escapes (' + by[4].escapePct + ' %)');
+  ok(by[7].trapCatchPct >= 20, 'running non-stop is no way out: traps set where he is going catch a sprinter with no dash (' + by[7].trapCatchPct + ' %)');
+  ok(by[9].trapCatchPct >= 10 && by[9].hitPct > by[8].hitPct, 'against a kid-like runner, traps are how a crew scores (' + by[9].trapCatchPct + ' % of traps)');
+}
 // ---------- the skill simulation ----------
 // what a kid SEES and can read: where Fénec will be at time t (he stands, crouches 0.3 s leaning, runs 2 spots)
 function predict(f, t) {
@@ -496,4 +846,4 @@ if (process.argv.includes('--sim')) {
   ok(by[7].hitPct >= by[8].hitPct * 2 && by[7].caughtPct >= by[8].caughtPct + 40, 'on a slow Wi-Fi a skilful crew still clearly beats random tappers');
 }
 console.log('test-teamcrab.js:', checks, 'checks passed');
-module.exports = { simulate, SIMS };
+module.exports = { simulate, SIMS, simulateVs, VS_SIMS };
