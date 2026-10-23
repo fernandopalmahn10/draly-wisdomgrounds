@@ -22,7 +22,7 @@
     idle: ['¡Mías, mías!', '¿Palabras? ¡Me las llevo!', '¡Nananá! 😜', '¡Uy, una palabra nueva! ¡Mía!'],
     miss: ['¡No me atrapan!', '¡Fallaste! 😜', '¡Muy lento!'], miss2: ['¡Jijiji, por poco!', '¡Ni me tocaste!'],
     mias: ['¡Mías! 😆', '¡Esa palabra es mía!', '¡Jijiji, me la llevo!'],
-    nervous: ['¡Ay, ay, ay! 😰', '¡Me están rodeando!'], swing: ['¡Bien, Péndulo! 😆'], up: ['¡Ay, mi cabeza! ⭐', '¡Uy! ¡Eso dolió poquito!'],
+    nervous: ['¡Ay, ay, ay! 😰', '¡Me están rodeando!'], swing: ['¡Bien, Péndulo! 😆'], up: ['¡Me despeinaste! ⭐', '¡Oye, eso no se vale! 😤'],
   };
   const PLINES = { feed: ['¡Enójate! ¡Ñam!', '¡Ñam, ñam! 😋', '¡Peleen, peleen!'], calm: ['¡Nooo, no se rían!', '¿Me ignoran? ¡Qué injusto!'], swing: ['¡ZAS! 😈'] };
   const pick = (a) => a[Math.floor(Math.random() * a.length)];
