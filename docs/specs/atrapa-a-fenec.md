@@ -2,7 +2,74 @@
 
 #4 of his Mario Party series: Super Mario Party «Team Crab» (his video https://www.youtube.com/watch?v=y9BKCVx_mNk
 7:30-8:16), his design 2026-10-23. **v1** deployed 2026-10-23 (18fc42e4f + c8bdf147b). **v2** built the same day on
-branch `teamcrab-v2` from his feedback after playing v1; **not deployed** (his word).
+branch `teamcrab-v2` from his feedback after playing v1 (live b6f3161d1). **v3** adds the mode «1 contra 3» (branch
+`teamcrab-v3`, **not deployed**).
+
+## v3 «1 contra 3» (his idea 2026-10-23; branch `teamcrab-v3` from 8460fa18c; not deployed)
+His words: "in Mario Party sometimes you can either play on the team that hides, the team that hits, or the team that
+runs… for one interaction you would be wanting to run, escape the crab, and for the other you would be wanting to hit and
+slam the opponent… one team is the fox and one team is the crab."
+- **The teacher picks the mode in the lobby** («🎮 Modo»: «👥 Todos contra Fénec», v2, the default · «🦊 1 contra 3»;
+  `host:tc-mode`, teacher only, lobby only; the phones' lobby card shows the steps of the mode, `state.tcMode`; it stays
+  for «Otra ronda»). Both modes keep everything of v2 (question window, El Péndulo eats a charge, only shown questions
+  cost, never naming who failed, robots, teacher controls, late joiners, reconnects).
+- **Each round, per crew:** the question window as in v2; at «¡A martillar!» the crew's best answerer of the window who
+  hasn't run yet is **Fénec for this round** («¡Eres Fénec por esta ronda!»; merit decides the order and nobody runs twice
+  before everyone has run; a crew with fewer than 2 kids online keeps the computer's Fénec). His right answers of the window
+  become **dashes** (1 each, max 3; the charges he doesn't turn into dashes stay). The others pilot the crab as in v2
+  (Capitán = the best of them).
+- **His phone = the video's camera** (7:39-7:43): Fénec from behind on the dock (new art `fenec-back`, `fenec-backrun`),
+  the crab and its hammers in front; he sees the hammers rise and their shadows; a falling hammer's shadow turns red with
+  a closing ring (when it closes, it lands) and the hammer looms big. Drag = run there (1.5 spots/s); double tap, a swipe
+  or «⚡ ¡TURBO!» = a dash (1.2 spots in 0.22 s; without a direction: away from the nearest falling shadow). A hit = dizzy
+  stars, 1 s stunned («💫 ¡Te dieron! ¡Arriba y a correr!»), never the end of his round. A dodge = «¡Esquivado! 😎».
+- **The crew and the projector** see Fénec (front) where the runner's phone says, drawn ahead by his speed over the relay
+  (dead reckoning), with his face and name on his legs («🦊 Ana»); his cockpit stands empty (a 🦊 in the glass).
+- **Points:** a hit = 3 to the slammer (+1 «trampa» per other armed claw beside him, +1 the Capitán; ×2 in the final
+  round); «¡Tiempo!» = 1 point a second he was on his feet (stun seconds don't count) + 3 for a round untouched (only for
+  a run of 3 s+); unused dashes are charges again. A window that ends early because every hammer was spent credits him the
+  rest of it; «Saltar», «−30 s», «Terminar» and a pause never pay time he didn't run.
+- **Ceremony:** no caught / escaped; «🦊 Mejor corredor» (points running) + Mejor martillazo, Mejor capitán, Mejor racha;
+  my card says how long I ran.
+
+### Fair on school Wi-Fi («¡Pero si lo esquivé!» must never be true)
+- His phone is the truth for where he is: `player:tc-run` ~14 a second (at most one per 40 ms; a distance budget refilled
+  by real time at 1.5× his speed; a dash's burst spent once), relayed volatile (`tc:runner`).
+- Every slam has an id (`sid`) and a **750 ms shadow**. When it lands on HIS screen his phone sends `player:tc-land {sid,
+  x}`; the server waits for it up to his round trip (≤ 0.4 s) + 0.45 s and believes it (clamped to what he could have run
+  since his last stream). Without it, the farthest he was from the hammer while it landed counts and the hit zone shrinks
+  0.15 (in doubt, the runner wins). The hammer spot is the same rounded number on both sides. A hammer that lands inside
+  his stun never hits (judged at the landing). A runner whose phone drops is run by the computer; robots run and martillan.
+- **The fairness simulation** (`node scripts/test-teamcrab.js --sim 8`, 8 games of 2 min per line, a board of 4, each
+  message 150 ms each way; skilful crews dead-reckon him and lead him to where he will be when the shadow shows):
+
+| Runner vs crew (150 ms each way) | hammers | hit % | wrong hits | trap catch % |
+|---|---|---|---|---|
+| reactive runner (sees a shadow, reacts in 0.22-0.42 s) vs single aimed hammers | 272 | **0 %** | **0** | — |
+| sleepy runner (reacts in 0.9-1.5 s) vs single aimed hammers | 295 | **55 %** (the rest land in his stun) | 0 | — |
+| reactive runner vs a skilful crew (two hammers covering both sides) | 238 | 1 % | 0 | 2 % (his dashes get him out) |
+| reactive runner with no dashes left vs two-hammer traps | 242 | 29 % | 0 | **58 %** |
+| reactive runner, + 60 ms jitter, 25 % of his verdicts lost | 258 | 0 % | 0 | — |
+| a runner who never stops sprinting, no dashes, vs traps set where he is going | 234 | 19 % | 0 | 37 % |
+| a kid-like runner (reacts in 0.3-0.55 s, 15 % runs the long way out) vs two-hammer traps | 240 | 12 % | 0 | 23 % |
+
+  Tuning that came out of it: his speed 2.6 → 1.5 spots/s and the shadow 600 → 750 ms (a reactive runner always gets out
+  of one hammer, never out of two side by side without a dash), a dash 1.2 spots. Live bots on the real server (30 kids ·
+  2 min, `--tc-mode vs`): skilful runners hit by 2 of 84 hammers, random runners 48 of 165, silent 12 of 40; «¡Pero si lo
+  esquivé!» 0; 0 frozen, 0 errors. The same 30 bots in «Todos contra Fénec»: skill 77 hits of 126 slams, random 11 of 175.
+- Side by side with the video: `teamcrab-shots/v3/side-by-side-runner-view.jpg` (7:39.5-7:42.75 vs Ana's runner view at
+  4 fps, `run-4fps/`).
+
+### Tests (v3)
+- `node scripts/test-teamcrab.js`: 134 checks (v2's 86 + «1 contra 3»: mode, runner by merit and rotation, dashes, his
+  stream clamped, the shadow, his own verdict believed, hit + stun + no hit during a stun, «¡Tiempo!» points, untouched
+  bonus, robots run / martillan, a dropped runner run by the computer, «Mejor corredor», the review's cases: a pause,
+  «Saltar», «Terminar», the stun edge, a flood of positions, one kid online) + the fairness simulation.
+- `node scripts/test-teamcrab-live.js --url … --password …`: 94 checks (game 3 = «1 contra 3» on the real server).
+- `node scripts/check-teamcrab-screens.js … --mode vs`: 60/60 on the projector + 4 phone sizes + a late joiner.
+- `node scripts/playtest-bots.js --game teamcrab --bots 30 --seconds 135 … --tc-mode vs`: PASS (and crew mode PASS).
+- Code review (agent-skills:code-reviewer): REQUEST CHANGES → every blocker / major / minor fixed the same day (see the
+  progress note); re-run of the browser checks after those fixes: pending (battery).
 
 ## Why v2 (his words after playing v1, 2026-10-23)
 "I tried to hit the little fox and it said that it escaped… I don't see that it's working based on skills… it should feel

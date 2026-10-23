@@ -535,6 +535,57 @@ function vsWindow(m, t0, want, order) {
   for (; m.round.phase !== 'pwout' && t < w.t + 20000; t += 80) ev.push(...T.tick(m, t, away));
   ok(ev.some((e) => e.t === 'runner' && e.k === 1), 'a runner whose phone dropped is run by the computer (never a sitting duck)');
 }
+// the code review's cases (2026-10-23): a pause, «Saltar», «Terminar» never pay time he didn't run; the stun counts at
+// the landing; a flood of positions can't teleport him; a crew with one kid online keeps the computer's Fénec
+{
+  const runRound = (seed) => { const m = mkVs(4, seed, 0, 240); T.startPlay(m, 0); const w = vsWindow(m, 0, { 1: 2, 2: 1, 3: 1, 4: 1 }, [1, 2, 3, 4]); return { m, b: m.boards[0], t: until(m, w.t, 'pw').t }; };
+  // a 60-s pause in the middle of his run
+  let { m, b, t } = runRound(41);
+  run(m, t + 80, t + 3000);
+  m.paused = true; m.pausedAt = t + 3000;
+  T.shiftTimes(m, 60000); m.paused = false;
+  let out = until(m, t + 63000, 'pwout');
+  let re = out.ev.find((e) => e.t === 'runend');
+  ok(re && re.secs <= 10, 'a pause is never paid as seconds he ran (' + (re && re.secs) + ' s)');
+  // «Saltar» 0.1 s into his run: no free window, no untouched bonus
+  ({ m, b, t } = runRound(43));
+  let ev = T.skip(m, t + 100, opts);
+  re = ev.find((e) => e.t === 'runend');
+  ok(re && re.secs === 0 && !re.untouched && re.pts === 0, '«Saltar» right away pays him nothing he didn\'t run', re);
+  // «Terminar» in «¡A martillar!» (he never ran)
+  const m2 = mkVs(4, 44, 0, 240); T.startPlay(m2, 0);
+  const w2 = vsWindow(m2, 0, { 1: 2, 2: 1, 3: 1, 4: 1 }, [1, 2, 3, 4]);
+  ev = T.final(m2, w2.t + 200);
+  re = ev.find((e) => e.t === 'runend');
+  ok(re && re.pts === 0, '«Terminar» before «¡YA!»: no points for a run that never started', re);
+  // the stun: a hammer that LANDS inside it never hits, even when his verdict arrives after it ended
+  ({ m, b, t } = runRound(45));
+  b.crab.x = b.crab.tx = b.rx;
+  const sl = [2, 3, 4].map((k) => m.kids[k]).filter((x) => x.claw.st === 'armed' && x.charges > 0);
+  sl.forEach((x) => { x.claw.readyAt = 0; });
+  const A = T.slam(m, sl[0].k, b.rx, t + 100).ev[0];
+  run(m, t + 120, t + 100 + VS.FALL_MS, 20);
+  const e1 = [];
+  T.runnerLand(m, 1, A.sid, b.rx, t + 100 + VS.FALL_MS + 20, e1);
+  ok(e1.some((e) => e.t === 'bonk'), '(the first hammer hits)');
+  const stunEnd = b.stunUntil;
+  const B = T.slam(m, sl[1].k, b.rx, stunEnd - 50 - VS.FALL_MS).ev[0];
+  run(m, stunEnd - 50 - VS.FALL_MS + 20, stunEnd - 40, 10);
+  const e2 = [];
+  T.runnerLand(m, 1, B.sid, b.rx, stunEnd + 150, e2);
+  ok(e2.some((e) => e.t === 'impact' && !e.hit) && !e2.some((e) => e.t === 'bonk'), 'a hammer that lands during his stun never hits, even judged after it');
+  // a flood of positions (a modified phone): no teleport
+  ({ m, b, t } = runRound(46));
+  const x0 = b.rx;
+  for (let i = 1; i <= 100; i++) T.runnerPos(m, 1, x0 > 2 ? 0 : 4, t + i);   // (one message a millisecond for 0.1 s after «¡YA!»)
+  ok(Math.abs(b.rx - x0) <= (VS.RUN_SPEED * VS.SPEED_SLACK * 100) / 1000 + 1e-9, 'a flood of positions moves him no faster than he runs (' + Math.abs(b.rx - x0).toFixed(2) + ' spots in 0.1 s)');
+  // one kid online in his crew: no free runs alone (the computer's Fénec)
+  const m3 = mkVs(4, 47, 0, 240); T.startPlay(m3, 0);
+  const alone = Object.assign({}, opts, { online: (k) => k === 1 });
+  let t3 = 0;
+  for (; t3 < 60000 && !(m3.round && m3.round.phase === 'pwin'); t3 += 80) T.tick(m3, t3, alone);
+  ok(m3.boards[0].runner == null, 'a crew with only one kid online keeps the computer\'s Fénec (no free runs alone)');
+}
 // the fairness simulation (his rule: fair on school Wi-Fi). A runner bot whose phone sees each hammer L ms late:
 // a reactive one escapes single hammers nearly always, a sleepy one gets hit; a skilful crew traps him with two hammers
 function simulateVs(o) {
@@ -676,7 +727,8 @@ const VS_SIMS = [
   const by = vs.map(([, r]) => r);
   ok(by.every((r) => r.wrongHits === 0), '«¡Pero si lo esquivé!» never: no hit is ever given when his own screen had him away (every Wi-Fi case)');
   ok(by[0].escapePct >= 90, 'a reactive runner escapes single hammers nearly always at 150 ms (' + by[0].escapePct + ' %)');
-  ok(by[1].hitPct >= 60, 'a sleepy runner gets hit (' + by[1].hitPct + ' %)');
+  // (a sleepy runner is hit by every hammer that doesn't land inside his 1-s stun: no pile-on)
+  ok(by[1].hitPct >= 45 && by[1].runPtsPerRun < by[0].runPtsPerRun * 0.6, 'a sleepy runner gets hit (' + by[1].hitPct + ' % of hammers, the rest fall in his stun) and banks far fewer points (' + by[1].runPtsPerRun + ' vs ' + by[0].runPtsPerRun + ')');
   ok(by[3].trapCatchPct >= 50, 'a skilful crew traps a runner with two hammers covering both sides (' + by[3].trapCatchPct + ' % with no dash left)');
   ok(by[2].trapCatchPct < by[3].trapCatchPct, 'his dashes are his way out of a trap');
   ok(by[4].escapePct >= 85, 'with jitter and lost verdicts, a reactive runner still escapes (' + by[4].escapePct + ' %)');

@@ -42,7 +42,7 @@
   let seats = [];                // my crew [{ k, name, skin, words, on, robot }]
   let rules = { reach: 1, fall: 350, back: 420, max: 4, speed: 4.2, hit: 0.45 };
   let charges = 0, role = 'none', captain = null, myClaw = 'idle', guidedDone = { cap: false, mart: false, run: false };
-  let gmode = 'crew', runner = null, dashes = 0, runT = null, lastRunX = null, lastRunAt = 0, myRunEnd = null, rtt = 150;   // («1 contra 3»)
+  let gmode = 'crew', runner = null, dashes = 0, runT = null, lastRunX = null, lastRunAt = 0, myRunEnd = null;   // («1 contra 3»)
   let rd = { n: 0, total: 0, phase: 'none', final: false, until: 0, ms: 0 };
   let myQ = null, myLocked = false, paintedQid = null, qShownAt = 0;
   let words = 0, target = 1, anger = 0, endsAt = 0, pausedLeft = 0, paused = false, frenzy = false, streak = 0;
@@ -73,7 +73,7 @@
     if (inStage) { const w = $('tc-stagewrap'); if (w && b.parentNode !== w) w.appendChild(b); b.classList.add('tc-mute'); }
     else { if (b.parentNode !== muteHome.parent) muteHome.parent.insertBefore(b, muteHome.next && muteHome.next.parentNode === muteHome.parent ? muteHome.next : null); b.classList.remove('tc-mute'); }
   }
-  function stopAll() { clearTimers(); if (clockT) { clearInterval(clockT); clockT = null; } }
+  function stopAll() { clearTimers(); if (clockT) { clearInterval(clockT); clockT = null; } stopRun(); }
   function ensureStage() { if (!stage && S()) stage = new (S().Stage)($('tc-stage'), Object.assign({ mode: 'phone' }, rules)); }
   const isRunner = () => !!(g && runner != null && runner === g.you);
   function setMode(m) {
@@ -587,7 +587,6 @@
     myClaw = mine ? 'armed' : 'idle';
     paintMeter();
     if (stage) {
-      stage.o.lead = Math.min(300, rtt);
       stage.setRunner(runner, role === 'runner', d.rx, runner != null ? nameOf(runner) : '', runner != null ? skinOf(runner) : null);
       stage.setCaptain(d.captain);
       (d.mart || []).forEach((x) => stage.claw(x.k, 'armed', x.off, x.charges));
@@ -618,7 +617,7 @@
     g = { id: d.id, you: d.you ? d.you.k : null, b: d.board ? d.board.id : null, phase: d.phase };
     show();
     if (stage && d.rules) Object.assign(stage.o, d.rules);
-    if (fresh) { myQ = null; streak = 0; race = {}; guidedDone = { cap: false, mart: false }; if (stage) stage.reset(); }
+    if (fresh) { myQ = null; streak = 0; race = {}; guidedDone = { cap: false, mart: false, run: false }; if (stage) stage.reset(); }
     paused = !!d.paused;
     $('tc-pause').classList.toggle('hidden', !paused);
     if (stage) stage.setPaused(paused);
@@ -638,7 +637,7 @@
         stage.setCaptain(bd.captain);
         stage.crabTo(bd.crab, bd.crab, true);
         if (bd.fen) stage.fenec(bd.fen);
-        (bd.claws || []).forEach((c) => stage.claw(c.k, c.st === 'fall' ? 'armed' : c.st, c.off, c.charges));
+        (bd.claws || []).forEach((c) => stage.claw(c.k, c.st === 'fall' || c.st === 'wait' ? 'armed' : c.st, c.off, c.charges));
         stage.setAnger(anger);
         stage.setPlaying(rd.phase === 'pw' || rd.phase === 'pwin');
         runner = bd.runner != null && (rd.phase === 'pw' || rd.phase === 'pwin') ? bd.runner : null;
@@ -750,7 +749,7 @@
     // «1 contra 3»: the runner's spot (relayed), his dashes, his seconds at «¡Tiempo!»
     s.on('tc:runner', (d) => { if (on && g && d.b === g.b && stage && !isRunner()) stage.runAt(d.x); });
     s.on('tc:dash', (d) => { if (on && g && d.b === g.b && stage && d.k !== g.you) { stage.dashFx(d.dir); sfx(K + 'whoosh.mp3', 0.3); } });
-    s.on('tc:nodash', () => { if (!on || !isRunner()) return; dashes = Math.min(3, dashes + 1); paintMeter(); paintRole(); });
+    s.on('tc:nodash', (d) => { if (!on || !isRunner()) return; dashes = Math.min(3, dashes + 1); if (stage && stage.me && d && d.x != null) { stage.me.x = stage.me.tx = d.x; stage.me.dashTo = null; } paintMeter(); paintRole(); });
     s.on('tc:runend', (d) => {
       if (!on || !g || d.b !== g.b) return;
       myRunEnd = d;
@@ -874,6 +873,7 @@
       if (!on || !g || d.b !== g.b) return;
       ctx.markActivity();
       if (d.runner != null && d.runner === g.you) {
+        if (stage && stage.me && d.x != null) { stage.me.x = stage.me.tx = d.x; stage.me.dashTo = null; }   // (where the server judged me)
         const bk0 = seat(d.k);
         if (bk0) setWords(d.k, (bk0.words || 0) + d.pts, true);
         if (stage) stage.stunMe(d.ms, d.flying);

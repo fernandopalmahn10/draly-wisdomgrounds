@@ -296,7 +296,7 @@
     b.stage.setCaptain(v.captain);
     b.stage.crabTo(v.crab, v.crab, true);
     if (v.fen) b.stage.fenec(v.fen);
-    (v.claws || []).forEach((c) => b.stage.claw(c.k, c.st === 'fall' ? 'armed' : c.st, c.off, c.charges));
+    (v.claws || []).forEach((c) => b.stage.claw(c.k, c.st === 'fall' || c.st === 'wait' ? 'armed' : c.st, c.off, c.charges));
     b.stage.setAnger(v.anger || 0);
     b.stage.setPlaying(rd.phase === 'pw' || rd.phase === 'pwin');
     const run = v.runner != null && (rd.phase === 'pw' || rd.phase === 'pwin') ? (v.seats || []).find((x) => x.k === v.runner) : null;
@@ -383,6 +383,7 @@
   });
   onTc('tc:init', (d) => {
     if (!d) return;
+    if (!game || game.id !== d.id) Object.keys(runEnds).forEach((k) => delete runEnds[k]);
     game = { id: d.id, phase: d.phase };
     if (d.rules) rules = d.rules;
     if (d.mode) gmode = d.mode;

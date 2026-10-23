@@ -538,6 +538,7 @@
   // ---------- «1 contra 3»: a kid is Fénec this round ----------
   // k = the runner (null = the computer's Fénec again); me = my phone runs him (the camera from behind); x = his start
   Stage.prototype.setRunner = function (k, me, x, name, skin) {
+    if (k == null && this.runK == null) return;          // (the computer's Fénec keeps his pose: crew mode never notices)
     this.runK = k != null ? k : null;
     this.runMe = this.runK != null && !!me;
     this.runS = [];

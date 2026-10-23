@@ -14841,7 +14841,7 @@ io.on('connection', (socket) => {
     try {
       tcPlayer(data, (pin, g, p) => {
         const r = Crab.runnerDash(g.tc, p.tcK, Number(data.dir), Date.now());
-        if (!r) { io.to(socket.id).emit('tc:nodash', {}); return; }
+        if (!r) { const me = Crab.kid(g.tc, p.tcK), bd = me && Crab.boardOf(g.tc, me.b); io.to(socket.id).emit('tc:nodash', { x: bd && bd.runner === p.tcK ? Math.round(bd.rx * 100) / 100 : null }); return; }   // (his phone snaps back to where the server has him)
         io.to(tcRoom(pin, g.tc, r.b)).emit('tc:dash', r);
         io.to(g.hostId).emit('tc:dash', r);
       });
