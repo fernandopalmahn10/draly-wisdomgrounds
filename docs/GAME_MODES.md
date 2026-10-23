@@ -111,7 +111,19 @@ being played nor the next one. Grey «−30 s» out where the server would refus
 
 ## Status (2026-10-11)
 
-Live modes: **¡No despiertes a Dralingo!** (`dormilon`, live 2026-10-22, v2 «Gana plumas, luego frota con el dedo» live
+Live modes: **¡Atrapa a Fénec!** (`teamcrab`, built 2026-10-23 on branch `teamcrab`, not deployed: #4 of his Mario Party
+series, «Team Crab» (his video 7:30-8:16) turned around (his design 2026-10-23): the kids are the CREW of a giant red robot
+crab in the sea of a Dubai beach (crews of 3-4, a glass cockpit with each kid's face, a wooden barrel hammer each) and
+Fénec, el ladrón de palabras (a fennec-fox cartoon burglar, computer-played), hops between 5 spots of the dock and dodges;
+a right answer LOADS my hammer (its shadow on the planks, live on the crew's phones), I touch Fénec (or drag + swipe down /
+«¡GOLPE!») and it falls in 0.42 s: under it = a BONK (the crew's phones flash gold, the class's pinyin words fly out of his
+sack, +2 · +1 «trampa» for crewmates covering his escape spots); a wrong / late / blind answer jams my hammer 3 s, Fénec
+snatches a word «¡Mías!» (never who failed) and El Péndulo eats the spark: at anger 5 his BIG SWING knocks the crew's
+hammers away 3 s, right answers in a row calm him; 2 / 3 / 4 min, the last 30 s ×2; a crew that emptied his sack has
+caught him («¡ATRAPADO!», he runs off), else he kicks the crab to pieces; each crew's ceremony + the crews' leaderboard;
+rules `core/teamcrab.js`, server block `tc*`, phone `js/player-teamcrab.js`, projector `host-teamcrab.html` +
+`js/host-teamcrab.js`, both draw `js/teamcrab-stage.js` + `css/teamcrab.css`; spec `docs/specs/atrapa-a-fenec.md`),
+**¡No despiertes a Dralingo!** (`dormilon`, live 2026-10-22, v2 «Gana plumas, luego frota con el dedo» live
 the same day; v3 (his picks 2026-10-22 15:44, branch `dormilon-v3`): the wake-up is a dice roll that grows with every tickle since he fell asleep (about 2 a board in a 2-minute game, sometimes in the first round; only each board's very first turn is safe), 2 / 3 / 4 min (default 2), a wrong, late (15 s) or blind (< 0.5 s) answer makes a feather fly out and him shift, and he wakes up ANGRY on every screen (the angry red Dralingo, the whole phone floods red, burst ring, speed lines, steam, sparks, shake, his growl, ~4 s); the projector lobby keeps PIN, QR and «¡Empezar!» on the first screen and scrolls: #3 of his Mario Party series, «Don't Wake Wiggler» (his video 6:14-7:29) — Dralingo
 sleeps in a Chinese palace bedroom; boards of 4 take TURNS. v2: between turns every kid answers quick questions from the
 pack (a right answer = a golden feather, 3 to start, 6 max) while the friend's turn plays live above; on MY turn his face

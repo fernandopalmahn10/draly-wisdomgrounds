@@ -46,7 +46,8 @@ const EscapeMap = require('./public/js/escape-map'); // … and its zona segura 
 const Party = require('./core/party');               // the Mario Party ending of Reinos / Pintores / Nieve / Fuga (stars, «¡FINAL!»)
 const Halcon = require('./core/halcon');             // Ojos de Halcón: Mario Party «Looking for Love» in boards of 4 (rules)
 const Mono = require('./core/monopoly');             // Dàfùwēng · Monopolio v2: «El Gran Tablero de Dubái», boards of 4 (rules)
-const Dorm = require('./core/dormilon');             // ¡No despiertes a Dralingo!: Mario Party «Don't Wake Wiggler», boards of 4 (rules)
+const Dorm = require('./core/dormilon');
+const Crab = require('./core/teamcrab');   // ¡Atrapa a Fénec!: Mario Party «Team Crab», the crew of a robot crab vs Fénec (rules)             // ¡No despiertes a Dralingo!: Mario Party «Don't Wake Wiggler», boards of 4 (rules)
 const Dragon = require('./core/dragon');               // Vuelo del Dragón v2: «La Carrera del Cielo de Dubái», races of 4 (rules)
 const Mochi = require('./core/mochi');               // Mochi Mash v2: «La Terraza del Mochi», team mash + ceremony (rules)
 const Pinata = require('./core/pinata');             // Piñata Tigre v2: «La Fiesta de las Piñatas», team hits + timing meter (rules)
@@ -7734,6 +7735,7 @@ function nextQuestionFor(game, playerId) {
   // 6-7 Swing v2: its room tick deals every sum (ssDeal, core/sixseven.js); never a generic question
   if (game.gameType === 'sixseven') return null;
   if (game.gameType === 'dormilon') return null;   // ¡No despiertes a Dralingo!: its tick deals the turn kid's questions (dm:q)
+  if (game.gameType === 'teamcrab') return null;   // ¡Atrapa a Fénec!: its tick deals every kid's questions (tc:q)
 
   const q = game.questions[p.queueIdx % game.questions.length];
   p.queueIdx++;
@@ -8274,6 +8276,278 @@ function dmAttach(pin, g, pid, p) {
   if (!Dorm.inGame(m, p.dmK)) { if (m.phase === 'intro' || m.phase === 'play') dmSeatLate(pin, g, pid, p); }   // (in the countdown dmStart seats them)
   else dmJoinRoom(pin, g, pid, p);
   io.to(pid).emit('dm:init', dmInitPayload(g, pid));
+}
+
+// === 🦀 ¡ATRAPA A FÉNEC! (gameType 'teamcrab') — Super Mario Party «Team Crab», the crew of a robot crab vs Fénec ===
+// Rules in core/teamcrab.js (spec docs/specs/atrapa-a-fenec.md). The boards are dealt when the countdown starts (each
+// phone runs in with its own board, tc:init); one 80 ms tick per room runs the clock, every hammer's fall and Fénec's
+// dodges: intro → play (each kid: a quiz question to them only (tc:q) → a right answer loads their hammer (tc:ham, the
+// board sees its shadow) → they drag it (player:tc-aim, relayed live to the board and the projector, volatile) and slam
+// (player:tc-slam) → the tick judges the impact against Fénec's spot (tc:impact / tc:bonk, the board's big moment) →
+// a wrong, late or blind answer: my hammer jams (to me only) + tc:snatch + tc:feed (anonymous) → El Péndulo's big swing
+// (tc:swing) → the last 30 s ×2 → «¡FINAL!» (caught or escaped per board) → game-end (each phone its board's ending,
+// ceremony and card; the projector every board + the crews and the class podium). Each board is a socket.io room of its
+// own (the game id in its name, so «Otra ronda» never mixes boards). The crews' standings ride on tc:crews.
+const TC_TICK_MS = 80;
+function tcEnsureId(g, p) { if (!p.tcK) p.tcK = (g.tcNextK = (g.tcNextK || 0) + 1); return p.tcK; }
+const tcRoom = (pin, m, bid) => `${pin}:tc:${m.id}:${bid}`;
+function tcJoinRoom(pin, g, pid, p) {
+  const m = g.tc;
+  const r = m && Crab.kid(m, p.tcK);
+  if (!r) return;
+  const s = io.sockets.sockets.get(pid);
+  if (s) s.join(tcRoom(pin, m, r.b));
+}
+function tcOnline(g) {
+  const on = new Set();
+  Object.values(g.players).forEach((p) => { if (p.tcK && !p.disconnected) on.add(p.tcK); });
+  return (k) => on.has(k);
+}
+function tcPidOf(g, k) {
+  for (const [pid, p] of Object.entries(g.players)) if (p.tcK === k && !p.disconnected) return pid;
+  return null;
+}
+const tcClock = (m) => (m.paused ? m.pausedAt : Date.now());
+function tcCrews(g) {
+  return g.tc.boards.filter((b) => b.seats.length).map((b) => ({ id: b.id, words: b.words, target: b.target, full: !!b.full, n: b.seats.length }))
+    .sort((a, b) => b.words - a.words || a.id - b.id);
+}
+function tcInitPayload(g, pid) {
+  const m = g.tc;
+  const clock = tcClock(m);
+  const online = tcOnline(g);
+  const out = {
+    id: m.id, phase: m.phase, phaseMs: Math.max(0, m.phaseUntil - clock), paused: !!m.paused,
+    endsMs: m.endsAt ? Math.max(0, m.endsAt - clock) : null, frenzy: !!m.frenzy, duration: m.duration, boardsN: m.boards.length,
+    crews: tcCrews(g), spots: Crab.R.SPOTS,
+  };
+  if (!pid) { out.boards = m.boards.map((b) => Crab.boardView(m, b, online, clock)); return out; }
+  const p = g.players[pid];
+  const r = p && Crab.kid(m, p.tcK);
+  if (!r) return out;
+  const b = Crab.boardOf(m, r.b);
+  out.board = b ? Crab.boardView(m, b, online, clock) : null;
+  const h = r.h;
+  out.you = { k: r.k, b: r.b, words: r.words, bonks: r.bonks, first: !!r.first, st: h.st, x: h.x, ms: h.until ? Math.max(0, h.until - clock) : 0, guided: !!h.guided };
+  out.q = Crab.openQ(m, r.k, clock);
+  return out;
+}
+function tcStop(g) { if (g && g.tc && g.tc.timer) { clearInterval(g.tc.timer); g.tc.timer = null; } }
+// The events of the rules (core/teamcrab.js) to the screens: the board's phones (its room) + the projector; a question,
+// its result and the end of a jam only to their kid (a miss is never shown with a name).
+const TC_KID_ONLY = { q: 'tc:q', qr: 'tc:qr' };
+function tcEmit(pin, g, evs) {
+  const m = g.tc;
+  if (!m || !evs || !evs.length) return;
+  let crews = false;
+  evs.forEach((e) => {
+    try {
+      if (e.t === 'q') {
+        const pid = tcPidOf(g, e.k);
+        if (pid) io.to(pid).emit('tc:q', Object.assign({ b: e.b, ms: e.ms }, Crab.qPublic(e.q)));
+        return;
+      }
+      if (TC_KID_ONLY[e.t] || (e.t === 'ham' && e.only)) {
+        const pid = tcPidOf(g, e.k);
+        const payload = Object.assign({ id: m.id }, e);
+        delete payload.t;
+        if (pid) io.to(pid).emit(TC_KID_ONLY[e.t] || 'tc:ham', payload);
+        return;
+      }
+      if (e.t === 'ham' && e.notMe) {
+        const pid = tcPidOf(g, e.k);
+        const payload = Object.assign({ id: m.id }, e);
+        delete payload.t; delete payload.notMe;
+        io.to(tcRoom(pin, m, e.b)).except(pid || '').emit('tc:ham', payload);
+        io.to(g.hostId).emit('tc:ham', payload);
+        return;
+      }
+      if (e.t === 'frenzy') { io.to(pin).emit('tc:frenzy', { id: m.id, endsMs: e.endsMs, off: !!e.off }); return; }
+      if (e.t === 'final') { io.to(pin).emit('tc:final', { id: m.id, ms: e.ms, boards: e.boards }); return; }
+      if (e.t === 'bonk' || e.t === 'snatch' || e.t === 'full') {
+        crews = true;
+        if (e.t === 'bonk') [e.k].concat(e.assists || []).forEach((k) => { const r = Crab.kid(m, k); Object.values(g.players).forEach((p) => { if (r && p.tcK === r.k) p.score = r.words; }); });
+      }
+      const payload = Object.assign({ id: m.id }, e);
+      delete payload.t;
+      io.to(tcRoom(pin, m, e.b)).emit('tc:' + e.t, payload);
+      io.to(g.hostId).emit('tc:' + e.t, payload);
+    } catch (err) { console.error('[teamcrab] emit', e && e.t, err); }
+  });
+  if (crews) io.to(g.hostId).emit('tc:crews', { crews: tcCrews(g) });
+}
+// The countdown starts: the boards are dealt now (every phone runs in with its own crab and the projector with all).
+function tcWords(g) {
+  const out = [];
+  (g.questions || []).forEach((q) => {
+    const w = String(q.key || '').trim().toLowerCase();
+    if (w && /^[a-z]+( [a-z]+)*$/.test(w) && w.length <= 14 && !out.includes(w)) out.push(w);
+  });
+  return out;
+}
+function tcDeal(pin, g) {
+  tcStop(g);
+  const now = Date.now();
+  const m = Crab.newGame(1 + Math.floor(Math.random() * 1e9), g.duration, now, tcWords(g));
+  m.phaseUntil = now + COUNTDOWN_MS;
+  m.timer = null;
+  g.tc = m;
+  Object.values(g.players).forEach((p) => { tcEnsureId(g, p); p.currentQ = null; });
+  Crab.deal(m, Object.values(g.players).filter((p) => !p.disconnected).map((p) => [p.tcK, p.name, hcSkin(p), p.studentCode || '']));
+  Object.entries(g.players).forEach(([pid, p]) => {
+    if (p.disconnected || !Crab.inGame(m, p.tcK)) return;
+    tcJoinRoom(pin, g, pid, p);
+    io.to(pid).emit('tc:init', tcInitPayload(g, pid));
+  });
+  io.to(g.hostId).emit('tc:init', tcInitPayload(g, null));
+}
+// A kid who wasn't dealt in sits at the smallest board (its hammer joins the crab); that board and the projector hear it.
+function tcSeatLate(pin, g, pid, p) {
+  const m = g.tc;
+  const b = Crab.seatLate(m, tcEnsureId(g, p), p.name, hcSkin(p), p.studentCode || '', Date.now());
+  if (!b) return false;
+  tcJoinRoom(pin, g, pid, p);
+  const view = Crab.boardView(m, b, tcOnline(g), tcClock(m));
+  io.to(tcRoom(pin, m, b.id)).except(pid).emit('tc:seat', { board: view });
+  io.to(g.hostId).emit('tc:seat', { board: view });
+  return true;
+}
+function tcStart(pin, g) {
+  const m = g.tc;
+  if (!m || m.phase !== 'countdown') return;
+  const now = Date.now();
+  m.phase = 'intro';
+  m.phaseAt = now;
+  m.phaseUntil = now + Crab.R.INTRO_MS;
+  Object.entries(g.players).forEach(([pid, p]) => {
+    tcEnsureId(g, p);
+    p.currentQ = null;
+    if (!p.disconnected && !Crab.inGame(m, p.tcK)) { tcSeatLate(pin, g, pid, p); io.to(pid).emit('tc:init', tcInitPayload(g, pid)); }
+  });
+  g.endsAt = now + Crab.R.INTRO_MS + m.duration * 1000;
+  io.to(pin).emit('tc:intro', { id: m.id, ms: Crab.R.INTRO_MS });
+  tcStop(g);
+  m.timer = setInterval(() => tcTick(pin, m), TC_TICK_MS);
+}
+function tcPlay(pin, g) {
+  const m = g.tc;
+  if (!m || m.phase !== 'intro') return;
+  const now = Date.now();
+  tcEmit(pin, g, Crab.startPlay(m, now));
+  g.endsAt = m.endsAt;
+  io.to(pin).emit('tc:play', { id: m.id, endsMs: m.endsAt - now });
+  g._lastBcast = 0;
+  broadcast(pin);
+}
+const tcOpts = (g) => ({ questions: g.questions, imageFor: (q) => Images.urlForQuestion(q), online: tcOnline(g) });
+function tcTick(pin, m) {
+  const g = games[pin];
+  if (!g || g.tc !== m || g.state !== 'active') { clearInterval(m.timer); m.timer = null; return; }
+  if (m.paused) return;
+  const now = Date.now();
+  try {
+    if (m.phase === 'intro') { if (now >= m.phaseUntil) tcPlay(pin, g); return; }
+    if (m.phase === 'play') { tcEmit(pin, g, Crab.tick(m, now, tcOpts(g))); return; }
+    if (m.phase === 'final' && now >= m.phaseUntil) {
+      tcStop(g);
+      if (g.endTimer) { clearTimeout(g.endTimer); g.endTimer = null; }
+      endGame(pin);
+    }
+  } catch (e) { console.error('[teamcrab] tick', e); }
+}
+// «¡FINAL!» on every screen (a falling hammer still lands); the tick ends the game FINAL_MS later.
+function tcFinal(pin, g) {
+  const m = g.tc;
+  if (!m || m.phase === 'final' || m.phase === 'done') return;
+  const now = Date.now();
+  if (m.paused) { Crab.shiftTimes(m, now - m.pausedAt); m.paused = false; io.to(pin).emit('tc:pause', { id: m.id, paused: false }); }
+  tcEmit(pin, g, Crab.final(m, now));
+  Object.values(g.players).forEach((p) => { p.currentQ = null; });
+  if (!m.timer) m.timer = setInterval(() => tcTick(pin, m), TC_TICK_MS);
+}
+function tcPause(pin, g, paused) {
+  const m = g.tc;
+  if (!m || !!m.paused === !!paused || m.phase === 'final' || m.phase === 'done' || m.phase === 'countdown') return;
+  const now = Date.now();
+  if (paused) { m.paused = true; m.pausedAt = now; }
+  else {
+    const shift = now - m.pausedAt;
+    Crab.shiftTimes(m, shift);
+    if (g.endsAt) g.endsAt += shift;
+    m.paused = false;
+  }
+  const clock = tcClock(m);
+  io.to(pin).emit('tc:pause', { id: m.id, paused: !!m.paused, phase: m.phase, endsMs: m.endsAt ? Math.max(0, m.endsAt - clock) : null });
+  Object.entries(g.players).forEach(([pid, p]) => { if (!p.disconnected && Crab.inGame(m, p.tcK)) io.to(pid).emit('tc:init', tcInitPayload(g, pid)); });
+  io.to(g.hostId).emit('tc:init', tcInitPayload(g, null));
+  g._lastBcast = 0;
+  broadcast(pin);
+}
+// The end: each board's ending (caught / escaped), ranking, bonus stars and winner; the crews; the class podium; each
+// phone its own board + its card (built again on demand for a reconnect).
+function tcEndPayloads(g) {
+  const m = g.tc;
+  const fin = Crab.finish(m);
+  const lite = (x) => x && {
+    k: x.k, name: x.name, skin: x.skin, b: x.b, words: x.words, bonks: x.bonks, assists: x.assists, rank: x.rank,
+    classRank: x.classRank, stars: x.stars, best: x.best,
+  };
+  const boards = fin.boards.map((bd) => ({
+    id: bd.id, words: bd.words, target: bd.target, caught: bd.caught, bonks: bd.bonks, winners: bd.winners, rows: bd.rows.map((k) => lite(fin.byK[k])),
+    stars: bd.stars.map((s) => ({ id: s.id, name: s.name, unit: s.unit, value: s.value, winners: s.winners })),
+  }));
+  const podium = fin.order.slice(0, 3).map((k) => lite(fin.byK[k]));
+  const common = { winner: 'tie', teamScores: { red: 0, gold: 0 } };   // (no teams: the shared phone code reads these)
+  const words = (m.words || []).slice(0, 8);                         // (the class's pinyin words: they fly out of his sack in the ending)
+  return {
+    byK: fin.byK,
+    guest: () => Object.assign({}, common, { teamcrab: { board: null, words, podium, crews: fin.crews, count: fin.count, boardsN: boards.length }, me: { guest: true } }),
+    host: Object.assign({
+      leaderboard: fin.order.map((k) => ({ name: fin.byK[k].name, score: fin.byK[k].words, team: 'red' })),
+      teamcrab: { boards, podium, crews: fin.crews, count: fin.count, words },
+    }, common),
+    forPlayer(pid) {
+      const p = g.players[pid];
+      const x = p && fin.byK[p.tcK];
+      if (!x) return null;
+      const board = boards.find((bd) => bd.id === x.b) || null;
+      const crew = fin.crews.find((c) => c.id === x.b) || null;
+      return Object.assign({}, common, {
+        scores: { [pid]: x.words },
+        teamcrab: { board, podium, crews: fin.crews, count: fin.count, boardsN: boards.length, words },
+        me: {
+          k: x.k, b: x.b, skin: x.skin, rank: x.rank, of: board ? board.rows.length : 1, classRank: x.classRank, classOf: fin.count,
+          words: x.words, bonks: x.bonks, assists: x.assists, slams: x.slams, stars: x.stars, answered: x.answered, right: x.right,
+          best: x.best, won: !!(board && board.winners.includes(x.k)), caught: !!(board && board.caught), crewRank: crew ? crew.rank : null, crews: fin.crews.length,
+        },
+      });
+    },
+  };
+}
+function tcFinish(pin, g) {
+  const m = g.tc;
+  if (!m) return;
+  tcStop(g);
+  m.phase = 'done';
+  const end = tcEndPayloads(g);
+  Object.values(g.players).forEach((p) => { const x = end.byK[p.tcK]; if (x) p.score = x.words; });
+  io.to(g.hostId).emit('game-end', end.host);
+  Object.entries(g.players).forEach(([pid, p]) => {
+    if (p.disconnected) return;
+    io.to(pid).emit('game-end', end.forPlayer(pid) || end.guest());
+  });
+  _zocoGameEnd(pin, g, end);   // 🪙 El Zoco: a game played for real and its bonus stars pay
+}
+// a kid's phone (re)connects mid-game: its seat (or a late seat), its board room, the board again with an open question
+function tcAttach(pin, g, pid, p) {
+  const m = g.tc;
+  if (!m) return;
+  if (!Crab.inGame(m, p.tcK) && p.studentCode) { const old = Crab.byCode(m, p.studentCode, tcOnline(g)); if (old) p.tcK = old.k; }
+  tcEnsureId(g, p);
+  p.currentQ = null;
+  if (!Crab.inGame(m, p.tcK)) { if (m.phase === 'intro' || m.phase === 'play') tcSeatLate(pin, g, pid, p); }
+  else tcJoinRoom(pin, g, pid, p);
+  io.to(pid).emit('tc:init', tcInitPayload(g, pid));
 }
 
 // === 🐉 VUELO DEL DRAGÓN v2 (gameType 'dragon-eye') — «La Carrera del Cielo de Dubái», a Mario Party sky race ===
@@ -11214,7 +11488,7 @@ function _gameAvatar(sent, rec, proven) {
   return s ? s.slice(0, 8) : '';
 }
 // The class games that pay (every pin game; never the warm-up, reading or exam rooms: those are class tools)
-const ZOCO_GAMES = ['kingdoms', 'paint', 'snow', 'escape', 'trapdoor', 'halcon', 'mochi-mash', 'pinata', 'sixseven', 'monopoly', 'dragon-eye', 'dormilon'];
+const ZOCO_GAMES = ['kingdoms', 'paint', 'snow', 'escape', 'trapdoor', 'halcon', 'mochi-mash', 'pinata', 'sixseven', 'monopoly', 'dragon-eye', 'dormilon', 'teamcrab'];
 // A pin game's round ended (each game's finisher, right after it built its end payloads): every kid whose account the
 // phone proved and who played for real (Zoco.GAME_MIN answers) gets PAY.game and PAY.star per bonus star of the ceremony, once per
 // round (the room's id + the round's start), within the day's caps. The phone hears it as `zoco:coins` (a small «+N
@@ -11292,6 +11566,13 @@ function endGame(pin, force) {
   if (g.gameType === 'dormilon' && g.dm) {
     if (g.endTimer) { clearTimeout(g.endTimer); g.endTimer = null; }
     dmFinish(pin, g);
+    broadcast(pin);
+    return;
+  }
+  // ¡Atrapa a Fénec!: each board's ending (caught / escaped), bonus stars, the crews, the class podium, each phone its card.
+  if (g.gameType === 'teamcrab' && g.tc) {
+    if (g.endTimer) { clearTimeout(g.endTimer); g.endTimer = null; }
+    tcFinish(pin, g);
     broadcast(pin);
     return;
   }
@@ -11420,7 +11701,7 @@ io.on('connection', (socket) => {
       if (typeof a === 'function') cb = a;
       else if (a && typeof a === 'object') opts = a;
     }
-    const validTypes = ['mochi-mash', 'pinata', 'dragon-eye', 'monopoly', 'dormilon', 'sixseven', 'kingdoms', 'paint', 'snow', 'escape', 'halcon', 'trapdoor', 'warmup', 'reading', 'hsksim'];
+    const validTypes = ['mochi-mash', 'pinata', 'dragon-eye', 'monopoly', 'dormilon', 'teamcrab', 'sixseven', 'kingdoms', 'paint', 'snow', 'escape', 'halcon', 'trapdoor', 'warmup', 'reading', 'hsksim'];
     const type = validTypes.includes(opts.gameType) ? opts.gameType : 'mochi-mash';
     // 🔑 2026-10-15 — creating ANY room needs a teacher (his words: "maestros crear un juego needs first time key access,
     // then it's safe"): a remembered teacher device (the dtd cookie the page's connection carried: a /maestro login
@@ -11448,6 +11729,7 @@ io.on('connection', (socket) => {
       type === 'dragon-eye'   ? Dragon.R.DURATION :   // 4 min (the lobby offers 3 / 4 / 5)
       type === 'monopoly'     ? Mono.R.DURATION :   // 4 min (the lobby offers 3 / 4 / 5)
       type === 'dormilon'     ? Dorm.R.DURATION :   // ¡No despiertes a Dralingo!: 2 min (the lobby offers 2 / 3 / 4)
+      type === 'teamcrab'     ? Crab.R.DURATION :   // ¡Atrapa a Fénec!: 2 min (the lobby offers 2 / 3 / 4)
       type === 'sixseven'     ? Sixseven.R.DURATION :   // 2 min (the lobby offers 2 / 3 / 4)
       type === 'kingdoms'     ? 180 :
       type === 'paint'        ? 240 :
@@ -11613,6 +11895,9 @@ io.on('connection', (socket) => {
     // ¡No despiertes a Dralingo!: every board again (the countdown or mid-game), or the ceremony again (after the end)
     if (g.gameType === 'dormilon' && g.dm && (g.state === 'active' || g.state === 'countdown')) io.to(socket.id).emit('dm:init', dmInitPayload(g, null));
     if (g.gameType === 'dormilon' && g.dm && g.state === 'ended') io.to(socket.id).emit('game-end', dmEndPayloads(g).host);
+    // ¡Atrapa a Fénec!: every board again (the countdown or mid-game), or the ending again (after the end)
+    if (g.gameType === 'teamcrab' && g.tc && (g.state === 'active' || g.state === 'countdown')) io.to(socket.id).emit('tc:init', tcInitPayload(g, null));
+    if (g.gameType === 'teamcrab' && g.tc && g.state === 'ended') io.to(socket.id).emit('game-end', tcEndPayloads(g).host);
     // Vuelo del Dragón: every race again (the countdown or mid-game), or the ceremony again (after the end)
     if (g.gameType === 'dragon-eye' && g.dr && (g.state === 'active' || g.state === 'countdown')) io.to(socket.id).emit('dr:init', drInitPayload(g, null));
     if (g.gameType === 'dragon-eye' && g.dr && g.state === 'ended') io.to(socket.id).emit('game-end', drEndPayloads(g).host);
@@ -11794,7 +12079,7 @@ io.on('connection', (socket) => {
   socket.on('host:start', ({ pin }) => {
     const g = games[pin];
     if (!g || g.hostId !== socket.id) return;
-    if ((g.gameType === 'monopoly' || g.gameType === 'dragon-eye' || g.gameType === 'dormilon') && g.state !== 'lobby') return;   // Monopolio / Vuelo / No despiertes: a second click never deals again
+    if ((g.gameType === 'monopoly' || g.gameType === 'dragon-eye' || g.gameType === 'dormilon' || g.gameType === 'teamcrab') && g.state !== 'lobby') return;   // Monopolio / Vuelo / No despiertes: a second click never deals again
     // Reinos / Pintores: a second click (or a reconnected projector) must not wipe a round that is already running.
     if ((g.gameType === 'kingdoms' || g.gameType === 'paint' || g.gameType === 'snow' || g.gameType === 'escape' || g.gameType === 'halcon' || g.gameType === 'mochi-mash' || g.gameType === 'pinata' || g.gameType === 'sixseven' || g.gameType === 'trapdoor') && g.state !== 'lobby') return;
     // Some game types don't use question sets at all (their content is
@@ -11862,6 +12147,9 @@ io.on('connection', (socket) => {
     // ¡No despiertes a Dralingo!: the same (each phone's run-in shows its own board of 4 and the sleeping Dralingo)
     if (g.gameType === 'dormilon') dmDeal(pin, g);
     const dmDealt = g.gameType === 'dormilon' && g.dm ? g.dm.id : null;
+    // ¡Atrapa a Fénec!: the same (each phone's run-in shows its own crab and crew)
+    if (g.gameType === 'teamcrab') tcDeal(pin, g);
+    const tcDealt = g.gameType === 'teamcrab' && g.tc ? g.tc.id : null;
     // Vuelo del Dragón: the same (each phone's run-in shows its own race of 4)
     if (g.gameType === 'dragon-eye') drDeal(pin, g);
     const drDealt = g.gameType === 'dragon-eye' && g.dr ? g.dr.id : null;
@@ -11870,6 +12158,7 @@ io.on('connection', (socket) => {
       if (!games[pin]) return;
       if (g.gameType === 'monopoly' && (g.state !== 'countdown' || !g.mn || g.mn.id !== mnDealt)) return;
       if (g.gameType === 'dormilon' && (g.state !== 'countdown' || !g.dm || g.dm.id !== dmDealt)) return;
+      if (g.gameType === 'teamcrab' && (g.state !== 'countdown' || !g.tc || g.tc.id !== tcDealt)) return;
       if (g.gameType === 'dragon-eye' && (g.state !== 'countdown' || !g.dr || g.dr.id !== drDealt)) return;
       g.state = 'active';
       g.startedAt = Date.now();
@@ -11886,6 +12175,8 @@ io.on('connection', (socket) => {
       if (g.gameType === 'monopoly') mnStart(pin, g);
       // ¡No despiertes a Dralingo!: the boards were dealt at the countdown; the intro now, then dmPlay (its tick runs the turns)
       if (g.gameType === 'dormilon') dmStart(pin, g);
+      // ¡Atrapa a Fénec!: the boards were dealt at the countdown; the intro now, then tcPlay (its tick runs everything)
+      if (g.gameType === 'teamcrab') tcStart(pin, g);
 
       // Vuelo del Dragón v2: the races were dealt at the countdown; the intro now, then drPlay (its tick deals the questions)
       if (g.gameType === 'dragon-eye') drStart(pin, g);
@@ -11971,7 +12262,7 @@ io.on('connection', (socket) => {
       }
       broadcast(pin);
       // Every question-driven game auto-deals the first question (Dragones Pintores: kids ask with «Recargar»).
-      if (g.gameType !== 'paint' && g.gameType !== 'snow' && g.gameType !== 'halcon' && g.gameType !== 'dormilon' && g.gameType !== 'mochi-mash' && g.gameType !== 'pinata' && g.gameType !== 'sixseven' && g.gameType !== 'trapdoor') Object.keys(g.players).forEach((pid) => {
+      if (g.gameType !== 'paint' && g.gameType !== 'snow' && g.gameType !== 'halcon' && g.gameType !== 'dormilon' && g.gameType !== 'teamcrab' && g.gameType !== 'mochi-mash' && g.gameType !== 'pinata' && g.gameType !== 'sixseven' && g.gameType !== 'trapdoor') Object.keys(g.players).forEach((pid) => {
         const q = nextQuestionFor(g, pid);
         if (q) io.to(pid).emit('question', q);
       });
@@ -11980,7 +12271,7 @@ io.on('connection', (socket) => {
         endGame(pin);
       }, g.duration * 1000);
       // Dàfùwēng · Monopolio: its room tick owns the clock (intro, +30 s, pause, «¡FINAL!»): no generic end timer
-      if ((g.gameType === 'monopoly' || g.gameType === 'dragon-eye' || g.gameType === 'trapdoor' || g.gameType === 'dormilon') && g.endTimer) { clearTimeout(g.endTimer); g.endTimer = null; }
+      if ((g.gameType === 'monopoly' || g.gameType === 'dragon-eye' || g.gameType === 'trapdoor' || g.gameType === 'dormilon' || g.gameType === 'teamcrab') && g.endTimer) { clearTimeout(g.endTimer); g.endTimer = null; }
     }, COUNTDOWN_MS);
   });
 
@@ -12004,6 +12295,12 @@ io.on('connection', (socket) => {
     if (g.gameType === 'dormilon') {
       if (!g.dm || g.state !== 'active' || g.dm.phase === 'final' || g.dm.phase === 'done') return;
       dmFinal(pin, g);
+      return;
+    }
+    // ¡Atrapa a Fénec!: «Terminar» plays «¡FINAL!» first (also from the pause card), then the endings; never twice
+    if (g.gameType === 'teamcrab') {
+      if (!g.tc || g.state !== 'active' || g.tc.phase === 'final' || g.tc.phase === 'done') return;
+      tcFinal(pin, g);
       return;
     }
     // Dàfùwēng · Monopolio: «Terminar» plays «¡FINAL!» first (also from the pause card), then the ceremony; never twice
@@ -12094,6 +12391,7 @@ io.on('connection', (socket) => {
     if (g.gameType === 'halcon') { hcStop(g); g.halcon = null; }
     if (g.gameType === 'monopoly') { mnStop(g); g.mn = null; }   // (each kid keeps its id k; a new game makes new boards)
     if (g.gameType === 'dormilon') { dmStop(g); g.dm = null; }   // (the same: a new game deals new boards and new nights)
+    if (g.gameType === 'teamcrab') { tcStop(g); g.tc = null; }   // (the same: a new game deals new crabs)
     if (g.gameType === 'dragon-eye') { drStop(g); g.dr = null; }  // (the same: a new game deals new races)
     if (g.gameType === 'mochi-mash') {
       mmStop(g);
@@ -12142,7 +12440,7 @@ io.on('connection', (socket) => {
     // Dàfùwēng · Monopolio: a kid of this game whose phone dropped around the end (a new socket) gets its slot back and
     // its own board's ceremony + card again, and stays in the room for «Otra ronda»
     // (2026-10-19: never a slot whose name is playing right now on another phone: _slotByName)
-    if (g.state === 'ended' && ((g.gameType === 'monopoly' && g.mn) || (g.gameType === 'dormilon' && g.dm))) {
+    if (g.state === 'ended' && ((g.gameType === 'monopoly' && g.mn) || (g.gameType === 'dormilon' && g.dm) || (g.gameType === 'teamcrab' && g.tc))) {
       const sl = _slotByName(g, name, socket.id, sentCode);
       const ex = sl.entry;
       if (ex) {
@@ -12160,7 +12458,8 @@ io.on('connection', (socket) => {
         const mine = _samePhone(pl, sentCode);
         cb({ ok: true, name: pl.name, team: pl.team, playerId: socket.id, gameType: g.gameType, rejoined: true, gameState: 'ended', studentCode: mine ? pl.studentCode : undefined, guest: !mine });
         io.to(socket.id).emit('state', publicState(g));
-        const one = g.gameType === 'dormilon' ? (() => { const e = dmEndPayloads(g); return e.forPlayer(socket.id) || e.guest(); })() : mnEndPayloads(g).forPlayer(socket.id);
+        const one = g.gameType === 'dormilon' ? (() => { const e = dmEndPayloads(g); return e.forPlayer(socket.id) || e.guest(); })()
+          : g.gameType === 'teamcrab' ? (() => { const e = tcEndPayloads(g); return e.forPlayer(socket.id) || e.guest(); })() : mnEndPayloads(g).forPlayer(socket.id);
         if (one) setTimeout(() => io.to(socket.id).emit('game-end', one), 60);
         return;
       }
@@ -12344,6 +12643,11 @@ io.on('connection', (socket) => {
       dmJoinRoom(pin, g, socket.id, player);
       io.to(socket.id).emit('dm:init', dmInitPayload(g, socket.id));
     }
+    // ¡Atrapa a Fénec! during the countdown: the same (a new kid sits down when the intro starts, tcStart)
+    if (g.state === 'countdown' && g.gameType === 'teamcrab' && g.tc && Crab.inGame(g.tc, player.tcK)) {
+      tcJoinRoom(pin, g, socket.id, player);
+      io.to(socket.id).emit('tc:init', tcInitPayload(g, socket.id));
+    }
     // Dàfùwēng · Monopolio during the countdown: a dealt kid who reloads gets its board's run-in again (a new kid sits
     // down when the intro starts, mnStart)
     if (g.state === 'countdown' && g.gameType === 'monopoly' && g.mn && Mono.inGame(g.mn, player.mnK)) {
@@ -12419,6 +12723,9 @@ io.on('connection', (socket) => {
       // ¡No despiertes a Dralingo!: a late joiner sits at the smallest board (max 5, last in its turn order); a rejoin
       // keeps its seat, points and an open question (dm:init carries it with the time left). Never a generic question.
       if (g.gameType === 'dormilon' && g.dm) { dmAttach(pin, g, socket.id, player); return; }
+      // ¡Atrapa a Fénec!: a late joiner sits at the smallest board (its hammer joins the crab); a rejoin keeps its seat, words
+      // and an open question (tc:init carries it with the time left). Never a generic question.
+      if (g.gameType === 'teamcrab' && g.tc) { tcAttach(pin, g, socket.id, player); return; }
       // Dàfùwēng · Monopolio: a late joiner sits at the smallest board (max 5) and plays from now; a rejoin keeps its seat,
       // piece, coins, stars, an open dice window and a turn still playing (mn:init carries them). Its open question comes
       // back; the room's tick deals every new one (never in the intro, a pause or «¡FINAL!»).
@@ -12890,6 +13197,7 @@ io.on('connection', (socket) => {
       if (g.gameType === 'halcon') hcPause(pin, g, !!paused);
       if (g.gameType === 'monopoly') mnPause(pin, g, !!paused);
       if (g.gameType === 'dormilon') dmPause(pin, g, !!paused);
+      if (g.gameType === 'teamcrab') tcPause(pin, g, !!paused);
       if (g.gameType === 'dragon-eye') drPause(pin, g, !!paused);
       if (g.gameType === 'mochi-mash') mmPause(pin, g, !!paused);
       if (g.gameType === 'pinata') pnPause(pin, g, !!paused);
@@ -13123,6 +13431,18 @@ io.on('connection', (socket) => {
       broadcast(pin);
       return;
     }
+    // ¡Atrapa a Fénec!: the same (landing inside the last 30 s starts «¡Atardecer dorado!» on the next tick)
+    if (g.gameType === 'teamcrab' && g.tc) {
+      const clock = tcClock(g.tc);
+      const d = Crab.addTime(g.tc, add, clock);
+      if (!d) { if (add < 0) io.to(socket.id).emit('host:time-refused', { cut: true }); return; }
+      g.endsAt = g.tc.endsAt;
+      io.to(pin).emit('tc:time', { id: g.tc.id, endsMs: Math.max(0, g.tc.endsAt - clock), frenzy: g.tc.frenzy, add: said(d), targets: Object.fromEntries(g.tc.boards.map((b) => [b.id, b.target])) });
+      io.to(g.hostId).emit('tc:crews', { crews: tcCrews(g) });
+      g._lastBcast = 0;
+      broadcast(pin);
+      return;
+    }
     // Las Trampillas counts in rounds: «+30 s» = 2 rondas más (up to 15), «−30 s» = 2 rondas menos (never the round
     // being played nor the next one); neither once the Final Round is on
     if (g.gameType === 'trapdoor' && g.td) {
@@ -13228,6 +13548,18 @@ io.on('connection', (socket) => {
         return;
       }
       if (g.state === 'active' || g.state === 'countdown') dmAttach(pin, g, socket.id, p);
+      return;
+    }
+    // ¡Atrapa a Fénec!: the board again (seat, words, my hammer, an open question with its time left); after the end the
+    // ending + card again. The room's tick deals every new question.
+    if (g.gameType === 'teamcrab' && g.tc) {
+      if (g.state === 'ended') {
+        const e = tcEndPayloads(g);
+        const one = e.forPlayer(socket.id) || e.guest();
+        if (one) io.to(socket.id).emit('game-end', one);
+        return;
+      }
+      if (g.state === 'active' || g.state === 'countdown') tcAttach(pin, g, socket.id, p);
       return;
     }
     // Dàfùwēng · Monopolio: the board again (seat, piece, coins, an open dice window, a turn still playing), the open
@@ -14404,6 +14736,75 @@ io.on('connection', (socket) => {
       } else if (g.state === 'ended') io.to(pin).except(g.hostId).emit('dm:skip', { id: m.id });
     } catch (e) { console.error('[host:dm-skip]', e); }
   });
+  // ¡Atrapa a Fénec!: a quiz answer (its qid; a stale or double tap is ignored and the phone hears why), the phone showed
+  // its question (only then can it run out and cost), my loaded hammer's aim (relayed live to the board and the
+  // projector, volatile: a late one is just dropped), the SLAM, a reaction.
+  const tcPlayer = (data, fn) => {
+    const pin = data && data.pin;
+    const g = games[pin];
+    if (!g || g.gameType !== 'teamcrab' || !g.tc || g.state !== 'active') return;
+    const p = g.players[socket.id];
+    if (!p || !p.tcK) return;
+    fn(pin, g, p);
+  };
+  socket.on('player:tc-answer', (data) => {
+    try {
+      tcPlayer(data, (pin, g, p) => {
+        const res = Crab.answer(g.tc, p.tcK, String(data.qid || ''), Number(data.idx), Date.now());
+        if (!res.ok) { io.to(socket.id).emit('tc:nope', { qid: String(data.qid || ''), why: res.why }); return; }
+        tcEmit(pin, g, res.ev);
+      });
+    } catch (e) { console.error('[player:tc-answer]', e); }
+  });
+  socket.on('player:tc-seen', (data) => {
+    try { tcPlayer(data, (pin, g, p) => { Crab.seen(g.tc, p.tcK, String(data.qid || '')); }); } catch (e) { console.error('[player:tc-seen]', e); }
+  });
+  socket.on('player:tc-aim', (data) => {
+    try {
+      tcPlayer(data, (pin, g, p) => {
+        const r = Crab.aim(g.tc, p.tcK, Number(data.x), Date.now());
+        if (!r) return;
+        socket.to(tcRoom(pin, g.tc, r.b)).volatile.emit('tc:aim', r);
+        io.to(g.hostId).volatile.emit('tc:aim', r);
+      });
+    } catch (e) { console.error('[player:tc-aim]', e); }
+  });
+  socket.on('player:tc-slam', (data) => {
+    try {
+      tcPlayer(data, (pin, g, p) => {
+        const x = data.x == null ? null : Number(data.x);
+        const res = Crab.slam(g.tc, p.tcK, Number.isFinite(x) ? x : null, Date.now());
+        if (!res.ok) { io.to(socket.id).emit('tc:noslam', { why: res.why }); return; }
+        tcEmit(pin, g, res.ev);
+      });
+    } catch (e) { console.error('[player:tc-slam]', e); }
+  });
+  socket.on('player:tc-react', (data) => {
+    try {
+      tcPlayer(data, (pin, g, p) => {
+        const r = Crab.react(g.tc, p.tcK, String(data.e || ''), Date.now());
+        if (!r) return;
+        io.to(tcRoom(pin, g.tc, r.b)).emit('tc:react', r);
+        io.to(g.hostId).emit('tc:react', r);
+      });
+    } catch (err) { console.error('[player:tc-react]', err); }
+  });
+  // ¡Atrapa a Fénec! teacher «Saltar»: the intro → play now; in play every board's big moment and every jam ends now;
+  // after the end → every phone jumps to its own card.
+  socket.on('host:tc-skip', (data) => {
+    try {
+      const pin = data && data.pin;
+      const g = games[pin];
+      if (!g || g.hostId !== socket.id || g.gameType !== 'teamcrab' || !g.tc) return;
+      const m = g.tc;
+      if (g.state === 'active' && m.phase === 'intro' && !m.paused) tcPlay(pin, g);
+      else if (g.state === 'active' && m.phase === 'play' && !m.paused) {
+        if (Date.now() - (m.skipAt || 0) < 700) return;
+        m.skipAt = Date.now();
+        tcEmit(pin, g, Crab.skip(m, Date.now(), tcOpts(g)));
+      } else if (g.state === 'ended') io.to(pin).except(g.hostId).emit('tc:skip', { id: m.id });
+    } catch (e) { console.error('[host:tc-skip]', e); }
+  });
   // Dàfùwēng · Monopolio teacher «Saltar»: the intro → play now; after the end → every phone jumps to its own card.
   socket.on('host:mn-skip', (data) => {
     try {
@@ -14501,6 +14902,7 @@ io.on('connection', (socket) => {
           if (stillExists.gameType === 'halcon') hcStop(stillExists);
           if (stillExists.gameType === 'monopoly') mnStop(stillExists);
           if (stillExists.gameType === 'dormilon') dmStop(stillExists);
+          if (stillExists.gameType === 'teamcrab') tcStop(stillExists);
           if (stillExists.gameType === 'dragon-eye') drStop(stillExists);
           if (stillExists.gameType === 'mochi-mash') mmStop(stillExists);
           if (stillExists.gameType === 'pinata') pnStop(stillExists);
@@ -14566,6 +14968,7 @@ setInterval(() => {
     if (g.gameType === 'halcon') return;       // no questions on the phones: the boards run the rounds
     if (g.gameType === 'monopoly') return;     // Monopolio: its room tick deals every question (after the turn / the wait)
     if (g.gameType === 'dormilon') return;     // ¡No despiertes a Dralingo!: its room tick deals the turn kid's questions
+    if (g.gameType === 'teamcrab') return;     // ¡Atrapa a Fénec!: its room tick deals every kid's questions
     if (g.gameType === 'dragon-eye') return;   // Vuelo del Dragón: the same (after the flight / the wait)
     if (g.gameType === 'mochi-mash' && g.mm && (g.mm.phase !== 'play' || g.mm.paused)) return;   // intro, pause, «¡FINAL!»
     if (g.gameType === 'pinata') return;       // Piñata Tigre: its room tick deals every question (after the hit / the wait)

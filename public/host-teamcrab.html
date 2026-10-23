@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>¡Atrapa a Fénec! · Anfitrión</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/app/favicon-32.png">
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/back.css?v=20261018a">
+  <link rel="stylesheet" href="/css/teamcrab.css?v=20261023tc">
+</head>
+<body class="tch">
+  <button class="tch-btn tch-mute" id="mute-btn" type="button">🔊 Sonido</button>
+
+  <!-- LOBBY: PIN + QR, the time and «¡Empezar!» right under them, the game in 3 pictures, the crab, the players -->
+  <main id="screen-lobby" class="tch-lobby">
+    <section class="tch-lobby-left">
+      <h1 class="tch-title">¡Atrapa a <span>Fénec</span>!</h1>
+      <p class="tch-tagline">Fénec, el ladrón de palabras, se robó las palabras de la clase. Cada tripulación pilota un cangrejo gigante: respondan bien para cargar su martillo y ¡aplástenlo para recuperar las palabras! Si fallan, Fénec se lleva una… y El Péndulo se enoja.</p>
+      <div class="tch-pin-card">
+        <div>
+          <div class="tch-pin-label">PIN</div>
+          <div class="tch-pin" id="pin-display">····</div>
+        </div>
+        <div class="tch-join">Entren desde el teléfono en<br><b id="join-url">esta dirección</b></div>
+        <div class="tch-qr" id="qr" aria-hidden="true"></div>
+      </div>
+      <div class="tch-tools">
+        <div class="tch-dur" role="group" aria-label="Duración"><span>⏱ Tiempo</span>
+          <button class="tch-btn on" type="button" data-s="120">2 min</button><button class="tch-btn" type="button" data-s="180">3 min</button><button class="tch-btn" type="button" data-s="240">4 min</button>
+        </div>
+        <button class="tch-btn go" id="start-btn" type="button" disabled>🦀 ¡Empezar!</button>
+      </div>
+      <div class="tch-set" id="set-display">Cargando preguntas…</div>
+      <ol class="tch-steps">
+        <li><div class="tc-step s1"><i class="t r">▲</i><i class="t b">◆</i><i class="t y ok">●</i><i class="t g">■</i><img class="hm" src="/assets/teamcrab/hammer.webp" alt=""></div>Responde bien<small>= tu martillo se carga 🔨 · si fallas, se atasca</small></li>
+        <li><div class="tc-step s2"><img class="fx" src="/assets/teamcrab/fenec-idle.webp" alt=""><img class="hm" src="/assets/teamcrab/hammer.webp" alt=""><i class="fing"></i></div>¡Toca a Fénec!<small>tu martillo cae encima: ¡BONK! · tapen sus salidas en equipo</small></li>
+        <li><div class="tc-step s3"><img src="/assets/teamcrab/fenec-spill.webp" alt=""><b>📚</b></div>Recuperen las palabras<small>si fallan, ¡Fénec se lleva una!</small></li>
+      </ol>
+    </section>
+    <section class="tch-lobby-right">
+      <div class="tch-lstage" id="lobby-stage"></div>
+      <div class="tch-crew">
+        <div class="tch-crew-head"><span>Los tripulantes</span><b id="count-all">0 jugadores</b></div>
+        <div class="tch-kids" id="players-all"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- COUNTDOWN: the beach, the crab arrives -->
+  <div id="screen-countdown" class="tch-count hidden"><div class="tch-cstage" id="count-stage"></div></div>
+
+  <!-- ACTIVE: every crew (its beach, its crab, its hammers, Fénec), the crews' standings, the teacher's buttons -->
+  <main id="screen-active" class="tch-stage hidden">
+    <header class="tch-head">
+      <div class="tch-clock"><b id="clock">2:00</b><span id="clock-sub">tiempo</span></div>
+      <div class="tch-headline" id="headline">¡Respondan para cargar el martillo y aplasten a Fénec!</div>
+      <div class="tch-fchip hidden" id="frenzy-chip">🌅 Atardecer dorado · martillazos ×2</div>
+      <div class="tch-pinmini">PIN <b id="active-pin">····</b></div>
+    </header>
+    <section class="tch-boards" id="boards"></section>
+    <aside class="tch-side">
+      <div class="tch-top3"><h2>🦀 Tripulaciones</h2><ol id="crews"></ol></div>
+      <div class="tch-host-say"><img id="host-img" src="/assets/teamcrab/anim/fenec-idle.webp" alt=""><p id="host-say">¡Mías, mías! ¡No me atrapan!</p></div>
+    </aside>
+    <nav class="tch-controls">
+      <button class="tch-btn" id="pause-btn" type="button">⏸ Pausa</button>
+      <button class="tch-btn" id="plus-btn" type="button">+30 s</button>
+      <button class="tch-btn" id="minus-btn" type="button">−30 s</button>
+      <button class="tch-btn" id="skip-btn" type="button">⏭ Saltar</button>
+      <span class="sp"></span>
+      <button class="tch-btn" id="end-now-btn" type="button">⏹ Terminar</button>
+    </nav>
+  </main>
+
+  <div class="tch-bigband hidden" id="bigband"></div>
+
+  <div class="tch-paused hidden" id="paused">
+    <div><img src="/assets/teamcrab/fenec-laugh.webp" alt=""><b>⏸ Pausa</b><span>Todos quietos: miren al profe</span>
+      <button class="tch-btn go" id="resume-btn" type="button">▶ Seguir jugando</button>
+      <button class="tch-btn" id="paused-end-btn" type="button">⏹ Terminar</button></div>
+  </div>
+
+  <!-- END: each crew's ending (caught / escaped) and champion, the crews, the class podium -->
+  <main id="screen-win" class="tch-end hidden">
+    <section class="tch-end-main">
+      <h1 class="tch-end-title" id="end-title">¡Atrapamos a Fénec!</h1>
+      <div class="tch-champs" id="champs"></div>
+    </section>
+    <aside class="tch-end-side">
+      <h2>🦀 Tripulaciones</h2>
+      <ol class="tch-crews-end" id="crews-end"></ol>
+      <h2>🏆 Podio de la clase</h2>
+      <div class="tch-podium" id="podium"></div>
+      <div class="tch-end-tools">
+        <button class="tch-btn" type="button" onclick="location.href='/'">🏠 Inicio</button>
+        <button class="tch-btn" id="end-skip-btn" type="button">⏭ Saltar a las tarjetas</button>
+        <button class="tch-btn go" id="play-again-btn" type="button">🔄 Otra ronda</button>
+      </div>
+    </aside>
+  </main>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <!-- 🔑 creating a game needs a teacher the first time on a device (js/teacher-gate.js) -->
+  <script src="/js/teacher-gate.js?v=20261018a"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+  <script src="/js/sounds.js"></script>
+  <script src="/js/saga.js?v=20261020z3d3"></script>
+  <script src="/js/halcon-board.js?v=20261019zc"></script>
+  <script src="/js/cast.js?v=20261017td"></script>
+  <script src="/js/teamcrab-stage.js?v=20261023tc"></script>
+  <script src="/js/host-teamcrab.js?v=20261023tc"></script>
+  <script src="/js/live-game.js?v=20261011c"></script>
+  <!-- ← «Volver» while the lobby waits (his rule 2026-10-18: every screen has a way back) -->
+  <script src="/js/host-back.js?v=20261023tc" data-place="title"></script>
+</body>
+</html>

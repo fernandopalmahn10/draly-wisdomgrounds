@@ -945,6 +945,15 @@ the checklist for any new game mode.
   a wrong, late or blind answer costs a feather and makes him shift, he wakes up ANGRY on every screen for ~4 s (filmed
   beside the video's red Wiggler: `scripts/record-dormilon-wake.js`), and the projector lobby fits and scrolls at every
   laptop size and zoom (`scripts/check-dormilon-lobby.js`).
+  «¡Atrapa a Fénec!» (new 2026-10-23, `teamcrab`, #4 of the Mario Party series, his video 7:30-8:16 «Team Crab», spec
+  `docs/specs/atrapa-a-fenec.md`, built on a branch, not deployed): his design turned the clip around: crews of 3-4 pilot a
+  giant red robot crab on a Dubai beach (a cockpit with each kid's face, a wooden hammer each) and Fénec, el ladrón de
+  palabras (cast.md villain, computer-played), dodges on the dock; a right answer loads my hammer, I touch Fénec and it
+  slams down (the aim-and-slam is the task, the quiz only loads it); a bonk floods the crew's phones gold and the class's
+  pinyin words fly back; a miss jams my hammer, Fénec snatches a word, El Péndulo (cast.md villain) eats the spark and at
+  anger 5 his big swing knocks the crew's hammers away (calm right answers shrink him); a crew that empties the sack has
+  caught him, else he kicks the crab to pieces (the video's ending); the slam and both endings filmed at 4 fps beside the
+  video's (`scripts/check-teamcrab-screens.js`, `scripts/record-teamcrab-end.js`).
 - **The kid's phone is the product** (his correction 2026-10-11: "a beautiful projector is useless if everybody else's
   UI is terrible"). Every game ships a phone experience that feels like a competition, better than Kahoot: big colored
   answer tiles, a per-question timer with ticking, live team score, Dralingo pose reactions (right / wrong / streak /
