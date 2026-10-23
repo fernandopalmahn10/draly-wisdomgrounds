@@ -111,16 +111,21 @@ being played nor the next one. Grey «−30 s» out where the server would refus
 
 ## Status (2026-10-11)
 
-Live modes: **¡Atrapa a Fénec!** (`teamcrab`, built 2026-10-23 on branch `teamcrab`, not deployed: #4 of his Mario Party
-series, «Team Crab» (his video 7:30-8:16) turned around (his design 2026-10-23): the kids are the CREW of a giant red robot
-crab in the sea of a Dubai beach (crews of 3-4, a glass cockpit with each kid's face, a wooden barrel hammer each) and
-Fénec, el ladrón de palabras (a fennec-fox cartoon burglar, computer-played), hops between 5 spots of the dock and dodges;
-a right answer LOADS my hammer (its shadow on the planks, live on the crew's phones), I touch Fénec (or drag + swipe down /
-«¡GOLPE!») and it falls in 0.42 s: under it = a BONK (the crew's phones flash gold, the class's pinyin words fly out of his
-sack, +2 · +1 «trampa» for crewmates covering his escape spots); a wrong / late / blind answer jams my hammer 3 s, Fénec
-snatches a word «¡Mías!» (never who failed) and El Péndulo eats the spark: at anger 5 his BIG SWING knocks the crew's
-hammers away 3 s, right answers in a row calm him; 2 / 3 / 4 min, the last 30 s ×2; a crew that emptied his sack has
-caught him («¡ATRAPADO!», he runs off), else he kicks the crab to pieces; each crew's ceremony + the crews' leaderboard;
+Live modes: **Draly Cangrejo · ¡Atrapa a Fénec!** (`teamcrab`, v1 live 2026-10-23 c8bdf147b; **v2** built the same day on
+branch `teamcrab-v2` after he played v1 («Skill decides, never luck», «Two rhythms»), not deployed: #4 of his Mario Party
+series, «Team Crab» (his video 7:30-8:16) turned around: the kids are the CREW of a giant red robot crab on a Dubai beach
+(crews of 3-4, a glass cockpit with each kid's face, a wooden barrel hammer each) and Fénec, el ladrón de palabras
+(computer-played), runs on the dock. v2 plays in ROUNDS of two windows: a QUESTION window (~11 s of 8-s quick-fire
+questions: a right answer = +1 hammer charge, max 4, on my hammer meter; a wrong / late / blind one = El Péndulo EATS a
+charge «¡Ñam!» and grows, never naming who), then «¡A martillar!» (my role on my phone) and a 10-s PLAY window: the
+window's best answerer is the ⭐ Capitán and drags the crab, which walks there (leaning, its claws ride along); every
+kid with charges is a martillero: hold = my shadow aims inside the crab's reach, let go = SLAM (one charge, 0.35 s);
+kids with none watch and cheer («Responde bien en la próxima ronda para subir al cangrejo»). Fénec moves in a readable
+pattern (stands, crouches 0.3 s leaning the way he will go, runs 2 spots), never an instant dodge: a hammer whose shadow
+is on him at the impact BONKS him (+2, «trampa» +1 for a claw beside him, +1 for the Capitán); ~5 rounds in 2 min, the
+last ×2; caught (the crew got its target of words back) or he kicks the crab to pieces; each crew's ceremony (stars
+martillazo / capitán / trampa / racha) + the crews' leaderboard; «🤖 Probar con robots» (teacher, lobby) fills a crew of 1-2 phones with robot
+crewmates that play like an average kid and never count; the skill simulation `node scripts/test-teamcrab.js --sim`;
 rules `core/teamcrab.js`, server block `tc*`, phone `js/player-teamcrab.js`, projector `host-teamcrab.html` +
 `js/host-teamcrab.js`, both draw `js/teamcrab-stage.js` + `css/teamcrab.css`; spec `docs/specs/atrapa-a-fenec.md`),
 **¡No despiertes a Dralingo!** (`dormilon`, live 2026-10-22, v2 «Gana plumas, luego frota con el dedo» live

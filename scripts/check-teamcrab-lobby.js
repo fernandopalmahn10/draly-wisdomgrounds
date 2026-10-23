@@ -65,9 +65,9 @@ const INVIEW = (sels) => {
     const kid = io(URL, { transports: ['websocket'], forceNew: true });
     await new Promise((res) => kid.emit('player:join', { pin, name: 'Ana', avatar: '' }, res));
     await sleep(1200);
-    const L = await page.evaluate(INVIEW, ['#pin-display', '#qr', '#start-btn', '.tch-dur']);
+    const L = await page.evaluate(INVIEW, ['#pin-display', '#qr', '#start-btn', '.tch-dur', '#robots-btn']);
     await page.screenshot({ path: path.join(OUT, 'lobby-' + name + '.png') });
-    ok(L['#pin-display'] === 'in' && L['#qr'] === 'in' && L['#start-btn'] === 'in' && L['.tch-dur'] === 'in' && L.wide, name + ' lobby: PIN, QR, time and «¡Empezar!» on the first screen ' + JSON.stringify(L));
+    ok(L['#pin-display'] === 'in' && L['#qr'] === 'in' && L['#start-btn'] === 'in' && L['.tch-dur'] === 'in' && L['#robots-btn'] === 'in' && L.wide, name + ' lobby: PIN, QR, time, «¡Empezar!» and «🤖 Probar con robots» on the first screen ' + JSON.stringify(L));
     if (L.tall > 4) {
       await page.mouse.move(w / 2, h * 0.6);
       await page.mouse.wheel(0, 400);
