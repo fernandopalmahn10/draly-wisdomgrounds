@@ -575,7 +575,7 @@
         document.body.appendChild(el);
       }
       el.innerHTML = '<svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true"><circle cx="16" cy="16" r="14" fill="#e8c878" stroke="#b88b2c" stroke-width="2.5"/><circle cx="16" cy="16" r="9" fill="none" stroke="#b88b2c" stroke-width="1.8"/></svg>'
-        + '<span><b>+' + n + ' monedas</b><small>para el Zoco de Dralingo</small></span>';
+        + '<span><b>+' + n + (n === 1 ? ' DralyDirham' : ' DralyDirhams') + '</b><small>para el Zoco de Dralingo</small></span>';   // (the shop's coins: «DralyDirhams», 2026-10-23)
       el.classList.remove('is-on');
       void el.offsetWidth;
       el.classList.add('is-on');

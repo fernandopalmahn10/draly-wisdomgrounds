@@ -716,7 +716,15 @@ async function serverTests() {
     'Repasar o marcar mis palabras', 'Marcar las palabras de la experiencia', 'Repasar mis palabras', 'Tus palabras', 'Practicar más',
     'El Entrenamiento y las preguntas de tu profe', 'Rondas de El Entrenamiento', 'Volver a Mi Familia', 'Experiencia 1 · Mi Familia',
     'Palabras listas, tarea mandada, práctica lista', 'Palabras por hacer, tarea de más adelante, práctica por hacer', 'Palabras empezadas, práctica por hacer',
-    'Los sonidos y los tonos', 'Una ronda de 10 preguntas'].forEach(check);
+    'Los sonidos y los tonos', 'Una ronda de 10 preguntas',
+    // (2026-10-23: El Zoco's coins are «DralyDirhams»; the English keeps the word and its singular, and every line settles)
+    '¿Cómo gano DralyDirhams?', 'Personajes nuevos para ti. Gana DralyDirhams con tus pasos de cada día.', 'Gana los DralyDirhams que te faltan',
+    'Cada paso de verdad te da DralyDirhams. Nunca se compran con dinero.', '¡A ganar DralyDirhams!', 'Te faltan DralyDirhams.', 'Te faltan 25 DralyDirhams.',
+    'Desbloquear por 800 DralyDirhams', 'Te queda 1 DralyDirham después.', 'Tienes 1 DralyDirham · El Zoco de Dralingo', 'Tienes 12 DralyDirhams · El Zoco de Dralingo',
+    '12 DralyDirhams para personajes nuevos', 'Dralingo te dio 75 DralyDirhams por todo lo que ya hiciste.', 'Tienes 1 DralyDirham esperando: llegan mañana.',
+    'Una tarea se deshizo después de gastar sus DralyDirhams: tus próximos 25 DralyDirhams la pagan.', 'para el Zoco de Dralingo'].forEach(check);
+  ok(en('Tienes 1 DralyDirham · El Zoco de Dralingo') === 'You have 1 DralyDirham · Dralingo\'s Souq' && en('¿Cómo gano DralyDirhams?') === 'How do I earn DralyDirhams?' &&
+    !/coins?\b/.test(en('Gana los DralyDirhams que te faltan') + en('Te faltan 25 DralyDirhams.')), '… El Zoco\'s «DralyDirhams» in English too (never «coins»)');
   ok(en('Repasar o marcar mis palabras') === 'Review or mark my words' && en('Volver a Mi Familia') === 'Back to My Family' && en('Volver a intentar') === 'Try again' &&
     en('Palabras listas, tarea mandada, práctica empezada') === 'Words done, homework sent, practice started', '… the green button, «Volver a <experiencia>», the bars in the ladder\'s order');
   ok(!settled.size, 'English settles: a translated line translated again stays the same (no endless re-translation)' + (settled.size ? ': ' + [...settled].slice(0, 6).join(' | ') : ''));

@@ -571,6 +571,9 @@ is different, since a name that stays the same, alt="Aileen", looped forever and
 `docs/specs/zoco.md`).** Kids unlock new characters (his own 3D models, rendered on this laptop) with coins they earn with
 real steps. The server judges every coin on the kid's own record (`core/zoco.js`); the phone never says how many it has,
 and coins are never bought with money.
+- **The coins are «DralyDirhams» (23 October 2026, your name, after the Emirati dirham):** «¿Cómo gano DralyDirhams?»,
+  «+2 DralyDirhams», «1 DralyDirham», the same word in English. The in-game coins of Draly Tablero and Draly 67 are
+  game points and keep «monedas». The `#monedas` address and the record's fields keep their old names.
 - **Earning (v2, 20 October 2026, your words: "make it a lot more difficult to get the points"):** +1 a word marked in
   La Base (first time only), +10 a practice of El Entrenamiento that reaches its goal (once per world), +25 a homework
   marked «¡Ya la mandé!» (once; «Deshacer» takes back what it paid), +5 a class PIN game played for real (3 answers or

@@ -1,5 +1,12 @@
 # El Zoco de Dralingo · the characters shop
 
+**The coins are «DralyDirhams» since 2026-10-23** (his name, after the Emirati dirham; «1 DralyDirham», «25 DralyDirhams»,
+the same word in the English toggle): «¿Cómo gano DralyDirhams?», «Gana los DralyDirhams que te faltan», «Desbloquear
+por P DralyDirhams», the purse's label, the «+N DralyDirhams» moment (pages and the class-game pill), the buy refusal
+«Te faltan N DralyDirhams.». The address `#monedas`, the record fields, ledger keys, `coins` in the APIs and
+`js/zoco-coins.js` keep their names (old links keep working). `scripts/test-wording.js` refuses «monedas» in the shop's
+files; `scripts/test-home.js` checks their English. The text below keeps the words it had when it was written.
+
 His idea (2026-10-19): "more avatars, more characters in different forms, better skins… a marketplace… they should be
 locked". His OK of the design: "Okay I approve the design of the Souq" (5 phone boards: the Zoco, a locked character,
 «¿Cómo gano monedas?», «¡Ya es tuyo!», Mi perfil «Elige tu personaje»; https://claude.ai/artifact/Tfi3racK5kFX72yempjpzT).

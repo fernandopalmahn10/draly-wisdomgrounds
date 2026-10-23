@@ -35,6 +35,8 @@ const FILES = [
   'public/js/papas.js', 'public/js/papas-plan.js',
   // Mi Dralingo, the kid's home (2026-10-18)
   'public/js/mi-dralingo.js',
+  // El Zoco's coins moment and its server lines (the shop's currency, «DralyDirhams» since 2026-10-23)
+  'public/js/zoco-coins.js', 'core/zoco.js',
 ];
 const RULES = [
   { re: /(?<!New )\bHSK ?2\b/, why: 'kids/parents see "New HSK 1", never "HSK 2" (root CLAUDE.md, 2026-10-11)' },
@@ -46,6 +48,9 @@ const RULES = [
   { re: /[㐀-鿿]/, why: 'no hanzi on game screens (root CLAUDE.md: games show pinyin, no hanzi)', only: /dragon|party|paint|trapdoor|dormilon|teamcrab/ },
   { re: /[㐀-鿿]/, why: 'no hanzi on Papás (the parents\' view shows pinyin + Spanish, 2026-10-18)', only: /papas/ },
   { re: /[㐀-鿿]/, why: 'no hanzi on the kid\'s home (pinyin only in kid UI, 2026-10-18)', only: /mi-dralingo/ },
+  // (the shop's coins are «DralyDirhams», his name 2026-10-23; the address #monedas and its view id 'monedas' stay so old
+  // links keep working. The in-game coins of Draly Tablero and Draly 67 keep «monedas»: other files)
+  { re: /(?<![#'])\bmonedas?\b/i, why: 'the Zoco\'s coins are «DralyDirhams» (mochi-mash CLAUDE.md «Draly Party», 2026-10-23)', only: /mi-dralingo|zoco-coins|core\/zoco|js\/player\.js/ },
 ];
 
 // blank out comments but keep line numbers

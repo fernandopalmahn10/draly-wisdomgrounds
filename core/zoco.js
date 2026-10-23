@@ -375,7 +375,7 @@ function buy(rec, id) {
   const x = item(id);
   if (!z || !x || !onSale(x)) return { ok: false, status: 404, why: 'item', error: 'Ese personaje no está en el Zoco.' };
   if (owns(rec, x.id)) return { ok: false, status: 409, why: 'owned', error: '¡Ya es tuyo!' };
-  if (!(z.c >= x.price)) return { ok: false, status: 402, why: 'coins', error: 'Te faltan ' + (x.price - Math.max(0, z.c)) + ' monedas.', need: x.price - Math.max(0, z.c) };
+  if (!(z.c >= x.price)) return { ok: false, status: 402, why: 'coins', error: x.price - Math.max(0, z.c) === 1 ? 'Te falta 1 DralyDirham.' : 'Te faltan ' + (x.price - Math.max(0, z.c)) + ' DralyDirhams.', need: x.price - Math.max(0, z.c) };
   z.c -= x.price;
   z.sp += x.price;
   z.own.push(x.id);
@@ -463,7 +463,8 @@ function merge(from, to, env) {
 }
 
 // ── what the shop shows ──────────────────────────────────────────────────────────────────────────────────────────
-// the table of «¿Cómo gano monedas?» (one source with the payments above)
+// the table of «¿Cómo gano DralyDirhams?» (one source with the payments above; the shop's coins are «DralyDirhams» since
+// 2026-10-23, his name: the ids, fields and keys here keep «coins»)
 const WAYS = [
   { n: 1, what: 'Marca una palabra', where: 'En La Base de tu experiencia', coins: PAY.seal, each: false },
   { n: 2, what: 'Supera una práctica', where: 'En El Entrenamiento, al llegar a la meta', coins: PAY.train, each: false },

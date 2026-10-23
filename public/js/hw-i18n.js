@@ -338,25 +338,26 @@
   })();
 
   // 🪙 2026-10-19 · El Zoco de Dralingo (js/mi-dralingo.js #zoco · #zoco-<id> · #monedas · #tuyo-<id> · #personaje, the
-  // band's coins pill, js/zoco-coins.js «+N monedas»). Kept apart so other changes to the big line merge cleanly. Every
+  // band's coins pill, js/zoco-coins.js «+N DralyDirhams»). Kept apart so other changes to the big line merge cleanly. Every
   // English line here is a settled one: translated again it stays the same (none of them is a key of this dictionary).
+  // The shop's coins are «DralyDirhams» since 2026-10-23 (his name): the same word in English, «1 DralyDirham» alone.
   (function () {
     var M = {
       'El Zoco de Dralingo': 'Dralingo\'s Souq', 'El Zoco': 'The Souq', 'Personajes nuevos': 'New characters', 'Personajes nuevos para ti': 'New characters for you',
-      'Personajes nuevos para ti. Gana monedas con tus pasos de cada día.': 'New characters for you. Earn coins with your steps every day.',
+      'Personajes nuevos para ti. Gana DralyDirhams con tus pasos de cada día.': 'New characters for you. Earn DralyDirhams with your steps every day.',
       'Nuevo en el Zoco': 'New in the Souq', 'En el Zoco': 'In the Souq', 'Tuyo': 'Yours', '¡Ya te alcanza!': 'You have enough!',
-      '¿Cómo gano monedas?': 'How do I earn coins?', 'Con tus palabras, prácticas y tareas': 'With your words, practices and homework',
+      '¿Cómo gano DralyDirhams?': 'How do I earn DralyDirhams?', 'Con tus palabras, prácticas y tareas': 'With your words, practices and homework',
       'Volver al Zoco': 'Back to the Souq', '¡Ya es tuyo!': 'It\'s yours!', 'Usarlo': 'Use it', 'Usarlo ahora': 'Use it now',
       'Lo estás usando en tu perfil y en los juegos': 'You\'re using it in your profile and in the games',
-      '¡Sí, desbloquear!': 'Yes, unlock it!', 'No, todavía no': 'Not yet', 'Gana las monedas que te faltan': 'Earn the coins you still need',
-      'Cada paso de verdad te da monedas. Nunca se compran con dinero.': 'Every real step gives you coins. They are never bought with money.',
+      '¡Sí, desbloquear!': 'Yes, unlock it!', 'No, todavía no': 'Not yet', 'Gana los DralyDirhams que te faltan': 'Earn the DralyDirhams you still need',
+      'Cada paso de verdad te da DralyDirhams. Nunca se compran con dinero.': 'Every real step gives you DralyDirhams. They are never bought with money.',
       'Marca una palabra': 'Mark a word', 'En La Base de tu experiencia': 'In the Base of your experience',
       'Supera una práctica': 'Pass a practice', 'En El Entrenamiento, al llegar a la meta': 'In the Training, when you reach the goal',
       'Manda tu tarea': 'Send your homework', 'Toca «¡Ya la mandé!» con tu video': 'Tap «I sent it!» with your video',
       'Juega en clase': 'Play in class', 'Cada partida con el PIN de tu profe': 'Every game with your teacher\'s PIN',
       'Gana estrellas en el juego': 'Win stars in the game', 'En la ceremonia del final': 'In the closing ceremony',
       'Racha de 7 días': '7-day streak', 'Un paso cada día, siete días seguidos': 'One step a day, seven days in a row',
-      'Desafío del día: muy pronto también da monedas': 'Daily challenge: soon it gives coins too', '¡A ganar monedas!': 'Let\'s earn coins!',
+      'Desafío del día: muy pronto también da DralyDirhams': 'Daily challenge: soon it gives DralyDirhams too', '¡A ganar DralyDirhams!': 'Let\'s earn DralyDirhams!',
       '¡Nuevo personaje!': 'New character!', 'Ver mis personajes': 'See my characters', 'Elige tu personaje': 'Choose your character',
       'Ahora juegas con': 'Now you play as', 'En tu perfil y en los juegos': 'In your profile and in the games', 'Tus personajes': 'Your characters',
       'En tu perfil y en los juegos de la clase': 'In your profile and in the class games',
@@ -365,7 +366,7 @@
       'Ese personaje no está en el Zoco.': 'That character is not in the Souq.', 'Ver los personajes': 'See the characters',
       '¡Un regalo de bienvenida!': 'A welcome gift!', 'Dralingo · forma especial': 'Dralingo · special form', 'La pandilla · nuevo look': 'The gang · new look',
       'Mascota': 'Pet', 'La pandilla': 'The gang', 'Mascotas': 'Pets',
-      'Ese personaje todavía no es tuyo.': 'That character is not yours yet.', 'Te faltan monedas.': 'You need more coins.',
+      'Ese personaje todavía no es tuyo.': 'That character is not yours yet.', 'Te faltan DralyDirhams.': 'You need more DralyDirhams.', 'Te falta 1 DralyDirham.': 'You need 1 more DralyDirham.',
       'No se pudo cambiar. Revisa tu internet y vuelve a intentarlo.': 'It could not change. Check your internet and try again.',
       'No se pudo desbloquear. Revisa tu internet y vuelve a intentarlo.': 'It could not unlock. Check your internet and try again.',
       'Entra de nuevo con tu código para usar el Zoco.': 'Sign in again with your code to use the Souq.',
@@ -406,7 +407,9 @@
     };
     for (var k in M) if (DICT.map[k] === undefined) DICT.map[k] = M[k];
     DICT.map['Otra cuenta entró en este teléfono. Toca «Entrar de nuevo».'] = 'Another account signed in on this phone. Tap «Sign in again».';
-    PATTERNS.push({ re: /^Una tarea se deshizo después de gastar sus monedas: tus próximas (\d+) monedas? la pagan\.$/, en: 'A homework was undone after its coins were spent: your next $1 coins pay it back.' });
+    // «1 DralyDirham», «25 DralyDirhams»: the English keeps his word and its singular
+    var DD = function (n) { return n + (String(n) === '1' ? ' DralyDirham' : ' DralyDirhams'); };
+    PATTERNS.push({ re: /^Una tarea se deshizo después de gastar sus DralyDirhams: tus próximos (\d+) DralyDirhams? la pagan\.$/, en: function (t, n) { return 'A homework was undone after its DralyDirhams were spent: your next ' + DD(n) + ' pay it back.'; } });
     PATTERNS.push({ re: /^1 forma$/, en: '1 form' });
     PATTERNS.push({ re: /^(\d+) formas$/, en: '$1 forms' });
     PATTERNS.push({ re: /^1 personaje$/, en: '1 character' });
@@ -415,19 +418,19 @@
     PATTERNS.push({ re: /^(\d+) amigos$/, en: '$1 friends' });
     PATTERNS.push({ re: /^Tienes (-?\d+) de (\d+)$/, en: 'You have $1 of $2' });
     PATTERNS.push({ re: /^Te faltan (\d+)$/, en: 'You need $1 more' });
-    PATTERNS.push({ re: /^Te faltan (\d+) monedas\.$/, en: 'You need $1 more coins.' });
+    PATTERNS.push({ re: /^Te faltan (\d+) DralyDirhams\.$/, en: 'You need $1 more DralyDirhams.' });
     PATTERNS.push({ re: /^Desbloquear por (\d+)$/, en: 'Unlock for $1' });
-    PATTERNS.push({ re: /^Te quedan (-?\d+) monedas? después\.$/, en: 'You will have $1 coins left.' });
-    PATTERNS.push({ re: /^Tienes (-?\d+) monedas? · El Zoco de Dralingo$/, en: 'You have $1 coins · Dralingo\'s Souq' });
+    PATTERNS.push({ re: /^Desbloquear por (\d+) DralyDirhams$/, en: 'Unlock for $1 DralyDirhams' });
+    PATTERNS.push({ re: /^Te quedan? (-?\d+) DralyDirhams? después\.$/, en: function (t, n) { return 'You will have ' + DD(n) + ' left.'; } });
+    PATTERNS.push({ re: /^Tienes (-?\d+) DralyDirhams? · El Zoco de Dralingo$/, en: function (t, n) { return 'You have ' + DD(n) + ' · Dralingo\'s Souq'; } });
+    // (the « · » splitter reads that line segment by segment: «Tienes N DralyDirhams» needs its own line too)
+    PATTERNS.push({ re: /^Tienes (-?\d+) DralyDirhams?$/, en: function (t, n) { return 'You have ' + DD(n); } });
     PATTERNS.push({ re: /^\+(\d+) c\/u$/, en: '+$1 each' });
-    PATTERNS.push({ re: /^\+(\d+) monedas?$/, en: '+$1 coins' });
-    PATTERNS.push({ re: /^−(\d+) monedas?$/, en: '−$1 coins' });
-    PATTERNS.push({ re: /^(\d+) monedas? para personajes nuevos$/, en: '$1 coins for new characters' });
-    PATTERNS.push({ re: /^Dralingo te dio (\d+) monedas? por todo lo que ya hiciste\.$/, en: 'Dralingo gave you $1 coins for everything you already did.' });
-    PATTERNS.push({ re: /^Tienes (\d+) monedas? esperando: llegan mañana\. Cada día pagan hasta (\d+) palabras y (\d+) tareas\.$/,
-      en: 'You have $1 coins waiting: they arrive tomorrow. Each day pays up to $2 words and $3 homework tasks.' });
-    // (v2, 2026-10-20: the day's limits always in «¿Cómo gano monedas?», the waiting coins on their own line)
-    PATTERNS.push({ re: /^Tienes (\d+) monedas? esperando: llegan mañana\.$/, en: 'You have $1 coins waiting: they arrive tomorrow.' });
+    // («+N DralyDirhams» / «−N DralyDirhams» of the coins moment read the same in English: no line needed)
+    PATTERNS.push({ re: /^(\d+) DralyDirhams? para personajes nuevos$/, en: function (t, n) { return DD(n) + ' for new characters'; } });
+    PATTERNS.push({ re: /^Dralingo te dio (\d+) DralyDirhams? por todo lo que ya hiciste\.$/, en: function (t, n) { return 'Dralingo gave you ' + DD(n) + ' for everything you already did.'; } });
+    // (v2, 2026-10-20: the day's limits always in «¿Cómo gano DralyDirhams?», the waiting coins on their own line)
+    PATTERNS.push({ re: /^Tienes (\d+) DralyDirhams? esperando: llegan mañana\.$/, en: function (t, n) { return 'You have ' + DD(n) + ' waiting: they arrive tomorrow.'; } });
     PATTERNS.push({ re: /^Cada día pagan hasta (\d+) palabras, (\d+) tareas, (\d+) juegos y (\d+) estrellas\.$/,
       en: 'Each day pays up to $1 words, $2 homework tasks, $3 games and $4 stars.' });
   })();

@@ -1,4 +1,4 @@
-// zoco-coins.js · the «+N monedas» moment of El Zoco de Dralingo (2026-10-19, his OK of the Souq's design). Every step
+// zoco-coins.js · the «+N DralyDirhams» moment of El Zoco de Dralingo (the shop's coins, his name 2026-10-23) (2026-10-19, his OK of the Souq's design). Every step
 // that pays answers `coins: { got, c, items }` (server.js: La Base's seals, El Entrenamiento's rounds, the homework marks);
 // the page hands it here: DralyCoins.pop(coins). A small gold pill slides in at the top edge for a moment (taps close
 // together add up: «+6 monedas»), never over a button or blocking anything (pointer-events: none), reduced motion = a
@@ -29,7 +29,7 @@
     const f = document.createElement('div');
     f.className = 'zc-float';
     f.setAttribute('role', 'status');
-    f.innerHTML = COIN + '<b>+' + n + '</b><span class="zc-sr">' + (n === 1 ? ' moneda' : ' monedas') + '</span>';
+    f.innerHTML = COIN + '<b>+' + n + '</b><span class="zc-sr">' + (n === 1 ? ' DralyDirham' : ' DralyDirhams') + '</span>';
     f.style.left = Math.round(Math.min(window.innerWidth - 50, Math.max(50, r.left + r.width / 2))) + 'px';
     f.style.top = Math.round(r.bottom + 6) + 'px';
     document.body.appendChild(f);
@@ -54,7 +54,7 @@
     }
     const up = n > 0;
     el.classList.toggle('is-back', !up);
-    el.innerHTML = COIN + '<span><b>' + (up ? '+' + n : '−' + Math.abs(n)) + (Math.abs(n) === 1 ? ' moneda' : ' monedas') + '</b>' +
+    el.innerHTML = COIN + '<span><b>' + (up ? '+' + n : '−' + Math.abs(n)) + (Math.abs(n) === 1 ? ' DralyDirham' : ' DralyDirhams') + '</b>' +
       '<small>' + (up ? 'para el Zoco de Dralingo' : 'volvieron al deshacer') + '</small></span>';
     el.classList.remove('is-on');
     void el.offsetWidth;
