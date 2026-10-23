@@ -36,7 +36,7 @@
   // ---------- sound ----------
   const SFX = {
     tick: K + 'tick.mp3', whoosh: K + 'whoosh.mp3', win: K + 'sting-win.mp3', flag: K + 'flag.mp3', alert: K + 'castle-alert.mp3',
-    siege: K + 'siege.mp3', start: H + 'start.mp3', final: H + 'final.mp3', aww: H + 'aww.mp3', round: H + 'round.mp3',
+    siege: K + 'siege.mp3', start: H + 'start.mp3', final: '/assets/party/final-v2.mp3', aww: H + 'aww.mp3', round: H + 'round.mp3',
     drum: MO + 'drum.mp3', star: MO + 'star.mp3', gold: MO + 'gold.mp3', coin: A + 'coins.mp3', landmark: K + 'landmark.mp3', liuqi: A + 'liuqi.mp3',
     shout: A + 'shout67.mp3',             // «¡SIX SEVEN!» shouted by a crowd (Kenney Voiceover Pack, CC0, layered: ../ss67 shout.sh)
   };

@@ -16,7 +16,7 @@
   const SFX = {
     stroke: A + 'stroke.mp3', pop: H + 'pop.mp3', creak: A + 'creak.mp3', wake: A + 'wake-h1.mp3', aww: H + 'aww.mp3',
     snore: A + 'snore-h1.mp3', angry: A + 'angry-h1.mp3', shift: A + 'creak2.mp3', round: H + 'round.mp3', start: H + 'start.mp3', whoosh: K + 'whoosh.mp3', win: K + 'sting-win.mp3',
-    final: H + 'final.mp3', hurry: PARTY + 'hurry.mp3', tick: PARTY + 'tick.mp3', yes: H + 'yes.mp3',
+    final: PARTY + 'final-v2.mp3', hurry: PARTY + 'hurry.mp3', tick: PARTY + 'tick-v2.mp3', yes: H + 'yes.mp3',
     giggle1: A + 'giggle-h1.mp3', giggle2: A + 'giggle-h2.mp3', giggle3: A + 'giggle-h3.mp3',
   };
   const MUSIC = { lobby: K + 'music-lobby.mp3', night: A + 'music-night.mp3', final: K + 'music-final.mp3' };

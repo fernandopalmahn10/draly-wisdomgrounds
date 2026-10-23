@@ -36,7 +36,7 @@
   // ---------- sound ----------
   const SFX = {
     tick: K + 'tick.mp3', whoosh: K + 'whoosh.mp3', win: K + 'sting-win.mp3', flag: K + 'flag.mp3', alert: K + 'castle-alert.mp3',
-    siege: K + 'siege.mp3', start: H + 'start.mp3', final: H + 'final.mp3', aww: H + 'aww.mp3', round: H + 'round.mp3',
+    siege: K + 'siege.mp3', start: H + 'start.mp3', final: '/assets/party/final-v2.mp3', aww: H + 'aww.mp3', round: H + 'round.mp3',
     drum: MO + 'drum.mp3', star: MN + 'star.mp3', landmark: K + 'landmark.mp3', storm: MN + 'storm.mp3', level: MN + 'level.mp3',
   };
   const MUSIC = { lobby: K + 'music-lobby.mp3', play: MN + 'music-board.mp3', final: K + 'music-final.mp3' };

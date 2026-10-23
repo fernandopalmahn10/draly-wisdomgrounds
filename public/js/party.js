@@ -205,11 +205,14 @@
   const C = () => root.DralingoCast;
   const reduced = () => !!(root.matchMedia && root.matchMedia('(prefers-reduced-motion: reduce)').matches);
   const SND = {
-    final: '/assets/halcon/final.mp3', drum: '/assets/mochi/drum.mp3', star: '/assets/mochi/star.mp3', aww: '/assets/halcon/aww.mp3',
+    // «¡FINAL!» (2026-10-23, Higgsfield Supercomputer · Mirelo, was /assets/halcon/final.mp3, a chiptune buzz): a referee's
+    // long whistle, then the stadium crowd's «ohh!» (2.3 s; every game stops its music for the 2.4 s «¡FINAL!» beat)
+    final: '/assets/party/final-v2.mp3', drum: '/assets/mochi/drum.mp3', star: '/assets/mochi/star.mp3', aww: '/assets/halcon/aww.mp3',
     win: '/assets/kingdoms/sting-win.mp3', whoosh: '/assets/kingdoms/whoosh.mp3', pop: '/assets/halcon/pop.mp3', freeze: '/assets/snow/freeze.mp3',
     jet: '/assets/escape/jet.mp3',
-    // «¡Rápido!» (scripts/hurry-sounds.js, Kenney CC0): the jingle and the clock's tick-tock of the last stretch
-    hurry: '/assets/party/hurry.mp3', tick: '/assets/party/tick.mp3', tock: '/assets/party/tock.mp3',
+    // «¡Rápido!»: the jingle (scripts/hurry-sounds.js, Kenney CC0) and the clock's tick-tock of the last stretch
+    // (since 2026-10-23 two woodblock knocks made on Higgsfield · Mirelo, the tock 3 semitones lower; were Kenney clicks)
+    hurry: '/assets/party/hurry.mp3', tick: '/assets/party/tick-v2.mp3', tock: '/assets/party/tock-v2.mp3',
   };
 
   // ---------- «¡Rápido!» · the hurry of the last stretch (2026-10-19, his words: "like a hurry up, hurry up kind of

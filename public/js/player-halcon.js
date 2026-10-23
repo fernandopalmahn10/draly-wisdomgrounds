@@ -181,7 +181,7 @@
       B.bandShow('¡FINAL!', 'final');
       setQ('¡FINAL! Se acabaron las rondas', null, true);
       $('hc-round').textContent = '¡FINAL!';
-      sfx('final', 0.8);
+      sfx('/assets/party/final-v2.mp3', 0.8);
       buzz([40, 30, 40]);
       hint('¡Se acabó! ¿Quién ganó tu tablero?', 'go');
       later(1300, () => { if (!testHold) B.bandHide(); B.crown(); });

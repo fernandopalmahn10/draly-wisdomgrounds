@@ -11,9 +11,11 @@
   const HB = window.HalconBoard;
   const A = '/assets/halcon/', K = '/assets/kingdoms/';
   const ANSWER_MS = 6000;
+  // final = the time-up «¡FINAL!» (the shared referee whistle + crowd since 2026-10-23); lastRound = «¡Última ronda!»,
+  // softly, keeps the old chiptune sting (a whistle there would sound like the end)
   const SFX = {
     tick: K + 'tick.mp3', whoosh: K + 'whoosh.mp3', win: K + 'sting-win.mp3', tap: K + 'tap.mp3',
-    round: A + 'round.mp3', pop: A + 'pop.mp3', yes: A + 'yes.mp3', aww: A + 'aww.mp3', first: A + 'first.mp3', final: A + 'final.mp3', start: A + 'start.mp3',
+    round: A + 'round.mp3', pop: A + 'pop.mp3', yes: A + 'yes.mp3', aww: A + 'aww.mp3', first: A + 'first.mp3', final: '/assets/party/final-v2.mp3', lastRound: A + 'final.mp3', start: A + 'start.mp3',
   };
   const MUSIC = { lobby: K + 'music-lobby.mp3', show: A + 'music-show.mp3', final: K + 'music-final.mp3' };
   const reduced = () => !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -246,7 +248,7 @@
     eachBoard((b) => { b.newRound(); b.dots(d.round, d.rounds); if (single) b.bandShow(d.text, 'q'); else b.bandHide(); });
     countLooks();
     sfx('round', 0.5);
-    if (d.last) { say('¡Última ronda! ¡La que decide!'); sfx('final', 0.35); } else if (d.round === 1) say('¡Lean la pregunta!');
+    if (d.last) { say('¡Última ronda! ¡La que decide!'); sfx('lastRound', 0.35); } else if (d.round === 1) say('¡Lean la pregunta!');
   });
   onHc('hc:open', (d) => {
     if (!q || d.round !== q.round) return;

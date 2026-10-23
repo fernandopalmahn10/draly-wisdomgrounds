@@ -270,7 +270,8 @@ none, and adding one would change it (his call).
   two high stabs; `scripts/hurry-sounds.js` from the CC0 Kenney packs → `public/assets/party/hurry.mp3`, peak −3 dB);
   then the SAME rounds' beat comes back faster and higher (playbackRate 1.2 with the pitch following, a little louder)
   and climbs to 1.3 by «0»; the hub's clock ticks and tocks twice a second for 5-4-3 and four times a second for 2-1,
-  each tick a little higher (`TrapdoorArena.tickAt`, `party/tick.mp3` + `tock.mp3`); red alarm lights breathe at the
+  each tick a little higher (`TrapdoorArena.tickAt`, `party/tick-v2.mp3` + `tock-v2.mp3`, woodblock knocks made on
+  Higgsfield · Mirelo since 2026-10-23; were Kenney's `tick.mp3` + `tock.mp3`); red alarm lights breathe at the
   screen's edges (`body.pf-hurry`, never over the play, off under «¡FINAL!»; reduced motion: still).
 - The projector carries the music; each phone plays the jingle and the clock and its own music steps aside (never 30
   copies of the music); a phone back in the middle of the Final Round gets the lights, no jingle.

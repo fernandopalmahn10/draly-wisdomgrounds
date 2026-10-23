@@ -54,7 +54,7 @@
   const bufs = {};
   const PA = '/assets/party/';
   const BUF = { tick: K + 'tick.mp3', pop: MO + 'pop.mp3', gold: MO + 'gold.mp3', open: TD + 'open.mp3', close: TD + 'close.mp3', fall: TD + 'fall.mp3', wings: TD + 'wings.mp3', saved: TD + 'saved.mp3', back: TD + 'back.mp3', lock: TD + 'lock.mp3', whoosh: K + 'whoosh.mp3',
-    hurry: PA + 'hurry.mp3', clockTick: PA + 'tick.mp3', clockTock: PA + 'tock.mp3' };
+    hurry: PA + 'hurry.mp3', clockTick: PA + 'tick-v2.mp3', clockTock: PA + 'tock-v2.mp3' };
   function audioReady() {
     if (actx) { if (actx.state === 'suspended') actx.resume().catch(() => {}); return; }
     try {

@@ -290,7 +290,7 @@
         big.textContent = sec;
         big.classList.toggle('hurry', sec <= 3);
         if (!reduced()) { big.classList.remove('tick'); void big.offsetWidth; big.classList.add('tick'); }
-        if (mine() && sec <= 3 && sec > 0 && !paused) sfx(PARTY + (sec % 2 ? 'tick.mp3' : 'tock.mp3'), 0.6);
+        if (mine() && sec <= 3 && sec > 0 && !paused) sfx(PARTY + (sec % 2 ? 'tick-v2.mp3' : 'tock-v2.mp3'), 0.6);
       }
     }
   }

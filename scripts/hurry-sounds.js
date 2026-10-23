@@ -11,7 +11,12 @@
 //   hurry   the «¡Rápido!» jingle, 1.6 s: the chiptune whole-tone run of Kenney's Retro jingles (the same 8-bit family as
 //           Las Trampillas' Retro Beat), twice and a major third higher the second time, over rising toms, then two
 //           high alarm stabs: «brrrrrp · BRRRRP · ¡bip-bip!»
-//   tick / tock   a clock's tick and its lower tock (Interface Sounds): the count that speeds up in the last stretch
+//   tick / tock   a clock's tick and its lower tock (Interface Sounds): the count that speeds up in the last stretch.
+//           Since 2026-10-23 the games play tick-v2.mp3 / tock-v2.mp3 instead (woodblock knocks made on Higgsfield
+//           Supercomputer · Mirelo, originals in assets-library/higgsfield/2026-10-23/end-sounds/), and «¡FINAL!» plays
+//           final-v2.mp3 (a referee's whistle + the crowd's «ohh!», was halcon/final.mp3): this script still makes the
+//           old Kenney tick.mp3 / tock.mp3, kept for comparison. The hurry jingle stays this script's (the Mirelo
+//           jingle takes came out weaker).
 // Every sound: inputs brought to the same peak, mixed, the mix to −1 dB and limited to −4 dB (mp3 rings over sharp
 // clicks: a −1 dB file can decode above 0 dB and clip on phones). The game code sets the volumes.
 'use strict';

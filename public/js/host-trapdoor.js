@@ -15,7 +15,7 @@
   const PA = '/assets/party/';
   const SFX = { tick: A + 'tick.mp3', whoosh: A + 'whoosh.mp3', win: A + 'sting-win.mp3', alert: A + 'castle-alert.mp3', star: '/assets/monopoly/star.mp3',
     open: TD + 'open.mp3', close: TD + 'close.mp3', fall: TD + 'fall.mp3', saved: TD + 'saved.mp3', back: TD + 'back.mp3', lock: TD + 'lock.mp3', round: HC + 'round.mp3', start: HC + 'start.mp3', streak: A + 'streak.mp3',
-    hurry: PA + 'hurry.mp3', clockTick: PA + 'tick.mp3', clockTock: PA + 'tock.mp3' };
+    hurry: PA + 'hurry.mp3', clockTick: PA + 'tick-v2.mp3', clockTock: PA + 'tock-v2.mp3' };
   const reduced = () => !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
   let pin = null, state = null, muted = false;

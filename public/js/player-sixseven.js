@@ -1098,7 +1098,7 @@
       footDance(0);
       const f = $('ssx-final');
       if (f) { f.classList.remove('hidden', 'show'); void f.offsetWidth; f.classList.add('show'); }
-      sfx(H + 'final.mp3', 0.85);
+      sfx('/assets/party/final-v2.mp3', 0.85);
       buzz([40, 30, 40]);
       if (skin() && skin().music) skin().music(null);
     });
