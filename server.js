@@ -7685,6 +7685,8 @@ function publicState(game) {
   // La Gran Fuga v2: the route of this round (the phones' lobby shows its three places)
   if (game.gameType === 'escape') out.esRoute = game.escape ? game.escape.route : EscapeMap.routeIdx(game.esRoute);
   // Las Trampillas: the arena and the rounds of this match (the phones' lobby shows them)
+  // Draly Cangrejo: «Todos contra Fénec» or «1 contra 3» (the phones' lobby shows the steps of the mode)
+  if (game.gameType === 'teamcrab') out.tcMode = game.tc && game.state !== 'lobby' ? game.tc.mode : (game.tcMode === 'vs' ? 'vs' : 'crew');
   if (game.gameType === 'trapdoor') { out.tdArena = game.td ? game.td.arena : (game.tdArena | 0); out.tdRounds = game.td ? game.td.rounds : (game.tdRounds || Trap.R.ROUNDS); }
   // HSK rooms expose simId so kid clients know what to load when
   // state flips to 'active'. fx is the current animation overlay.
@@ -8293,6 +8295,11 @@ function dmAttach(pin, g, pid, p) {
 // → «¡FINAL!» (caught or escaped per crew) → game-end. Each crew is a socket.io room of its own (the game id in its name,
 // so «Otra ronda» never mixes crews). «🤖 Probar con robots» (host:tc-robots, the teacher in the lobby) seats robot
 // crewmates the rules play like an average kid; a robot is never a player (no coins, record, star, podium or ranking).
+// v3 «1 contra 3» (host:tc-mode in the lobby, g.tcMode 'vs'): each round one kid of the crew is Fénec (tc:roles runner);
+// HIS phone is the truth for where he is: it streams player:tc-run (~14 a second, clamped to his speed, relayed volatile
+// as tc:runner), spends a dash (player:tc-dash → tc:dash) and tells the server where he was when each hammer landed on
+// his own screen (player:tc-land {sid, x}); the hammer waits for that verdict (his round trip + a little), and without it
+// the hit zone shrinks: in doubt, the runner wins. «¡Tiempo!» banks his seconds (tc:runend).
 const TC_TICK_MS = 80;
 const TC_ROBOTS = [['🤖 Robi', 'hamdan'], ['🤖 Roba', 'latifa'], ['🤖 Robo', 'aileen']];
 function tcEnsureId(g, p) { if (!p.tcK) p.tcK = (g.tcNextK = (g.tcNextK || 0) + 1); return p.tcK; }
@@ -8325,8 +8332,9 @@ function tcInitPayload(g, pid) {
   const out = {
     id: m.id, phase: m.phase, phaseMs: Math.max(0, m.phaseUntil - clock), paused: !!m.paused,
     endsMs: m.endsAt ? Math.max(0, m.endsAt - clock) : null, frenzy: !!m.frenzy, duration: m.duration, boardsN: m.boards.length,
-    crews: tcCrews(g), spots: Crab.R.SPOTS, round: Crab.roundView(m, clock),
-    rules: { reach: Crab.R.REACH, fall: Crab.R.FALL_MS, back: Crab.R.BACK_MS, max: Crab.R.CHARGES_MAX, speed: Crab.R.CRAB_SPEED, hit: Crab.R.HIT_R },
+    crews: tcCrews(g), spots: Crab.R.SPOTS, round: Crab.roundView(m, clock), mode: m.mode,
+    rules: { reach: Crab.R.REACH, fall: Crab.R.FALL_MS, back: Crab.R.BACK_MS, max: Crab.R.CHARGES_MAX, speed: Crab.R.CRAB_SPEED, hit: Crab.R.HIT_R,
+      vs: { fall: Crab.R.VS.FALL_MS, run: Crab.R.VS.RUN_SPEED, dashX: Crab.R.VS.DASH_X, dashMs: Crab.R.VS.DASH_MS, dashes: Crab.R.VS.DASHES_MAX, stun: Crab.R.VS.STUN_MS } },
   };
   if (!pid) { out.boards = m.boards.map((b) => Crab.boardView(m, b, online, clock)); return out; }
   const p = g.players[pid];
@@ -8336,6 +8344,7 @@ function tcInitPayload(g, pid) {
   out.board = b ? Crab.boardView(m, b, online, clock) : null;
   out.you = {
     k: r.k, b: r.b, words: r.words, bonks: r.bonks, charges: r.charges, rightQW: r.rightQW, captain: !!(b && b.captain === r.k), role: r.role || null,
+    runner: !!(b && b.runner === r.k), dashes: r.dashes || 0, runs: r.runs || 0,
     claw: { st: r.claw.st, off: r.claw.off, x: r.claw.x, ms: r.claw.readyAt ? Math.max(0, r.claw.readyAt - clock) : 0 },
   };
   out.q = Crab.openQ(m, r.k, clock);
@@ -8365,12 +8374,13 @@ function tcEmit(pin, g, evs) {
         return;
       }
       if (TC_ALL[e.t]) { io.to(pin).emit('tc:' + e.t, payload); return; }
-      if (e.t === 'crab' && e.vol) {
+      if ((e.t === 'crab' || e.t === 'runner') && e.vol) {
         delete payload.vol;
-        io.to(tcRoom(pin, m, e.b)).volatile.emit('tc:crab', payload);
-        io.to(g.hostId).volatile.emit('tc:crab', payload);
+        io.to(tcRoom(pin, m, e.b)).volatile.emit('tc:' + e.t, payload);
+        io.to(g.hostId).volatile.emit('tc:' + e.t, payload);
         return;
       }
+      if (e.t === 'runend') { const r = Crab.kid(m, e.k); if (r) Object.values(g.players).forEach((p) => { if (p.tcK === r.k) p.score = r.words; }); }
       if (e.t === 'bonk' || e.t === 'full') {
         crews = true;
         if (e.t === 'bonk') [e.k, e.cap].concat(e.assists || []).forEach((k) => { const r = k != null && Crab.kid(m, k); if (r) Object.values(g.players).forEach((p) => { if (p.tcK === r.k) p.score = r.words; }); });
@@ -8394,7 +8404,7 @@ const tcRobotNames = (n) => TC_ROBOTS.slice(0, Math.max(0, Math.min(TC_ROBOTS.le
 function tcDeal(pin, g) {
   tcStop(g);
   const now = Date.now();
-  const m = Crab.newGame(1 + Math.floor(Math.random() * 1e9), g.duration, now, tcWords(g));
+  const m = Crab.newGame(1 + Math.floor(Math.random() * 1e9), g.duration, now, tcWords(g), g.tcMode);
   m.phaseUntil = now + COUNTDOWN_MS;
   m.timer = null;
   g.tc = m;
@@ -8503,10 +8513,10 @@ function tcEndPayloads(g) {
   const fin = Crab.finish(m);
   const lite = (x) => x && {
     k: x.k, name: x.name, skin: x.skin, b: x.b, words: x.words, bonks: x.bonks, assists: x.assists, capBonks: x.capBonks, rank: x.rank,
-    classRank: x.classRank, stars: x.stars, best: x.best,
+    classRank: x.classRank, stars: x.stars, best: x.best, runs: x.runs, survived: x.survived, runPts: x.runPts,
   };
   const boards = fin.boards.map((bd) => ({
-    id: bd.id, words: bd.words, target: bd.target, caught: bd.caught, bonks: bd.bonks, winners: bd.winners, rows: bd.rows.map((k) => lite(fin.byK[k])),
+    id: bd.id, mode: m.mode, words: bd.words, target: bd.target, caught: bd.caught, bonks: bd.bonks, winners: bd.winners, rows: bd.rows.map((k) => lite(fin.byK[k])),
     robots: bd.robots, stars: bd.stars.map((s) => ({ id: s.id, name: s.name, unit: s.unit, value: s.value, winners: s.winners })),
   }));
   const podium = fin.order.slice(0, 3).map((k) => lite(fin.byK[k]));
@@ -8514,10 +8524,10 @@ function tcEndPayloads(g) {
   const words = (m.words || []).slice(0, 8);                         // (the class's pinyin words: they fly out of his sack in the ending)
   return {
     byK: fin.byK,
-    guest: () => Object.assign({}, common, { teamcrab: { board: null, words, podium, crews: fin.crews, count: fin.count, boardsN: boards.length }, me: { guest: true } }),
+    guest: () => Object.assign({}, common, { teamcrab: { board: null, words, podium, crews: fin.crews, count: fin.count, boardsN: boards.length, mode: m.mode }, me: { guest: true } }),
     host: Object.assign({
       leaderboard: fin.order.map((k) => ({ name: fin.byK[k].name, score: fin.byK[k].words, team: 'red' })),
-      teamcrab: { boards, podium, crews: fin.crews, count: fin.count, words },
+      teamcrab: { boards, podium, crews: fin.crews, count: fin.count, words, mode: m.mode },
     }, common),
     forPlayer(pid) {
       const p = g.players[pid];
@@ -8527,12 +8537,12 @@ function tcEndPayloads(g) {
       const crew = fin.crews.find((c) => c.id === x.b) || null;
       return Object.assign({}, common, {
         scores: { [pid]: x.words },
-        teamcrab: { board, podium, crews: fin.crews, count: fin.count, boardsN: boards.length, words },
+        teamcrab: { board, podium, crews: fin.crews, count: fin.count, boardsN: boards.length, words, mode: m.mode },
         me: {
           k: x.k, b: x.b, skin: x.skin, rank: x.rank, of: board ? board.rows.length : 1, classRank: x.classRank, classOf: fin.count,
           words: x.words, bonks: x.bonks, assists: x.assists, capBonks: x.capBonks, captained: x.captained, slams: x.slams, stars: x.stars,
           answered: x.answered, right: x.right, best: x.best, won: !!(board && board.winners.includes(x.k)), caught: !!(board && board.caught),
-          crewRank: crew ? crew.rank : null, crews: fin.crews.length,
+          crewRank: crew ? crew.rank : null, crews: fin.crews.length, runs: x.runs, survived: x.survived, runPts: x.runPts, hitsTaken: x.hitsTaken,
         },
       });
     },
@@ -14782,6 +14792,7 @@ io.on('connection', (socket) => {
         const t = Number(data.t), rtt = Date.now() - t;
         if (!Number.isFinite(t) || t !== g.tc.pingAt || rtt < 0 || rtt > 5000) return;   // (only the server's own last ping)
         p.tcRtt = p.tcRtt == null ? rtt : Math.round(p.tcRtt * 0.6 + rtt * 0.4);
+        Crab.setRtt(g.tc, p.tcK, p.tcRtt);
       });
     } catch (e) { console.error('[player:tc-pong]', e); }
   });
@@ -14814,6 +14825,35 @@ io.on('connection', (socket) => {
         tcEmit(pin, g, res.ev);
       });
     } catch (e) { console.error('[player:tc-slam]', e); }
+  });
+  // «1 contra 3»: the runner's phone is the truth for where he is (clamped to his speed), his dashes and his own verdicts
+  socket.on('player:tc-run', (data) => {
+    try {
+      tcPlayer(data, (pin, g, p) => {
+        const r = Crab.runnerPos(g.tc, p.tcK, Number(data.x), Date.now());
+        if (!r) return;
+        socket.to(tcRoom(pin, g.tc, r.b)).volatile.emit('tc:runner', r);
+        io.to(g.hostId).volatile.emit('tc:runner', r);
+      });
+    } catch (e) { console.error('[player:tc-run]', e); }
+  });
+  socket.on('player:tc-dash', (data) => {
+    try {
+      tcPlayer(data, (pin, g, p) => {
+        const r = Crab.runnerDash(g.tc, p.tcK, Number(data.dir), Date.now());
+        if (!r) { io.to(socket.id).emit('tc:nodash', {}); return; }
+        io.to(tcRoom(pin, g.tc, r.b)).emit('tc:dash', r);
+        io.to(g.hostId).emit('tc:dash', r);
+      });
+    } catch (e) { console.error('[player:tc-dash]', e); }
+  });
+  socket.on('player:tc-land', (data) => {
+    try {
+      tcPlayer(data, (pin, g, p) => {
+        const ev = [];
+        if (Crab.runnerLand(g.tc, p.tcK, Number(data.sid), Number(data.x), Date.now(), ev)) tcEmit(pin, g, ev);
+      });
+    } catch (e) { console.error('[player:tc-land]', e); }
   });
   socket.on('player:tc-react', (data) => {
     try {
@@ -14851,6 +14891,19 @@ io.on('connection', (socket) => {
       g.tcRobots = data && data.on ? TC_ROBOTS.length : 0;
       io.to(socket.id).emit('tc:robots', { on: !!g.tcRobots, robots: tcRobotNames(g.tcRobots) });
     } catch (e) { console.error('[host:tc-robots]', e); }
+  });
+  // Draly Cangrejo teacher: «Todos contra Fénec» (crew, the default) or «1 contra 3» (vs) in the lobby; the phones'
+  // lobby shows the steps of the mode (state.tcMode). It stays for «Otra ronda».
+  socket.on('host:tc-mode', (data) => {
+    try {
+      const pin = data && data.pin;
+      const g = games[pin];
+      if (!g || g.hostId !== socket.id || g.gameType !== 'teamcrab' || g.state !== 'lobby') return;
+      g.tcMode = data && data.mode === 'vs' ? 'vs' : 'crew';
+      io.to(socket.id).emit('tc:mode', { mode: g.tcMode });
+      g._lastBcast = 0;
+      broadcast(pin);
+    } catch (e) { console.error('[host:tc-mode]', e); }
   });
   // Dàfùwēng · Monopolio teacher «Saltar»: the intro → play now; after the end → every phone jumps to its own card.
   socket.on('host:mn-skip', (data) => {

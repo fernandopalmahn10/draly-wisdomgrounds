@@ -7,7 +7,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/app/favicon-32.png">
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/back.css?v=20261018a">
-  <link rel="stylesheet" href="/css/teamcrab.css?v=20261023tc3">
+  <link rel="stylesheet" href="/css/teamcrab.css?v=20261023tc4">
 </head>
 <body class="tch">
   <button class="tch-btn tch-mute" id="mute-btn" type="button">🔊 Sonido</button>
@@ -16,7 +16,7 @@
   <main id="screen-lobby" class="tch-lobby">
     <section class="tch-lobby-left">
       <h1 class="tch-title"><small>Draly Cangrejo</small>¡Atrapa a <span>Fénec</span>!</h1>
-      <p class="tch-tagline">Fénec, el ladrón de palabras, se robó las palabras de la clase. Cada ronda: preguntas rápidas (cada respuesta buena = un martillazo), luego 10 segundos de «¡A martillar!»: el mejor de la ronda es el Capitán y maneja el cangrejo, y todos aplastan a Fénec. Si fallan, El Péndulo se come su martillazo.</p>
+      <p class="tch-tagline" id="tagline">Fénec, el ladrón de palabras, se robó las palabras de la clase. Cada ronda: preguntas rápidas (cada respuesta buena = un martillazo), luego 10 segundos de «¡A martillar!»: el mejor de la ronda es el Capitán y maneja el cangrejo, y todos aplastan a Fénec. Si fallan, El Péndulo se come su martillazo.</p>
       <div class="tch-pin-card">
         <div>
           <div class="tch-pin-label">PIN</div>
@@ -28,6 +28,9 @@
       <div class="tch-tools">
         <div class="tch-dur" role="group" aria-label="Duración"><span>⏱ Tiempo</span>
           <button class="tch-btn on" type="button" data-s="120">2 min</button><button class="tch-btn" type="button" data-s="180">3 min</button><button class="tch-btn" type="button" data-s="240">4 min</button>
+        </div>
+        <div class="tch-mode" role="group" aria-label="Modo de juego"><span>🎮 Modo</span>
+          <button class="tch-btn on" type="button" data-mode="crew" aria-pressed="true">👥 Todos contra Fénec<small>la tripulación atrapa al Fénec del juego</small></button><button class="tch-btn" type="button" data-mode="vs" aria-pressed="false">🦊 1 contra 3<small>cada ronda, un niño es Fénec</small></button>
         </div>
         <button class="tch-btn go" id="start-btn" type="button" disabled>🦀 ¡Empezar!</button>
         <button class="tch-btn tch-robots" id="robots-btn" type="button" aria-pressed="false" title="Solo para probar: 3 robots juegan contigo (no cuentan en nada)">🤖 Probar con robots</button>
@@ -111,8 +114,8 @@
   <script src="/js/saga.js?v=20261020z3d3"></script>
   <script src="/js/halcon-board.js?v=20261019zc"></script>
   <script src="/js/cast.js?v=20261017td"></script>
-  <script src="/js/teamcrab-stage.js?v=20261023tc3"></script>
-  <script src="/js/host-teamcrab.js?v=20261023tc3"></script>
+  <script src="/js/teamcrab-stage.js?v=20261023tc4"></script>
+  <script src="/js/host-teamcrab.js?v=20261023tc4"></script>
   <script src="/js/live-game.js?v=20261011c"></script>
   <!-- ← «Volver» while the lobby waits (his rule 2026-10-18: every screen has a way back) -->
   <script src="/js/host-back.js?v=20261023tc" data-place="title"></script>

@@ -56,6 +56,18 @@ const R = {
   AIM_GAP_MS: 40, STEER_GAP_MS: 40,
   TAUNT_GAP_MS: 3500,
   ROBOT: { ACC: 0.7, ANS_MIN: 1500, ANS_MAX: 3600, SLAM_MIN: 1100, SLAM_MAX: 2200, NOISE: 0.32 },
+  // «1 contra 3» (his idea 2026-10-23): a kid is Fénec for a round; his own phone is the truth for where he is
+  VS: {
+    FALL_MS: 750,            // a hammer's shadow shows this long before it lands: a runner who reacts can always get away
+    RUN_SPEED: 1.5,          // spots per second: out of one hammer in time, never out of two side by side without a dash
+    DASH_X: 1.2, DASH_MS: 220, DASHES_MAX: 3,   // a dash = a quick burst out of a trap; 1 per right answer of the window, max 3
+    STUN_MS: 1000,           // a hit stuns him briefly, it never ends the round
+    SURVIVE: 1, UNTOUCHED: 3, HIT: 3,   // points: a second survived, a round untouched; a hit for its slammer
+    LAND_WAIT: 450,          // after the impact the server waits this long (+ his round trip) for his phone's own verdict
+    DOUBT: 0.15,             // without his phone's verdict the hit zone shrinks by this much: in doubt, the runner wins
+    SPEED_SLACK: 1.5,        // his streamed moves may be this much faster than RUN_SPEED (frames, jitter) before they are clamped
+    ROBOT_REACT_MIN: 250, ROBOT_REACT_MAX: 480,
+  },
 };
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -63,9 +75,9 @@ const clampDuration = (s) => clamp(Math.round(Number(s) || R.DURATION), 60, 600)
 const MAXX = R.SPOTS - 1;
 const round2 = (v) => Math.round(v * 100) / 100;
 
-function newGame(seed, durationS, now, words) {
+function newGame(seed, durationS, now, words, mode) {
   return {
-    id: seed, seed, rng: Halcon.mulberry32(seed), duration: clampDuration(durationS),
+    id: seed, seed, rng: Halcon.mulberry32(seed), duration: clampDuration(durationS), mode: mode === 'vs' ? 'vs' : 'crew', slamSeq: 0,
     phase: 'countdown', phaseAt: now, phaseUntil: now, endsAt: 0, frenzy: false,
     paused: false, pausedAt: 0, boards: [], kids: {}, nextBoard: 1, qn: 0, words: (words || []).slice(0, 60),
     round: null,
@@ -83,6 +95,7 @@ function newKid(k, name, skin, b, code, robot) {
     slams: 0, misses: 0, right: 0, wrong: 0, late: 0, fast: 0, answered: 0, eaten: 0, streak: 0, best: 0,
     awaySince: 0, lastReact: 0, q: null, qNextAt: 0, order: [], qi: 0, lastAim: 0, lastSteer: 0,
     claw: { st: 'idle', off: 0, x: 2, fallX: 2, impactAt: 0, readyAt: 0 }, bot: { ansAt: 0, nextAt: 0, steerAt: 0 },
+    ran: false, runs: 0, survived: 0, runPts: 0, hitsTaken: 0, dashes: 0, rtt: 0,
   };
 }
 function targetFor(n, minutes) { return Math.max(R.TARGET_MIN, Math.round(R.TARGET_PER_KID_MIN * Math.max(1, n) * minutes)); }
@@ -91,6 +104,7 @@ function addBoard(m) {
     id: m.nextBoard++, seats: [], words: 0, target: 0, full: false, bonks: 0, roundBonks: 0, anger: 0, lastOk: null,
     captain: null, crab: { x: MAXX / 2, tx: MAXX / 2, sentX: MAXX / 2, sentAt: 0 }, lastTaunt: 0,
     fx: { x: MAXX / 2, mode: 'idle', t0: 0, t1: 0, x0: MAXX / 2, x1: MAXX / 2, dir: 1 }, fhist: [],
+    runner: null, rx: MAXX / 2, rxAt: 0, rxSent: MAXX / 2, rxSentAt: 0, stunUntil: 0, stunMs: 0, hitsRound: 0, dashUntil: 0, runFrom: 0,
   };
   m.boards.push(b);
   return b;
@@ -230,22 +244,23 @@ function nextRound(m, now, ev) {
   ev.push({ t: 'round', phase: 'qw', n: r.n, total: r.total, final: r.final, ms: qw });
 }
 // the crew's best answerer of this window (most right, then the faster total time, the earlier first right, the seat)
-function leader(m, b) {
-  const cands = b.seats.map((k) => kid(m, k)).filter((x) => x && x.rightQW > 0);
+function leader(m, b, except) {
+  const cands = b.seats.map((k) => kid(m, k)).filter((x) => x && x.rightQW > 0 && x.k !== except);
   cands.sort((a, c) => c.rightQW - a.rightQW || a.timeQW - c.timeQW || a.firstQW - c.firstQW || a.k - c.k);
   return cands.length ? cands[0].k : null;
 }
 // the question window closes: open questions are withdrawn (free), the roles are decided, «¡A martillar!»
-function toPlayIn(m, now, ev) {
+function toPlayIn(m, now, ev, o) {
   const r = m.round;
   r.phase = 'pwin'; r.at = now; r.until = now + R.PW_IN_MS;
   Object.values(m.kids).forEach((k) => { if (k.q) { k.q = null; ev.push({ t: 'qx', b: k.b, k: k.k }); } });
   m.boards.forEach((b) => {
-    b.captain = leader(m, b);
-    b.seats.forEach((k) => { const x = kid(m, k); if (x) x.role = k === b.captain ? 'cap' : x.charges > 0 ? 'mart' : 'watch'; });
+    const run = vsRunner(m, b, now, o && o.online);
+    b.captain = leader(m, b, run ? run.k : null);
+    b.seats.forEach((k) => { const x = kid(m, k); if (x) x.role = run && k === run.k ? 'runner' : k === b.captain ? 'cap' : x.charges > 0 ? 'mart' : 'watch'; });
     if (b.captain != null) kid(m, b.captain).captained++;
     // the martilleros' claws spread across the crab's reach (the Capitán's in the middle)
-    const mart = b.seats.map((k) => kid(m, k)).filter((x) => x && x.charges > 0);
+    const mart = b.seats.map((k) => kid(m, k)).filter((x) => x && x.charges > 0 && (!run || x.k !== run.k));
     const offs = [-0.9, 0.9, -0.35, 0.35, 0].map((v) => v * R.REACH);
     let i = 0;
     mart.forEach((x) => {
@@ -254,13 +269,15 @@ function toPlayIn(m, now, ev) {
       x.claw.x = clamp(b.crab.x + x.claw.off, 0, MAXX);
       x.claw.readyAt = now + R.PW_IN_MS;
     });
-    ev.push({ t: 'roles', b: b.id, captain: b.captain, mart: mart.map((x) => ({ k: x.k, charges: x.charges, off: x.claw.off })), crab: round2(b.crab.x) });
+    ev.push(Object.assign({ t: 'roles', b: b.id, captain: b.captain, mart: mart.map((x) => ({ k: x.k, charges: x.charges, off: x.claw.off })), crab: round2(b.crab.x) },
+      run ? { runner: run.k, dashes: run.dashes, rx: round2(b.rx), n: run.runs } : {}));
   });
   ev.push({ t: 'round', phase: 'pwin', n: r.n, total: r.total, final: r.final, ms: R.PW_IN_MS });
 }
 function toPlay(m, now, ev) {
   const r = m.round;
-  r.phase = 'pw'; r.at = now; r.until = now + (r.pwMs || R.PW_MS);
+  r.phase = 'pw'; r.at = now; r.until = now + (r.pwMs || R.PW_MS); r.pwEnd = r.until;
+  m.boards.forEach((b) => { if (b.runner != null) b.rxAt = now; });   // (his speed is measured from «¡YA!»)
   // («Saltar» in «¡A martillar!»: the claws are ready at once)
   Object.values(m.kids).forEach((x) => { if (x.claw.st === 'armed' && x.claw.readyAt > now) x.claw.readyAt = now; });
   ev.push({ t: 'round', phase: 'pw', n: r.n, total: r.total, final: r.final, ms: r.until - now });
@@ -269,6 +286,8 @@ function toPlayOut(m, now, ev) {
   const r = m.round;
   // (a hammer still in the air lands at its own time: the tick lands it, then it goes up)
   Object.values(m.kids).forEach((x) => { if (x.claw.st === 'armed' || x.claw.st === 'back') x.claw.st = 'idle'; });
+  // (a window that ends early because every hammer is spent: the runner is credited the rest of it)
+  m.boards.forEach((b) => runEnd(m, b, now, ev, Math.max(now, r.pwEnd || now)));
   r.phase = 'pwout'; r.at = now; r.until = now + R.PW_OUT_MS;
   ev.push({ t: 'round', phase: 'pwout', n: r.n, total: r.total, final: r.final, ms: R.PW_OUT_MS, tally: m.boards.map((b) => ({ b: b.id, bonks: b.roundBonks, words: b.words })) });
 }
@@ -443,10 +462,13 @@ function slam(m, k, x, now, lag) {
   r.charges--;
   r.slams++;
   r.claw.st = 'fall';
-  r.claw.fallX = r.claw.x;
-  r.claw.impactAt = now + R.FALL_MS;
+  r.claw.fallX = round2(r.claw.x);   // (the spot every screen gets: the runner's phone judges this same number)
+  const fall = b.runner != null ? R.VS.FALL_MS : R.FALL_MS;
+  r.claw.impactAt = now + fall;
   r.claw.lag = clamp(Number(lag) || 0, 0, R.LAG_MAX);
-  return { ok: true, ev: [{ t: 'slam', b: b.id, k, x: round2(r.claw.fallX), ms: R.FALL_MS, charges: r.charges }] };
+  r.claw.sid = ++m.slamSeq;
+  r.claw.landX = null; r.claw.far = 0;
+  return { ok: true, ev: [{ t: 'slam', b: b.id, k, x: round2(r.claw.fallX), ms: fall, charges: r.charges, sid: r.claw.sid }] };
 }
 // the impact: Fénec within HIT_R of the hammer (and not lying flat already) = a BONK
 function impact(m, b, r, now, ev) {
@@ -512,8 +534,9 @@ function robotTick(m, b, r, now, ev) {
     return;
   }
   if (rd.phase !== 'pw') return;
+  if (b.runner === r.k) return;                      // (a robot runner moves in robotRun)
   const f = b.fx;
-  const goal = fxAt(f, now);      // (an average kid taps where Fénec IS, not where he will land: fair, not perfect)
+  const goal = b.runner != null ? b.rx : fxAt(f, now);      // (an average kid taps where Fénec IS, not where he will land: fair, not perfect)
   if (b.captain === r.k && now >= bt.steerAt) { bt.steerAt = now + 350; b.crab.tx = clamp(goal + (m.rng() - 0.5) * 0.6, 0, MAXX); }
   if (r.claw.st === 'armed' && now >= r.claw.readyAt) {
     if (!bt.nextAt) bt.nextAt = now + rnd(m, B.SLAM_MIN, B.SLAM_MAX);
@@ -525,6 +548,173 @@ function robotTick(m, b, r, now, ev) {
     }
   }
 }
+
+// ---------- «1 contra 3»: a kid is Fénec for a round (his own phone is the truth for where he is) ----------
+// the runner of this round: the board's best answerer of the window who hasn't run yet (when everyone has, a new turn);
+// a board of one kid keeps the computer Fénec
+function vsRunner(m, b, now, online) {
+  b.runner = null;
+  if (m.mode !== 'vs' || b.seats.length < 2) return null;
+  const on = (x) => x.robot || !online || online(x.k);
+  let pool = b.seats.map((k) => kid(m, k)).filter((x) => x && !x.ran && on(x));
+  if (!pool.length) { b.seats.forEach((k) => { const x = kid(m, k); if (x) x.ran = false; }); pool = b.seats.map((k) => kid(m, k)).filter((x) => x && on(x)); }
+  if (!pool.length) return null;
+  pool.sort((a, c) => c.rightQW - a.rightQW || a.timeQW - c.timeQW || (a.firstQW || Infinity) - (c.firstQW || Infinity) || a.k - c.k);
+  const r = pool[0];
+  r.ran = true; r.runs++;
+  r.dashes = Math.min(R.VS.DASHES_MAX, r.charges);   // (his right answers of the window became dashes)
+  r.charges -= r.dashes;
+  r.claw.st = 'idle';
+  b.runner = r.k;
+  b.rx = b.rxSent = b.crab.x <= MAXX / 2 ? MAXX - 0.7 : 0.7; b.rxAt = now;   // (he starts across the dock from the crab)
+  b.stunUntil = 0; b.stunMs = 0; b.hitsRound = 0; b.dashUntil = 0; b.runFrom = now + R.PW_IN_MS;
+  const f = b.fx;
+  f.x = f.x0 = f.x1 = b.rx; f.mode = 'idle'; f.t0 = now; f.t1 = now + 60000;
+  fenSnap(b);
+  return r;
+}
+// «¡Tiempo!» (or «¡FINAL!»): the runner banks a point a second he was on his feet, +3 for a round untouched (×2 in the final round)
+function runEnd(m, b, now, ev, end) {
+  if (b.runner == null) return;
+  const r = kid(m, b.runner);
+  b.runner = null;
+  if (!r) return;
+  const mult = m.round && m.round.final ? 2 : 1;
+  const ms = Math.max(0, (end || now) - b.runFrom - b.stunMs);
+  const secs = Math.floor(ms / 1000);
+  const untouched = b.hitsRound === 0;
+  const pts = (secs * R.VS.SURVIVE + (untouched ? R.VS.UNTOUCHED : 0)) * mult;
+  r.survived += ms; r.runPts += pts; r.words += pts;
+  r.charges = Math.min(R.CHARGES_MAX, r.charges + r.dashes); r.dashes = 0;   // (dashes he didn't use are charges again)
+  ev.push({ t: 'runend', b: b.id, k: r.k, secs, untouched, pts, words: r.words, x2: mult > 1, charges: r.charges, hits: b.hitsRound });
+  const f = b.fx;
+  f.x = f.x0 = f.x1 = b.rx; f.mode = 'idle'; f.t0 = now; f.t1 = now + 900;
+  fenSnap(b);
+}
+// his phone streams where he is (~14 a second); moves faster than he can run are clamped (a dash allows its burst)
+function runnerPos(m, k, x, now) {
+  const r = kid(m, k);
+  if (!r || m.phase !== 'play' || m.paused || !m.round || (m.round.phase !== 'pw' && m.round.phase !== 'pwin')) return null;
+  const b = boardOf(m, r.b);
+  if (!b || b.runner !== k || !Number.isFinite(Number(x))) return null;
+  if (now < b.stunUntil || m.round.phase === 'pwin') { b.rxAt = now; return null; }   // (stunned, or not yet: he waits for «¡YA!»)
+  const dt = clamp(now - (b.rxAt || now), 16, 300);
+  const max = (R.VS.RUN_SPEED * R.VS.SPEED_SLACK * dt) / 1000 + (now < b.dashUntil ? R.VS.DASH_X : 0) + 0.08;
+  const want = clamp(Number(x), 0, MAXX);
+  b.rx = clamp(b.rx + clamp(want - b.rx, -max, max), 0, MAXX);
+  b.rxAt = now;
+  b.fx.x = b.fx.x0 = b.fx.x1 = b.rx;
+  vsFar(m, b, now);
+  if (Math.abs(b.rx - b.rxSent) < 0.02 && now - b.rxSentAt < 400) return null;
+  b.rxSent = b.rx; b.rxSentAt = now;
+  return { b: b.id, k, x: round2(b.rx) };
+}
+// a dash: one of his dashes, a quick burst (his phone moves him; the server allows the burst and tells the crew)
+function runnerDash(m, k, dir, now) {
+  const r = kid(m, k);
+  if (!r || !playing(m)) return null;
+  const b = boardOf(m, r.b);
+  if (!b || b.runner !== k || r.dashes <= 0 || now < b.stunUntil) return null;
+  r.dashes--;
+  b.dashUntil = now + R.VS.DASH_MS + 400;
+  return { b: b.id, k, dir: Number(dir) < 0 ? -1 : 1, dashes: r.dashes };
+}
+// his phone's own verdict: where he was when THAT hammer landed on HIS screen
+function runnerLand(m, k, sid, x, now, ev) {
+  const r = kid(m, k);
+  if (!r || m.phase !== 'play') return false;
+  const b = boardOf(m, r.b);
+  if (!b || b.runner !== k || !Number.isFinite(Number(x))) return false;
+  const c = b.seats.map((j) => kid(m, j)).find((o) => o && (o.claw.st === 'fall' || o.claw.st === 'wait') && o.claw.sid === Number(sid));
+  if (!c) return false;
+  // (his report must agree with his stream: never farther from it than he could have run since)
+  const since = Math.max(0, now - c.claw.impactAt) + 300;
+  const slack = (R.VS.RUN_SPEED * R.VS.SPEED_SLACK * since) / 1000 + (now < b.dashUntil + 300 ? R.VS.DASH_X : 0) + 0.25;
+  c.claw.landX = clamp(Number(x), b.rx - slack, b.rx + slack);
+  if (c.claw.st === 'wait' || now >= c.claw.impactAt) vsJudge(m, b, c, now, ev);
+  return true;
+}
+// the hammer has landed on the server's clock: a robot runner (or one whose phone is gone) is judged now, a kid's own
+// phone gets its round trip + LAND_WAIT to say where he was
+function vsLand(m, b, r, now, ev, o) {
+  const run = kid(m, b.runner);
+  const c = r.claw;
+  const away = !run || run.robot || (o && o.online && !o.online(run.k));
+  if (away || c.landX != null) { c.auto = !!away; vsJudge(m, b, r, now, ev); return; }
+  c.st = 'wait';
+  c.waitUntil = c.impactAt + Math.min(400, run.rtt || 150) + R.VS.LAND_WAIT;
+}
+// (while a hammer lands, the farthest his streamed position was from it: without his own verdict, that counts)
+function vsFar(m, b, now) {
+  b.seats.forEach((k) => {
+    const c = (kid(m, k) || {}).claw;
+    if (c && ((c.st === 'fall' && now >= c.impactAt - 150) || c.st === 'wait')) c.far = Math.max(c.far || 0, Math.abs(b.rx - c.fallX));
+  });
+}
+function vsJudge(m, b, r, now, ev) {
+  const c = r.claw;
+  const run = kid(m, b.runner);
+  c.st = 'back';
+  c.readyAt = now + R.BACK_MS;
+  const sure = c.landX != null || !!(run && run.robot) || !!c.auto;
+  c.auto = false;
+  vsFar(m, b, now);
+  const x = c.landX != null ? c.landX : b.rx;
+  const fin = c.final; c.final = false;
+  const d = c.landX != null || sure ? Math.abs(x - c.fallX) : Math.max(c.far || 0, Math.abs(x - c.fallX));
+  const stunned = now < b.stunUntil;
+  const hit = !!run && !stunned && !(fin && c.landX == null && !sure) && d < R.HIT_R - (sure ? 0 : R.VS.DOUBT) - 1e-6;
+  c.landX = null; c.far = 0;
+  if (!hit) {
+    r.misses++;
+    ev.push({ t: 'impact', b: b.id, k: r.k, x: round2(c.fallX), hit: false, fx: round2(x), sid: c.sid, runner: b.runner });
+    return;
+  }
+  const mult = m.round && m.round.final ? 2 : 1;
+  const pts = R.VS.HIT * mult;
+  const assists = [];
+  b.seats.forEach((k) => {
+    const o = kid(m, k);
+    if (!o || o === r || o.k === b.captain || o.k === b.runner) return;
+    if ((o.claw.st === 'armed' || o.claw.st === 'fall') && Math.abs((o.claw.st === 'fall' ? o.claw.fallX : o.claw.x) - x) <= R.TRAP_R) { o.assists++; o.words += R.ASSIST; assists.push(o.k); }
+  });
+  let cap = null;
+  if (b.captain != null && b.captain !== r.k) { const o = kid(m, b.captain); if (o) { o.words += R.CAPTAIN; o.capBonks++; cap = o.k; } }
+  else if (b.captain === r.k) r.capBonks++;
+  r.bonks++; r.words += pts;
+  b.bonks++; b.roundBonks++; b.hitsRound++;
+  run.hitsTaken++;
+  b.words += pts + assists.length * R.ASSIST + (cap != null ? R.CAPTAIN : 0);
+  b.stunUntil = now + R.VS.STUN_MS;
+  b.stunMs += R.VS.STUN_MS;
+  ev.push({ t: 'bonk', b: b.id, k: r.k, x: round2(x), pts, assists, cap, words: b.words, target: b.target, flying: pickWords(m, pts + assists.length + (cap != null ? 1 : 0)), ms: R.VS.STUN_MS, x2: mult > 1, n: b.bonks, sid: c.sid, runner: b.runner });
+}
+// a robot runner: it notices a falling hammer (or two) after a kid's reaction time and runs out of the way, a dash
+// when both sides are covered; between hammers it strolls
+function robotRun(m, b, now, dt, ev, auto) {
+  const r = kid(m, b.runner);
+  if (!r || (!r.robot && !auto) || m.round.phase !== 'pw' || now < b.stunUntil) return;
+  const bt = r.bot;
+  const threats = b.seats.map((k) => kid(m, k)).filter((o) => o && o.claw.st === 'fall' && now - (o.claw.impactAt - R.VS.FALL_MS) >= (o.claw.react || (o.claw.react = rnd(m, R.VS.ROBOT_REACT_MIN, R.VS.ROBOT_REACT_MAX))) && Math.abs(o.claw.fallX - b.rx) < R.HIT_R + 0.35);
+  let target = bt.runTo != null ? bt.runTo : b.rx;
+  if (threats.length) {
+    const lo = Math.min(...threats.map((o) => o.claw.fallX)) - R.HIT_R - 0.35, hi = Math.max(...threats.map((o) => o.claw.fallX)) + R.HIT_R + 0.35;
+    const goLeft = (b.rx - lo) < (hi - b.rx) ? lo >= 0 : hi > MAXX;
+    target = clamp(goLeft ? lo : hi, 0, MAXX);
+    const need = Math.abs(target - b.rx), left = Math.min(...threats.map((o) => o.claw.impactAt)) - now;
+    if (r.dashes > 0 && need > (R.VS.RUN_SPEED * left) / 1000 && !bt.dashed) { const d = runnerDash(m, r.k, target < b.rx ? -1 : 1, now); if (d) { ev.push(Object.assign({ t: 'dash' }, d)); b.rx = clamp(b.rx + d.dir * R.VS.DASH_X, 0, MAXX); bt.dashed = true; } }
+  } else {
+    bt.dashed = false;
+    if (bt.runTo == null || Math.abs(bt.runTo - b.rx) < 0.05 || now >= (bt.runAt || 0)) { bt.runTo = rnd(m, 0.3, MAXX - 0.3); bt.runAt = now + rnd(m, 900, 2200); }
+    target = bt.runTo;
+  }
+  const step = ((threats.length ? R.VS.RUN_SPEED : R.VS.RUN_SPEED * 0.55) * dt) / 1000;
+  b.rx = Math.abs(target - b.rx) <= step ? target : b.rx + Math.sign(target - b.rx) * step;
+  b.fx.x = b.fx.x0 = b.fx.x1 = b.rx;
+  if (Math.abs(b.rx - b.rxSent) > 0.04 && now - b.rxSentAt >= 70) { b.rxSent = b.rx; b.rxSentAt = now; ev.push({ t: 'runner', b: b.id, k: r.k, x: round2(b.rx), vol: true }); }
+}
+// (the server measures each phone's round trip: a hammer waits that long for the runner's own verdict)
+function setRtt(m, k, rtt) { const r = kid(m, k); if (r && Number.isFinite(rtt)) r.rtt = clamp(rtt, 0, 2000); }
 
 // ---------- the tick (every 80 ms while the game plays) ----------
 // opts: { questions, imageFor(q), online(k) → bool }. Returns the events to send.
@@ -551,11 +741,13 @@ function tick(m, now, opts) {
     b.seats.forEach((k) => {
       const r = kid(m, k);
       if (!r) return;
-      if (r.claw.st === 'fall' && now >= r.claw.impactAt) impact(m, b, r, now, ev);
+      if (r.claw.st === 'fall' && now >= r.claw.impactAt) { if (b.runner != null) vsLand(m, b, r, now, ev, o); else impact(m, b, r, now, ev); }
+      else if (r.claw.st === 'wait' && (r.claw.landX != null || now >= r.claw.waitUntil)) vsJudge(m, b, r, now, ev);
       else if (r.claw.st === 'back' && now >= r.claw.readyAt) { r.claw.st = r.charges > 0 && rd.phase === 'pw' ? 'armed' : 'idle'; ev.push({ t: 'claw', b: b.id, k: r.k, st: r.claw.st, charges: r.charges }); }
       if (r.robot) robotTick(m, b, r, now, ev);
     });
-    fenTick(m, b, now, ev);
+    if (b.runner != null && (rd.phase === 'pwin' || rd.phase === 'pw')) { robotRun(m, b, now, dt, ev, !online(b.runner)); vsFar(m, b, now); }
+    else fenTick(m, b, now, ev);
   });
   // the windows
   if (rd.phase === 'qw') {
@@ -570,13 +762,13 @@ function tick(m, now, opts) {
         else r.qNextAt = now + 2000;
       }
     });
-    if (now >= rd.until) toPlayIn(m, now, ev);
+    if (now >= rd.until) toPlayIn(m, now, ev, o);
   } else if (rd.phase === 'pwin') { if (now >= rd.until) toPlay(m, now, ev); }
   else if (rd.phase === 'pw') {
     // every claw spent and landed: the window ends a little after (no waiting on nothing)
-    const live = Object.values(m.kids).some((r) => r.claw.st === 'fall' || r.claw.st === 'back' || (r.claw.st === 'armed' && r.charges > 0));
+    const live = Object.values(m.kids).some((r) => r.claw.st === 'fall' || r.claw.st === 'wait' || r.claw.st === 'back' || (r.claw.st === 'armed' && r.charges > 0));
     if (!live && rd.until - now > R.PW_EMPTY_MS) rd.until = now + R.PW_EMPTY_MS;
-    if (now >= rd.until && !Object.values(m.kids).some((r) => r.claw.st === 'fall')) toPlayOut(m, now, ev);
+    if (now >= rd.until && !Object.values(m.kids).some((r) => r.claw.st === 'fall' || r.claw.st === 'wait')) toPlayOut(m, now, ev);
   } else if (rd.phase === 'pwout') { if (now >= rd.until) nextRound(m, now, ev); }
   return ev;
 }
@@ -586,14 +778,20 @@ function final(m, now) {
   if (m.phase === 'final' || m.phase === 'done') return ev;
   if (m.phase !== 'play') startPlay(m, now);
   if (m.phase === 'final') return ev;
-  m.boards.forEach((b) => b.seats.forEach((k) => { const r = kid(m, k); if (r && r.claw.st === 'fall') impact(m, b, r, Math.max(now, r.claw.impactAt), ev); }));
+  m.boards.forEach((b) => b.seats.forEach((k) => {
+    const r = kid(m, k);
+    if (!r) return;
+    if (b.runner != null && (r.claw.st === 'fall' || r.claw.st === 'wait')) { r.claw.final = true; vsJudge(m, b, r, now, ev); }   // (no verdict from his screen yet: it doesn't count)
+    else if (r.claw.st === 'fall') impact(m, b, r, Math.max(now, r.claw.impactAt), ev);
+  }));
+  m.boards.forEach((b) => runEnd(m, b, now, ev));
   m.boards.forEach((b) => { b.caught = !!b.full || b.words >= b.target; b.seats.forEach((k) => { const r = kid(m, k); if (r) { r.q = null; r.claw.st = 'idle'; } }); });
   m.phase = 'final';
   m.frenzy = false;
   m.phaseAt = now;
   m.phaseUntil = now + R.FINAL_MS;
   if (m.round) m.round.phase = 'done';
-  ev.push({ t: 'final', ms: R.FINAL_MS, boards: m.boards.map((b) => ({ id: b.id, caught: !!b.caught, words: b.words, target: b.target })) });
+  ev.push({ t: 'final', ms: R.FINAL_MS, mode: m.mode, boards: m.boards.map((b) => ({ id: b.id, caught: m.mode === 'vs' ? null : !!b.caught, words: b.words, target: b.target })) });
   return ev;
 }
 // Teacher «⏭ Saltar»: the current window ends now
@@ -610,7 +808,8 @@ function boardView(m, b, online, now) {
   const clock = m.paused ? m.pausedAt : t;
   return {
     id: b.id, words: b.words, target: b.target, full: !!b.full, anger: round2(b.anger), bonks: b.bonks, captain: b.captain,
-    crab: round2(b.crab.x), fen: fenView(b.fx, clock),
+    crab: round2(b.crab.x), fen: fenView(b.fx, clock), mode: m.mode,
+    runner: b.runner, rx: round2(b.rx), stunMs: Math.max(0, b.stunUntil - clock),
     seats: b.seats.map((k) => { const r = kid(m, k); return { k, name: r.name, skin: r.skin, words: r.words, robot: r.robot, rightQW: r.rightQW, on: r.robot || !online || online(k) }; }),
     claws: b.seats.map((k) => clawView(kid(m, k))),
   };
@@ -619,7 +818,7 @@ function roundView(m, now) {
   const r = m.round;
   if (!r) return null;
   const clock = m.paused ? m.pausedAt : now;
-  return { n: r.n, total: r.total, phase: r.phase, final: r.final, ms: Math.max(0, r.until - clock) };
+  return { n: r.n, total: r.total, phase: r.phase, final: r.final, ms: Math.max(0, r.until - clock), mode: m.mode };
 }
 function openQ(m, k, now) {
   const r = kid(m, k);
@@ -635,8 +834,16 @@ function rankRows(rows) {
   rows.forEach((r, i) => { r.rank = i > 0 && same(r, rows[i - 1]) ? rows[i - 1].rank : i + 1; });
   return rows;
 }
-function starDefs(n) {
+function starDefs(n, mode) {
   const maxShare = Math.max(1, Math.floor(n / 2));
+  if (mode === 'vs') {
+    return [
+      { id: 'corredor', name: 'Mejor corredor', unit: 'puntos corriendo', val: (r) => r.runPts, ok: (r) => r.runPts >= 1, best: 'max', maxShare },
+      { id: 'martillo', name: 'Mejor martillazo', unit: 'martillazos', val: (r) => r.bonks, ok: (r) => r.bonks >= 1, best: 'max', maxShare },
+      { id: 'capitan', name: 'Mejor capitán', unit: 'atrapadas al volante', val: (r) => r.capBonks, ok: (r) => r.capBonks >= 1, best: 'max', maxShare },
+      { id: 'racha', name: 'Mejor racha', unit: 'seguidas', val: (r) => r.best, ok: (r) => r.best >= 3, best: 'max', maxShare },
+    ];
+  }
   return [
     { id: 'martillo', name: 'Mejor martillazo', unit: 'martillazos', val: (r) => r.bonks, ok: (r) => r.bonks >= 1, best: 'max', maxShare },
     { id: 'capitan', name: 'Mejor capitán', unit: 'atrapadas al volante', val: (r) => r.capBonks, ok: (r) => r.capBonks >= 1, best: 'max', maxShare },
@@ -649,6 +856,7 @@ function finish(m) {
   const row = (r) => ({
     k: r.k, name: r.name, skin: r.skin, b: r.b, robot: r.robot, words: r.words, bonks: r.bonks, assists: r.assists, capBonks: r.capBonks,
     captained: r.captained, slams: r.slams, right: r.right, wrong: r.wrong, answered: r.answered, eaten: r.eaten, best: r.best, stars: [],
+    runs: r.runs, survived: Math.round(r.survived / 1000), runPts: r.runPts, hitsTaken: r.hitsTaken,
   });
   const all = Object.values(m.kids).map(row);
   const byK = {};
@@ -656,12 +864,12 @@ function finish(m) {
   const boards = m.boards.filter((b) => b.seats.length).map((b) => {
     const people = rankRows(b.seats.map((k) => byK[k]).filter((r) => r && !r.robot));
     const bots = b.seats.map((k) => byK[k]).filter((r) => r && r.robot);
-    const st = Party.stars(people, starDefs(people.length));
+    const st = Party.stars(people, starDefs(people.length, m.mode));
     st.forEach((s) => s.winners.forEach((k) => { if (byK[k]) byK[k].stars.push(s.id); }));
     people.forEach((r) => { r.of = people.length; });
     bots.forEach((r) => { r.rank = null; r.of = people.length; });
     const winners = people.filter((r) => r.rank === 1 && r.words > 0).map((r) => r.k);
-    return { id: b.id, rows: people.map((r) => r.k), robots: bots.map((r) => ({ k: r.k, name: r.name, skin: r.skin, words: r.words, bonks: r.bonks })), winners, stars: st, words: b.words, target: b.target, caught: !!b.full || b.words >= b.target, bonks: b.bonks };
+    return { id: b.id, mode: m.mode, rows: people.map((r) => r.k), robots: bots.map((r) => ({ k: r.k, name: r.name, skin: r.skin, words: r.words, bonks: r.bonks })), winners, stars: st, words: b.words, target: b.target, caught: m.mode === 'vs' ? null : !!b.full || b.words >= b.target, bonks: b.bonks };
   });
   const crews = boards.slice().sort((a, b) => (b.words / b.target) - (a.words / a.target) || b.words - a.words || a.id - b.id).map((b, i) => ({ id: b.id, words: b.words, target: b.target, caught: b.caught, robots: b.robots.length, rank: i + 1 }));
   const cls = rankRows(all.filter((r) => !r.robot).map((r) => Object.assign({}, r)));
@@ -670,6 +878,6 @@ function finish(m) {
 }
 
 module.exports = {
-  fenAt, R, clampDuration, targetFor, newGame, kid, inGame, boardOf, deal, seatLate, seatRobot, byCode, startPlay, addTime, shiftTimes, tick,
+  runnerPos, runnerDash, runnerLand, setRtt, fenAt, R, clampDuration, targetFor, newGame, kid, inGame, boardOf, deal, seatLate, seatRobot, byCode, startPlay, addTime, shiftTimes, tick,
   final, skip, answer, seen, steer, aim, slam, react, boardView, roundView, openQ, qPublic, finish, starDefs, fxAt, nextQ, MAXX,
 };

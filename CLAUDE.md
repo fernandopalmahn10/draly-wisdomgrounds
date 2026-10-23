@@ -1024,7 +1024,12 @@ the checklist for any new game mode.
   Reinos · Draly Mochi · La Terraza del Mochi · Draly Tablero · El Gran Tablero de Dubái (no «Monopolio»: another
   company's brand) · Draly Vuelo · La Carrera del Cielo · Draly Piñata · La Fiesta de las Piñatas · Draly 67 · La
   Balanza de Oro. Renames follow «Removing or renaming something kids saw»; gameType ids never change. «Draly» is the
-  platform's name, never the mascot's (he is Dralingo). The list (full + short + the old names) lives in
+  platform's name, never the mascot's (he is Dralingo). **What we build inside the games and the platform carries it
+  too** (his clarification 2026-10-23: "anything you implement in the game, like the Draly coins, the Draly whatsoever,
+  makes much sense"): coins, power-ups, prizes, modes and features get Draly names; ask him the name of a big one.
+  **The Zoco's coins are «DralyDirhams»** (his name 2026-10-23, after the Emirati dirham; «1 DralyDirham», «25
+  DralyDirhams», the same word in the English toggle) everywhere a kid, parent or teacher sees the shop's currency; the
+  in-game coins of Draly Tablero and Draly 67 are game points, not the shop's currency, and keep «monedas». The list (full + short + the old names) lives in
   `core/game-names.js`: a new game joins it, and `node scripts/test-game-names.js` checks every page that names a game
   (games.html, /maestro's launcher, sets/packs, the projector titles, the phone lobbies, the ceremonies) and that no
   old name or «Monopolio» is left where kids and teachers read. Kids' inboxes keep old invites («La maestra está

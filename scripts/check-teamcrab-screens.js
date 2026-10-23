@@ -10,6 +10,10 @@
 // eating my miss, the ending (Fénec inside the ceremony's stage). Ana's (390×844) play windows are filmed at 4 fps until
 // one has a bonk (`play-4fps/`, for the side-by-side with the video's 7:39-7:43), and her ending at 4 fps (`end-4fps/`).
 // Gentle with the laptop: one browser, low priority, every step under a timeout, closed at the end.
+// v3: `--mode vs` = «1 contra 3» (the teacher clicks «🦊 1 contra 3» in the lobby): the bots run like a kid who watches
+// the shadows (and report where they were when each hammer landed on their screen) or martillan at the runner; the
+// phones play every role (the runner moves away from falling shadows); Ana's runner view is filmed at 4 fps
+// (`run-4fps/`, the video's camera: 7:39-7:43) and her runner PEAK measured (Fénec from behind inside, no face covered).
 'use strict';
 const os = require('os');
 const fs = require('fs');
@@ -23,6 +27,7 @@ const PASSWORD = arg('password', process.env.TEST_TEACHER_PW || '');
 const OUT = arg('out', path.join(__dirname, '..', '..', '..', 'teamcrab-shots', 'run'));
 const BOTS = +arg('bots', 4);
 const ACC = +arg('acc', 0.5);
+const MODE = arg('mode', 'crew');
 if (!PASSWORD) { console.error('pass the teacher code of the server under test: --password <code>'); process.exit(2); }
 try { os.setPriority(os.constants.priority.PRIORITY_BELOW_NORMAL); } catch (_) {}
 function loadPw() {
@@ -50,13 +55,33 @@ function bot(pin, name) {
   const s = io(URL, { transports: ['websocket'], forceNew: true });
   sockets.push(s);
   let me = null, role = 'none', charges = 0, armed = false, crab = 2, phase = '', f = { mode: 'idle', x: 2, x1: 2 }, next = 0;
+  let runner = null, rx = 2, goal = 2, shadows = [], dashes = 0;   // («1 contra 3»)
   s.on('tc:init', (d) => { if (d.you) me = d.you.k; if (d.board) { crab = d.board.crab; if (d.board.fen) f = d.board.fen; } });
   s.on('tc:round', (d) => { phase = d.phase; if (d.phase === 'qw') role = 'none'; });
-  s.on('tc:roles', (d) => { const m = (d.mart || []).find((x) => x.k === me); role = d.captain === me ? 'cap' : m ? 'mart' : 'watch'; charges = m ? m.charges : 0; armed = !!m; crab = d.crab; });
+  s.on('tc:roles', (d) => { const m = (d.mart || []).find((x) => x.k === me); runner = d.runner != null ? d.runner : null; role = runner === me ? 'runner' : d.captain === me ? 'cap' : m ? 'mart' : 'watch'; charges = m ? m.charges : 0; armed = !!m; crab = d.crab; if (d.rx != null) rx = goal = d.rx; dashes = role === 'runner' ? d.dashes || 0 : 0; shadows = []; });
+  s.on('tc:runner', (d) => { if (role !== 'runner') rx = d.x; });
   s.on('tc:crab', (d) => { crab = d.x; });
   s.on('tc:fen', (d) => { f = d; });
   s.on('tc:claw', (d) => { if (d.k === me) { armed = d.st === 'armed'; charges = d.charges; } });
-  s.on('tc:slam', (d) => { if (d.k === me) { armed = false; charges = d.charges; } });
+  s.on('tc:slam', (d) => {
+    if (d.k === me) { armed = false; charges = d.charges; }
+    if (role === 'runner' && d.sid) { const sh = { x: d.x, seen: Date.now(), land: Date.now() + d.ms }; shadows.push(sh); setTimeout(() => { s.emit('player:tc-land', { pin, sid: d.sid, x: rx }); shadows = shadows.filter((q) => q !== sh); }, d.ms); }
+  });
+  // the runner bot: it notices a shadow after 0.3-0.5 s and runs out of it (a dash when it can't make it), else wanders
+  const rt = setInterval(() => {
+    if (!s.connected) { clearInterval(rt); return; }
+    if (phase !== 'pw' || role !== 'runner') return;
+    const now = Date.now();
+    const live = shadows.filter((q) => now - q.seen > 300 + Math.random() * 200 && Math.abs(q.x - rx) < 0.62);
+    if (live.length) {
+      const lo = Math.min(...live.map((q) => q.x)) - 0.6, hi = Math.max(...live.map((q) => q.x)) + 0.6;
+      goal = lo >= 0 && (rx - lo < hi - rx || hi > 4) ? lo : Math.min(4, hi);
+      if (dashes > 0 && Math.abs(goal - rx) > 0.9) { dashes--; const dir = goal < rx ? -1 : 1; s.emit('player:tc-dash', { pin, dir }); rx = Math.max(0, Math.min(4, rx + dir * 1.2)); }
+    } else if (Math.abs(goal - rx) < 0.05 && Math.random() < 0.08) goal = 0.4 + Math.random() * 3.2;
+    const st = 1.5 * 0.07;
+    rx = Math.abs(goal - rx) <= st ? goal : rx + Math.sign(goal - rx) * st;
+    s.emit('player:tc-run', { pin, x: Math.round(rx * 1000) / 1000 });
+  }, 70);
   s.on('tc:q', (q) => {
     s.emit('player:tc-seen', { pin, qid: q.qid });
     setTimeout(() => { const r = q.answers.indexOf(RIGHT[q.text]); s.emit('player:tc-answer', { pin, qid: q.qid, idx: Math.random() < ACC && r >= 0 ? r : (Math.max(0, r) + 1) % q.answers.length }); }, 1300 + Math.random() * 1700);
@@ -64,9 +89,10 @@ function bot(pin, name) {
   const t = setInterval(() => {
     if (!s.connected) { clearInterval(t); return; }
     if (phase !== 'pw') return;
-    const at = f.mode === 'run' || f.mode === 'crouch' ? f.x1 : f.x;
+    if (role === 'runner') return;
+    const at = runner != null ? rx : f.mode === 'run' || f.mode === 'crouch' ? f.x1 : f.x;
     if (role === 'cap') s.emit('player:tc-steer', { pin, x: at });
-    if (armed && charges > 0 && Date.now() > next && f.mode === 'idle' && Math.abs(at - crab) < 1.1) { next = Date.now() + 1100; s.emit('player:tc-slam', { pin, x: at + (Math.random() - 0.5) * 0.6 }); }
+    if (armed && charges > 0 && Date.now() > next && (runner != null || f.mode === 'idle') && Math.abs(at - crab) < 1.1) { next = Date.now() + 1100; s.emit('player:tc-slam', { pin, x: at + (Math.random() - 0.5) * 0.6 }); }
   }, 300);
   s.on('tc:bonk', () => { if (Math.random() < 0.2) s.emit('player:tc-react', { pin, e: ['wow', 'lol', 'clap', 'fire'][Math.floor(Math.random() * 4)] }); });
   return new Promise((res) => s.emit('player:join', { pin, name, avatar: '' }, res));
@@ -105,7 +131,7 @@ const PEAK = (sel) => {
   const fen = fenEl && vis(fenEl) ? box(fenEl) : null;
   const domes = root ? [...root.querySelectorAll('.tcs-dome')].map(box) : [];
   const covers = [];
-  ['#tc-big', '.tc-panel', '.tcs-stamp', '.tcs-bubble', '.tc-plus.on', '#mute-btn'].forEach((q) => document.querySelectorAll(q).forEach((e) => { if (vis(e) && !e.classList.contains('hidden')) covers.push({ q, b: box(e) }); }));
+  ['#tc-big', '.tc-panel', '.tcs-stamp', '.tcs-bubble', '.tc-plus.on', '#mute-btn', '.tcs-runtag'].forEach((q) => document.querySelectorAll(q).forEach((e) => { if (vis(e) && !e.classList.contains('hidden')) covers.push({ q, b: box(e) }); }));
   const hams = root ? [...root.querySelectorAll('.tcs-ham.st-armed:not(.rising) .tcs-himg')].filter(vis).map((e) => ({ q: '.tcs-ham', b: box(e) })) : [];
   const inside = (b) => b && b.l >= -2 && b.t >= -2 && b.r <= innerWidth + 2 && b.b <= innerHeight + 2;
   const ov = (a, c) => Math.max(0, Math.min(a.r, c.r) - Math.max(a.l, c.l)) * Math.max(0, Math.min(a.b, c.b) - Math.max(a.t, c.t));
@@ -125,6 +151,13 @@ const RUN = () => { document.getAnimations().forEach((a) => { try { a.play(); } 
 const PLAY = () => {
   const P = window.CrabPhone, f = P.frame(), s = P.stage();
   if (f.window !== 'pw' || !s) return f;
+  f.fall = s.crew.some((c) => c.st === 'fall');
+  if (f.role === 'runner') {
+    const me = s.myX(), live = s.crew.filter((c) => c.st === 'fall' && Math.abs(c.fallX - me) < 0.62);
+    if (live.length) { const lo = Math.min(...live.map((c) => c.fallX)) - 0.6, hi = Math.max(...live.map((c) => c.fallX)) + 0.6; P.runTo(lo >= 0 && (me - lo < hi - me || hi > 4) ? lo : Math.min(4, hi)); }
+    else if (!window.__wander || Date.now() - window.__wander > 1400) { window.__wander = Date.now(); P.runTo(Math.max(0.3, Math.min(3.7, me + (Math.random() - 0.5) * 1.6))); }
+    return f;
+  }
   const at = s.f.mode === 'run' || s.f.mode === 'crouch' ? s.f.x1 : s.fx;
   if (f.role === 'cap') P.steerTo(at);
   if ((f.role === 'mart' || f.role === 'cap') && f.charges > 0 && f.claw === 'armed' && s.f.mode === 'idle' && Math.abs(s.fx - s.crabX) < 1.05 && (!window.__tapAt || Date.now() - window.__tapAt > 900)) { window.__tapAt = Date.now(); P.tapFenec(); }
@@ -172,6 +205,7 @@ async function finish(code) {
   await host.setViewportSize({ width: 1600, height: 900 });
   await shot(phones[0].page, 'k01-phone-lobby-390x844');
   await shot(phones[1].page, 'k02-phone-lobby-360x640');
+  if (MODE === 'vs') { await host.click('.tch-mode button[data-mode=vs]'); await sleep(900); await shot(host, 'p02b-projector-lobby-vs-1600x900'); await shot(phones[0].page, 'k01b-phone-lobby-vs-390x844'); const pl = await phones[0].page.evaluate(() => { const b = document.getElementById('tc-how'); return b ? { vs: b.classList.contains('vs'), text: b.textContent.slice(0, 200) } : null; }); ok(pl && pl.vs && /1 contra 3/.test(pl.text), 'the phones\' lobby shows the steps of «1 contra 3» ' + JSON.stringify(pl)); }
   await host.click('#start-btn');
   await sleep(1800);
   await shot(host, 'p03-projector-countdown', true);
@@ -197,6 +231,26 @@ async function finish(code) {
   fs.mkdirSync(REC, { recursive: true });
   let recDone = false, recTry = 0;
   // Ana's play window at 4 fps (a frame every 250 ms for 5 s from «¡A martillar!»), kept when her crew bonked in it
+  const RUNREC = path.join(OUT, 'run-4fps');
+  let runDone = false, runTry = 0;
+  // «1 contra 3»: Ana's runner view (the video's camera) at 4 fps, kept when hammers fell on her screen
+  async function recordRun(p) {
+    runTry++;
+    const tmp = path.join(RUNREC, 'try' + runTry);
+    fs.mkdirSync(tmp, { recursive: true });
+    let falls = 0, peak = null;
+    for (let i = 0; i < 20; i++) {
+      const t = Date.now();
+      const f2 = await p.page.evaluate(PLAY).catch(() => null);
+      if (f2 && f2.fall) falls++;
+      try { await p.page.screenshot({ path: path.join(tmp, 'f' + String(i).padStart(2, '0') + '.png'), timeout: 8000 }); } catch (_) { /* next */ }
+      if (f2 && f2.fall && !peak) peak = await p.page.evaluate(PEAK).catch(() => null);
+      await sleep(Math.max(0, 250 - (Date.now() - t)));
+    }
+    fs.writeFileSync(path.join(tmp, 'falls.txt'), String(falls));
+    if (peak) ok(peak.fenIn && peak.facesIn && peak.facesCovered <= 12 && peak.hamOnFaces <= 15, p.name + ' runner view with a hammer falling: Fénec (from behind) and the faces inside, nothing on them ' + JSON.stringify(peak));
+    if (falls >= 2) { runDone = true; fs.writeFileSync(path.join(RUNREC, 'RUN.txt'), 'try' + runTry + ' falls ' + falls); shots.push('run-4fps/try' + runTry); }
+  }
   async function recordPlay(p) {
     recTry++;
     const tmp = path.join(REC, 'try' + recTry);
@@ -251,7 +305,8 @@ async function finish(code) {
         await shot(p.page, 'k20-role-' + f.role + '-' + p.tag, true);
       }
       if (f.window === 'pw') {
-        if (p === phones[0] && !recDone && recTry < 5 && f.role !== 'watch' && !S['rec' + f.round]) { S['rec' + f.round] = 1; await recordPlay(p); continue; }
+        if (MODE === 'vs' && p === phones[0] && f.role === 'runner' && !runDone && runTry < 3 && !S['run' + f.round]) { S['run' + f.round] = 1; await recordRun(p); continue; }
+        if (p === phones[0] && !recDone && recTry < 5 && f.role !== 'watch' && f.role !== 'runner' && !S['rec' + f.round]) { S['rec' + f.round] = 1; await recordPlay(p); continue; }
         if (!S['pw' + f.role]) {
           S['pw' + f.role] = 1;
           await sleep(400);
@@ -307,6 +362,7 @@ async function finish(code) {
     const c = await p.page.evaluate(() => { const c = document.querySelector('.tc-mycard'); if (!c) return null; const r = c.getBoundingClientRect(); return { h: Math.round(r.height), top: Math.round(r.top), home: !!c.querySelector('.tc-home') }; });
     ok(c && c.home && c.top >= -2, p.name + ' got its card with «Inicio», its top (the character) on the screen: ' + JSON.stringify(c));
   }
-  ok(recDone, 'Ana\'s play window with a bonk was filmed at 4 fps (' + recTry + ' tries)');
+  if (MODE === 'vs') ok(runDone, 'Ana\'s runner view with hammers falling was filmed at 4 fps (' + runTry + ' tries)');
+  else ok(recDone, 'Ana\'s play window with a bonk was filmed at 4 fps (' + recTry + ' tries)');
   await finish();
 })().catch((e) => { console.log('FAIL · ' + e.message); finish(1); });

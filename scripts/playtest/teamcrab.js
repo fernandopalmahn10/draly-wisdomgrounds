@@ -10,6 +10,12 @@
 // is eaten anonymously (tc:eat has no kid; tc:mine only to that kid); the race never shows charges; roles: the Capitán is
 // of the crew and every martillero has charges; I slam only with charges; a bonk = +2 or +4 for its slammer and the crew's
 // words add up; the crew's words never go below 0; the end payload has my crew, my card and caught / escaped.
+// v3 `--tc-mode vs` («1 contra 3»: the teacher picks it in the lobby): the round's runner bot streams where it is
+// (player:tc-run every 70 ms), sees each hammer's shadow and — a «skill» bot — runs out of it after 0.25-0.45 s (a dash
+// when it can't make it), a «random» bot wanders and ignores the shadows; it reports where it was when each hammer
+// landed on its own screen (player:tc-land). Crew bots aim at the relayed runner. Checked: the runner never slams; a
+// hit always lands on a runner whose own verdict said «under» («¡Pero si lo esquivé!» = 0); a hit = 3 / 6 points;
+// «¡Tiempo!» banks his seconds; «¡FINAL!» and the end carry no caught / escaped.
 'use strict';
 const os = require('os');
 const fs = require('fs');
@@ -41,6 +47,8 @@ module.exports = (bot, ctx) => {
   let charges = 0, role = 'none', claw = 'idle', phase = 'none', winUntil = 0, words = 0, crabX = 2, lastQAt = Date.now();
   let f = { mode: 'idle', x: 2, x0: 2, x1: 2, t0: 0, t1: 0 };
   let lastBoardEv = Date.now(), hasQ = false, timers = [], slamAt = 0, steerAt = 0, myAir = 0;
+  let vs = false, runner = null, rx = 2, goal = 2, dashes = 0, shadows = [], verdict = {}, runTimer = null;   // («1 contra 3»)
+  E.vs = E.vs || { runs: 0, runsByStyle: {}, hitsTaken: 0, hitsTakenByStyle: {}, hammersAtRunner: 0, hammersByStyle: {}, wrongHits: 0, dodges: 0, dashes: 0, runPts: [], runEnds: 0, lands: 0 };
   const botN = parseInt(String(ctx.name).replace(/\D/g, ''), 10) || 0;
   const style = botN % 6 === 3 ? 'silent' : botN % 2 ? 'skill' : 'random';
   const clear = () => { timers.forEach(clearTimeout); timers = []; };
@@ -64,6 +72,7 @@ module.exports = (bot, ctx) => {
     E.inits++;
     if (d.you && me == null) { me = d.you.k; E.seated++; }
     if (d.board) { b = d.board.id; E.boards[b] = d.board.seats.length; words = d.board.words; crabX = d.board.crab; if (d.board.fen) setFen(d.board.fen); }
+    vs = d.mode === 'vs';
     if (d.you) { charges = d.you.charges || 0; claw = d.you.claw ? d.you.claw.st : 'idle'; }
     if (d.round) { phase = d.round.phase; winUntil = Date.now() + d.round.ms; }
     active = d.phase === 'play' || d.phase === 'intro' || d.phase === 'countdown';
@@ -76,7 +85,8 @@ module.exports = (bot, ctx) => {
     seen();
     if (d.phase === 'qw') { role = 'none'; lastQAt = Date.now(); if (ctx.name === 'Bot01') E.rounds++; }
     if (d.phase === 'pw' && ctx.name === 'Bot01') E.playWindows++;
-    if (d.phase === 'pwout') { role = 'none'; }
+    if (d.phase === 'pwout') { role = 'none'; runner = null; shadows = []; if (runTimer) { clearInterval(runTimer); runTimer = null; } }
+    if (d.phase === 'pw' && role === 'runner' && !runTimer) runTimer = setInterval(runStep, 70);
   });
   bot.on('tc:q', (q) => {
     if ('correctIdx' in q || 'correct' in q) fail('tc:q carries the right answer', q);
@@ -112,7 +122,12 @@ module.exports = (bot, ctx) => {
     if (d.captain != null && !(E.boards[b] >= 1)) fail('a Capitán without a crew', d);
     if ((d.mart || []).some((x) => !(x.charges > 0))) fail('a martillero without charges', d);
     const m = (d.mart || []).find((x) => x.k === me);
-    role = d.captain === me ? 'cap' : m ? 'mart' : 'watch';
+    runner = d.runner != null ? d.runner : null;
+    if (vs && runner == null && (E.boards[b] || 0) > 1) fail('«1 contra 3»: a crew of 2+ with no runner', d);
+    if (runner != null && (d.mart || []).some((x) => x.k === runner)) fail('the runner got a hammer', d);
+    if (runner != null) { rx = goal = d.rx; }
+    role = runner === me ? 'runner' : d.captain === me ? 'cap' : m ? 'mart' : 'watch';
+    if (role === 'runner') { dashes = d.dashes || 0; shadows = []; E.vs.runs++; E.vs.runsByStyle[style] = (E.vs.runsByStyle[style] || 0) + 1; if (dashes > 3) fail('more than 3 dashes', d); }
     if (role === 'cap' && ctx.name) E.captains++;
     if (m) { charges = m.charges; claw = 'armed'; } else claw = 'idle';
     if (style === 'silent' && m) fail('a never-answer kid got charges', d);
@@ -123,9 +138,30 @@ module.exports = (bot, ctx) => {
   bot.on('tc:fen', (d) => { if (!mine(d)) return; seen(); setFen(d); if (ctx.name === 'Bot01') E.fenMoves++; });
   bot.on('tc:claw', (d) => { if (!mine(d)) return; seen(); if (d.k === me) { claw = d.st; charges = d.charges; } });
   bot.on('tc:aim', (d) => { if (mine(d)) { E.aimRelays++; if (d.k === me) fail('my own aim came back to me', d); } });
+  bot.on('tc:runner', (d) => { if (!mine(d)) return; seen(); if (role !== 'runner') rx = d.x; if (d.k === me) fail('my own stream came back to me', d); });
+  bot.on('tc:dash', (d) => { if (mine(d)) seen(); });
+  bot.on('tc:runend', (d) => {
+    if (!mine(d)) return;
+    seen();
+    E.ruleChecks++;
+    if (d.k === me) { E.vs.runEnds++; E.vs.runPts.push(d.pts); const want = (d.secs * 1 + (d.untouched ? 3 : 0)) * (d.x2 ? 2 : 1); if (d.pts !== want) fail('his seconds: 1 a second + 3 untouched (×2 final)', d); }
+  });
   bot.on('tc:slam', (d) => {
     if (!mine(d)) return;
     seen();
+    if (vs && d.k === me && role === 'runner') fail('the runner slammed', d);
+    if (role === 'runner' && d.sid) {
+      E.vs.hammersAtRunner++; E.vs.hammersByStyle[style] = (E.vs.hammersByStyle[style] || 0) + 1;
+      const sh = { x: d.x, seen: Date.now(), react: 250 + Math.random() * 200, sid: d.sid };
+      shadows.push(sh);
+      timers.push(setTimeout(() => {
+        shadows = shadows.filter((q) => q !== sh);
+        verdict[d.sid] = Math.abs(rx - d.x) >= 0.45 ? 'away' : 'under';
+        if (verdict[d.sid] === 'away') E.vs.dodges++;
+        E.vs.lands++;
+        bot.emit('player:tc-land', { pin: ctx.pin, sid: d.sid, x: Math.round(rx * 1000) / 1000 });
+      }, d.ms));
+    }
     if (d.k === me) { E.slams++; E.slamsByStyle[style] = (E.slamsByStyle[style] || 0) + 1; charges = d.charges; claw = 'fall'; if (style === 'silent') fail('a never-answer kid slammed', d); }
   });
   bot.on('tc:impact', (d) => { if (mine(d)) { seen(); if (d.k === me) { E.impacts++; myAir = 0; } } });
@@ -133,7 +169,10 @@ module.exports = (bot, ctx) => {
     if (!mine(d)) return;
     seen();
     E.ruleChecks++;
-    if (!(d.pts === 2 || d.pts === 4)) fail('a bonk returns 2 words (4 in the final round)', d);
+    if (d.runner != null) {
+      if (!(d.pts === 3 || d.pts === 6)) fail('a hit on the runner = 3 points (6 in the final round)', d);
+      if (d.runner === me) { E.vs.hitsTaken++; E.vs.hitsTakenByStyle[style] = (E.vs.hitsTakenByStyle[style] || 0) + 1; if (verdict[d.sid] === 'away') { E.vs.wrongHits++; fail('«¡Pero si lo esquivé!»: a hit while my own screen had me away', d); } }
+    } else if (!(d.pts === 2 || d.pts === 4)) fail('a bonk returns 2 words (4 in the final round)', d);
     const add = d.pts + (d.assists || []).length + (d.cap != null ? 1 : 0);
     if (d.words < 0 || d.words !== words + add) fail('the crew\'s words after a bonk', { d, words });
     words = d.words;
@@ -143,7 +182,7 @@ module.exports = (bot, ctx) => {
   bot.on('tc:taunt', (d) => { if (mine(d)) seen(); });
   bot.on('tc:calm', (d) => { if (mine(d)) seen(); });
   bot.on('tc:frenzy', (d) => { if (!d.off && ctx.name === 'Bot01') E.frenzy++; });
-  bot.on('tc:final', (d) => { active = false; clear(); if (ctx.name === 'Bot01') E.finals++; if (!d.boards || !d.boards.every((x) => typeof x.caught === 'boolean')) fail('«¡FINAL!» says caught / escaped per crew', d); });
+  bot.on('tc:final', (d) => { active = false; clear(); if (ctx.name === 'Bot01') E.finals++; if (!d.boards || !d.boards.every((x) => (d.mode === 'vs' ? x.caught === null : typeof x.caught === 'boolean'))) fail('«¡FINAL!» says caught / escaped per crew (none in «1 contra 3»)', d); });
   bot.on('game-end', (d) => {
     ended = true; active = false; clear();
     const tc = d && d.teamcrab;
@@ -155,8 +194,9 @@ module.exports = (bot, ctx) => {
     if (!row) fail('end payload: my row in my crew', tc.board);
     if (d.me.words !== (row && row.words)) fail('end payload: my card = my row', { me: d.me, row });
     if (!(d.me.rank >= 1 && d.me.of === rows.length && d.me.classOf >= rows.length)) fail('end payload me', d.me);
-    if (tc.board.words >= tc.board.target && !tc.board.caught) fail('words reached the target = caught', tc.board);
-    if (rows[0] === row) { if (tc.board.caught) E.caught++; else E.escaped++; }
+    if (tc.mode === 'vs') { if (tc.board.caught !== null) fail('«1 contra 3» has no caught / escaped', tc.board); if (!(tc.board.stars || []).every((x) => ['corredor', 'martillo', 'capitan', 'racha'].includes(x.id))) fail('«1 contra 3» stars', tc.board.stars); }
+    else if (tc.board.words >= tc.board.target && !tc.board.caught) fail('words reached the target = caught', tc.board);
+    if (rows[0] === row && tc.mode !== 'vs') { if (tc.board.caught) E.caught++; else E.escaped++; }
     if (ctx.name === 'Bot01') E.ends++;
   });
   bot.on('tc:react', () => {});
@@ -166,6 +206,16 @@ module.exports = (bot, ctx) => {
     if (ended) { clearInterval(play); return; }
     if (!active || phase !== 'pw' || style === 'silent') return;
     const now = Date.now();
+    if (role === 'runner') return;
+    if (runner != null) {                                   // («1 contra 3»: the crew goes for the runner)
+      if (role === 'cap' && now >= steerAt) { steerAt = now + (style === 'skill' ? 250 : 900 + Math.random() * 600); E.steers++; bot.emit('player:tc-steer', { pin: ctx.pin, x: style === 'skill' ? rx : Math.random() * 4 }); }
+      if (charges <= 0 || claw !== 'armed' || myAir || now < slamAt) return;
+      if (style === 'skill' && Math.abs(rx - crabX) > REACH + 0.2) return;
+      slamAt = now + 700 + Math.random() * 900;
+      myAir = now;
+      bot.emit('player:tc-slam', { pin: ctx.pin, x: style === 'skill' ? clamp(rx + (Math.random() - 0.5) * 0.4, 0, 4) : Math.random() * 4 });
+      return;
+    }
     if (role === 'cap' && now >= steerAt) {
       const goal = style === 'skill' ? (f.mode === 'crouch' || f.mode === 'run' ? f.x1 : f.x) : Math.random() * 4;
       steerAt = now + (style === 'skill' ? 250 : 900 + Math.random() * 600);
@@ -186,6 +236,21 @@ module.exports = (bot, ctx) => {
       bot.emit('player:tc-slam', { pin: ctx.pin, x: Math.random() * 4 });
     }
   }, 60);
+  // the runner bot: a «skill» kid runs out of a shadow it has noticed (a dash when it can't make it); a «random» kid wanders
+  function runStep() {
+    if (ended || role !== 'runner' || phase !== 'pw') { if (runTimer) { clearInterval(runTimer); runTimer = null; } return; }
+    const now = Date.now();
+    const live = style === 'skill' ? shadows.filter((q) => now - q.seen >= q.react && Math.abs(q.x - rx) < 0.62) : [];
+    if (live.length) {
+      const lo = Math.min(...live.map((q) => q.x)) - 0.6, hi = Math.max(...live.map((q) => q.x)) + 0.6;
+      goal = lo >= 0 && (rx - lo <= hi - rx || hi > 4) ? lo : Math.min(4, hi);
+      const soon = Math.min(...live.map((q) => q.seen + 750 - now));
+      if (dashes > 0 && Math.abs(goal - rx) > (1.5 * soon) / 1000) { dashes--; E.vs.dashes++; const dir = goal < rx ? -1 : 1; bot.emit('player:tc-dash', { pin: ctx.pin, dir }); rx = clamp(rx + dir * 1.2, 0, 4); }
+    } else if (Math.abs(goal - rx) < 0.05 && Math.random() < 0.06) goal = 0.4 + Math.random() * 3.2;
+    const st2 = 1.5 * 0.07;
+    rx = Math.abs(goal - rx) <= st2 ? goal : rx + Math.sign(goal - rx) * st2;
+    bot.emit('player:tc-run', { pin: ctx.pin, x: Math.round(rx * 1000) / 1000 });
+  }
   const watch = setInterval(() => {
     if (ended) { clearInterval(watch); return; }
     const now = Date.now();
@@ -198,4 +263,13 @@ module.exports = (bot, ctx) => {
     }
     if (active && Math.random() < 0.02) bot.emit('player:tc-react', { pin: ctx.pin, e: ['wow', 'lol', 'clap', 'fire'][Math.floor(Math.random() * 4)] });
   }, 1000);
+};
+// the teacher's lobby step: «--tc-mode vs» picks «1 contra 3» before «Empezar»
+module.exports.host = async (host, ctx) => {
+  const i = (ctx.args || []).indexOf('--tc-mode');
+  const mode = i >= 0 ? ctx.args[i + 1] : 'crew';
+  if (mode !== 'vs') return;
+  host.emit('host:tc-mode', { pin: ctx.pin, mode: 'vs' });
+  await new Promise((r) => setTimeout(r, 500));
+  ctx.report.tcMode = 'vs';
 };
