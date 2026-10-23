@@ -959,6 +959,13 @@ the checklist for any new game mode.
   kid with charges aims and slams; Fénec runs a readable pattern (a crouch, then 2 spots), the hit is judged where he is at
   the impact; the skill simulation (`node scripts/test-teamcrab.js --sim`) proves skilful crews beat random tappers;
   «🤖 Probar con robots» in the projector lobby (teacher only; it fills a crew of 1-2 phones; robots never count).
+  **v3 «1 contra 3» (2026-10-23, branch `teamcrab-v3`, his idea: "one team is the fox and one team is the crab")**: the
+  teacher's «🎮 Modo» in the lobby («Todos contra Fénec» stays the default); each round the crew's best answerer who
+  hasn't run yet IS Fénec on their phone (the video's camera from behind, drag to run, right answers = dashes) and the
+  others martillan; his own phone is the truth for where he is (each hammer's 0.75-s shadow is judged where he was
+  when it landed on HIS screen; in doubt the runner wins); 1 point a second survived, a hit = 3 for the slammer and a
+  1-s stun; «Mejor corredor» in the ceremony; the fairness simulation at 150 ms (`--sim`) proves a reactive runner
+  escapes, a sleepy one gets hit and two-hammer traps catch.
 - **The kid's phone is the product** (his correction 2026-10-11: "a beautiful projector is useless if everybody else's
   UI is terrible"). Every game ships a phone experience that feels like a competition, better than Kahoot: big colored
   answer tiles, a per-question timer with ticking, live team score, Dralingo pose reactions (right / wrong / streak /

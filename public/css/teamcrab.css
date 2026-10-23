@@ -719,4 +719,7 @@ body.tch-pw .tch-board { border-color: #ff9a3c; }
 .tcs-dome.running .tcs-dhead { opacity: 0; }
 .tcs-dome.running { filter: saturate(.6); }
 .tcs-dome.running::after { content: '🦊'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: calc(var(--dd, 40px) * .55); opacity: .9; }
-.tcs.run-me .tcs-ham.st-fall .tcs-himg, .tcs.run-me .tcs-ham.st-hit .tcs-himg { scale: 1.45; transform-origin: 50% 90%; }
+/* a mallet that comes down reads big (like the video's): it grows as it falls, bigger on the runner's own screen */
+.tcs-ham .tcs-himg { transition: scale .3s ease-in; }
+.tcs-ham.st-fall .tcs-himg, .tcs-ham.st-hit .tcs-himg { scale: 1.32; transform-origin: 50% 90%; }
+.tcs.run-me .tcs-ham.st-fall .tcs-himg, .tcs.run-me .tcs-ham.st-hit .tcs-himg { scale: 1.55; }

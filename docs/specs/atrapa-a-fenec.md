@@ -60,16 +60,63 @@ slam the opponent… one team is the fox and one team is the crab."
 - Side by side with the video: `teamcrab-shots/v3/side-by-side-runner-view.jpg` (7:39.5-7:42.75 vs Ana's runner view at
   4 fps, `run-4fps/`).
 
-### Tests (v3)
+### Tests (v3, after the code review and the classroom playtest)
 - `node scripts/test-teamcrab.js`: 134 checks (v2's 86 + «1 contra 3»: mode, runner by merit and rotation, dashes, his
   stream clamped, the shadow, his own verdict believed, hit + stun + no hit during a stun, «¡Tiempo!» points, untouched
   bonus, robots run / martillan, a dropped runner run by the computer, «Mejor corredor», the review's cases: a pause,
   «Saltar», «Terminar», the stun edge, a flood of positions, one kid online) + the fairness simulation.
-- `node scripts/test-teamcrab-live.js --url … --password …`: 94 checks (game 3 = «1 contra 3» on the real server).
-- `node scripts/check-teamcrab-screens.js … --mode vs`: 60/60 on the projector + 4 phone sizes + a late joiner.
-- `node scripts/playtest-bots.js --game teamcrab --bots 30 --seconds 135 … --tc-mode vs`: PASS (and crew mode PASS).
-- Code review (agent-skills:code-reviewer): REQUEST CHANGES → every blocker / major / minor fixed the same day (see the
-  progress note); re-run of the browser checks after those fixes: pending (battery).
+- `node scripts/test-teamcrab-live.js --url … --password …`: 94/94 (game 3 = «1 contra 3» on the real server).
+- `node scripts/check-teamcrab-screens.js … --mode vs`: 48/48 (Ana's runner view filmed at 4 fps with 8 frames of falling
+  hammers, the runner PEAK measured) and crew mode 48/48, after the review fixes and the bigger mallets.
+- `node scripts/check-teamcrab-lobby.js …`: 18/18 at 8 sizes, «🎮 Modo» on the first screen with «¡Empezar!».
+- `node scripts/playtest-bots.js --game teamcrab --bots 30 --seconds 135 … --tc-mode vs`: PASS (30/30, 0 frozen, 0
+  errors; skilful runners hit by 2 of 95 hammers, random 40 of 128, silent 13 of 41; «¡Pero si lo esquivé!» 0); crew
+  mode PASS (skill 77 of 126 slams hit vs random 11 of 175).
+- Code review (agent-skills:code-reviewer): REQUEST CHANGES (1 blocker, 2 major, 4 minor) → all fixed, each with a test.
+- Classroom playtester (5 classes of 12: the projector, a RUNNER phone at 390×844 driven with real touches (drags,
+  double taps, TURBO), a crew phone, 10 socket bots on the same PIN): ISSUES → fixed: the runner's finger that touched
+  during «¡Prepárate!» stayed dead for the whole run (now kept and running from «¡YA!»), «¡Fuiste el mejor!» beside 0
+  turbos, «¡con trampa!» read as cheating, the ending's «cada uno corrió», the crew total without the runner's points,
+  the lobby's step 1 per mode. 0 errors anywhere; 37 of the runner's own verdicts audited: every hit had him under the
+  hammer on his screen, every on-screen dodge got no hit. Kept on purpose: an answer under 1.3 s is a blind guess (the
+  platform's rule for every game).
+
+## Scorecard · Draly Cangrejo · ¡Atrapa a Fénec! v3 «1 contra 3» · 2026-10-23 · branch `teamcrab-v3`
+```
+Hard gates: bots PASS in both modes (30 kids · 2 min, 0 frozen, 0 errors; «1 contra 3»: 0 wrong hits, skilful runners
+            hit 2 % vs random 31 %; crew: skill 61 % vs random 6 %; 12 kids × 5 classes in the classroom playtest) ·
+            teacher controls ✓ (Pausa holds the run and never pays it, +30 s / −30 s, Saltar, Terminar → «¡FINAL!» →
+            ceremony → «Otra ronda» keeps the mode; «🎮 Modo» + «¡Empezar!» on the first screen at 8 sizes, lobby 18/18) ·
+            saga only ✓ (Fénec + El Péndulo, the kids' own faces, no logos) · Spanish / pinyin without tones ✓
+            (test-wording) · kid-safe ✓ (never names who missed a question; a hit names only the slammer («¡Martillazo
+            de …!»); «¡Te dieron!» only on the runner's own phone, cartoon stun, nobody touches anybody)
+1 Real place ........ 2/2  the same Dubai beach and dock; the runner gets the video's camera (Fénec from behind on the
+                           dock, the crab and its mallets in front: side by side with 7:39.5-7:42.75)
+2 The gang .......... 2/2  every kid's face in a cockpit, the runner's cockpit empty with a 🦊 while his face and name
+                           ride on Fénec, Fénec in two new poses from behind, El Péndulo eating misses
+3 Every tap ......... 2/2  the lobby's steps per mode, «🦊 ¡Eres Fénec por esta ronda!» with what to do, a guide hand for
+                           the first drag, «⚡ ¡TURBO! (n)» names the dash, the red ring closing = «it lands here, now»,
+                           a finger put down early runs from «¡YA!»
+4 Feedback .......... 2/2  a dodge «¡Esquivado! 😎» / «¡Ni te tocaron!», a hit = big thud, shake, dizzy stars, «💫 ¡Te
+                           dieron!», the words fly to the crab; a dash = speed lines + whoosh; «🦊 ¡Sobreviviste 9 s! +9»;
+                           the crew's «¡BONK! +3» cards, «¡Se escapó! Cúbranle los dos lados»
+5 Finale ............ 2/2  5 rounds, the last ×2, «¡FINAL!» «¿Quién corrió mejor? ¿Quién martilló más?», stars (🦊 Mejor
+                           corredor, martillazo, capitán, racha), the drum, the winner, my card («Corriste 9 s como
+                           Fénec»); projector: each crab's champion + podium
+6 Fair, no stall .... 2/2  «¡Pero si lo esquivé!» never (his own screen's verdict, in doubt the runner wins: 0 wrong hits
+                           in the sim at 150 ms + jitter + lost messages, in 3 bot classes and in 37 audited real-phone
+                           verdicts); merit picks the runner, everyone runs once before anyone twice; a pause, Saltar,
+                           −30 s or Terminar never pays time not run; a dropped runner is run by the computer
+7 Product feel ...... 2/2  new Higgsfield art (Fénec from behind, standing and running), mallets that loom as they fall,
+                           the 4-fps side by side with the video, every phone size + the projector checked at the PEAK
+                           (screens 48/48 in each mode)
+Total 14/14 → ships (≥ 12, no 0). For his eyes: the runner's camera on a real phone (is the dock wide enough, are the
+mallets big enough?) and the balance (a skilful crew traps a runner 23-58 % of the time; a runner who reacts dodges
+single hammers): both are one constant each in core/teamcrab.js R.VS.
+```
+Evidence: `.claude/handoff/teamcrab-shots/v3/`: `vs2/` (a whole «1 contra 3» game at 390×844, 360×640, 844×390,
+1366×657 + the projector; `run-4fps/` the runner's view), `crew/` (the same in «Todos contra Fénec»), `lobby/`,
+`playtester/`, `side-by-side-runner-view.jpg`, `runner-view-4fps-sheet.jpg`, `bots-30kids-2min-{vs,crew}.txt`.
 
 ## Why v2 (his words after playing v1, 2026-10-23)
 "I tried to hit the little fox and it said that it escaped… I don't see that it's working based on skills… it should feel

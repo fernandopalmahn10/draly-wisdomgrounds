@@ -443,13 +443,16 @@
   }
   function startRun() { if (!runT) runT = setInterval(runStream, 70); }
   function stopRun() { if (runT) { clearInterval(runT); runT = null; } lastRunX = null; }
+  // (the runner may put his finger down during «¡Prepárate!»: the drag is kept and he runs from «¡YA!»)
+  const runnerReady = () => role === 'runner' && !!(g && g.phase === 'play' && rd.phase === 'pwin' && !paused);
   function touchStart(e) {
-    if (!playing()) return;
+    if (!playing() && !runnerReady()) return;
     e.preventDefault();
     try { e.target.setPointerCapture(e.pointerId); } catch (_) {}
     drag = { id: e.pointerId, t0: Date.now(), x0: e.clientX };
     if (role === 'runner') {
       const now = Date.now();
+      if (!playing()) return;
       if (now - lastTapAt < 320 && Math.abs(e.clientX - lastTapX) < 60) { lastTapAt = 0; const mx = stage ? stage.xPx(stage.myX()) + $('tc-stage').getBoundingClientRect().left : e.clientX; dashNow(e.clientX < mx ? -1 : 1); return; }
       lastTapAt = now; lastTapX = e.clientX;
       runTo(xOfClient(e.clientX));
@@ -459,6 +462,14 @@
     else if (role === 'mart' && canSlam()) aimTo(xOfClient(e.clientX), true);
   }
   function touchMove(e) {
+    if (role === 'runner') {                                         // (a finger already down, or put down before «¡YA!», runs him)
+      const down = e.pointerType !== 'mouse' || e.buttons > 0;
+      if (!down || (!playing() && !runnerReady())) return;
+      e.preventDefault();
+      if (!drag) drag = { id: e.pointerId, t0: Date.now(), x0: e.clientX };
+      if (playing()) runTo(xOfClient(e.clientX));
+      return;
+    }
     if (!playing()) { drag = null; return; }
     if (!drag && e.pointerType === 'mouse') { if (role === 'mart' && canSlam()) aimTo(xOfClient(e.clientX)); return; }   // (a laptop: the shadow follows the mouse)
     if (!drag || e.pointerId !== drag.id) return;
@@ -600,7 +611,7 @@
     later(120, () => sfx(H + 'start.mp3', 0.6));
     buzz(role === 'watch' ? 20 : [40, 30, 60]);
     const runName = runner != null && role !== 'runner' ? nameOf(runner) : '';
-    if (role === 'runner') bigCard(A + 'fenec-back.webp', '🦊 ¡Eres Fénec por esta ronda!', '¡Fuiste el mejor! Corre: arrastra el dedo · ⚡ ' + dashes + (dashes === 1 ? ' turbo' : ' turbos') + ' (doble toque)', 'gold me', 2000);
+    if (role === 'runner') bigCard(A + 'fenec-back.webp', '🦊 ¡Eres Fénec por esta ronda!', dashes > 0 ? '¡Fuiste el mejor! Corre: arrastra el dedo · ⚡ ' + dashes + (dashes === 1 ? ' turbo' : ' turbos') + ' (doble toque)' : '¡Te toca correr! Arrastra el dedo y esquiva las sombras · responde bien para ganar turbos ⚡', 'gold me', 2000);
     else if (role === 'cap') bigCard(S() ? S().head(skinOf(g.you)) : null, '⭐ ¡Eres el Capitán!', runName ? '🦊 ' + runName + ' es Fénec: ¡llévale el cangrejo encima!' : 'Fuiste el mejor: ¡tú manejas el cangrejo!', 'gold me', 1600);
     else if (role === 'mart') bigCard(A + 'hammer.webp', runName ? '🦊 ¡' + runName + ' es Fénec!' : '¡A martillar! 🔨 ×' + charges, runName ? '¡Martíllalo! 🔨 ×' + charges + (capName ? ' · ⭐ Capitán: ' + capName : '') : capName ? '⭐ Capitán: ' + capName : 'Toca a Fénec cuando tu sombra esté sobre él', 'gold', 1600);
     else bigCard(A + 'crab-hero.webp', '¡A martillar!', 'Esta ronda miras · responde bien para subir al cangrejo', 'calm', 1600);

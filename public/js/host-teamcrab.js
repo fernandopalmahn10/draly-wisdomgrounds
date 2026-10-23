@@ -142,6 +142,7 @@
     const tl = $('tagline');
     if (tl) { if (!tl.dataset.crew) tl.dataset.crew = tl.textContent; tl.textContent = gmode === 'vs' ? '1 contra 3: cada ronda, preguntas rápidas (cada respuesta buena = un martillazo o un turbo); luego el mejor de cada cangrejo ES Fénec por 10 segundos y corre por el muelle esquivando las sombras, y los demás manejan el cangrejo y lo martillan. Todos corren por turnos. Si fallan, El Péndulo se come su martillazo.' : tl.dataset.crew; }
     const st = document.querySelectorAll('.tch-steps li');
+    if (st[0]) { const sm0 = st[0].querySelector('small'); if (sm0) sm0.textContent = gmode === 'vs' ? '= +1 martillazo 🔨 o +1 turbo ⚡' : '= +1 martillazo 🔨'; }
     if (st[2]) { const im = st[2].querySelector('img.fx'); if (im) im.src = A + (gmode === 'vs' ? 'fenec-back.webp' : 'fenec-idle.webp'); const sm = st[2].querySelector('small'); if (sm) sm.textContent = gmode === 'vs' ? 'el mejor de la ronda es Fénec 🦊 y corre · los demás lo martillan' : 'toca a Fénec: ¡BONK! · el mejor es ⭐ Capitán y mueve el cangrejo'; }
   }
   document.querySelectorAll('.tch-mode button').forEach((b) => b.addEventListener('click', () => { if (!pin) return; paintMode(b.dataset.mode); socket.emit('host:tc-mode', { pin, mode: b.dataset.mode }); }));
@@ -496,7 +497,7 @@
     const s = (b.view.seats || []).find((x) => x.k === d.k);
     if (Date.now() - lastGang > 4000) {
       lastGang = Date.now();
-      say(d.runner != null ? '¡Martillazo de ' + (s ? s.name : 'la tripulación') + '! +' + d.pts + ' 📚' + ((d.assists || []).length ? ' · ¡con trampa!' : '') : '¡' + (s ? s.name : 'La tripulación') + ' le dio a Fénec! +' + d.pts + ' palabras 📚' + ((d.assists || []).length ? ' · ¡con trampa!' : ''), s ? null : 'fer');
+      say(d.runner != null ? '¡Martillazo de ' + (s ? s.name : 'la tripulación') + '! +' + d.pts + ' 📚' + ((d.assists || []).length ? ' · ¡le cerraron el paso! 🪤' : '') : '¡' + (s ? s.name : 'La tripulación') + ' le dio a Fénec! +' + d.pts + ' palabras 📚' + ((d.assists || []).length ? ' · ¡con trampa!' : ''), s ? null : 'fer');
     }
   });
   onTc('tc:full', (d) => { const b = boards[d.b]; if (b) { bigBand('🎒 ¡Cangrejo ' + (b.idx + 1) + ' llenó la bolsa!', 'go', 1800); sfx('win', 0.5, 2000); } });
@@ -579,7 +580,8 @@
       c.appendChild(res);
       const w = document.createElement('p');
       w.className = 'tch-champ-words';
-      w.textContent = vsEnd ? '🔨 ' + (bd.bonks || 0) + ((bd.bonks || 0) === 1 ? ' martillazo' : ' martillazos') + ' · cada uno corrió como Fénec 🦊' : bd.caught ? '📚 ¡' + bd.words + ' palabras recuperadas! (meta: ' + bd.target + ')' : '📚 ' + bd.words + ' de ' + bd.target + ' palabras · ¡la próxima!';
+      const runs = (bd.rows || []).reduce((a, r) => a + (r.runs || 0), 0);
+      w.textContent = vsEnd ? '🔨 ' + (bd.bonks || 0) + ((bd.bonks || 0) === 1 ? ' martillazo' : ' martillazos') + ' · 🦊 ' + runs + (runs === 1 ? ' carrera' : ' carreras') + ' como Fénec' : bd.caught ? '📚 ¡' + bd.words + ' palabras recuperadas! (meta: ' + bd.target + ')' : '📚 ' + bd.words + ' de ' + bd.target + ' palabras · ¡la próxima!';
       c.appendChild(w);
       const win = (bd.rows || []).filter((r) => (bd.winners || []).includes(r.k));
       const figs = document.createElement('div');

@@ -144,6 +144,7 @@ module.exports = (bot, ctx) => {
     if (!mine(d)) return;
     seen();
     E.ruleChecks++;
+    if (d.bw != null) words = d.bw;   // (the crew's total counts the runner's points too)
     if (d.k === me) { E.vs.runEnds++; E.vs.runPts.push(d.pts); const want = (d.secs * 1 + (d.untouched ? 3 : 0)) * (d.x2 ? 2 : 1); if (d.pts !== want) fail('his seconds: 1 a second + 3 untouched (×2 final)', d); }
   });
   bot.on('tc:slam', (d) => {

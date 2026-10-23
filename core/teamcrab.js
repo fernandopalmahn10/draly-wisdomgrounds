@@ -590,9 +590,9 @@ function runEnd(m, b, now, ev, end) {
   const secs = Math.floor(ms / 1000);
   const untouched = b.hitsRound === 0 && ms >= 3000;   // (the bonus is for a round he really ran)
   const pts = (secs * R.VS.SURVIVE + (untouched ? R.VS.UNTOUCHED : 0)) * mult;
-  r.survived += ms; r.runPts += pts; r.words += pts;
+  r.survived += ms; r.runPts += pts; r.words += pts; b.words += pts;   // (the crew's total is everyone's points)
   r.charges = Math.min(R.CHARGES_MAX, r.charges + r.dashes); r.dashes = 0;   // (dashes he didn't use are charges again)
-  ev.push({ t: 'runend', b: b.id, k: r.k, secs, untouched, pts, words: r.words, x2: mult > 1, charges: r.charges, hits: b.hitsRound });
+  ev.push({ t: 'runend', b: b.id, k: r.k, secs, untouched, pts, words: r.words, bw: b.words, x2: mult > 1, charges: r.charges, hits: b.hitsRound });
   const f = b.fx;
   f.x = f.x0 = f.x1 = b.rx; f.mode = 'idle'; f.t0 = now; f.t1 = now + 900;
   fenSnap(b);

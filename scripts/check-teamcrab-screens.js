@@ -243,6 +243,7 @@ async function finish(code) {
       const t = Date.now();
       const f2 = await p.page.evaluate(PLAY).catch(() => null);
       if (f2 && f2.fall) falls++;
+      await Promise.all(allPhones.filter((q) => q !== p).map((q) => q.page.evaluate(PLAY).catch(() => null)));   // (her crewmates' phones keep playing while she is filmed)
       try { await p.page.screenshot({ path: path.join(tmp, 'f' + String(i).padStart(2, '0') + '.png'), timeout: 8000 }); } catch (_) { /* next */ }
       if (f2 && f2.fall && !peak) peak = await p.page.evaluate(PEAK).catch(() => null);
       await sleep(Math.max(0, 250 - (Date.now() - t)));
