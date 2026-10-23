@@ -1,14 +1,15 @@
-// ¡Atrapa a Fénec! · every screen in a real browser (headless Chrome through playwright-core) against a RUNNING local
-// server (never the live site):
+// Draly Cangrejo · ¡Atrapa a Fénec! v2 · every screen in a real browser (headless Chrome through playwright-core) against a
+// RUNNING local server (never the live site):
 //   node scripts/check-teamcrab-screens.js --url http://localhost:4512 --password <the local teacher code> [--out <folder>]
 // The projector (1600×900, the teacher types the code on the key screen) + four phones (390×844, 360×640, sideways
 // 844×390, a laptop 1366×657) + socket bots that fill the crews and play like kids (half of their answers wrong, so El
-// Péndulo fills up and swings), a phone that joins late. A whole short game (2 min) is played; each moment is
-// photographed as it happens and its PEAK is measured: the bonk (Fénec and every face of the crew inside the screen,
-// nothing covering them: the bonker's card, the panel, the «¡BONK!» stamp, his bubble), El Péndulo's big swing (the
-// faces inside, the card off them), the ending (Fénec and the crab inside the ceremony's stage). Ana's (390×844) slams
-// are filmed at 4 fps until one is a bonk (frames for the side-by-side with the video, `slam-4fps/`), and her ending at
-// 4 fps (`end-4fps/`). Gentle with the laptop: one browser, low priority, every step under a timeout, closed at the end.
+// Péndulo eats), a phone that joins late. A whole short game (2 min, ~5 rounds) is played; each moment is photographed as
+// it happens and its PEAK is measured: the question window (tiles + my hammer meter fit), «¡A martillar!» (my role card),
+// the play window per role (the controls fit; the faces inside, no hovering hammer on them, Fénec inside), the bonk
+// (Fénec and every face inside, nothing covering them: the card, the panel, the «¡BONK!» stamp, his bubble), El Péndulo
+// eating my miss, the ending (Fénec inside the ceremony's stage). Ana's (390×844) play windows are filmed at 4 fps until
+// one has a bonk (`play-4fps/`, for the side-by-side with the video's 7:39-7:43), and her ending at 4 fps (`end-4fps/`).
+// Gentle with the laptop: one browser, low priority, every step under a timeout, closed at the end.
 'use strict';
 const os = require('os');
 const fs = require('fs');
@@ -40,28 +41,33 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let checks = 0, bad = 0;
 const ok = (c, m) => { checks++; if (!c) { bad++; console.log('FAIL ' + m); } };
 const shots = [];
-const watchdog = setTimeout(() => { console.log('FAIL · timed out'); finish(1); }, 480000);
+const watchdog = setTimeout(() => { console.log('FAIL · timed out'); finish(1); }, 520000);
 const sockets = [];
 let browser = null;
 
-// ---------- the socket bots (kids of the crews) ----------
+// ---------- the socket bots (kids of the crews: they answer, and in «¡A martillar!» they steer / slam like kids) ----------
 function bot(pin, name) {
   const s = io(URL, { transports: ['websocket'], forceNew: true });
   sockets.push(s);
-  let me = null, fx = 2;
-  s.on('tc:init', (d) => { if (d.you) me = d.you.k; if (d.board) fx = d.board.fx; });
-  s.on('tc:hop', (d) => { fx = d.to; });
-  s.on('tc:up', (d) => { fx = d.to; });
+  let me = null, role = 'none', charges = 0, armed = false, crab = 2, phase = '', f = { mode: 'idle', x: 2, x1: 2 }, next = 0;
+  s.on('tc:init', (d) => { if (d.you) me = d.you.k; if (d.board) { crab = d.board.crab; if (d.board.fen) f = d.board.fen; } });
+  s.on('tc:round', (d) => { phase = d.phase; if (d.phase === 'qw') role = 'none'; });
+  s.on('tc:roles', (d) => { const m = (d.mart || []).find((x) => x.k === me); role = d.captain === me ? 'cap' : m ? 'mart' : 'watch'; charges = m ? m.charges : 0; armed = !!m; crab = d.crab; });
+  s.on('tc:crab', (d) => { crab = d.x; });
+  s.on('tc:fen', (d) => { f = d; });
+  s.on('tc:claw', (d) => { if (d.k === me) { armed = d.st === 'armed'; charges = d.charges; } });
+  s.on('tc:slam', (d) => { if (d.k === me) { armed = false; charges = d.charges; } });
   s.on('tc:q', (q) => {
     s.emit('player:tc-seen', { pin, qid: q.qid });
-    setTimeout(() => { const r = q.answers.indexOf(RIGHT[q.text]); s.emit('player:tc-answer', { pin, qid: q.qid, idx: Math.random() < ACC && r >= 0 ? r : (Math.max(0, r) + 1) % q.answers.length }); }, 1100 + Math.random() * 1500);
+    setTimeout(() => { const r = q.answers.indexOf(RIGHT[q.text]); s.emit('player:tc-answer', { pin, qid: q.qid, idx: Math.random() < ACC && r >= 0 ? r : (Math.max(0, r) + 1) % q.answers.length }); }, 1300 + Math.random() * 1700);
   });
-  s.on('tc:ham', (d) => {
-    if (d.k !== me || d.st !== 'loaded') return;
-    let n = 0;
-    const t = setInterval(() => { s.emit('player:tc-aim', { pin, x: fx / 4 }); if (++n > 5 + Math.random() * 6) { clearInterval(t); s.emit('player:tc-slam', { pin, x: fx / 4 }); } }, 130);
-  });
-  s.on('tc:noslam', (d) => { if (d.why === 'wait') setTimeout(() => s.emit('player:tc-slam', { pin, x: fx / 4 }), 600); });
+  const t = setInterval(() => {
+    if (!s.connected) { clearInterval(t); return; }
+    if (phase !== 'pw') return;
+    const at = f.mode === 'run' || f.mode === 'crouch' ? f.x1 : f.x;
+    if (role === 'cap') s.emit('player:tc-steer', { pin, x: at });
+    if (armed && charges > 0 && Date.now() > next && f.mode === 'idle' && Math.abs(at - crab) < 1.1) { next = Date.now() + 1100; s.emit('player:tc-slam', { pin, x: at + (Math.random() - 0.5) * 0.6 }); }
+  }, 300);
   s.on('tc:bonk', () => { if (Math.random() < 0.2) s.emit('player:tc-react', { pin, e: ['wow', 'lol', 'clap', 'fire'][Math.floor(Math.random() * 4)] }); });
   return new Promise((res) => s.emit('player:join', { pin, name, avatar: '' }, res));
 }
@@ -84,10 +90,13 @@ const LOOK = () => {
   const inside = tiles.every((t) => t.top >= 0 && t.bottom <= innerHeight + 1 && t.left >= 0 && t.right <= innerWidth + 1 && t.height >= 44);
   const g = document.getElementById('tc-golpe').getBoundingClientRect();
   const golpeIn = g.height === 0 || (g.top >= 0 && g.bottom <= innerHeight + 1 && g.height >= 44);
+  const m = document.getElementById('tc-meter').getBoundingClientRect();
+  const meterIn = m.height === 0 || (m.top >= 0 && m.bottom <= innerHeight + 1);
   const wide = document.documentElement.scrollWidth <= innerWidth + 1;
-  return { vis, stage: r ? [Math.round(r.width), Math.round(r.height)] : null, tiles: tiles.length, inside, golpeIn, wide };
+  return { vis, stage: r ? [Math.round(r.width), Math.round(r.height)] : null, tiles: tiles.length, inside, golpeIn, meterIn, wide };
 };
-// the PEAK of a big moment: are Fénec and every face of the crew inside the screen, with nothing covering them?
+// the PEAK of a big moment: are Fénec and every face of the crew inside the screen, with nothing covering them? (and no
+// hovering hammer over a face)
 const PEAK = (sel) => {
   const root = document.querySelector(sel || '#tc-stage');
   const vis = (e) => e && e.getClientRects().length && getComputedStyle(e).visibility !== 'hidden' && Number(getComputedStyle(e).opacity) > 0.05;
@@ -97,19 +106,30 @@ const PEAK = (sel) => {
   const domes = root ? [...root.querySelectorAll('.tcs-dome')].map(box) : [];
   const covers = [];
   ['#tc-big', '.tc-panel', '.tcs-stamp', '.tcs-bubble', '.tc-plus.on', '#mute-btn'].forEach((q) => document.querySelectorAll(q).forEach((e) => { if (vis(e) && !e.classList.contains('hidden')) covers.push({ q, b: box(e) }); }));
+  const hams = root ? [...root.querySelectorAll('.tcs-ham.st-armed:not(.rising) .tcs-himg')].filter(vis).map((e) => ({ q: '.tcs-ham', b: box(e) })) : [];
   const inside = (b) => b && b.l >= -2 && b.t >= -2 && b.r <= innerWidth + 2 && b.b <= innerHeight + 2;
   const ov = (a, c) => Math.max(0, Math.min(a.r, c.r) - Math.max(a.l, c.l)) * Math.max(0, Math.min(a.b, c.b) - Math.max(a.t, c.t));
-  const worst = (a) => Math.max(0, ...covers.map((c) => ov(a, c.b) / Math.max(1, a.w * a.h)));
+  const worst = (a, list) => Math.max(0, ...(list || covers).map((c) => ov(a, c.b) / Math.max(1, a.w * a.h)));
   const by = (a) => covers.filter((c) => ov(a, c.b) / Math.max(1, a.w * a.h) > 0.12).map((c) => c.q);
   return {
     fenIn: inside(fen), fenCovered: fen ? Math.round(worst(fen) * 100) : 100, fenBy: fen ? by(fen) : [],
-    facesIn: domes.length > 0 && domes.every(inside), facesCovered: Math.round(Math.max(0, ...domes.map(worst)) * 100), facesBy: [...new Set(domes.flatMap(by))],
+    facesIn: domes.length > 0 && domes.every(inside), facesCovered: Math.round(Math.max(0, ...domes.map((d) => worst(d))) * 100), facesBy: [...new Set(domes.flatMap(by))],
+    hamOnFaces: Math.round(Math.max(0, ...domes.map((d) => worst(d, hams))) * 100),
     fen: fen && [Math.round(fen.l), Math.round(fen.t), Math.round(fen.w), Math.round(fen.h)], n: domes.length,
   };
 };
 // hold every animation at `ms` (the peak of a moment), then let it run on
 const HOLD = (ms) => { document.getAnimations().forEach((a) => { try { a.pause(); a.currentTime = ms; } catch (_) {} }); };
 const RUN = () => { document.getAnimations().forEach((a) => { try { a.play(); } catch (_) {} }); };
+// a kid's finger in the play window: the Capitán drives under Fénec, a martillero taps him when he stands still in reach
+const PLAY = () => {
+  const P = window.CrabPhone, f = P.frame(), s = P.stage();
+  if (f.window !== 'pw' || !s) return f;
+  const at = s.f.mode === 'run' || s.f.mode === 'crouch' ? s.f.x1 : s.fx;
+  if (f.role === 'cap') P.steerTo(at);
+  if ((f.role === 'mart' || f.role === 'cap') && f.charges > 0 && f.claw === 'armed' && s.f.mode === 'idle' && Math.abs(s.fx - s.crabX) < 1.05 && (!window.__tapAt || Date.now() - window.__tapAt > 900)) { window.__tapAt = Date.now(); P.tapFenec(); }
+  return f;
+};
 
 async function finish(code) {
   clearTimeout(watchdog);
@@ -147,8 +167,8 @@ async function finish(code) {
   await host.setViewportSize({ width: 1366, height: 657 });
   await sleep(500);
   await shot(host, 'p02-projector-lobby-1366x657');
-  const lb = await host.evaluate(() => { const b = document.getElementById('start-btn').getBoundingClientRect(); return { top: b.top, bottom: b.bottom, h: innerHeight }; });
-  ok(lb.bottom <= lb.h, 'the projector lobby at 1366×657: «¡Empezar!» on the first screen ' + JSON.stringify(lb));
+  const lb = await host.evaluate(() => { const b = document.getElementById('start-btn').getBoundingClientRect(); const r = document.getElementById('robots-btn').getBoundingClientRect(); return { top: b.top, bottom: b.bottom, rb: r.bottom, h: innerHeight }; });
+  ok(lb.bottom <= lb.h && lb.rb <= lb.h, 'the projector lobby at 1366×657: «¡Empezar!» and «🤖 Probar con robots» on the first screen ' + JSON.stringify(lb));
   await host.setViewportSize({ width: 1600, height: 900 });
   await shot(phones[0].page, 'k01-phone-lobby-390x844');
   await shot(phones[1].page, 'k02-phone-lobby-360x640');
@@ -171,87 +191,92 @@ async function finish(code) {
   await shot(late, 'k03-late-joiner-390x844');
 
   const t0 = Date.now();
-  let hostBonk = false, hostSwing = false, hostFrenzy = false, hostMid = false;
+  let hostBonk = false, hostFrenzy = false, hostQw = false, hostPw = false;
   const allPhones = phones.concat([{ name: 'Eli', page: late, tag: 'eli-390x844', seen: {} }]);
-  const REC = path.join(OUT, 'slam-4fps');
+  const REC = path.join(OUT, 'play-4fps');
   fs.mkdirSync(REC, { recursive: true });
   let recDone = false, recTry = 0;
-  // Ana's slam at 4 fps (a frame every 250 ms from the tap), kept when it was a bonk
-  async function recordSlam(p) {
+  // Ana's play window at 4 fps (a frame every 250 ms for 5 s from «¡A martillar!»), kept when her crew bonked in it
+  async function recordPlay(p) {
     recTry++;
     const tmp = path.join(REC, 'try' + recTry);
     fs.mkdirSync(tmp, { recursive: true });
-    let bonk = false;
-    await p.page.evaluate(() => window.CrabPhone.tapFenec());
-    for (let i = 0; i < 14; i++) {
+    let bonk = false, roleSeen = '';
+    for (let i = 0; i < 20; i++) {
       const t = Date.now();
+      const f2 = await p.page.evaluate(PLAY).catch(() => null);
+      if (f2) { roleSeen = f2.role; if (f2.moment === 'bonk') bonk = true; }
       try { await p.page.screenshot({ path: path.join(tmp, 'f' + String(i).padStart(2, '0') + '.png'), timeout: 8000 }); } catch (_) { /* next */ }
-      const f2 = await frame(p.page);
-      if (f2 && f2.moment === 'bonk') bonk = true;
       await sleep(Math.max(0, 250 - (Date.now() - t)));
     }
-    if (bonk) { recDone = true; fs.writeFileSync(path.join(REC, 'BONK.txt'), 'try' + recTry); shots.push('slam-4fps/try' + recTry); }
+    fs.writeFileSync(path.join(tmp, 'role.txt'), roleSeen + (bonk ? ' BONK' : ''));
+    if (bonk && roleSeen !== 'watch') { recDone = true; fs.writeFileSync(path.join(REC, 'BONK.txt'), 'try' + recTry + ' ' + roleSeen); shots.push('play-4fps/try' + recTry); }
     return bonk;
   }
-  while (Date.now() - t0 < 140000) {
+  while (Date.now() - t0 < 150000) {
     const hf = await host.evaluate(() => window.CrabHost && window.CrabHost.frame()).catch(() => null);
     if (hf && hf.phase === 'final') break;
+    if (hf && hf.window === 'qw' && !hostQw && hf.round >= 1) { hostQw = true; await sleep(1500); await shot(host, 'p05-projector-questions', true); }
+    if (hf && hf.window === 'pw' && !hostPw) { hostPw = true; await sleep(1500); await shot(host, 'p06-projector-play'); }
     for (const p of allPhones) {
-      const f = await frame(p.page);
+      const f = await p.page.evaluate(() => (window.CrabPhone && window.CrabPhone.frame().window === 'pw' ? null : window.CrabPhone && window.CrabPhone.frame())).catch(() => null) || await p.page.evaluate(PLAY).catch(() => null);
       if (!f || !f.on) continue;
       const S = p.seen;
       // a bonk on my crew: its peak (the stamp landed, the words in the air)
       if (f.moment === 'bonk' && !S.bonk) {
         S.bonk = 1;
-        await sleep(250);
+        await sleep(200);
         await p.page.evaluate(HOLD, 330).catch(() => {});
         await shot(p.page, 'k31-bonk-peak-' + p.tag);
         const P = await p.page.evaluate(PEAK).catch(() => null);
         await p.page.evaluate(RUN).catch(() => {});
-        ok(P && P.fenIn && P.fenCovered <= 25 && P.facesIn && P.facesCovered <= 12, p.name + ' bonk peak: Fénec and the crew\'s faces inside, nothing covering them ' + JSON.stringify(P));
-        if (!hostBonk) { hostBonk = true; await host.evaluate(HOLD, 330).catch(() => {}); await shot(host, 'p06-projector-bonk'); await host.evaluate(RUN).catch(() => {}); }
+        ok(P && P.fenIn && P.fenCovered <= 25 && P.facesIn && P.facesCovered <= 12 && P.hamOnFaces <= 15, p.name + ' bonk peak: Fénec and the crew\'s faces inside, nothing covering them ' + JSON.stringify(P));
+        if (!hostBonk) { hostBonk = true; await host.evaluate(HOLD, 330).catch(() => {}); await shot(host, 'p07-projector-bonk'); await host.evaluate(RUN).catch(() => {}); }
         continue;
       }
-      if (f.moment === 'swing' && !S.swing) {
-        S.swing = 1;
-        await sleep(300);
-        await p.page.evaluate(HOLD, 600).catch(() => {});
-        await shot(p.page, 'k32-swing-peak-' + p.tag);
+      // my miss: the hammer flies into El Péndulo («¡Ñam!»)
+      if (f.moment === 'eat' && !S.eat) {
+        S.eat = 1;
+        await sleep(350);
+        await p.page.evaluate(HOLD, 380).catch(() => {});
+        await shot(p.page, 'k22-eat-' + p.tag);
         const P = await p.page.evaluate(PEAK).catch(() => null);
         await p.page.evaluate(RUN).catch(() => {});
-        ok(P && P.facesIn && P.facesCovered <= 12, p.name + ' big swing peak: the crew\'s faces inside, the card off them ' + JSON.stringify(P));
-        if (!hostSwing) { hostSwing = true; await shot(host, 'p07-projector-swing', true); }
+        ok(P && P.facesIn && P.facesCovered <= 12, p.name + ' El Péndulo eats: the crew\'s faces inside, nothing on them ' + JSON.stringify(P));
         continue;
       }
-      if (f.ham === 'jam' && !S.jam) { S.jam = 1; await shot(p.page, 'k22-jam-' + p.tag, true); }
-      // my hammer is loaded: the pad (+ the guided hand the first time), then slam on Fénec
-      if (f.ham === 'loaded' && !f.moment) {
-        if (!S.pad) {
-          S.pad = 1;
-          await sleep(350);
-          await shot(p.page, 'k12-loaded-guided-' + p.tag, true);
+      if (f.window === 'pwin' && !S['pwin' + f.role]) {
+        S['pwin' + f.role] = 1;
+        await sleep(250);
+        await shot(p.page, 'k20-role-' + f.role + '-' + p.tag, true);
+      }
+      if (f.window === 'pw') {
+        if (p === phones[0] && !recDone && recTry < 5 && f.role !== 'watch' && !S['rec' + f.round]) { S['rec' + f.round] = 1; await recordPlay(p); continue; }
+        if (!S['pw' + f.role]) {
+          S['pw' + f.role] = 1;
+          await sleep(400);
+          await shot(p.page, 'k21-play-' + f.role + '-' + p.tag, true);
           const L = await p.page.evaluate(LOOK);
-          ok(L.golpeIn && L.wide, p.name + ' my loaded hammer: «¡GOLPE!» fits ' + JSON.stringify(L));
+          const P = await p.page.evaluate(PEAK).catch(() => null);
+          ok(L.golpeIn && L.wide && (f.role === 'watch' || L.meterIn), p.name + ' play window (' + f.role + '): the controls fit ' + JSON.stringify(L));
+          ok(P && P.facesIn && P.hamOnFaces <= 15 && P.fenIn, p.name + ' play window: the faces inside, no hovering hammer on them, Fénec inside ' + JSON.stringify(P));
         }
-        if (p === phones[0] && !recDone && S.pad && recTry < 6) { await recordSlam(p); continue; }
-        await p.page.evaluate(() => window.CrabPhone.tapFenec());
-        if (!S.slam) { S.slam = 1; await sleep(220); await shot(p.page, 'k13-slam-' + p.tag); }
         continue;
       }
-      if (f.q && f.ham === 'idle') {
-        if (!S.quiz) { S.quiz = 1; await shot(p.page, 'k11-quiz-' + p.tag, true); const L = await p.page.evaluate(LOOK); ok(L.tiles >= 2 && L.inside && L.wide, p.name + ' quiz tiles fit: ' + JSON.stringify(L)); }
+      if (f.window === 'qw' && f.q) {
+        if (!S.quiz) { S.quiz = 1; await shot(p.page, 'k11-quiz-' + p.tag, true); const L = await p.page.evaluate(LOOK); ok(L.tiles >= 2 && L.inside && L.wide && L.meterIn, p.name + ' quiz tiles + hammer meter fit: ' + JSON.stringify(L)); }
         if (S.lastQ !== f.q) {
           S.lastQ = f.q;
           await sleep(500);
           const want = RIGHT[f.q];
           const i = f.answers ? f.answers.indexOf(want) : 0;
-          await p.page.evaluate((x) => window.CrabPhone.answer(x), Math.random() < 0.88 && i >= 0 ? i : (Math.max(0, i) + 1) % 4);
+          await p.page.evaluate((x) => window.CrabPhone.answer(x), Math.random() < 0.82 && i >= 0 ? i : (Math.max(0, i) + 1) % 4);
         }
       }
-      if (f.frenzy && !S.frenzy) { S.frenzy = 1; await shot(p.page, 'k40-last30-' + p.tag, true); if (!hostFrenzy) { hostFrenzy = true; await shot(host, 'p08-projector-last30', true); } }
+      if (f.window === 'pwout' && !S.pwout) { S.pwout = 1; await shot(p.page, 'k23-tiempo-' + p.tag, true); }
+      if (f.frenzy && !S.frenzy) { S.frenzy = 1; await shot(p.page, 'k40-final-round-' + p.tag, true); if (!hostFrenzy) { hostFrenzy = true; await shot(host, 'p08-projector-final-round', true); } }
     }
-    if (!hostMid && Date.now() - t0 > 20000) { hostMid = true; await shot(host, 'p05-projector-mid-game', true); }
-    await sleep(150);
+    await sleep(120);
   }
   // «¡FINAL!» and the endings
   await sleep(500);
@@ -276,12 +301,12 @@ async function finish(code) {
   await host.setViewportSize({ width: 1366, height: 657 });
   await sleep(600);
   await shot(host, 'p11-projector-end-1366x657');
-  await sleep(11000);
+  await sleep(15500);   // (the ending, up to 4 bonus stars, the drum, the winner, then the card)
   for (const p of allPhones) {
     await shot(p.page, 'k53-my-card-' + p.tag);
     const c = await p.page.evaluate(() => { const c = document.querySelector('.tc-mycard'); if (!c) return null; const r = c.getBoundingClientRect(); return { h: Math.round(r.height), top: Math.round(r.top), home: !!c.querySelector('.tc-home') }; });
     ok(c && c.home && c.top >= -2, p.name + ' got its card with «Inicio», its top (the character) on the screen: ' + JSON.stringify(c));
   }
-  ok(recDone, 'Ana\'s bonk was filmed at 4 fps (' + recTry + ' tries)');
+  ok(recDone, 'Ana\'s play window with a bonk was filmed at 4 fps (' + recTry + ' tries)');
   await finish();
 })().catch((e) => { console.log('FAIL · ' + e.message); finish(1); });

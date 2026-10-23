@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>¡Atrapa a Fénec! · Anfitrión</title>
+  <title>Draly Cangrejo · ¡Atrapa a Fénec! · Anfitrión</title>
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/app/favicon-32.png">
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/back.css?v=20261018a">
-  <link rel="stylesheet" href="/css/teamcrab.css?v=20261023tc">
+  <link rel="stylesheet" href="/css/teamcrab.css?v=20261023tc3">
 </head>
 <body class="tch">
   <button class="tch-btn tch-mute" id="mute-btn" type="button">🔊 Sonido</button>
@@ -15,8 +15,8 @@
   <!-- LOBBY: PIN + QR, the time and «¡Empezar!» right under them, the game in 3 pictures, the crab, the players -->
   <main id="screen-lobby" class="tch-lobby">
     <section class="tch-lobby-left">
-      <h1 class="tch-title">¡Atrapa a <span>Fénec</span>!</h1>
-      <p class="tch-tagline">Fénec, el ladrón de palabras, se robó las palabras de la clase. Cada tripulación pilota un cangrejo gigante: respondan bien para cargar su martillo y ¡aplástenlo para recuperar las palabras! Si fallan, Fénec se lleva una… y El Péndulo se enoja.</p>
+      <h1 class="tch-title"><small>Draly Cangrejo</small>¡Atrapa a <span>Fénec</span>!</h1>
+      <p class="tch-tagline">Fénec, el ladrón de palabras, se robó las palabras de la clase. Cada ronda: preguntas rápidas (cada respuesta buena = un martillazo), luego 10 segundos de «¡A martillar!»: el mejor de la ronda es el Capitán y maneja el cangrejo, y todos aplastan a Fénec. Si fallan, El Péndulo se come su martillazo.</p>
       <div class="tch-pin-card">
         <div>
           <div class="tch-pin-label">PIN</div>
@@ -30,12 +30,13 @@
           <button class="tch-btn on" type="button" data-s="120">2 min</button><button class="tch-btn" type="button" data-s="180">3 min</button><button class="tch-btn" type="button" data-s="240">4 min</button>
         </div>
         <button class="tch-btn go" id="start-btn" type="button" disabled>🦀 ¡Empezar!</button>
+        <button class="tch-btn tch-robots" id="robots-btn" type="button" aria-pressed="false" title="Solo para probar: 3 robots juegan contigo (no cuentan en nada)">🤖 Probar con robots</button>
       </div>
       <div class="tch-set" id="set-display">Cargando preguntas…</div>
       <ol class="tch-steps">
-        <li><div class="tc-step s1"><i class="t r">▲</i><i class="t b">◆</i><i class="t y ok">●</i><i class="t g">■</i><img class="hm" src="/assets/teamcrab/hammer.webp" alt=""></div>Responde bien<small>= tu martillo se carga 🔨 · si fallas, se atasca</small></li>
-        <li><div class="tc-step s2"><img class="fx" src="/assets/teamcrab/fenec-idle.webp" alt=""><img class="hm" src="/assets/teamcrab/hammer.webp" alt=""><i class="fing"></i></div>¡Toca a Fénec!<small>tu martillo cae encima: ¡BONK! · tapen sus salidas en equipo</small></li>
-        <li><div class="tc-step s3"><img src="/assets/teamcrab/fenec-spill.webp" alt=""><b>📚</b></div>Recuperen las palabras<small>si fallan, ¡Fénec se lleva una!</small></li>
+        <li><div class="tc-step s1"><i class="t r">▲</i><i class="t b">◆</i><i class="t y ok">●</i><i class="t g">■</i><img class="hm" src="/assets/teamcrab/hammer.webp" alt=""></div>Responde bien<small>= +1 martillazo 🔨</small></li>
+        <li><div class="tc-step s2"><img class="pd" src="/assets/teamcrab/pendulo-eat.webp" alt=""><img class="hm" src="/assets/teamcrab/hammer.webp" alt=""></div>Si te equivocas…<small>El Péndulo se come tu martillazo</small></li>
+        <li><div class="tc-step s3"><img class="fx" src="/assets/teamcrab/fenec-idle.webp" alt=""><img class="hm" src="/assets/teamcrab/hammer.webp" alt=""><i class="fing"></i></div>¡A martillar!<small>toca a Fénec: ¡BONK! · el mejor es ⭐ Capitán y mueve el cangrejo</small></li>
       </ol>
     </section>
     <section class="tch-lobby-right">
@@ -54,10 +55,12 @@
   <main id="screen-active" class="tch-stage hidden">
     <header class="tch-head">
       <div class="tch-clock"><b id="clock">2:00</b><span id="clock-sub">tiempo</span></div>
-      <div class="tch-headline" id="headline">¡Respondan para cargar el martillo y aplasten a Fénec!</div>
-      <div class="tch-fchip hidden" id="frenzy-chip">🌅 Atardecer dorado · martillazos ×2</div>
+      <div class="tch-headline" id="headline">¡Respondan bien para ganar martillazos!</div>
+      <div class="tch-round" id="round-chip"></div>
+      <div class="tch-fchip hidden" id="frenzy-chip">🌅 Ronda final · martillazos ×2</div>
       <div class="tch-pinmini">PIN <b id="active-pin">····</b></div>
     </header>
+    <div class="tch-wbar" id="wbar" aria-hidden="true"><i></i></div>
     <section class="tch-boards" id="boards"></section>
     <aside class="tch-side">
       <div class="tch-top3"><h2>🦀 Tripulaciones</h2><ol id="crews"></ol></div>
@@ -108,8 +111,8 @@
   <script src="/js/saga.js?v=20261020z3d3"></script>
   <script src="/js/halcon-board.js?v=20261019zc"></script>
   <script src="/js/cast.js?v=20261017td"></script>
-  <script src="/js/teamcrab-stage.js?v=20261023tc2"></script>
-  <script src="/js/host-teamcrab.js?v=20261023tc"></script>
+  <script src="/js/teamcrab-stage.js?v=20261023tc3"></script>
+  <script src="/js/host-teamcrab.js?v=20261023tc3"></script>
   <script src="/js/live-game.js?v=20261011c"></script>
   <!-- ← «Volver» while the lobby waits (his rule 2026-10-18: every screen has a way back) -->
   <script src="/js/host-back.js?v=20261023tc" data-place="title"></script>

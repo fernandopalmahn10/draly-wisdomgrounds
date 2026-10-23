@@ -1,18 +1,22 @@
-// ¡Atrapa a Fénec! — the kid's phone (the product). player.js calls CrabPhone.init(...) once; the pastel skin
-// (player-kingdoms-skin.js) routes the sounds, the music, the lobby card and the end screen here.
-// His design 2026-10-23 (Mario Party «Team Crab» turned around: the kids are the crew of the robot crab):
-//   · the beach on top: my crew's crab with my face in my glass cockpit, everyone's hammer, Fénec hopping on the dock,
-//     El Péndulo over the sea; my crewmates' loaded hammers hover with their shadows on the planks, live;
-//   · the quiz below: a right answer LOADS my hammer → the stage grows and I TOUCH Fénec (the hammer comes down right
-//     there), or drag it over a spot and swipe down / «¡GOLPE!»; a 6-s bar (it slams by itself at 0);
-//   · a BONK floods the whole phone gold: Fénec flat, dizzy stars, the class's words fly out of his sack to the crab;
-//   · a wrong, late or blind answer: my hammer jams with smoke (3 s), Fénec snatches a word back «¡Mías!», a grumpy spark
-//     feeds El Péndulo; his BIG SWING (all the crew's hammers knocked away) takes over the whole phone;
-//   · «¡FINAL!» → my crew's ending (caught or escaped, the crab kicked to pieces), the ceremony, my card.
-// Test hooks: CrabPhone.frame(), .answer(i), .tapFenec(), .slamAt(spot), .freeze(v), .stage().
+// Draly Cangrejo · ¡Atrapa a Fénec! — the kid's phone (the product). player.js calls CrabPhone.init(...) once; the pastel
+// skin (player-kingdoms-skin.js) routes the sounds, the music, the lobby card and the end screen here.
+// v2 (his feedback 2026-10-23 after playing v1, his rules «Skill decides, never luck» + «Two rhythms»): rounds of two
+// windows.
+//   · QUESTION WINDOW: quick-fire questions; a right answer fills one slot of MY HAMMER METER (4 max, a clank); a wrong,
+//     late or blind answer: El Péndulo EATS one (the hammer flies from my meter into his mouth, «¡Ñam!», he grows). The
+//     beach stays on top, alive: the crab, Fénec, El Péndulo, the race for Capitán.
+//   · «¡A martillar!» (1.6 s, the whole phone): MY ROLE. ⭐ Capitán (the crew's best answerer of the window) = I DRIVE the
+//     crab (drag: it walks there, its claws follow) · 🔨 Martillero (I have charges) = I aim my claw (hold: my shadow on
+//     the planks follows my finger inside the crab's reach) and let go = SLAM (one charge) · 👀 no charges = I watch and
+//     cheer («Responde bien en la próxima ronda para subir al cangrejo»).
+//   · PLAY WINDOW (10 s): Fénec runs his readable pattern (stands, crouches leaning, runs 2 spots); my hammer falls in
+//     0.35 s where my shadow is; it bonks him if he is under it at the impact: the whole phone floods gold, words fly back.
+//   · «¡Tiempo!» → the round's tally → the next question window · the last round ×2 → «¡FINAL!» → my crew's ending
+//     (caught / escaped kicking the crab to pieces), the ceremony, my card.
+// Test hooks: CrabPhone.frame(), .answer(i), .tapFenec(), .slamAt(x), .aimAt(x), .steerTo(x), .freeze(v), .stage().
 (function () {
   'use strict';
-  const A = '/assets/teamcrab/', H = '/assets/halcon/', K = '/assets/kingdoms/', PARTY = '/assets/party/', MO = '/assets/monopoly/';
+  const A = '/assets/teamcrab/', H = '/assets/halcon/', K = '/assets/kingdoms/', PARTY = '/assets/party/';
   const $ = (id) => document.getElementById(id);
   const S = () => window.CrabStage;
   const HB = () => window.HalconBoard;
@@ -25,14 +29,17 @@
   const SHAPES = ['▲', '◆', '●', '■'];
   const fmtClock = (ms) => { const s = Math.max(0, Math.ceil(ms / 1000)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
   const duck = (low) => { const k = window.KingdomsSkin; if (k && k.musicVol) k.musicVol(low ? 0.14 : 0.32); };
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
-  let ctx = null, on = false, stage = null, lastBigFx = 0;
+  let ctx = null, on = false, stage = null, lastBigFx = 0, bonkAt = 0, eatAt = 0;
   let g = null;                  // { id, you, b, phase }
-  let seats = [];                // my crew [{ k, name, skin, words, on }]
-  let myH = { st: 'idle', until: 0, guided: false, x: 0.5 };
+  let seats = [];                // my crew [{ k, name, skin, words, on, robot }]
+  let rules = { reach: 1, fall: 350, back: 420, max: 4, speed: 4.2, hit: 0.45 };
+  let charges = 0, role = 'none', captain = null, myClaw = 'idle', guidedDone = { cap: false, mart: false };
+  let rd = { n: 0, total: 0, phase: 'none', final: false, until: 0, ms: 0 };
   let myQ = null, myLocked = false, paintedQid = null, qShownAt = 0;
-  let words = 0, target = 1, anger = 0, endsAt = 0, pausedLeft = 0, paused = false, frenzy = false, streak = 0, moment = null;
-  let clockT = null, timers = [];
+  let words = 0, target = 1, anger = 0, endsAt = 0, pausedLeft = 0, paused = false, frenzy = false, streak = 0;
+  let clockT = null, timers = [], lastMineAt = 0, race = {}, raceLead = null;
   const later = (ms, fn) => { const t = setTimeout(fn, Math.max(0, ms)); timers.push(t); return t; };
   function clearTimers() { timers.forEach(clearTimeout); timers = []; }
   const seat = (k) => seats.find((x) => x.k === k) || null;
@@ -60,17 +67,18 @@
     else { if (b.parentNode !== muteHome.parent) muteHome.parent.insertBefore(b, muteHome.next && muteHome.next.parentNode === muteHome.parent ? muteHome.next : null); b.classList.remove('tc-mute'); }
   }
   function stopAll() { clearTimers(); if (clockT) { clearInterval(clockT); clockT = null; } }
-  function ensureStage() { if (!stage && S()) stage = new (S().Stage)($('tc-stage'), { mode: 'phone' }); }
+  function ensureStage() { if (!stage && S()) stage = new (S().Stage)($('tc-stage'), Object.assign({ mode: 'phone' }, rules)); }
   function show() { ctx.showScreen('teamcrab'); ensureStage(); placeMute(true); requestAnimationFrame(() => { if (stage) stage.fit(); }); }
+  const refit = () => requestAnimationFrame(() => { if (stage) stage.fit(); });
 
-  // ---------- the top: my crew, the clock, the words we got back ----------
+  // ---------- the top: my crew, the round, the clock, the words we got back ----------
   function paintCrew() {
     const box = $('tc-crew');
     if (!box) return;
     box.innerHTML = '';
     seats.forEach((x) => {
       const r = document.createElement('div');
-      r.className = 'tc-mate' + (g && x.k === g.you ? ' me' : '') + (x.on === false ? ' off' : '');
+      r.className = 'tc-mate' + (g && x.k === g.you ? ' me' : '') + (x.on === false ? ' off' : '') + (x.k === captain ? ' cap' : '') + (x.robot ? ' bot' : '');
       const i = document.createElement('img');
       i.alt = '';
       i.src = S() ? S().head(x.skin) : '';
@@ -99,29 +107,70 @@
     $('tc-sack').classList.toggle('full', full);
     if (pop && !reduced()) { const s = $('tc-sack'); s.classList.remove(pop); void s.offsetWidth; s.classList.add(pop); }
   }
+  function paintRound() {
+    const r = $('tc-round');
+    if (!r) return;
+    r.textContent = rd.n ? (rd.final ? '¡Ronda final! ×2' : 'Ronda ' + rd.n + (rd.total ? ' de ' + rd.total : '')) : '';
+    r.classList.toggle('final', !!rd.final);
+  }
   function paintClock() {
-    const left = endsAt ? (paused ? pausedLeft : endsAt - Date.now()) : 0;
+    const now = Date.now();
+    const left = endsAt ? (paused ? pausedLeft : endsAt - now) : 0;
     $('tc-clock').textContent = endsAt ? fmtClock(left) : '·:··';
     $('tc-clock').classList.toggle('hurry', !!endsAt && left <= 30000);
-    if (myH.st === 'loaded' && myH.until) {
-      const lb = $('tc-loadbar');
-      const tl = Math.max(0, myH.until - Date.now());
-      if (lb) { lb.firstChild.style.width = Math.min(100, (100 * tl) / (myH.guided ? 9000 : 6000)) + '%'; lb.classList.toggle('hurry', tl < 2000); }
-      const s = Math.ceil(tl / 1000);
-      if (s <= 2 && s > 0 && lb && lb.dataset.s !== String(s) && !paused) { lb.dataset.s = String(s); sfx(PARTY + 'tick.mp3', 0.45); }
+    // the window's bar on the stage (the question window, «¡A martillar!»)
+    const wt = $('tc-wtimer');
+    if (wt && rd.until) {
+      const l = Math.max(0, (paused ? rd.pausedLeft || 0 : rd.until - now));
+      wt.firstChild.style.width = Math.min(100, (100 * l) / Math.max(1, rd.ms)) + '%';
+      wt.className = 'tc-wtimer ' + rd.phase + (l < 3000 ? ' hurry' : '');
+      if (rd.phase === 'pw') { const s = Math.ceil(l / 1000); if (s <= 3 && s > 0 && wt.dataset.s !== String(s) && !paused) { wt.dataset.s = String(s); sfx(PARTY + (s % 2 ? 'tick-v2.mp3' : 'tock-v2.mp3'), 0.5); } }
     }
   }
-  function runClock() { if (!clockT) clockT = setInterval(paintClock, 200); paintClock(); }
+  function runClock() { if (!clockT) clockT = setInterval(paintClock, 150); paintClock(); }
 
-  // ---------- the panel: the quiz, my loaded hammer, a message ----------
+  // ---------- my hammer meter (4 slots): right = a slot fills; El Péndulo eats one on a miss ----------
+  function paintMeter(pop) {
+    const box = $('tc-slots');
+    if (!box) return;
+    const n = Math.max(0, Math.min(rules.max, charges));
+    [...box.children].forEach((s, i) => {
+      s.classList.toggle('full', i < n);
+      if (pop === 'add' && i === n - 1 && !reduced()) { s.classList.remove('pop'); void s.offsetWidth; s.classList.add('pop'); }
+    });
+    $('tc-meter').classList.toggle('max', n >= rules.max);
+    $('tc-meter-n').textContent = n + (n === 1 ? ' martillazo' : ' martillazos');
+  }
+  // the charge I lost flies from my meter into El Péndulo's mouth («¡Ñam!»)
+  function eatFly(ate) {
+    const box = $('tc-slots');
+    if (!box || !stage) return;
+    const slot = box.children[Math.max(0, Math.min(rules.max - 1, charges))];
+    const a = slot.getBoundingClientRect(), p = stage.pend.getBoundingClientRect();
+    if (!reduced() && ate) {
+      const f = document.createElement('img');
+      f.className = 'tc-eatfly';
+      f.alt = '';
+      f.src = A + 'hammer.webp';
+      f.style.left = a.left + a.width / 2 + 'px';
+      f.style.top = a.top + a.height / 2 + 'px';
+      f.style.setProperty('--dx', Math.round(p.left + p.width / 2 - (a.left + a.width / 2)) + 'px');
+      f.style.setProperty('--dy', Math.round(p.top + p.height * 0.72 - (a.top + a.height / 2)) + 'px');
+      document.body.appendChild(f);
+      setTimeout(() => f.remove(), 760);
+    }
+    stage.eat(anger, { x: -9999, y: -9999 }, false);              // (he gulps and grows; the charge already flew from my meter)
+  }
+
+  // ---------- the panel: the quiz, my role in the play window, a message ----------
   function mode(m) {
     const scr = $('screen-teamcrab');
     $('tc-quiz').classList.toggle('hidden', m !== 'quiz');
     $('tc-pad').classList.toggle('hidden', m !== 'pad');
     $('tc-msg').classList.toggle('hidden', m !== 'msg');
     scr.classList.toggle('tc-aiming', m === 'pad');
-    $('tc-touch').classList.toggle('live', m === 'pad');
-    requestAnimationFrame(() => { if (stage) stage.fit(); });
+    $('tc-touch').classList.toggle('live', m === 'pad' && (role === 'cap' || role === 'mart'));
+    refit();
   }
   function msg(big, small, kind, imgSrc) {
     mode('msg');
@@ -132,39 +181,43 @@
     const im = $('tc-msg-img');
     if (imgSrc) { im.src = imgSrc; im.classList.remove('hidden'); } else im.classList.add('hidden');
   }
+  function setWindow(ph) {
+    const scr = $('screen-teamcrab');
+    ['qw', 'pwin', 'pw', 'pwout'].forEach((p) => scr.classList.toggle('tc-' + p, p === ph));
+    refit();
+  }
   function qbar() {
     const qt = $('tc-qtime');
     if (!qt || !myQ) return;
-    const total = 15000, left = Math.max(0, Math.min(total, (myQ.until || Date.now() + total) - Date.now()));
+    const total = myQ.total || 8000, left = Math.max(0, Math.min(total, (myQ.until || Date.now() + total) - Date.now()));
     qt.style.setProperty('--ms', total + 'ms');
     qt.style.setProperty('--qd', (left - total) + 'ms');
     qt.classList.remove('run', 'done'); void qt.offsetWidth; qt.classList.add('run');
-    if (myLocked || paused || moment) qt.classList.add('done');
+    if (myLocked || paused) qt.classList.add('done');
   }
   function seenQ() {
     if (!myQ || myQ.seenSent || document.visibilityState !== 'visible') return;
     myQ.seenSent = true;
     ctx.socket.emit('player:tc-seen', { pin: ctx.getPin(), qid: myQ.qid });
   }
-  let frozeAt = 0;
-  function freezeQ(v) {
-    if (v) { if (!frozeAt) frozeAt = Date.now(); return; }
-    if (frozeAt && myQ && myQ.until) myQ.until += Date.now() - frozeAt;
-    frozeAt = 0;
-  }
-  // what my panel shows now, from my hammer's state
+  // what my panel shows now, from the round's window and my role
   function paintPanel() {
     if (!g || g.phase === 'final') return;
-    if (myH.st === 'loaded') { paintPad(); return; }
-    if (myH.st === 'jam') { msg('¡Martillo atascado! 💨', 'Fénec se llevó una palabra… respira y responde la próxima', 'jam', A + 'fenec-laugh.webp'); return; }
-    if (myH.st === 'knock') { msg('¡El Péndulo tumbó los martillos!', '¡Uf! Respira: en un momento vuelven 🔨', 'knock', A + 'pendulo-dizzy.webp'); return; }
-    if (myH.st === 'fall' || myH.st === 'back') { msg('🔨 ¡BAM!', 'Tu martillo vuelve a subir… ¡prepárate para la próxima!', 'calm', A + 'hammer.webp'); return; }
+    if (g.phase !== 'play') return;
+    if (rd.phase === 'qw') { paintMyQ(); return; }
+    if (rd.phase === 'pwin' || rd.phase === 'pw') { paintRole(); return; }
+    if (rd.phase === 'pwout') return;
     paintMyQ();
   }
   function paintMyQ() {
     mode('quiz');
     const box = $('tc-mq');
-    if (!myQ) { box.classList.add('wait'); $('tc-mq-text').textContent = '…'; $('tc-tiles').innerHTML = ''; $('tc-mq-img').classList.add('hidden'); return; }
+    if (!myQ) {
+      box.classList.add('wait');
+      $('tc-mq-text').textContent = rd.phase === 'qw' && rd.until - Date.now() < 2600 ? '¡Ya viene «¡A martillar!»! 🔨' : '…';
+      $('tc-tiles').innerHTML = ''; $('tc-mq-img').classList.add('hidden');
+      return;
+    }
     box.classList.remove('wait');
     if (paintedQid === myQ.qid && $('tc-tiles').children.length) { qbar(); return; }
     paintedQid = myQ.qid;
@@ -172,7 +225,7 @@
     qbar();
     seenQ();
     const qf = $('tc-qfeed');
-    if (qf.classList.contains('ans')) { qf.textContent = ''; qf.className = 'tc-qfeed'; }
+    if (qf.classList.contains('ans')) { const age = Date.now() - (+qf.dataset.at || 0); if (age > 1100) { qf.textContent = ''; qf.className = 'tc-qfeed'; } else later(1100 - age, () => { if (+qf.dataset.at && Date.now() - +qf.dataset.at >= 1000) { qf.textContent = ''; qf.className = 'tc-qfeed'; } }); }
     $('tc-mq-text').textContent = myQ.text;
     const im = $('tc-mq-img');
     if (myQ.image) { im.src = myQ.image; im.classList.remove('hidden'); } else { im.classList.add('hidden'); im.removeAttribute('src'); }
@@ -194,7 +247,7 @@
     if (!reduced()) { box.classList.remove('new'); void box.offsetWidth; box.classList.add('new'); }
   }
   function answer(i) {
-    if (!myQ || myLocked || paused || moment === 'swing') return;   // (a bonk never blocks the quiz)
+    if (!myQ || myLocked || paused || rd.phase !== 'qw') return;
     if (Date.now() - qShownAt < 350) return;                  // (a tap meant for the last question never lands on the new one)
     myLocked = true;
     $('tc-qtime').classList.add('done');
@@ -222,82 +275,130 @@
     later(2400, () => box.classList.add('hidden'));
     sfx(K + 'streak.mp3', 0.5);
   }
+  // the crew's race for Capitán during the question window (right answers only: nobody's miss shows)
+  function paintRace() {
+    const el = $('tc-race');
+    if (!el) return;
+    let best = null;
+    if (raceLead != null) best = { k: raceLead, n: race[raceLead] || 1 };
+    else Object.entries(race).forEach(([k, n]) => { if (n > 0 && (!best || n > best.n)) best = { k: +k, n }; });
+    if (!best || rd.phase !== 'qw') { el.textContent = ''; el.className = 'tc-race'; return; }
+    const me = g && best.k === g.you;
+    el.textContent = me ? '⭐ ¡Vas para Capitán!' : '⭐ Capitán: ' + nameOf(best.k);
+    el.className = 'tc-race' + (me ? ' me' : '');
+  }
 
-  // ---------- my loaded hammer: touch Fénec, or drag and slam ----------
-  function paintPad() {
+  // ---------- the play window: my role ----------
+  function paintRole() {
+    const hint = $('tc-padhint'), golpe = $('tc-golpe');
+    if (role === 'watch') {
+      msg('👀 Esta ronda miras', 'Responde bien en la próxima ronda para subir al cangrejo 🦀', 'watch', A + 'crab-hero.webp');
+      $('tc-touch').classList.remove('live');
+      return;
+    }
     mode('pad');
-    const hint = $('tc-padhint');
-    hint.textContent = myH.guided ? 'Tu primer martillo: ¡toca a Fénec y cae encima!' : '¡Martillo listo! Toca a Fénec · o arrastra y ¡GOLPE!';
-    $('tc-golpe').disabled = moment === 'bonk';
-    if (moment === 'bonk') hint.textContent = '¡Está aplastado! Espera que se levante… 👀';
-    const lb = $('tc-loadbar');
-    if (lb) lb.dataset.s = '';
-    paintClock();
+    $('screen-teamcrab').classList.toggle('tc-captain', role === 'cap');
+    if (role === 'cap') {
+      hint.innerHTML = '<b>⭐ ¡Eres el Capitán!</b><span>Arrastra el dedo: el cangrejo camina. ¡Llévalo debajo de Fénec!</span>';
+      golpe.classList.toggle('hidden', charges <= 0);
+      golpe.textContent = '🔨 ¡GOLPE! (' + charges + ')';
+    } else {
+      hint.innerHTML = '<b>🔨 ¡A martillar! · ' + charges + (charges === 1 ? ' martillazo' : ' martillazos') + '</b><span>Mantén el dedo: tu sombra apunta · suelta = ¡GOLPE!</span>';
+      golpe.classList.remove('hidden');
+      golpe.textContent = '🔨 ¡GOLPE!';
+    }
+    golpe.disabled = rd.phase !== 'pw' || charges <= 0 || myClaw !== 'armed';
     coach();
   }
-  // the guided first slam: a hand goes from my hammer to Fénec and taps
+  // the guided first action: a hand shows what to do (drag for the Capitán, tap Fénec for a martillero)
   function coach() {
     const h = $('tc-hand');
     if (!h) return;
-    if (!myH.guided || myH.st !== 'loaded' || moment === 'bonk' || !stage || !stage.g) { h.className = 'tc-hand hidden'; return; }
-    const x = stage.spotPx(stage.at), y = stage.g.feet - stage.g.fenH * 0.5;
-    h.style.left = Math.round(x - 20) + 'px';
-    h.style.top = Math.round(y - 10) + 'px';
-    h.className = 'tc-hand tap';
+    const need = rd.phase === 'pw' && ((role === 'cap' && !guidedDone.cap) || (role === 'mart' && !guidedDone.mart));
+    if (!need || !stage || !stage.g) { h.className = 'tc-hand hidden'; return; }
+    if (role === 'cap') {
+      h.style.left = Math.round(stage.g.W / 2 - 20) + 'px';
+      h.style.top = Math.round(stage.g.feet - stage.g.fenH * 0.2) + 'px';
+      h.className = 'tc-hand drag';
+    } else {
+      const fx = stage.f.mode === 'run' || stage.f.mode === 'crouch' ? stage.f.x1 : stage.fx;
+      const x = stage.xPx(fx), y = stage.g.feet - stage.g.fenH * 0.5;
+      h.style.left = Math.round(x - 20) + 'px';
+      h.style.top = Math.round(y - 10) + 'px';
+      h.className = 'tc-hand tap';
+    }
   }
-  let drag = null, lastAimSent = 0;
-  const canSlam = () => !!(g && myH.st === 'loaded' && !paused && moment !== 'bonk' && moment !== 'swing');
+  let drag = null, lastSent = 0, mySlamAt = 0, lastWalkSfx = 0;
+  // the crab's servos whirr and clank when it starts to walk (at most every 1.5 s)
+  function walkSfx(vol) { const now = Date.now(); if (now - lastWalkSfx > 1500) { lastWalkSfx = now; sfx(A + 'clank.mp3', vol); } }
+  const playing = () => !!(g && g.phase === 'play' && rd.phase === 'pw' && !paused);
+  const canSlam = () => playing() && charges > 0 && myClaw === 'armed' && Date.now() - mySlamAt > rules.fall;
   function xOfClient(cx) {
-    if (!stage || !stage.spotX) return 0.5;
+    if (!stage || !stage.spotW) return 2;
     const r = $('tc-stage').getBoundingClientRect();
-    const a = stage.spotX[0], b = stage.spotX[stage.spotX.length - 1];
-    return Math.max(0, Math.min(1, (cx - r.left - a) / Math.max(1, b - a)));
+    return stage.xOfPx(cx - r.left);
   }
   function aimTo(x, force) {
-    myH.x = x;
-    if (stage && g) stage.aim(g.you, x);
+    if (!stage || !g) return;
+    const off = clamp(x - stage.crabX, -rules.reach, rules.reach);
+    stage.aim(g.you, off);
     const now = Date.now();
-    if (force || now - lastAimSent > 60) { lastAimSent = now; ctx.socket.emit('player:tc-aim', { pin: ctx.getPin(), x }); }
+    if (force || now - lastSent > 60) { lastSent = now; ctx.socket.emit('player:tc-aim', { pin: ctx.getPin(), x }); }
+  }
+  function steerTo(x, force) {
+    if (!stage || !g || role !== 'cap' || !playing()) return;
+    stage.steer(x);
+    stage.light(g.you);
+    if (Math.abs(x - stage.crabX) > 0.3) walkSfx(0.4);
+    const now = Date.now();
+    if (force || now - lastSent > 60) { lastSent = now; ctx.socket.emit('player:tc-steer', { pin: ctx.getPin(), x }); }
+    if (!guidedDone.cap) { guidedDone.cap = true; coach(); }
   }
   function slamNow(x) {
-    if (!canSlam()) return;
-    if (x != null) aimTo(x, true);
-    myH.st = 'fall';
-    $('tc-golpe').disabled = true;
-    $('tc-hand').className = 'tc-hand hidden';
-    ctx.socket.emit('player:tc-slam', { pin: ctx.getPin(), x: myH.x });
-    if (stage && g) stage.slam(g.you, myH.x, 420);
+    if (!canSlam()) { if (playing() && charges <= 0) noCharges(); return; }
+    const sx = x != null ? clamp(x, Math.max(0, stage.crabX - rules.reach), Math.min(stage.MAXX || 4, stage.crabX + rules.reach)) : null;
     mySlamAt = Date.now();
-    later(400, () => sfx(A + 'thud.mp3', 0.9));
+    myClaw = 'fall';
+    charges = Math.max(0, charges - 1);
+    paintMeter();
+    ctx.socket.emit('player:tc-slam', { pin: ctx.getPin(), x: sx });
+    if (stage && g) stage.slam(g.you, sx, rules.fall);
+    later(rules.fall - 20, () => sfx(A + 'thud.mp3', 0.9));
     buzz(20);
-    later(420, () => buzz(45));
+    later(rules.fall, () => buzz(45));
     sfx(K + 'whoosh.mp3', 0.45);
     ctx.markActivity();
-    msg('🔨 ¡BAM!', '¡Tu martillo cayó! ¿Lo aplastaste?', 'calm', A + 'hammer.webp');
+    if (!guidedDone.mart) guidedDone.mart = true;
+    $('tc-hand').className = 'tc-hand hidden';
+    paintRole();
   }
-  let mySlamAt = 0;
+  function shadowX(fallback) { const c = stage && g && stage.cr(g.you); return c && c.st === 'armed' ? Math.max(0, Math.min(4, stage.crabX + c.off)) : fallback; }
+  function noCharges() {
+    const p = $('tc-plus');
+    p.textContent = 'Sin martillazos · ¡responde bien la próxima ronda!';
+    p.className = 'tc-plus no';
+    if (!reduced()) { void p.offsetWidth; p.classList.add('on'); }
+  }
   function touchStart(e) {
-    if (!canSlam()) return;
+    if (!playing()) return;
     e.preventDefault();
     try { e.target.setPointerCapture(e.pointerId); } catch (_) {}
-    drag = { id: e.pointerId, x0: e.clientX, y0: e.clientY, t0: Date.now(), moved: false, startX: myH.x };
-    if (e.pointerType !== 'mouse') aimTo(xOfClient(e.clientX));
+    drag = { id: e.pointerId, t0: Date.now() };
+    if (role === 'cap') steerTo(xOfClient(e.clientX), true);
+    else if (role === 'mart' && canSlam()) aimTo(xOfClient(e.clientX), true);
   }
   function touchMove(e) {
-    if (!canSlam()) { drag = null; return; }
-    if (!drag && e.pointerType === 'mouse') { aimTo(xOfClient(e.clientX)); return; }   // (a laptop: the hammer follows the mouse)
+    if (!playing()) { drag = null; return; }
+    if (!drag && e.pointerType === 'mouse') { if (role === 'mart' && canSlam()) aimTo(xOfClient(e.clientX)); return; }   // (a laptop: the shadow follows the mouse)
     if (!drag || e.pointerId !== drag.id) return;
     e.preventDefault();
-    const dx = e.clientX - drag.x0, dy = e.clientY - drag.y0;
-    if (Math.abs(dx) > 10 || Math.abs(dy) > 10) drag.moved = true;
-    if (dy > 46 && dy > Math.abs(dx) * 1.1 && Date.now() - drag.t0 < 700) { drag = null; slamNow(null); return; }   // a swipe down = slam
-    aimTo(xOfClient(e.clientX));
+    if (role === 'cap') steerTo(xOfClient(e.clientX));
+    else if (role === 'mart' && canSlam()) aimTo(xOfClient(e.clientX));
   }
   function touchEnd(e) {
     if (!drag || e.pointerId !== drag.id) return;
-    const d = drag;
     drag = null;
-    if (!d.moved && Date.now() - d.t0 < 450) slamNow(xOfClient(e.clientX));          // a tap = the hammer comes down right there
+    if (role === 'mart') slamNow(shadowX(xOfClient(e.clientX)));     // let go = the hammer comes down where its shadow is
   }
 
   // ---------- the big moments on the whole phone ----------
@@ -307,32 +408,23 @@
     r.innerHTML = '';
     r.className = 'tc-fx ' + kind;
     if (!reduced()) {
-      const n = kind === 'bonk' ? 16 : 12;
+      const n = kind === 'bonk' ? 16 : 10;
       for (let i = 0; i < n; i++) {
         const e = document.createElement('i');
         e.className = 'fly';
-        e.textContent = kind === 'bonk' ? (i % 3 ? '★' : '✦') : '';
+        e.textContent = kind === 'bonk' ? (i % 3 ? '★' : '✦') : kind === 'go' ? '🔨' : '';
         e.style.setProperty('--x', Math.round(Math.random() * innerWidth) + 'px');
         e.style.setProperty('--y', Math.round(innerHeight * (0.1 + Math.random() * 0.6)) + 'px');
         e.style.setProperty('--dx', Math.round((Math.random() - 0.5) * innerWidth * 0.7) + 'px');
         e.style.setProperty('--dy', Math.round((Math.random() - 0.7) * innerHeight * 0.5) + 'px');
         e.style.setProperty('--t', (1.0 + Math.random() * 0.8).toFixed(2) + 's');
-        e.style.setProperty('--d', Math.round(Math.random() * 600) + 'ms');
+        e.style.setProperty('--d', Math.round(Math.random() * 500) + 'ms');
         r.appendChild(e);
       }
-      const scr = $('screen-teamcrab');
-      scr.classList.remove('tc-shake'); void scr.offsetWidth; scr.classList.add('tc-shake');
-      setTimeout(() => scr.classList.remove('tc-shake'), 700);
-    }
-    if (kind === 'swing') {
-      const p = document.createElement('img');
-      p.className = 'tc-bigpend';
-      p.alt = '';
-      p.src = A + 'pendulo-swing.webp';
-      r.appendChild(p);
+      if (kind === 'bonk') { const scr = $('screen-teamcrab'); scr.classList.remove('tc-shake'); void scr.offsetWidth; scr.classList.add('tc-shake'); setTimeout(() => scr.classList.remove('tc-shake'), 700); }
     }
     clearTimeout(fxOn.t);
-    fxOn.t = setTimeout(() => { r.classList.add('out'); setTimeout(() => { r.className = 'tc-fx hidden'; r.innerHTML = ''; }, 420); }, ms || 2400);
+    fxOn.t = setTimeout(() => { r.classList.add('out'); setTimeout(() => { r.className = 'tc-fx hidden'; r.innerHTML = ''; }, 420); }, ms || 2000);
   }
   function bigCard(imgSrc, big, small, kind, ms) {
     const b = $('tc-big');
@@ -347,74 +439,125 @@
     t.append(h, s);
     b.appendChild(t);
     clearTimeout(bigCard.t);
-    bigCard.t = setTimeout(() => { b.className = 'tc-big hidden'; }, ms || 2400);
+    bigCard.t = setTimeout(() => { b.className = 'tc-big hidden'; }, ms || 2200);
   }
-  function setMoment(m, ms) {
-    moment = m;
-    const scr = $('screen-teamcrab');
-    scr.classList.toggle('tc-moment', m === 'swing');            // (a swing knocks the hammers: the quiz waits; a bonk: it goes on)
-    scr.classList.toggle('tc-bonking', m === 'bonk');
-    if (m === 'bonk' && myH.st === 'loaded') { $('tc-padhint').textContent = '¡Está aplastado! Espera que se levante… 👀'; $('tc-golpe').disabled = true; $('tc-hand').className = 'tc-hand hidden'; }   // (a slam now would land on him flat: the pad says so)
-    freezeQ(m === 'swing');
-    if (m) {
-      if (m === 'swing') document.querySelectorAll('#tc-tiles .tc-tile').forEach((x) => { x.disabled = true; });
-      clearTimeout(setMoment.t);
-      setMoment.t = setTimeout(() => endMoment(), ms);
+
+  // ---------- the rounds ----------
+  function onRound(d) {
+    const was = rd.phase, wasFinal = rd.final, wasN = rd.n;
+    rd = { n: d.n, total: d.total, phase: d.phase, final: !!d.final, ms: d.ms || 1, until: Date.now() + (d.ms || 0) };
+    const wt = $('tc-wtimer'); if (wt) wt.dataset.s = '';
+    paintRound();
+    setWindow(d.phase);
+    if (stage) stage.setPlaying(d.phase === 'pw' || d.phase === 'pwin');
+    const again = d.phase === 'qw' && was === 'qw' && d.n === wasN;   // (the teacher's ±30 s re-planned this same window)
+    if (d.phase === 'qw' && !again) { race = {}; raceLead = null; }
+    if (d.phase === 'qw') {
+      role = 'none'; captain = null;
+      if (stage) { stage.setCaptain(null); stage.showReach(false); }
+      $('screen-teamcrab').classList.remove('tc-captain');
+      $('tc-hand').className = 'tc-hand hidden';
+      paintCrew(); paintRace();
+      if ((!again && (d.n > 1 || was === 'pwout')) || (again && d.final && !wasFinal)) {
+        if (stage) stage.say(d.final ? '¡Ronda final! Martillazos dobles' : '¡A responder! Ronda ' + d.n, d.final ? 'final' : 'calm', 1400);
+        sfx(K + 'whoosh.mp3', 0.4);
+      }
+      duck(false);
+      paintMyQ();
+    } else if (d.phase === 'pwin') {
+      myQ = null;
+      duck(true);
+    } else if (d.phase === 'pw') {
+      if (stage) stage.say('', null);
+      paintRole();
+    } else if (d.phase === 'pwout') {
+      $('tc-touch').classList.remove('live');
+      $('tc-hand').className = 'tc-hand hidden';
+      if (stage) stage.showReach(false);
+      const mine = (d.tally || []).find((x) => g && x.b === g.b);
+      const n = mine ? mine.bonks : 0;
+      msg('¡Tiempo! ⏱', n ? '¡' + n + (n === 1 ? ' martillazo' : ' martillazos') + ' a Fénec esta ronda! · Ahora, ¡a responder!' : 'Fénec se salvó esta ronda… ¡a responder y a cargar martillazos!', n ? 'win' : 'calm', n ? A + 'fenec-spill.webp' : A + 'fenec-laugh.webp');
+      if (stage) stage.say('¡Tiempo!', 'calm', 1200);
+      sfx(H + 'pop.mp3', 0.5);
+      duck(false);
     }
-    requestAnimationFrame(() => { if (stage) stage.fit(); });
+    paintClock();
   }
-  function endMoment() {
-    if (!moment) return;
-    moment = null;
-    const scr = $('screen-teamcrab');
-    const was = scr.classList.contains('tc-moment');
-    scr.classList.remove('tc-moment', 'tc-bonking');
-    if (was) freezeQ(false);
-    if (!myLocked) document.querySelectorAll('#tc-tiles .tc-tile').forEach((x) => { x.disabled = false; });
-    requestAnimationFrame(() => { if (stage) stage.fit(); qbar(); });
-    paintPanel();
+  // «¡A martillar!»: my role takes over the phone for a beat
+  function onRoles(d) {
+    captain = d.captain;
+    const mine = (d.mart || []).find((x) => g && x.k === g.you);
+    role = g && d.captain === g.you ? 'cap' : mine ? 'mart' : 'watch';
+    if (mine) charges = mine.charges;
+    myClaw = mine ? 'armed' : 'idle';
+    paintMeter();
+    if (stage) {
+      stage.setCaptain(d.captain);
+      (d.mart || []).forEach((x) => stage.claw(x.k, 'armed', x.off, x.charges));
+      if (d.crab != null) stage.crabTo(d.crab, d.crab);
+      stage.showReach(role === 'mart' || (role === 'cap' && charges > 0));
+    }
+    paintCrew();
+    const capName = d.captain != null ? (g && d.captain === g.you ? 'Tú' : nameOf(d.captain)) : null;
+    fxOn('go', 1400);
+    sfx(A + 'clank.mp3', 0.8);
+    later(120, () => sfx(H + 'start.mp3', 0.6));
+    buzz(role === 'watch' ? 20 : [40, 30, 60]);
+    if (role === 'cap') bigCard(S() ? S().head(skinOf(g.you)) : null, '⭐ ¡Eres el Capitán!', 'Fuiste el mejor: ¡tú manejas el cangrejo!', 'gold me', 1600);
+    else if (role === 'mart') bigCard(A + 'hammer.webp', '¡A martillar! 🔨 ×' + charges, capName ? '⭐ Capitán: ' + capName : 'Toca a Fénec cuando tu sombra esté sobre él', 'gold', 1600);
+    else bigCard(A + 'crab-hero.webp', '¡A martillar!', 'Esta ronda miras · responde bien para subir al cangrejo', 'calm', 1600);
+    msg('¡A martillar! 🔨', role === 'cap' ? '⭐ Tú manejas el cangrejo' : role === 'mart' ? 'Tienes ' + charges + (charges === 1 ? ' martillazo' : ' martillazos') : '👀 Esta ronda miras', 'go', A + 'hammer.webp');
   }
 
   // ---------- the events ----------
   function applyInit(d) {
     if (!d) return;
     const fresh = !g || g.id !== d.id;
+    if (d.rules) rules = Object.assign(rules, d.rules);
     g = { id: d.id, you: d.you ? d.you.k : null, b: d.board ? d.board.id : null, phase: d.phase };
     show();
-    if (fresh) { myQ = null; streak = 0; moment = null; frozeAt = 0; if (stage) stage.reset(); }
+    if (stage && d.rules) Object.assign(stage.o, d.rules);
+    if (fresh) { myQ = null; streak = 0; race = {}; guidedDone = { cap: false, mart: false }; if (stage) stage.reset(); }
     paused = !!d.paused;
     $('tc-pause').classList.toggle('hidden', !paused);
+    if (stage) stage.setPaused(paused);
     if (d.endsMs != null) { endsAt = Date.now() + d.endsMs; pausedLeft = d.endsMs; }
     frenzy = !!d.frenzy;
     document.body.classList.toggle('tc-frenzy', frenzy);
     $('tc-frenzy').classList.toggle('hidden', !frenzy);
+    if (d.round) { rd = { n: d.round.n, total: d.round.total, phase: d.round.phase, final: !!d.round.final, ms: Math.max(1, d.round.ms), until: Date.now() + d.round.ms, pausedLeft: d.round.ms }; paintRound(); setWindow(rd.phase); }
     const bd = d.board;
     if (bd) {
       seats = bd.seats.slice();
       words = bd.words; target = bd.target;
       anger = bd.anger || 0;
+      captain = bd.captain;
       if (stage) {
         stage.setCrew(seats, g.you);
-        (bd.hammers || []).forEach((h) => { if (h.k !== g.you) stage.ham(h.k, h.st, h.x); });
-        stage.placeFen(bd.fx, false);
+        stage.setCaptain(bd.captain);
+        stage.crabTo(bd.crab, bd.crab, true);
+        if (bd.fen) stage.fenec(bd.fen);
+        (bd.claws || []).forEach((c) => stage.claw(c.k, c.st === 'fall' ? 'armed' : c.st, c.off, c.charges));
         stage.setAnger(anger);
+        stage.setPlaying(rd.phase === 'pw' || rd.phase === 'pwin');
       }
     }
     if (d.you) {
-      myH = { st: d.you.st || 'idle', until: Date.now() + (d.you.ms || 0), guided: !!d.you.guided, x: d.you.x != null ? d.you.x : 0.5 };
-      if (stage) stage.ham(g.you, myH.st === 'jam' ? 'jam' : myH.st, myH.x);
+      charges = d.you.charges || 0;
+      myClaw = d.you.claw ? d.you.claw.st : 'idle';
+      role = d.you.captain ? 'cap' : (rd.phase === 'pw' || rd.phase === 'pwin') ? (d.you.role || (myClaw !== 'idle' ? 'mart' : 'watch')) : 'none';
       setWords(d.you.k, d.you.words || 0);
+      if (stage) stage.showReach(rd.phase === 'pw' && (role === 'mart' || (role === 'cap' && charges > 0)));
     }
+    paintMeter();
     paintCrew();
     paintSack();
-    if (d.q) { if (!myQ || myQ.qid !== d.q.qid) { myQ = d.q; myQ.until = Date.now() + (d.q.ms != null ? d.q.ms : 15000); } }
-    else if (myH.st !== 'idle') myQ = null;
+    if (d.q) { if (!myQ || myQ.qid !== d.q.qid) { myQ = d.q; myQ.total = 8000; } myQ.until = Date.now() + (d.q.ms != null ? d.q.ms : 8000); }
+    else myQ = null;
     if (d.phase === 'play') paintPanel();
-    else if (d.phase === 'countdown' || d.phase === 'intro') msg('¡Atrapa a Fénec!', 'Responde bien = tu martillo se carga 🔨 · ¡luego aplasta a Fénec!', 'calm', A + 'fenec-idle.webp');
+    else if (d.phase === 'countdown' || d.phase === 'intro') msg('Draly Cangrejo', 'Responde bien = +1 martillazo 🔨 · luego, ¡a martillar a Fénec!', 'calm', A + 'fenec-idle.webp');
     if (d.phase === 'play' || d.phase === 'intro') runClock();
     paintClock();
-    if (bd && bd.phase === 'bonk' && stage) { stage.fenPose('spill'); }
-    duck(myH.st === 'loaded');
   }
   function init(c) {
     ctx = c;
@@ -427,7 +570,7 @@
     touch.addEventListener('pointermove', touchMove);
     touch.addEventListener('pointerup', touchEnd);
     touch.addEventListener('pointercancel', () => { drag = null; });
-    $('tc-golpe').addEventListener('click', () => slamNow(null));
+    $('tc-golpe').addEventListener('click', () => { if (role === 'cap') slamNow(stage ? stage.crabX : null); else slamNow(null); });
     document.addEventListener('visibilitychange', () => { if (on && myQ && !$('tc-quiz').classList.contains('hidden')) seenQ(); });
     window.addEventListener('draly:elsewhere', () => { stopAll(); duck(false); setOn(false); });
     let lastReact = 0;
@@ -437,13 +580,14 @@
       lastReact = now;
       b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop');
       ctx.socket.emit('player:tc-react', { pin: ctx.getPin(), e: b.dataset.e });
+      if (stage) stage.react(b.dataset.e, skinOf(g && g.you));
     }));
     s.on('state', (st) => {
       if (!st) return;
       if (st.gameType) setOn(st.gameType === 'teamcrab');
       if (!on) return;
       if (st.state === 'lobby') {
-        stopAll(); g = null; myQ = null; moment = null; frozeAt = 0; stopCeremony();
+        stopAll(); g = null; myQ = null; stopCeremony();
         placeMute(false);
         document.body.classList.remove('tc-ended', 'tc-frenzy');
         const old = $('tc-cer'); if (old) old.remove();
@@ -452,13 +596,13 @@
         const off = {};
         Object.values(st.players).forEach((p) => { off[String(p.name).toLowerCase()] = !!p.off; });
         let ch = false;
-        seats.forEach((x) => { const k = String(x.name).toLowerCase(); if (k in off && x.on === off[k]) { x.on = !off[k]; ch = true; if (stage) stage.setOn(x.k, x.on); } });
+        seats.forEach((x) => { if (x.robot) return; const k = String(x.name).toLowerCase(); if (k in off && x.on === off[k]) { x.on = !off[k]; ch = true; if (stage) stage.setOn(x.k, x.on); } });
         if (ch) paintCrew();
       }
     });
     s.on('countdown', () => {
       if (!on) return;
-      stopAll(); g = null; myQ = null; endsAt = 0; streak = 0; moment = null; words = 0; frozeAt = 0; stopCeremony();
+      stopAll(); g = null; myQ = null; endsAt = 0; streak = 0; words = 0; charges = 0; role = 'none'; stopCeremony();
       document.body.classList.remove('tc-ended', 'tc-frenzy');
       const old = $('tc-cer'); if (old) old.remove();
     });
@@ -467,7 +611,7 @@
       if (!on || !d.board || !g || d.board.id !== g.b) return;
       seats = d.board.seats.slice();
       target = d.board.target;
-      if (stage) { stage.setCrew(seats, g.you); (d.board.hammers || []).forEach((h) => stage.ham(h.k, h.k === g.you ? myH.st : h.st, h.k === g.you ? myH.x : h.x)); }
+      if (stage) { stage.setCrew(seats, g.you); (d.board.claws || []).forEach((c) => { if (c.k !== g.you) stage.claw(c.k, c.st, c.off, c.charges); }); }
       paintCrew(); paintSack();
     });
     s.on('tc:intro', (d) => {
@@ -475,7 +619,7 @@
       ctx.markActivity();
       g.phase = 'intro';
       if (stage) { stage.say('¡Atrapa a Fénec!', 'go', (d.ms || 2600) - 700); stage.taunt('idle', '¡No me atrapan! 😜', 1800); }
-      msg('¡Atrapa a Fénec!', 'Responde bien = tu martillo se carga 🔨 · ¡luego aplasta a Fénec!', 'calm', A + 'fenec-idle.webp');
+      msg('Draly Cangrejo', 'Responde bien = +1 martillazo 🔨 · si fallas, ¡El Péndulo se lo come!', 'calm', A + 'fenec-idle.webp');
       later((d.ms || 2600) - 700, () => { if (stage) stage.say('¡YA!', 'go', 700); sfx(H + 'start.mp3', 0.7); sfx(A + 'clank.mp3', 0.7); buzz(30); });
     });
     s.on('tc:play', (d) => {
@@ -483,15 +627,20 @@
       g.phase = 'play';
       endsAt = Date.now() + (d.endsMs || 0);
       runClock();
-      paintPanel();
     });
+    s.on('tc:round', (d) => { if (on && g && d) onRound(d); });
+    s.on('tc:roles', (d) => { if (on && g && d.b === g.b) onRoles(d); });
     s.on('tc:q', (d) => {
       if (!on || !g || d.b !== g.b) return;
       ctx.markActivity();
       myQ = d;
-      myQ.until = Date.now() + (d.ms || 15000);
-      if (myH.st === 'idle' && moment !== 'swing') paintMyQ();
+      myQ.total = d.ms || 8000;
+      myQ.until = Date.now() + (d.ms || 8000);
+      if (d.charges != null) { charges = d.charges; paintMeter(); }
+      if (rd.phase === 'qw') paintMyQ();
     });
+    s.on('tc:ping', (d) => { if (on && d && d.t) ctx.socket.emit('player:tc-pong', { pin: ctx.getPin(), t: d.t }); });
+    s.on('tc:qx', () => { if (!on || !g) return; myQ = null; if (rd.phase === 'qw') paintMyQ(); });
     s.on('tc:nope', (d) => {
       if (!on || !myQ || !d || d.qid !== myQ.qid) return;
       if (d.why === 'closed') { myLocked = false; document.querySelectorAll('#tc-tiles .tc-tile').forEach((x) => { x.disabled = false; x.classList.remove('chosen'); }); }
@@ -504,21 +653,21 @@
       myQ = null;
       if (d.ok) {
         if (ts[d.idx]) ts[d.idx].classList.add('ok');
+        charges = d.charges;
+        paintMeter(d.gained ? 'add' : null);
         sfx(K + 'correct.mp3', 0.55);
-        sfx(A + 'clank.mp3', 0.5);
+        if (d.gained) sfx(A + 'clank.mp3', 0.5);
         buzz(20);
-        $('tc-qfeed').textContent = '🔨 ¡Martillo cargado!';
+        $('tc-qfeed').textContent = d.gained ? '🔨 ¡+1 martillazo!' : '🔨 ¡Martillo lleno! ¡Y sumas para Capitán ⭐!';
         $('tc-qfeed').className = 'tc-qfeed ok ans';
+        $('tc-qfeed').dataset.at = String(Date.now());
         cheer(streak);
-        myH = { st: 'loaded', until: Date.now() + (d.loadMs || 6000), guided: !!d.guided, x: myH.x };
-        later(260, () => { if (myH.st === 'loaded') { duck(true); paintPad(); if (stage && g) stage.ham(g.you, 'loaded', myH.x); } });
       } else {
         if (ts[d.idx]) ts[d.idx].classList.add('no');
         if (ts[d.correctIdx]) ts[d.correctIdx].classList.add('ok');
         document.querySelectorAll('#tc-tiles .tc-tile').forEach((x) => { x.disabled = true; });
         $('tc-qtime').classList.add('done');
         sfx(K + 'wrong.mp3', 0.4);
-        later(200, () => sfx(A + 'giggle.mp3', 0.75));
         buzz([30, 40, 30]);
         const fb = $('tc-qfeed');
         fb.innerHTML = '';
@@ -526,107 +675,30 @@
         sad.className = 'sad';
         const im = document.createElement('img');
         im.alt = '';
-        im.src = A + 'fenec-laugh.webp';
+        im.src = A + 'pendulo-angry.webp';
         const tx = document.createElement('span');
-        tx.textContent = (d.late ? '¡Se acabó el tiempo! ' : d.tooFast ? '¡Muy rápido! Primero lee. ' : '¡Casi! ') + 'Era «' + d.correctText + '» · ¡Mías! 😆';
+        tx.textContent = (d.late ? '¡Se acabó el tiempo! ' : d.tooFast ? '¡Muy rápido! Primero lee. ' : '¡Casi! ') + 'Era «' + d.correctText + '» · El Péndulo: ¡Ñam! 😋';
         sad.append(im, tx);
         fb.appendChild(sad);
         fb.className = 'tc-qfeed no ans';
-        myH = { st: 'jam', until: Date.now() + (d.jamMs || 3000), guided: false, x: myH.x };
-        if (stage && g) stage.ham(g.you, 'jam', myH.x);
-        later(1300, () => { if (myH.st === 'jam') paintPanel(); });
+        fb.dataset.at = String(Date.now());
       }
     });
-    // a hammer's state (mine: the end of a jam, a knock, back up; a crewmate's: loaded = its shadow on the dock)
-    s.on('tc:ham', (d) => {
-      if (!on || !g || d.b !== g.b) return;
-      if (d.k === g.you) {
-        if (d.st === 'loaded') myH = { st: 'loaded', until: Date.now() + (d.ms || 6000), guided: !!d.guided, x: d.x != null ? d.x : myH.x };
-        else myH.st = d.st;
-        if (stage) stage.ham(g.you, d.st, myH.x);
-        if (d.st === 'idle') { duck(false); if (!moment) paintPanel(); }
-        if (d.st === 'loaded' && !moment) { duck(true); paintPad(); }
-        return;
-      }
-      if (stage) stage.ham(d.k, d.st, d.x);
+    // my own miss: the charge flies from my meter into El Péndulo («¡Ñam!»); with none he still grows
+    s.on('tc:mine', (d) => {
+      if (!on || !g) return;
+      lastMineAt = Date.now();
+      if (d.ate) eatAt = Date.now();
+      charges = d.charges;
+      eatFly(!!d.ate);
+      paintMeter();
+      later(540, () => sfx(A + (d.ate ? 'chomp.mp3' : 'slurp.mp3'), 0.8));   // («¡Ñam!»: he bites my hammer; with none he just slurps)
     });
-    s.on('tc:aim', (d) => { if (on && g && d.b === g.b && d.k !== g.you && stage) stage.aim(d.k, d.x); });
-    s.on('tc:slam', (d) => {
-      if (!on || !g || d.b !== g.b) return;
-      ctx.markActivity();
-      if (d.k === g.you) {
-        if (Date.now() - mySlamAt > 600) {                          // (it slammed by itself: the time ran out)
-          myH.st = 'fall';
-          if (stage) stage.slam(g.you, d.x, d.ms);
-          later((d.ms || 420) - 20, () => sfx(A + 'thud.mp3', 0.9));
-          msg('🔨 ¡BAM!', '¡Se acabó el tiempo y tu martillo cayó solo!', 'calm', A + 'hammer.webp');
-          $('tc-hand').className = 'tc-hand hidden';
-        }
-        duck(false);
-        return;
-      }
-      if (stage) stage.slam(d.k, d.x, d.ms);
-      later((d.ms || 420) - 20, () => sfx(A + 'thud.mp3', 0.45));
-    });
-    s.on('tc:impact', (d) => {
-      if (!on || !g || d.b !== g.b) return;
-      if (d.k === g.you && !d.hit) {
-        $('tc-plus').textContent = '¡Se escapó! 😜';
-        $('tc-plus').className = 'tc-plus no';
-        if (!reduced()) { void $('tc-plus').offsetWidth; $('tc-plus').classList.add('on'); }
-      }
-    });
-    s.on('tc:hop', (d) => { if (on && g && d.b === g.b && stage) stage.hop(d.from, d.to, d.ms); });
-    s.on('tc:up', (d) => { if (on && g && d.b === g.b && stage) stage.up(d.from, d.to, d.ms); });
-    s.on('tc:taunt', (d) => {
-      if (!on || !g || d.b !== g.b || !stage || moment) return;              // (a big moment speaks for itself)
-      stage.taunt(d.line);
-      if (d.line === 'miss' || d.line === 'miss2' || d.line === 'mias') later(150, () => sfx(A + 'giggle.mp3', d.line === 'mias' ? 0.6 : 0.4));
-    });
-    // a BONK on my crew: the whole phone floods gold, Fénec flat, the words fly back
-    s.on('tc:bonk', (d) => {
-      if (!on || !g || d.b !== g.b) return;
-      ctx.markActivity();
-      const meB = d.k === g.you;
-      const meA = (d.assists || []).includes(g.you);
-      if (myH.st === 'loaded' && !meB) myH.until += d.ms || 2000;       // (the server holds my loaded hammer while he lies flat)
-      words = d.words; target = d.target;
-      paintSack('pop');
-      const bk = seat(d.k);
-      if (bk) setWords(d.k, (bk.words || 0) + d.pts, true);
-      (d.assists || []).forEach((k) => { const x = seat(k); if (x) setWords(k, (x.words || 0) + 1, true); });
-      setMoment('bonk', d.ms || 2000);
-      if (stage) stage.bonk(d.k, d.flying, d.pts, d.ms);
-      if (meB || meA || Date.now() - lastBigFx > 6000) { lastBigFx = Date.now(); fxOn('bonk', 1500); }   // (restraint: a crewmate's bonks never stack into noise)
-      sfx(A + 'thud.mp3', 1);
-      later(90, () => sfx(H + 'pop.mp3', 0.8));
-      later(700, () => sfx('/assets/mochi/star.mp3', 0.75));
-      later(1000, () => sfx(K + 'streak.mp3', 0.6));
-      buzz(meB ? [60, 40, 120] : 50);
-      const who = bk ? bk.name : '';
-      const assist = (d.assists || []).filter((k) => k !== d.k).map(nameOf).filter(Boolean);
-      if (meB) bigCard(S() ? S().head(skinOf(g.you)) : null, '¡LO APLASTASTE! +' + d.pts + ' 📚', assist.length ? '¡Trampa de ' + assist.join(' y ') + '!' : (d.x2 ? '¡Atardecer dorado: doble!' : '¡Las palabras vuelven a la tripulación!'), 'gold me', 2500);
-      else if (meA) bigCard(S() ? S().head(skinOf(g.you)) : null, '¡Tu trampa funcionó! +1 📚', who + ' lo aplastó · ¡le tapaste la salida!', 'gold', 2500);
-      else bigCard(S() ? S().head(skinOf(d.k)) : null, '¡' + who + ' aplastó a Fénec!', '+' + d.pts + ' palabras para la tripulación 📚', 'gold', 2500);
-    });
-    s.on('tc:full', (d) => {
-      if (!on || !g || d.b !== g.b) return;
-      if (P() && P().news) P().news('¡Bolsa vacía! 🎒 ¡Lo atraparon!', { sub: 'Sigan: cada martillazo suma al récord de su tripulación', kind: 'win', ms: 2600 });
-      sfx(K + 'sting-win.mp3', 0.6);
-    });
-    // a miss on my crew (never who): Fénec snatches a word back, the spark feeds El Péndulo
-    s.on('tc:snatch', (d) => {
-      if (!on || !g || d.b !== g.b) return;
-      words = d.words; target = d.target;
-      paintSack(d.n ? 'drop' : null);
-      if (stage && d.n) stage.snatch('📚');
-    });
-    s.on('tc:feed', (d) => {
+    s.on('tc:eat', (d) => {
       if (!on || !g || d.b !== g.b) return;
       anger = d.anger;
-      if (stage) stage.feed(d.anger);
-      later(560, () => sfx(A + 'slurp.mp3', 0.55));
-      if (d.anger >= 4 && d.anger < 5) later(900, () => sfx(A + 'tick.mp3', 0.6));
+      // (my own miss plays from my meter: tc:mine arrives right after this one)
+      later(80, () => { if (Date.now() - lastMineAt < 400) return; if (stage) stage.eat(d.anger, null, d.ate); later(540, () => sfx(A + (d.ate ? 'chomp.mp3' : 'slurp.mp3'), 0.45)); });
     });
     s.on('tc:calm', (d) => {
       if (!on || !g || d.b !== g.b) return;
@@ -635,34 +707,81 @@
       if (stage) stage.calm(d.anger);
       if (Math.floor(was) !== Math.floor(d.anger)) sfx(H + 'pop.mp3', 0.35);
     });
-    // El Péndulo's BIG SWING: the whole phone, every hammer of my crew knocked away
-    s.on('tc:swing', (d) => {
+    s.on('tc:race', (d) => { if (!on || !g || d.b !== g.b) return; race[d.k] = d.rightQW; if (d.lead !== undefined) raceLead = d.lead; paintRace(); });
+    // the crab walks (the server's x every ~0.1 s; the Capitán's finger relayed so everyone sees it start at once)
+    s.on('tc:crab', (d) => { if (on && g && d.b === g.b && stage) stage.crabTo(d.x, d.tx); });
+    s.on('tc:steer', (d) => { if (on && g && d.b === g.b && stage && d.k !== g.you) { if (Math.abs(d.tx - stage.crabX) > 0.3) walkSfx(0.25); stage.steer(d.tx); stage.light(d.k); } });
+    s.on('tc:fen', (d) => { if (on && g && d.b === g.b && stage) { stage.fenec(d); if (role === 'mart' && !guidedDone.mart) coach(); } });
+    s.on('tc:aim', (d) => { if (on && g && d.b === g.b && d.k !== g.you && stage) { stage.aim(d.k, d.off); stage.light(d.k); } });
+    s.on('tc:claw', (d) => {
+      if (!on || !g || d.b !== g.b) return;
+      if (d.k === g.you) { myClaw = d.st; charges = d.charges; paintMeter(); if (rd.phase === 'pw' && role !== 'watch') paintRole(); }
+      if (stage) stage.claw(d.k, d.st, null, d.charges);
+    });
+    s.on('tc:slam', (d) => {
       if (!on || !g || d.b !== g.b) return;
       ctx.markActivity();
-      anger = 1;
-      setMoment('swing', d.ms || 1800);
-      if (stage) stage.swing(d.ms);
-      fxOn('swing', (d.ms || 1800) + 200);
-      sfx(A + 'swing.mp3', 0.95);
-      later(260, () => sfx(A + 'clank.mp3', 0.8));
-      later(520, () => sfx(A + 'swing.mp3', 0.7));
-      buzz([80, 60, 160]);
-      bigCard(A + 'pendulo-angry.webp', '¡ZAS! El Péndulo se enojó', 'Los errores lo alimentan… ¡respiren, respondan bien y se calma!', 'purple', (d.ms || 1800) + 400);
-      if (myH.st !== 'jam') { myH.st = 'knock'; myH.until = Date.now() + (d.knockMs || 3000); }
+      if (d.k === g.you) { charges = d.charges; paintMeter(); if (stage) { if (Date.now() - mySlamAt > 600) stage.slam(g.you, d.x, d.ms); else stage.refall(g.you, d.x); } return; }
+      if (stage) { stage.slam(d.k, d.x, d.ms); stage.charges(d.k, d.charges); }
+      later((d.ms || 350) - 20, () => sfx(A + 'thud.mp3', 0.45));
     });
-    s.on('tc:calmdown', (d) => { if (on && g && d.b === g.b && stage) stage.setAnger(d.anger); });
+    s.on('tc:impact', (d) => {
+      if (!on || !g || d.b !== g.b) return;
+      if (d.k === g.you && !d.hit) {
+        const p = $('tc-plus');
+        p.textContent = '¡Fallaste! Mira dónde para Fénec 👀';
+        p.className = 'tc-plus no';
+        if (!reduced()) { void p.offsetWidth; p.classList.add('on'); }
+      }
+    });
+    s.on('tc:taunt', (d) => {
+      if (!on || !g || d.b !== g.b || !stage) return;
+      stage.taunt(d.line);
+      if (d.line === 'miss' || d.line === 'miss2') later(150, () => sfx(A + 'giggle.mp3', 0.4));
+    });
+    // a BONK on my crew: the whole phone floods gold, Fénec flat, the words fly back
+    s.on('tc:bonk', (d) => {
+      if (!on || !g || d.b !== g.b) return;
+      ctx.markActivity();
+      const meB = d.k === g.you;
+      const meA = (d.assists || []).includes(g.you);
+      const meC = d.cap === g.you;
+      words = d.words; target = d.target;
+      paintSack('pop');
+      const bk = seat(d.k);
+      if (bk) setWords(d.k, (bk.words || 0) + d.pts, true);
+      (d.assists || []).forEach((k) => { const x = seat(k); if (x) setWords(k, (x.words || 0) + 1, true); });
+      if (d.cap != null) { const x = seat(d.cap); if (x) setWords(d.cap, (x.words || 0) + 1, true); }
+      bonkAt = Date.now();
+      if (stage) stage.bonk(d.k, d.flying, d.pts, d.ms, d.x);
+      if (meB || meA || meC || Date.now() - lastBigFx > 5000) { lastBigFx = Date.now(); fxOn('bonk', 1300); }   // (restraint: a crewmate's bonks never stack into noise)
+      sfx(A + 'thud.mp3', 1);
+      later(90, () => sfx(H + 'pop.mp3', 0.8));
+      later(600, () => sfx('/assets/mochi/star.mp3', 0.75));
+      buzz(meB ? [60, 40, 120] : 50);
+      const who = bk ? bk.name : '';
+      if (meB) bigCard(S() ? S().head(skinOf(g.you)) : null, '¡BONK! +' + d.pts + ' 📚', d.x2 ? '¡Ronda final: doble!' : '¡Le diste a Fénec! Las palabras vuelven', 'gold me', 1800);
+      else if (meC) bigCard(S() ? S().head(skinOf(g.you)) : null, '¡Buen manejo, Capitán! +1 📚', who + ' le dio · ¡tú llevaste el cangrejo!', 'gold', 1800);
+      else if (meA) bigCard(S() ? S().head(skinOf(g.you)) : null, '¡Tu trampa funcionó! +1 📚', who + ' le dio · ¡tu martillo le tapaba la salida!', 'gold', 1800);
+      else bigCard(S() ? S().head(skinOf(d.k)) : null, '¡' + who + ' le dio a Fénec!', '+' + d.pts + ' palabras para la tripulación 📚', 'gold', 1800);
+    });
+    s.on('tc:full', () => {
+      if (!on || !g) return;
+      if (P() && P().news) P().news('¡Bolsa llena! 🎒 ¡Lo atraparon!', { sub: 'Sigan: cada martillazo suma al récord de su tripulación', kind: 'win', ms: 2400 });
+      sfx(K + 'sting-win.mp3', 0.6);
+    });
     s.on('tc:noslam', (d) => {
       if (!on || !d) return;
-      if (d.why === 'wait' && myH.st === 'fall') { myH.st = 'loaded'; if (stage && g) stage.ham(g.you, 'loaded', myH.x); later(600, () => { if (!moment) paintPad(); }); }
+      if (d.why === 'wait' || d.why === 'closed') { charges = Math.min(rules.max, charges + 1); mySlamAt = 0; myClaw = d.why === 'wait' ? 'armed' : myClaw; paintMeter(); if (rd.phase === 'pw') paintRole(); }
     });
-    s.on('tc:react', (d) => { if (on && g && d.b === g.b && stage) stage.react(d.e, skinOf(d.k)); });
+    s.on('tc:react', (d) => { if (on && g && d.b === g.b && stage && d.k !== g.you) stage.react(d.e, skinOf(d.k)); });
     s.on('tc:frenzy', (d) => {
       if (!on || !g) return;
       frenzy = !d.off;
       document.body.classList.toggle('tc-frenzy', frenzy);
       $('tc-frenzy').classList.toggle('hidden', !frenzy);
       if (frenzy) {
-        if (P() && P().news) P().news('¡Atardecer dorado! 🌅', { sub: 'Últimos 30 segundos: cada martillazo vale doble', kind: 'alarm', ms: 2800 });
+        if (P() && P().news) P().news('¡Ronda final! 🌅', { sub: 'Cada martillazo vale doble', kind: 'alarm', ms: 2400 });
         sfx(PARTY + 'hurry.mp3', 0.8);
         buzz([60, 40, 60]);
       }
@@ -678,18 +797,20 @@
     s.on('tc:pause', (d) => {
       if (!on || !g) return;
       paused = !!d.paused;
-      if (paused) pausedLeft = endsAt - Date.now();
+      if (paused) { pausedLeft = endsAt - Date.now(); rd.pausedLeft = rd.until - Date.now(); }
       $('tc-pause').classList.toggle('hidden', !paused);
-      freezeQ(paused);
+      if (stage) stage.setPaused(paused);
       if (!paused) qbar();
     });
     s.on('tc:final', (d) => {
       if (!on || !g) return;
       clearTimers(); duck(false);
       g.phase = 'final';
-      myQ = null; moment = null; frozeAt = 0;
-      $('screen-teamcrab').classList.remove('tc-moment', 'tc-aiming');
+      myQ = null;
+      $('screen-teamcrab').classList.remove('tc-aiming', 'tc-captain');
       $('tc-touch').classList.remove('live');
+      $('tc-hand').className = 'tc-hand hidden';
+      if (stage) { stage.setPlaying(false); stage.showReach(false); }
       document.querySelectorAll('#tc-tiles .tc-tile').forEach((x) => { x.disabled = true; });
       const mine = (d.boards || []).find((b) => b.id === g.b);
       msg('¡FINAL!', mine ? (mine.caught ? '¡Recuperaron las palabras!' : 'Fénec todavía tiene palabras…') : '', 'calm', A + 'crab-hero.webp');
@@ -712,9 +833,9 @@
       box.innerHTML = '<div class="tc-you"><span class="tc-youdome"><img id="tc-you-img" alt=""></span><span>Vas a pilotar el cangrejo como<b id="tc-you-name"></b></span></div>'
         + '<div class="tc-villain"><img id="tc-vil-img" src="' + A + 'anim/fenec-idle-still.webp" alt=""><span><b>¡Fénec se robó las palabras!</b>Atrápalo con tu tripulación</span></div>'
         + '<div class="tc-how-title">Así se juega</div><ol>'
-        + '<li><div class="tc-step s1"><i class="t r">▲</i><i class="t b">◆</i><i class="t y ok">●</i><i class="t g">■</i><img class="hm" src="' + A + 'hammer.webp" alt=""></div><span>Responde bien<small>= tu martillo se carga 🔨</small></span></li>'
-        + '<li><div class="tc-step s2"><img class="fx" src="' + A + 'fenec-idle.webp" alt=""><img class="hm" src="' + A + 'hammer.webp" alt=""><i class="fing"></i></div><span>¡Toca a Fénec!<small>tu martillo cae encima: ¡BONK!</small></span></li>'
-        + '<li><div class="tc-step s3"><img src="' + A + 'fenec-spill.webp" alt=""><b>📚</b></div><span>Recupera las palabras<small>si fallas, ¡se lleva una!</small></span></li>'
+        + '<li><div class="tc-step s1"><i class="t r">▲</i><i class="t b">◆</i><i class="t y ok">●</i><i class="t g">■</i><img class="hm" src="' + A + 'hammer.webp" alt=""></div><span>Responde bien<small>= +1 martillazo 🔨</small></span></li>'
+        + '<li><div class="tc-step s2"><img class="pd" src="' + A + 'pendulo-eat.webp" alt=""><img class="hm" src="' + A + 'hammer.webp" alt=""></div><span>Si te equivocas…<small>El Péndulo se come tu martillazo</small></span></li>'
+        + '<li><div class="tc-step s3"><img class="fx" src="' + A + 'fenec-idle.webp" alt=""><img class="hm" src="' + A + 'hammer.webp" alt=""><i class="fing"></i></div><span>¡A martillar!<small>toca a Fénec: ¡BONK! · el mejor es ⭐ Capitán y mueve el cangrejo</small></span></li>'
         + '</ol>';
       headEl.after(box);
       // his idle loop (Canva, the light copy for phones) after the still first frame
@@ -742,6 +863,7 @@
     const me = (data && data.me) || {};
     const bd = tc.board || { rows: [], stars: [], winners: [] };
     const rows = bd.rows || [];
+    const bots = bd.robots || [];
     const byK = {};
     rows.forEach((r) => { byK[r.k] = r; });
     const root = document.createElement('div');
@@ -754,7 +876,7 @@
     root.append(st, showEl);
     box.appendChild(root);
     document.body.classList.add('tc-ended');
-    const stg = S() ? new (S().Stage)(st, { mode: 'phone' }) : null;
+    const stg = S() ? new (S().Stage)(st, Object.assign({ mode: 'phone' }, rules)) : null;
     const Cc = cer = { timers: [], stg };
     const at = (ms, fn) => Cc.timers.push(setTimeout(fn, ms));
     const H_ = HB();
@@ -785,12 +907,12 @@
       if (sub) { const p = document.createElement('p'); p.textContent = sub; c.appendChild(p); }
       showEl.appendChild(c);
     }
-    if (stg && rows.length) {
-      stg.setCrew(rows.map((r) => ({ k: r.k, name: r.name, skin: r.skin })), me.k);
-      stg.placeFen(2, false);
+    if (stg && (rows.length || bots.length)) {
+      stg.setCrew(rows.concat(bots.map((r) => Object.assign({ robot: true }, r))).map((r) => ({ k: r.k, name: r.name, skin: r.skin, robot: r.robot })), me.k);
+      stg.placeFen(2);
     }
-    const STAR_ICO = { martillo: '🔨', trampa: '🪤', racha: '🔥' };
-    const UNIT = { martillo: ['martillazo', 'martillazos'], trampa: ['trampa', 'trampas'], racha: ['seguida', 'seguidas'] };
+    const STAR_ICO = { martillo: '🔨', capitan: '⭐', trampa: '🪤', racha: '🔥' };
+    const UNIT = { martillo: ['martillazo', 'martillazos'], capitan: ['atrapada al volante', 'atrapadas al volante'], trampa: ['trampa', 'trampas'], racha: ['seguida', 'seguidas'] };
     const starValue = (s) => s.value + ' ' + (UNIT[s.id] ? UNIT[s.id][s.value === 1 ? 0 : 1] : s.unit);
     const stars = bd.stars || [];
     let t = 150;
@@ -856,11 +978,12 @@
       l1.className = 'tc-line';
       if (me.guest) l1.textContent = 'Mira el proyector: ¡ahí están las tripulaciones! 👀';
       else if (me.words) { l1.innerHTML = 'Recuperaste: <b></b>'; l1.querySelector('b').textContent = me.words + (me.words === 1 ? ' palabra 📚' : ' palabras 📚'); }
-      else l1.textContent = 'Responde para cargar tu martillo 🔨 y ¡toca a Fénec!';
+      else l1.textContent = 'Responde bien para ganar martillazos 🔨 y ¡toca a Fénec!';
       const l2 = document.createElement('p');
       l2.className = 'tc-small';
       const bits = [];
       if (me.bonks) bits.push(me.bonks + (me.bonks === 1 ? ' martillazo' : ' martillazos'));
+      if (me.captained) bits.push('⭐ Capitán ' + me.captained + (me.captained === 1 ? ' vez' : ' veces'));
       if (me.assists) bits.push(me.assists + (me.assists === 1 ? ' trampa' : ' trampas'));
       if (!me.guest && bd.caught != null) bits.push(bd.caught ? 'tu tripulación lo atrapó 🎉' : 'Fénec se escapó 😜');
       if (!me.guest && me.crewRank && me.crews > 1) bits.push('tripulación ' + me.crewRank + '.ª de ' + me.crews);
@@ -882,6 +1005,19 @@
         im.src = S() ? S().head(r.skin) : '';
         const n = document.createElement('span');
         n.textContent = r.rank + '. ' + r.name;
+        const sc = document.createElement('b');
+        sc.textContent = r.words + ' 📚';
+        li.append(im, n, sc);
+        list.appendChild(li);
+      });
+      bots.forEach((r) => {                                       // (robot crewmates: in the crew, never ranked)
+        const li = document.createElement('li');
+        li.className = 'bot';
+        const im = document.createElement('img');
+        im.alt = '';
+        im.src = S() ? S().head(r.skin) : '';
+        const n = document.createElement('span');
+        n.textContent = r.name + ' (robot)';
         const sc = document.createElement('b');
         sc.textContent = r.words + ' 📚';
         li.append(im, n, sc);
@@ -916,14 +1052,17 @@
     init, lobby, end,
     frame: () => ({
       on, phase: g && g.phase, you: g && g.you, board: g && g.b, seats: seats.map((x) => x.name + ':' + (x.words || 0)), words, target, anger,
-      ham: myH.st, q: myQ && myQ.text, answers: myQ && myQ.answers, paused, frenzy, moment, fen: stage ? stage.at : null,
+      round: rd.n, window: rd.phase, final: rd.final, role, captain, charges, claw: myClaw, q: myQ && myQ.text, answers: myQ && myQ.answers,
+      paused, frenzy, fen: stage ? Math.round(stage.fx * 100) / 100 : null, fenMode: stage ? stage.f.mode : null, crab: stage ? Math.round(stage.crabX * 100) / 100 : null,
       aiming: !!($('screen-teamcrab') && $('screen-teamcrab').classList.contains('tc-aiming')),
+      moment: Date.now() - bonkAt < 1100 ? 'bonk' : Date.now() - eatAt < 900 ? 'eat' : null,
     }),
     answer: (i) => answer(i),
-    // test hooks: tap where Fénec stands now (like a finger), or slam over a spot
-    tapFenec: () => { if (!stage || !stage.spotX) return false; const x = stage.at / (stage.spotX.length - 1); slamNow(x); return true; },
-    slamAt: (spot) => { slamNow(spot / 4); },
-    aimAt: (spot) => { aimTo(spot / 4, true); },
+    // test hooks: like a finger — tap where Fénec stands now (or where he will land), slam at x, aim at x, steer to x
+    tapFenec: () => { if (!stage) return false; const f = stage.f; const x = f.mode === 'run' || f.mode === 'crouch' ? f.x1 : stage.fx; slamNow(x); return true; },
+    slamAt: (x) => { slamNow(x); },
+    aimAt: (x) => { aimTo(x, true); },
+    steerTo: (x) => { steerTo(x, true); },
     freeze: (v) => (CrabPhone._freeze ? CrabPhone._freeze(v) : 0),
     stage: () => stage,
   };

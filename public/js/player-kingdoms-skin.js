@@ -246,7 +246,7 @@
     if (game === 'escape') { t.className = 'kdp-team es-team'; t.textContent = '🚀 ¡Eres de la tripulación!'; }
     if (game === 'halcon') { t.className = 'kdp-team hc-team'; t.textContent = '🦅 Ojos de Halcón · ¡tableros de 4!'; }
     if (game === 'dormilon') { t.className = 'kdp-team dm-team'; t.textContent = '😴 ¡No despiertes a Dralingo! · tableros de 4'; }
-    if (game === 'teamcrab') { t.className = 'kdp-team tc-team'; t.textContent = '🦀 ¡Atrapa a Fénec! · tripulaciones de 4'; }
+    if (game === 'teamcrab') { t.className = 'kdp-team tc-team'; t.textContent = '🦀 Draly Cangrejo · tripulaciones de 4'; }
     if (game === 'monopoly') { t.className = 'kdp-team mn-team'; t.textContent = '🎲 El Gran Tablero de Dubái'; }
     if (game === 'dragon-eye') { t.className = 'kdp-team dr-team'; t.textContent = '🐉 La Carrera del Cielo de Dubái'; }
     if (game === 'mochi-mash' || game === 'pinata' || game === 'sixseven') t.textContent = team === 'red' ? '¡Eres del Equipo Fuego!' : '¡Eres del Equipo Mar!';

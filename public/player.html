@@ -29,7 +29,7 @@
   <link rel="stylesheet" href="/css/halcon.css?v=20261019zc">
   <!-- ¡No despiertes a Dralingo! -->
   <link rel="stylesheet" href="/css/dormilon.css?v=20261023v3">
-  <link rel="stylesheet" href="/css/teamcrab.css?v=20261023tc">
+  <link rel="stylesheet" href="/css/teamcrab.css?v=20261023tc3">
   <link rel="stylesheet" href="/css/mochi.css?v=20261019zc">
   <link rel="stylesheet" href="/css/party.css?v=20261019zc">
   <link rel="stylesheet" href="/css/pinata.css?v=20261018a">
@@ -731,13 +731,15 @@
     <div class="dm-pause hidden" id="dm-pause"><div><img src="/assets/dralingo/wise.webp" alt=""><b>⏸ Pausa</b><span>Mira al profe</span></div></div>
   </div>
 
-  <!-- ¡Atrapa a Fénec! (js/player-teamcrab.js + js/teamcrab-stage.js + css/teamcrab.css): my crew on top (faces, words,
-       the clock, the words we got back), the beach (our crab, the hammers, Fénec, El Péndulo), the panel below: the quiz,
-       then my loaded hammer (touch Fénec, or drag and «¡GOLPE!»), a message (a jam, a knock). -->
+  <!-- Draly Cangrejo · ¡Atrapa a Fénec! (js/player-teamcrab.js + js/teamcrab-stage.js + css/teamcrab.css): my crew on top
+       (faces, words, the round, the clock, the words we got back), the beach (our walking crab, the hammers, Fénec, El
+       Péndulo) with the window's bar, the panel below: my hammer meter, then the quiz (question window) or my role
+       (play window: ⭐ Capitán drags the crab · 🔨 martillero holds to aim and lets go to slam · 👀 watch and cheer). -->
   <div id="screen-teamcrab" class="hidden">
     <div class="tc-top">
       <div class="tc-crew" id="tc-crew"></div>
       <div class="tc-chips">
+        <b class="tc-round" id="tc-round"></b>
         <b class="tc-clock" id="tc-clock">·:··</b>
         <span class="tc-me" id="tc-me">0 📚</span>
         <span class="tc-fchip hidden" id="tc-frenzy">🌅 ×2</span>
@@ -746,20 +748,24 @@
     <div class="tc-sack" id="tc-sack" role="status"><span class="tc-sack-ico" aria-hidden="true">🎒</span><div class="tc-sack-bar"><i id="tc-sack-fill"></i></div><b id="tc-sack-n">0 / 0</b></div>
     <div class="tc-stagewrap" id="tc-stagewrap">
       <div class="tc-stage" id="tc-stage"></div>
-      <div class="tc-touch" id="tc-touch" aria-label="Toca a Fénec para aplastarlo"></div>
+      <div class="tc-touch" id="tc-touch" aria-label="Arrastra para apuntar o mover el cangrejo; suelta para golpear"></div>
+      <i class="tc-wtimer" id="tc-wtimer" aria-hidden="true"><i></i></i>
       <b class="tc-plus" id="tc-plus" aria-live="polite"></b>
       <i class="tc-hand hidden" id="tc-hand" aria-hidden="true"></i>
     </div>
     <div class="tc-panel">
+      <div class="tc-meter" id="tc-meter" role="status">
+        <span class="tc-slots" id="tc-slots" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+        <b class="tc-meter-n" id="tc-meter-n">0 martillazos</b>
+        <span class="tc-race" id="tc-race"></span>
+      </div>
       <div class="tc-quiz" id="tc-quiz">
-        <div class="tc-qhead"><img src="/assets/teamcrab/hammer.webp" alt=""><span>Responde bien y tu martillo se carga</span></div>
         <div class="tc-mq wait" id="tc-mq"><img id="tc-mq-img" class="hidden" alt=""><b id="tc-mq-text">…</b><i class="tc-qtime" id="tc-qtime" aria-hidden="true"><i></i></i></div>
         <div class="tc-tiles" id="tc-tiles"></div>
         <p class="tc-qfeed" id="tc-qfeed"></p>
       </div>
       <div class="tc-pad hidden" id="tc-pad">
-        <div class="tc-padhint" id="tc-padhint">¡Martillo listo! Toca a Fénec</div>
-        <i class="tc-loadbar" id="tc-loadbar" aria-hidden="true"><i></i></i>
+        <div class="tc-padhint" id="tc-padhint"></div>
         <button class="tc-golpe" id="tc-golpe" type="button">🔨 ¡GOLPE!</button>
       </div>
       <div class="tc-msg hidden" id="tc-msg"><img id="tc-msg-img" class="hidden" alt=""><div class="tc-msgt"><b id="tc-msg-big"></b><span id="tc-msg-small"></span></div></div>
@@ -859,7 +865,7 @@
   <script src="/js/rewards.js?v=20260525c"></script>
   <script src="/js/sentence-categories.js?v=20260606a"></script>
   <script src="/js/kingdoms-board.js?v=20261011d"></script>
-  <script src="/js/player-kingdoms-skin.js?v=20261023tc"></script>
+  <script src="/js/player-kingdoms-skin.js?v=20261023tc3"></script>
   <script src="/js/player-kingdoms.js?v=20261016eq"></script>
   <script src="/js/paint-worlds.js?v=20261017pv2"></script>
   <script src="/js/paint-render.js?v=20261017pv2"></script>
@@ -877,8 +883,8 @@
   <script src="/js/player-halcon.js?v=20261023end"></script>
   <script src="/js/dormilon-stage.js?v=20261023v3"></script>
   <script src="/js/player-dormilon.js?v=20261023end"></script>
-  <script src="/js/teamcrab-stage.js?v=20261023tc2"></script>
-  <script src="/js/player-teamcrab.js?v=20261023tc"></script>
+  <script src="/js/teamcrab-stage.js?v=20261023tc3"></script>
+  <script src="/js/player-teamcrab.js?v=20261023tc3"></script>
   <script src="/js/monopoly-map.js?v=20261016a"></script>
   <script src="/js/monopoly-board.js?v=20261019zc"></script>
   <script src="/js/player-monopoly.js?v=20261023end"></script>
@@ -895,7 +901,7 @@
   <script src="/js/cast.js?v=20261017td"></script>
   <script src="/js/dralingo-fx.js?v=20261017art"></script>
   <script src="/js/saga.js?v=20261020z3d3"></script>
-  <script src="/js/player.js?v=20261023tc"></script>
+  <script src="/js/player.js?v=20261023tc3"></script>
   <script src="/js/pwa.js?v=20261012a" defer></script>
 </body>
 </html>

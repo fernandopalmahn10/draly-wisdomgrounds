@@ -857,7 +857,7 @@
       teamLabel = '¡No despiertes a Dralingo!';   // boards of 4: every kid against the rivals of their board
       teamMascot = '😴';
     } else if (gameType === 'teamcrab') {
-      teamLabel = '¡Atrapa a Fénec!';   // crews of 4: every kid with the crew of their crab
+      teamLabel = 'Draly Cangrejo · ¡Atrapa a Fénec!';   // crews of 4: every kid with the crew of their crab
       teamMascot = '🦀';
     } else if (gameType === 'halcon') {
       teamLabel = 'Ojos de Halcón';         // boards of 4: every kid against the rivals of their board

@@ -1,22 +1,26 @@
-// ¡Atrapa a Fénec! (gameType 'teamcrab') — the rules, no sockets (server.js «ATRAPA A FÉNEC» block glues them to the
-// room). #4 of his Mario Party series: Super Mario Party «Team Crab» (his video y9BKCVx_mNk, 7:30-8:16), turned around
-// (his design 2026-10-23): the KIDS are the crew of a giant red robot crab in the sea of a Dubai beach, one wooden
-// hammer each; FÉNEC, el ladrón de palabras (a fennec-fox cartoon burglar), hops between 5 spots on the dock and dodges.
-// The class plays in BOARDS of 3-4 (the deal of core/halcon.js); each board = one crab, one Fénec, one Péndulo.
-//   · A right quiz answer LOADS my hammer (its shadow shows on the dock). I drag it over a spot and SLAM (tap, swipe down
-//     or «¡GOLPE!») within LOAD_MS (else it slams by itself where it hangs). It falls for FALL_MS; at the impact the
-//     server asks where Fénec is: under it = a BONK (the board's big moment, words fly out of his sack back to the crew).
-//   · Fénec is computer-played and fair: he reacts to a falling hammer on his spot (REACT_MIN-MAX ms, then a HOP_MS hop
-//     to a neighbour spot that no hammer threatens, a loaded hammer's shadow if nothing better), gets spooked by a
-//     shadow that lingers on his spot and wanders now and then. Alone a kid catches him ~1 slam in 3; a crew that covers
-//     his escape spots with their shadows boxes him in (an «assist» for each crewmate whose loaded hammer did it).
-//   · A wrong, late (Q_TIME_MS) or blind (< FAST_MS) answer costs (his standing rule): my hammer jams with smoke JAM_MS,
-//     Fénec snatches a word back into his sack («¡Mías!», never naming who), a grumpy spark feeds El Péndulo (anger +1).
-//     El Péndulo at ANGER_MAX = the BIG SWING: every hammer of the board knocked away KNOCK_MS. Right answers in a row
-//     calm him (−CALM each): «anger feeds him, calm and laughter stop him».
-//   · The clock: 2 / 3 / 4 min (default 2), the last 30 s every bonk ×2. At the end a board that got its target of words
-//     back has CAUGHT him («¡Atrapado!», he runs off: «¡La próxima vez, Dralingo!»); else he escapes and kicks the crab to
-//     pieces. Then each board's Mario Party ceremony (bonus stars) and the crews' leaderboard on the projector.
+// «Draly Cangrejo · ¡Atrapa a Fénec!» (gameType 'teamcrab') — the rules, no sockets (server.js «ATRAPA A FÉNEC» block
+// glues them to the room). #4 of his Mario Party series: Super Mario Party «Team Crab» (his video y9BKCVx_mNk,
+// 7:30-8:16), turned around: the KIDS are the crew of a giant red robot crab on a Dubai beach, one claw with a wooden
+// hammer each; FÉNEC, el ladrón de palabras (a fennec-fox cartoon burglar), runs along the dock. Crews of 3-4 (the deal
+// of core/halcon.js); each crew = one crab, one Fénec, one Péndulo.
+// v2 (his feedback 2026-10-23 after playing v1: "I tried to hit the little fox and it said that it escaped… it should
+// feel like kids are controlling the crab… merit-based… make the crab so that it moves as well"; his rules «Skill
+// decides, never luck» and «Two rhythms: pick the one that fits each game»): the game runs in ROUNDS of two windows.
+//   · QUESTION WINDOW (~11 s): everyone answers quick-fire questions; each right answer = +1 hammer charge (max 4); a
+//     wrong, late or blind answer = El Péndulo EATS one of my charges («¡Ñam!», he grows; right answers in a row shrink
+//     him). Only a question really shown on a visible screen can run out and cost. The window's open questions are
+//     withdrawn at its end, free.
+//   · PLAY WINDOW (10 s, «¡A martillar!»): the answers decide the roles. The crew's best answerer of the window (most
+//     right answers, then the fastest) is the CAPITÁN and STEERS the crab (it walks along the shore at a visible speed);
+//     every kid with charges is a MARTILLERO: their claw rides on the crab within its reach, they aim it and slam (one
+//     charge a slam, 0.35 s fall); kids with no charges watch and cheer. Fénec moves in a readable pattern (stands
+//     still, crouches 0.3 s leaning the way he'll go, then runs 2 spots at a visible speed, away from the crab), NEVER
+//     an instant dodge: a hammer that lands where he is at the impact is a BONK. Words fly back: +2 to the slammer, +1
+//     «trampa» to every other armed claw that blocked him, +1 to the Capitán who drove them there.
+//   · The last round is ×2 («¡Ronda final!»). The clock ends after a play window; a crew that got its target of words
+//     back has CAUGHT him (latched), else he escapes and kicks the crab to pieces. Then each crew's ceremony.
+//   · «🤖 Probar con robots» (teacher-only): robots sit in the crew and play like an average kid (70 % right, fair aim);
+//     they are never in stars, the podium, the class ranking or any record.
 // Every kid's numbers live in m.kids[k] (k = the server's stable id p.tcK), so a kid who left still counts at the end.
 // Spec: docs/specs/atrapa-a-fenec.md. The server emits the events every function returns ({ t, b, … }).
 'use strict';
@@ -26,44 +30,45 @@ const Halcon = require('./halcon');    // boards of 4 (splitBoards), mulberry32,
 const R = {
   DURATIONS: [120, 180, 240], DURATION: 120,
   INTRO_MS: 2600,            // «¡Atrapa a Fénec!» → «¡YA!» after the 3.5 s run-in countdown
-  SPOTS: 5,                  // the dock's spots, left to right (Fénec stands on one)
-  Q_TIME_MS: 15000,          // a quiz question's time: left to run out = late = it costs like a wrong answer
-  FAST_MS: 500,              // an answer sooner than this after its question went out = a blind guess = wrong
-  NEXT_Q_MS: 200,            // the next question this soon after my hammer is back up
-  LOAD_MS: 6000,             // a loaded hammer must slam within this (then it slams by itself where it hangs)
-  FIRST_LOAD_MS: 9000,       // my very first loaded hammer (guided: the hand shows the drag and the slam)
-  FALL_MS: 420,              // the slam: the hammer's fall to the dock
-  BACK_MS: 650,              // after the impact the hammer rises back to the crab
-  JAM_MS: 3000,              // a wrong / late / blind answer: my hammer jams with smoke this long
-  BONK_MS: 2000,             // the bonk: Fénec flat, the words fly out (the board's slams wait; the quiz goes on)
-  SWING_MS: 1800,            // El Péndulo's big swing across the dock (the moment)
-  KNOCK_MS: 3000,            // …the board's hammers knocked away this long
-  HOP_MS: 300,               // Fénec's hop to the next spot (he is on the new spot from half of it)
-  REACT_MIN: 120, REACT_MAX: 400,   // he notices a hammer falling on his spot after this long
-  SPOOK_MIN: 650, SPOOK_MAX: 1300,  // a loaded shadow on his spot this long and he hops away
-  WANDER_MIN: 1300, WANDER_MAX: 2800,
-  TAUNT_GAP_MS: 4000,        // his lines at most this often per board (a «¡Mías!» always)
-  WORDS_BONK: 2, ASSIST: 1, SNATCH: 1,   // a bonk returns 2 words to the bonker (×2 in the last 30 s), +1 per assist
-  ANGER_MAX: 5, CALM: 0.25, ANGER_REST: 1,
-  TARGET_PER_KID_MIN: 2.2,   // words a board must get back per kid and minute (+ half a minute for the ×2 end; sim-tuned)
+  SPOTS: 5,                  // the dock: positions 0-4 (continuous)
+  // the rounds: a question window, then «¡A martillar!» (roles), the play window, «¡Tiempo!» (the round's tally)
+  ROUND_MS: 24500, QW_MIN: 8000, QW_MAX: 18000, PW_IN_MS: 1600, PW_MS: 10000, PW_OUT_MS: 1500,
+  PW_EMPTY_MS: 1500,         // a play window where every claw is spent ends this soon after the last hammer lands
+  Q_TIME_MS: 8000,           // a quick-fire question's time (it can't outlive its window: withdrawn free at the window's end)
+  FAST_MS: 500,              // an answer sooner than this = a blind guess = wrong
+  NEXT_Q_MS: 300, WRONG_WAIT_MS: 1300,
+  CHARGES_MAX: 4,
+  FALL_MS: 350, BACK_MS: 420,   // a slam's fall (shadow → slam) and the claw back up
+  LAG_MAX: 250,              // a slam is judged where Fénec was on the slammer's screen: rewound by its round trip (ms, at most this)
+  PW_MIN: 4000,              // the final round's play window may shrink to fit the clock, never under this
+  HIT_R: 0.45,               // a hammer that lands within this many spots of Fénec's centre bonks him
+  REACH: 1.0,                // a claw rides within this many spots of the crab's centre (the Capitán must drive him into reach)
+  CRAB_SPEED: 4.2,           // spots per second (the Capitán steers; the crab walks at this speed at most)
+  FEN_IDLE_MIN: 650, FEN_IDLE_MAX: 1350, FEN_CROUCH_MS: 300, FEN_RUN_SPEED: 3.2, FEN_RUN_N: 2, FEN_FLAT_MS: 1100, FEN_UP_MS: 400,
+  WORDS_BONK: 2, ASSIST: 1, CAPTAIN: 1, TRAP_R: 0.75,   // (a «trampa» = another armed claw right beside him: it blocked his way)
+  ROBOT_CREW: 4, ROBOT_HUMANS_MAX: 2,   // «🤖 Probar con robots» fills only a crew of 1-2 phones up to 4 (a real class gets none)
+  ANGER_MAX: 5, CALM: 0.5,
+  TARGET_PER_KID_MIN: 5.5,   // words a crew must get back per kid and minute (sim-tuned, test-teamcrab.js --sim: skilful crews catch him, random tappers don't)
   TARGET_MIN: 6,
-  FRENZY_MS: 30000,          // the last 30 s: «¡Atardecer dorado!» every bonk ×2
   FINAL_MS: 2400,
   BOARD: 4, BOARD_MAX: 5,
   REACTS: ['wow', 'lol', 'clap', 'fire'], REACT_GAP_MS: 1200,
-  AIM_GAP_MS: 40,            // aim updates closer than this are dropped (relayed live, volatile)
+  AIM_GAP_MS: 40, STEER_GAP_MS: 40,
+  TAUNT_GAP_MS: 3500,
+  ROBOT: { ACC: 0.7, ANS_MIN: 1500, ANS_MAX: 3600, SLAM_MIN: 1100, SLAM_MAX: 2200, NOISE: 0.32 },
 };
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const clampDuration = (s) => clamp(Math.round(Number(s) || R.DURATION), 60, 600);
-const spotOfX = (x) => clamp(Math.round(clamp(Number(x) || 0, 0, 1) * (R.SPOTS - 1)), 0, R.SPOTS - 1);
-const xOfSpot = (s) => s / (R.SPOTS - 1);
+const MAXX = R.SPOTS - 1;
+const round2 = (v) => Math.round(v * 100) / 100;
 
 function newGame(seed, durationS, now, words) {
   return {
     id: seed, seed, rng: Halcon.mulberry32(seed), duration: clampDuration(durationS),
-    phase: 'countdown', phaseAt: now, phaseUntil: now, endsAt: 0, frenzyAt: 0, frenzy: false,
+    phase: 'countdown', phaseAt: now, phaseUntil: now, endsAt: 0, frenzy: false,
     paused: false, pausedAt: 0, boards: [], kids: {}, nextBoard: 1, qn: 0, words: (words || []).slice(0, 60),
+    round: null,
   };
 }
 const kid = (m, k) => (m && k != null ? m.kids[k] || null : null);
@@ -71,233 +76,262 @@ const inGame = (m, k) => !!kid(m, k);
 const boardOf = (m, id) => (m ? m.boards.find((b) => b.id === id) || null : null);
 const rnd = (m, a, b) => a + m.rng() * (b - a);
 
-function newKid(k, name, skin, b, code) {
+function newKid(k, name, skin, b, code, robot) {
   return {
-    k, name: String(name || ''), skin: skin || 'dralingo', b, code: code ? String(code) : '',   // (code: server only)
-    words: 0, bonks: 0, assists: 0, slams: 0, misses: 0, right: 0, wrong: 0, late: 0, fast: 0, answered: 0,
-    streak: 0, best: 0, first: true, awaySince: 0, lastReact: 0, q: null, qNextAt: 0, order: [], qi: 0, lastAim: 0,
-    h: { st: 'idle', x: 0.5, spot: 2, until: 0, slamAt: 0, impactAt: 0, react: 0, guided: false, was: null },
+    k, name: String(name || ''), skin: skin || 'dralingo', b, code: code ? String(code) : '', robot: !!robot,
+    charges: 0, rightQW: 0, timeQW: 0, firstQW: 0, words: 0, bonks: 0, assists: 0, capBonks: 0, captained: 0,
+    slams: 0, misses: 0, right: 0, wrong: 0, late: 0, fast: 0, answered: 0, eaten: 0, streak: 0, best: 0,
+    awaySince: 0, lastReact: 0, q: null, qNextAt: 0, order: [], qi: 0, lastAim: 0, lastSteer: 0,
+    claw: { st: 'idle', off: 0, x: 2, fallX: 2, impactAt: 0, readyAt: 0 }, bot: { ansAt: 0, nextAt: 0, steerAt: 0 },
   };
 }
-// a board's target: words to get back to catch him (per kid and minute, at least TARGET_MIN)
-function targetFor(n, minutes) { return Math.max(R.TARGET_MIN, Math.round(R.TARGET_PER_KID_MIN * Math.max(1, n) * (minutes + 0.5))); }
+function targetFor(n, minutes) { return Math.max(R.TARGET_MIN, Math.round(R.TARGET_PER_KID_MIN * Math.max(1, n) * minutes)); }
 function addBoard(m) {
   const b = {
-    id: m.nextBoard++, seats: [], phase: 'wait', phaseUntil: 0, words: 0, target: 0, full: false, bonks: 0, snatched: 0,
-    anger: 0, lastOk: null, swings: 0, lastTaunt: 0, said: null,
-    fx: { at: 2, from: 2, hopAt: 0, nextWander: 0, spookSpot: -1, spookAt: 0, spookMs: 0 },
+    id: m.nextBoard++, seats: [], words: 0, target: 0, full: false, bonks: 0, roundBonks: 0, anger: 0, lastOk: null,
+    captain: null, crab: { x: MAXX / 2, tx: MAXX / 2, sentX: MAXX / 2, sentAt: 0 }, lastTaunt: 0,
+    fx: { x: MAXX / 2, mode: 'idle', t0: 0, t1: 0, x0: MAXX / 2, x1: MAXX / 2, dir: 1 }, fhist: [],
   };
   m.boards.push(b);
   return b;
 }
-function seatIn(m, b, k, name, skin, code) {
-  m.kids[k] = newKid(k, name, skin, b.id, code);
+function seatIn(m, b, k, name, skin, code, robot) {
+  m.kids[k] = newKid(k, name, skin, b.id, code, robot);
   b.seats.push(k);
   return m.kids[k];
 }
-// The start: boards of 4 (3 when it doesn't divide; ≤ 5 kids = one board). entries: [[k, name, skin, code]]
+const humans = (m, b) => b.seats.filter((k) => !(kid(m, k) || {}).robot).length;
+// The start: crews of 4 (3 when it doesn't divide; ≤ 5 kids = one crew). entries: [[k, name, skin, code, robot]]
 function deal(m, entries) {
   const byK = {};
-  entries.forEach(([k, name, skin, code]) => { byK[k] = [name, skin, code]; });
+  entries.forEach(([k, name, skin, code, robot]) => { byK[k] = [name, skin, code, robot]; });
   Halcon.splitBoards(entries.map((e) => e[0]), m.rng).forEach((ks) => {
     const b = addBoard(m);
-    ks.forEach((k) => seatIn(m, b, k, byK[k][0], byK[k][1], byK[k][2]));
+    ks.forEach((k) => seatIn(m, b, k, byK[k][0], byK[k][1], byK[k][2], byK[k][3]));
     b.target = targetFor(b.seats.length, m.duration / 60);
   });
   return m.boards;
 }
-// A late joiner sits at the smallest board with room (max 5); its target grows by the kid's share of the time left.
 function seatLate(m, k, name, skin, code, now) {
   if (inGame(m, k)) return null;
   const open = m.boards.filter((b) => b.seats.length < R.BOARD_MAX).sort((a, b) => a.seats.length - b.seats.length || a.id - b.id);
   const b = open[0] || addBoard(m);
-  seatIn(m, b, k, name, skin, code);
+  seatIn(m, b, k, name, skin, code, false);
   const left = m.phase === 'play' && m.endsAt ? Math.max(0, m.endsAt - (now || Date.now())) / 60000 : m.duration / 60;
   b.target = b.seats.length === 1 ? targetFor(1, left) : b.target + Math.round(R.TARGET_PER_KID_MIN * left);
-  if (m.phase === 'play' && b.phase === 'wait') { b.phase = 'play'; b.fx.nextWander = (now || Date.now()) + 1500; }
   return b;
 }
-// a kid back after the room forgot their phone: their own row, by the student code the server proved
+// «🤖 Probar con robots»: a robot crewmate sits in the smallest crew (the teacher's own, when he plays with one phone);
+// it counts for the crew's target like a kid (it brings words back too). Only for a teacher trying alone: it fills a crew of
+// 1-2 phones up to 4 seats; a crew of 3+ kids (a real class, even with the robots left on) gets none
+function seatRobot(m, k, name, skin) {
+  if (inGame(m, k)) return null;
+  const people = (b) => b.seats.filter((x) => !(kid(m, x) || {}).robot).length;
+  const open = m.boards.filter((b) => b.seats.length < R.ROBOT_CREW && people(b) >= 1 && people(b) <= R.ROBOT_HUMANS_MAX).sort((a, b) => a.seats.length - b.seats.length || a.id - b.id);
+  const b = open[0];
+  if (!b) return null;                                   // (no room: a robot never opens a crew of its own)
+  seatIn(m, b, k, name, skin, '', true);
+  b.target = targetFor(b.seats.length, m.duration / 60);
+  return b;
+}
 function byCode(m, code, online) {
   if (!code) return null;
   const r = Object.values(m.kids).find((x) => x.code && x.code === String(code));
   return r && !(online && online(r.k)) ? r : null;
 }
 
-// ---------- the clock ----------
-function frenzyLen(m) { return m.duration >= 60 ? R.FRENZY_MS : 0; }
-function startPlay(m, now) {
-  m.phase = 'play';
-  m.phaseAt = now;
-  m.endsAt = now + m.duration * 1000;
-  m.phaseUntil = m.endsAt;
-  m.frenzyAt = m.endsAt - frenzyLen(m);
-  m.frenzy = false;
-  m.boards.forEach((b) => { b.phase = 'play'; b.fx.at = b.fx.from = Math.floor(R.SPOTS / 2); b.fx.hopAt = 0; b.fx.nextWander = now + rnd(m, R.WANDER_MIN, R.WANDER_MAX); });
-  return [];
+// ---------- Fénec: a readable pattern (stands, crouches leaning the way he'll go, runs 2 spots), never a dodge ----------
+function fxAt(f, t) {
+  if (f.mode !== 'run') return f.x;
+  const p = f.t1 > f.t0 ? clamp((t - f.t0) / (f.t1 - f.t0), 0, 1) : 1;
+  return f.x0 + (f.x1 - f.x0) * p;
 }
-function addTime(m, ms, now) {
-  if (m.phase !== 'play') return 0;
-  const d = Party.clockShift(m.endsAt, ms, now);
-  if (!d) return 0;
-  m.endsAt += d;
-  m.phaseUntil = m.endsAt;
-  m.frenzyAt = m.endsAt - frenzyLen(m);
-  if (d > 0) m.duration += d / 1000;
-  // the crews that haven't emptied the sack get a target for the new length (the play time from the start to the end)
-  const plan = (m.endsAt - m.phaseAt) / 60000, was = plan - d / 60000;
-  if (was > 0) m.boards.forEach((b) => { if (!b.full && b.target) b.target = Math.max(R.TARGET_MIN, Math.round(b.target * (plan + 0.5) / (was + 0.5))); });
-  return d;
+// the last steps of his plan: a slam is judged at the moment the slammer saw (impact − its round trip)
+function fenSnap(b) { const f = b.fx; b.fhist.push({ mode: f.mode, x: f.x, x0: f.x0, x1: f.x1, t0: f.t0, t1: f.t1 }); if (b.fhist.length > 10) b.fhist.shift(); }
+function fenAt(b, t) {
+  let seg = null;
+  for (let i = b.fhist.length - 1; i >= 0; i--) if (b.fhist[i].t0 <= t) { seg = b.fhist[i]; break; }
+  seg = seg || b.fhist[0] || b.fx;
+  return { mode: seg.mode, x: fxAt(seg, t) };
 }
-// the teacher paused for `ms`: every pending moment moves by that much
-function shiftTimes(m, ms) {
-  m.phaseAt += ms; m.phaseUntil += ms;
-  if (m.endsAt) m.endsAt += ms;
-  if (m.frenzyAt) m.frenzyAt += ms;
-  m.lastTick = 0;
-  m.boards.forEach((b) => {
-    if (b.phaseUntil) b.phaseUntil += ms;
-    const f = b.fx;
-    if (f.hopAt) f.hopAt += ms;
-    if (f.nextWander) f.nextWander += ms;
-    if (f.spookAt) f.spookAt += ms;
-  });
-  Object.values(m.kids).forEach((r) => {
-    if (r.awaySince) r.awaySince += ms;
-    if (r.qNextAt) r.qNextAt += ms;
-    if (r.q && r.q.until) r.q.until += ms;
-    const h = r.h;
-    if (h.until) h.until += ms;
-    if (h.slamAt) h.slamAt += ms;
-    if (h.impactAt) h.impactAt += ms;
-  });
-}
-
-// ---------- Fénec ----------
-// where he is at time t (on a hop he counts on the new spot from half of it)
-const fxSpotAt = (f, t) => (f.hopAt && t < f.hopAt + R.HOP_MS / 2 ? f.from : f.at);
-const hopping = (f, now) => !!f.hopAt && now < f.hopAt + R.HOP_MS;
-function boardHammers(m, b) { return b.seats.map((k) => kid(m, k)).filter(Boolean).map((r) => r.h); }
-// how a spot looks to him: 2 = a hammer falling on it, 1 = a loaded hammer's shadow, 0 = free
-function threat(m, b, s) {
-  let v = 0;
-  boardHammers(m, b).forEach((h) => {
-    if (h.st === 'fall' && h.spot === s) v = Math.max(v, 2);
-    else if (h.st === 'loaded' && h.spot === s) v = Math.max(v, 1);
-  });
-  return v;
-}
-function hop(m, b, to, now, ev, why) {
+const fenView = (f, now) => ({ mode: f.mode, x: round2(fxAt(f, now)), x0: round2(f.x0), x1: round2(f.x1), dir: f.dir, ms: Math.max(0, f.t1 - now), dur: Math.max(0, f.t1 - f.t0) });
+function fenEv(b, now) { return Object.assign({ t: 'fen', b: b.id }, fenView(b.fx, now)); }
+// where he goes next: away from the crab (2 spots; at the edge he has to come back past it)
+function fenPlan(m, b, now) {
   const f = b.fx;
-  f.from = f.at; f.at = to; f.hopAt = now;
-  f.spookSpot = -1;
-  ev.push({ t: 'hop', b: b.id, from: f.from, to, ms: R.HOP_MS, why });
+  let dir = f.x >= b.crab.x ? 1 : -1;
+  if (Math.abs(f.x - b.crab.x) < 0.25) dir = m.rng() < 0.5 ? -1 : 1;
+  if ((dir > 0 && f.x >= MAXX - 0.05) || (dir < 0 && f.x <= 0.05)) dir = -dir;
+  const x1 = clamp(Math.round(f.x) + dir * R.FEN_RUN_N, 0, MAXX);
+  f.dir = x1 >= f.x ? 1 : -1;
+  f.x0 = f.x; f.x1 = x1;
+  f.mode = 'crouch'; f.t0 = now; f.t1 = now + R.FEN_CROUCH_MS;
+  fenSnap(b);
 }
-// a neighbour spot to flee to (the least threatened; equal ones at random); null = boxed in (both sides fall / the edge)
-function escapeSpot(m, b, okLoaded) {
-  const at = b.fx.at;
-  const opts = [at - 1, at + 1].filter((s) => s >= 0 && s < R.SPOTS).map((s) => ({ s, v: threat(m, b, s) }))
-    .filter((o) => o.v < 2 && (okLoaded || o.v === 0));
-  if (!opts.length) return null;
-  const best = Math.min(...opts.map((o) => o.v));
-  const pick = opts.filter((o) => o.v === best);
-  return pick[Math.floor(m.rng() * pick.length)].s;
+function fenTick(m, b, now, ev) {
+  const f = b.fx;
+  if (now < f.t1) return;
+  if (f.mode === 'idle') { fenPlan(m, b, now); ev.push(fenEv(b, now)); return; }
+  if (f.mode === 'crouch') {
+    f.mode = 'run'; f.t0 = now; f.t1 = now + Math.max(120, (Math.abs(f.x1 - f.x0) / R.FEN_RUN_SPEED) * 1000);
+    fenSnap(b);
+    ev.push(fenEv(b, now));
+    return;
+  }
+  if (f.mode === 'run') { f.x = f.x1; f.mode = 'idle'; f.t0 = now; f.t1 = now + rnd(m, R.FEN_IDLE_MIN, R.FEN_IDLE_MAX); fenSnap(b); ev.push(fenEv(b, now)); if (m.rng() < 0.3) taunt(b, now, ev, 'idle'); return; }
+  if (f.mode === 'flat') { f.mode = 'up'; f.t0 = now; f.t1 = now + R.FEN_UP_MS; fenSnap(b); ev.push(fenEv(b, now)); taunt(b, now, ev, 'up', true); return; }
+  if (f.mode === 'up') { f.mode = 'idle'; f.t0 = now; f.t1 = now + rnd(m, R.FEN_IDLE_MIN, R.FEN_IDLE_MAX) * 0.7; fenSnap(b); ev.push(fenEv(b, now)); }
 }
 function taunt(b, now, ev, line, force) {
   if (!force && now - b.lastTaunt < R.TAUNT_GAP_MS) return;
   b.lastTaunt = now;
   ev.push({ t: 'taunt', b: b.id, line });
 }
-// his move this tick: flee a falling hammer he noticed, flee a lingering shadow, or wander
-function fennec(m, b, now, ev) {
-  const f = b.fx;
-  if (hopping(f, now)) return;
-  const hs = boardHammers(m, b);
-  const falling = hs.find((h) => h.st === 'fall' && h.spot === f.at && now >= h.slamAt + h.react && now < h.impactAt);
-  if (falling) {
-    const to = escapeSpot(m, b, true);
-    if (to != null) hop(m, b, to, now, ev, 'dodge');
-    return;
-  }
-  const shadowed = hs.some((h) => h.st === 'loaded' && h.spot === f.at);
-  if (shadowed) {
-    if (f.spookSpot !== f.at) { f.spookSpot = f.at; f.spookAt = now; f.spookMs = rnd(m, R.SPOOK_MIN, R.SPOOK_MAX); }
-    else if (now - f.spookAt >= f.spookMs) {
-      const to = escapeSpot(m, b, false);
-      if (to != null) hop(m, b, to, now, ev, 'spook');
-      else { f.spookAt = now; f.spookMs = rnd(m, R.SPOOK_MIN, R.SPOOK_MAX); taunt(b, now, ev, 'nervous'); }
-    }
-    return;
-  }
-  f.spookSpot = -1;
-  if (now >= f.nextWander) {
-    f.nextWander = now + rnd(m, R.WANDER_MIN, R.WANDER_MAX);
-    const to = escapeSpot(m, b, false);
-    if (to != null) hop(m, b, to, now, ev, 'wander');
-    if (m.rng() < 0.35) taunt(b, now, ev, 'idle');
-  }
-}
 
-// ---------- the hammers ----------
-function setHam(r, st, until) { r.h.st = st; r.h.until = until || 0; }
-function hamEv(b, r, extra) { return Object.assign({ t: 'ham', b: b.id, k: r.k, st: r.h.st, spot: r.h.spot, x: r.h.x, ms: 0 }, extra || {}); }
-// my hammer starts its fall at its aimed spot (the kid's slam, or the time ran out)
-function startSlam(m, b, r, now, ev, auto) {
-  const h = r.h;
-  h.st = 'fall';
-  h.slamAt = now;
-  h.impactAt = now + R.FALL_MS;
-  h.react = rnd(m, R.REACT_MIN, R.REACT_MAX);
-  h.guided = false;
-  h.auto = !!auto;
-  r.slams++;
-  ev.push({ t: 'slam', b: b.id, k: r.k, spot: h.spot, x: h.x, ms: R.FALL_MS, auto: !!auto });
+// ---------- the clock and the rounds ----------
+const FIXED = () => R.PW_IN_MS + R.PW_MS + R.PW_OUT_MS;
+function startPlay(m, now) {
+  m.phase = 'play';
+  m.phaseAt = now;
+  m.endsAt = now + m.duration * 1000;
+  m.phaseUntil = m.endsAt;
+  m.frenzy = false;
+  m.round = { n: 0, phase: 'none', at: now, until: now, total: 0, final: false };
+  m.boards.forEach((b) => { b.fx.x = b.fx.x0 = b.fx.x1 = MAXX / 2; b.fx.mode = 'idle'; b.fx.t0 = now; b.fx.t1 = now + 900; b.fhist = []; fenSnap(b); });
+  const ev = [];
+  nextRound(m, now, ev);
+  return ev;
 }
-// the impact: Fénec under it = a bonk; else a puff of dust and his taunt
-function impact(m, b, r, now, ev) {
-  const h = r.h;
-  const t = h.impactAt;
-  const fx = fxSpotAt(b.fx, t);
-  setHam(r, 'back', now + R.BACK_MS);
-  const hit = b.phase === 'play' && fx === h.spot;
-  if (!hit) {
-    r.misses++;
-    ev.push({ t: 'impact', b: b.id, k: r.k, spot: h.spot, hit: false, fx });
-    if (b.phase === 'play') taunt(b, now, ev, m.rng() < 0.5 ? 'miss' : 'miss2');
-    return;
-  }
-  // a BONK: the words fly out of his sack; crewmates whose loaded hammer covered an escape spot assist
-  const pts = (h.auto ? 1 : R.WORDS_BONK) * (m.frenzy ? 2 : 1);   // (a hammer that slammed by itself: +1, never what an aimed slam earns)
-  const assists = [];
-  b.seats.forEach((k) => {
-    const o = kid(m, k);
-    if (!o || o === r) return;
-    if ((o.h.st === 'loaded' || o.h.st === 'fall') && Math.abs(o.h.spot - h.spot) === 1) {
-      o.assists++; o.words += R.ASSIST; assists.push(o.k);
-    }
+// a new question window, as long as the time left allows (the clock ends after a play window)
+// (the schedule of a question window opening now: its length, whether it is the final round, its play window)
+function plan(m, now) {
+  const left = m.endsAt - now;
+  const roundsLeft = Math.max(1, Math.round(left / R.ROUND_MS));
+  if (roundsLeft > 1) return { qw: clamp(left / roundsLeft - FIXED(), R.QW_MIN, R.QW_MAX), final: false, roundsLeft, pw: R.PW_MS };
+  const qw = clamp(left - FIXED(), 3000, R.QW_MAX + 6000);
+  return { qw, final: true, roundsLeft: 1, pw: clamp(left - qw - R.PW_IN_MS - R.PW_OUT_MS, R.PW_MIN, R.PW_MS) };
+}
+function setFinal(m, r, fin, now, ev) {
+  r.final = fin;
+  if (fin && !m.frenzy) { m.frenzy = true; ev.push({ t: 'frenzy', endsMs: Math.max(0, m.endsAt - now) }); }
+  else if (!fin && m.frenzy) { m.frenzy = false; ev.push({ t: 'frenzy', off: true, endsMs: Math.max(0, m.endsAt - now) }); }
+}
+function nextRound(m, now, ev) {
+  const left = m.endsAt - now;
+  const MIN_ROUND = 3000 + R.PW_IN_MS + R.PW_MIN + R.PW_OUT_MS;
+  if (left < MIN_ROUND && (m.frenzy || left < 6000)) { ev.push.apply(ev, final(m, now)); return; }
+  const p = left < MIN_ROUND ? { qw: 1200, final: true, roundsLeft: 1, pw: R.PW_MIN } : plan(m, now);   // (a «−30 s» left no room: a short final round on the charges kept, a few s past 0:00)
+  const qw = p.qw;
+  const r = m.round;
+  r.n++; r.phase = 'qw'; r.at = now; r.until = now + qw; r.total = r.n + p.roundsLeft - 1; r.pwMs = p.pw;
+  setFinal(m, r, p.final, now, ev);
+  Object.values(m.kids).forEach((k) => { k.rightQW = 0; k.timeQW = 0; k.firstQW = 0; k.role = null; k.qNextAt = now + 250; if (k.claw.st !== 'idle') { k.claw.st = 'idle'; } });
+  m.boards.forEach((b) => { b.captain = null; b.roundBonks = 0; b.crab.tx = b.crab.x; });
+  ev.push({ t: 'round', phase: 'qw', n: r.n, total: r.total, final: r.final, ms: qw });
+}
+// the crew's best answerer of this window (most right, then the faster total time, the earlier first right, the seat)
+function leader(m, b) {
+  const cands = b.seats.map((k) => kid(m, k)).filter((x) => x && x.rightQW > 0);
+  cands.sort((a, c) => c.rightQW - a.rightQW || a.timeQW - c.timeQW || a.firstQW - c.firstQW || a.k - c.k);
+  return cands.length ? cands[0].k : null;
+}
+// the question window closes: open questions are withdrawn (free), the roles are decided, «¡A martillar!»
+function toPlayIn(m, now, ev) {
+  const r = m.round;
+  r.phase = 'pwin'; r.at = now; r.until = now + R.PW_IN_MS;
+  Object.values(m.kids).forEach((k) => { if (k.q) { k.q = null; ev.push({ t: 'qx', b: k.b, k: k.k }); } });
+  m.boards.forEach((b) => {
+    b.captain = leader(m, b);
+    b.seats.forEach((k) => { const x = kid(m, k); if (x) x.role = k === b.captain ? 'cap' : x.charges > 0 ? 'mart' : 'watch'; });
+    if (b.captain != null) kid(m, b.captain).captained++;
+    // the martilleros' claws spread across the crab's reach (the Capitán's in the middle)
+    const mart = b.seats.map((k) => kid(m, k)).filter((x) => x && x.charges > 0);
+    const offs = [-0.9, 0.9, -0.35, 0.35, 0].map((v) => v * R.REACH);
+    let i = 0;
+    mart.forEach((x) => {
+      x.claw.st = 'armed';
+      x.claw.off = x.k === b.captain ? 0 : offs[i++ % offs.length];
+      x.claw.x = clamp(b.crab.x + x.claw.off, 0, MAXX);
+      x.claw.readyAt = now + R.PW_IN_MS;
+    });
+    ev.push({ t: 'roles', b: b.id, captain: b.captain, mart: mart.map((x) => ({ k: x.k, charges: x.charges, off: x.claw.off })), crab: round2(b.crab.x) });
   });
-  r.bonks++; r.words += pts;
-  b.bonks++;
-  const before = b.words;
-  b.words += pts + assists.length * R.ASSIST;
-  const flying = pickWords(m, pts + assists.length);
-  b.phase = 'bonk';
-  b.phaseUntil = now + R.BONK_MS;
-  // (every other hammer waits: the tick keeps a loaded one's time while the bonk plays; a falling one lands on nothing)
-  ev.push({ t: 'bonk', b: b.id, k: r.k, spot: h.spot, pts, assists, words: b.words, target: b.target, flying, ms: R.BONK_MS, x2: m.frenzy, n: b.bonks });
-  if (!b.full && before < b.target && b.words >= b.target) { b.full = true; ev.push({ t: 'full', b: b.id, words: b.words, target: b.target }); }
+  ev.push({ t: 'round', phase: 'pwin', n: r.n, total: r.total, final: r.final, ms: R.PW_IN_MS });
 }
-// the pinyin words that fly back (the class's own words, from the pack: never hanzi)
-function pickWords(m, n) {
-  const list = m.words || [];
-  if (!list.length) return [];
-  const out = [];
-  for (let i = 0; i < Math.min(n, 6); i++) out.push(list[Math.floor(m.rng() * list.length)]);
-  return out;
+function toPlay(m, now, ev) {
+  const r = m.round;
+  r.phase = 'pw'; r.at = now; r.until = now + (r.pwMs || R.PW_MS);
+  // («Saltar» in «¡A martillar!»: the claws are ready at once)
+  Object.values(m.kids).forEach((x) => { if (x.claw.st === 'armed' && x.claw.readyAt > now) x.claw.readyAt = now; });
+  ev.push({ t: 'round', phase: 'pw', n: r.n, total: r.total, final: r.final, ms: r.until - now });
+}
+function toPlayOut(m, now, ev) {
+  const r = m.round;
+  // (a hammer still in the air lands at its own time: the tick lands it, then it goes up)
+  Object.values(m.kids).forEach((x) => { if (x.claw.st === 'armed' || x.claw.st === 'back') x.claw.st = 'idle'; });
+  r.phase = 'pwout'; r.at = now; r.until = now + R.PW_OUT_MS;
+  ev.push({ t: 'round', phase: 'pwout', n: r.n, total: r.total, final: r.final, ms: R.PW_OUT_MS, tally: m.boards.map((b) => ({ b: b.id, bonks: b.roundBonks, words: b.words })) });
+}
+function addTime(m, ms, now, ev) {
+  if (m.phase !== 'play') return 0;
+  const d = Party.clockShift(m.endsAt, ms, now);
+  if (!d) return 0;
+  m.endsAt += d;
+  m.phaseUntil = m.endsAt;
+  if (d > 0) m.duration += d / 1000;
+  // the crews that haven't emptied the sack get a target for the new length
+  const plan = (m.endsAt - m.phaseAt) / 60000, was = plan - d / 60000;
+  if (was > 0) m.boards.forEach((b) => { if (!b.full && b.target) b.target = Math.max(R.TARGET_MIN, Math.round(b.target * plan / was)); });
+  replan(m, now, ev || []);
+  return d;
+}
+// the clock moved (±30 s): the open question window takes its new length (and becomes the final round, or stops being
+// it); an open play window never runs past the clock
+function replan(m, now, ev) {
+  const r = m.round;
+  if (!r) return;
+  if (r.phase === 'qw') {
+    const left = m.endsAt - r.at;
+    const p = left < 3000 + R.PW_IN_MS + R.PW_MIN + R.PW_OUT_MS ? { qw: 1500, final: true, roundsLeft: 1, pw: R.PW_MIN } : plan(m, r.at);
+    r.until = Math.max(now + 1500, r.at + p.qw);
+    r.total = r.n + p.roundsLeft - 1;
+    r.pwMs = p.final ? clamp(m.endsAt - r.until - R.PW_IN_MS - R.PW_OUT_MS, R.PW_MIN, R.PW_MS) : p.pw;
+    setFinal(m, r, p.final, now, ev);
+    ev.push({ t: 'round', phase: 'qw', n: r.n, total: r.total, final: r.final, ms: r.until - now });
+  } else if (r.phase === 'pwin' || r.phase === 'pw' || r.phase === 'pwout') {
+    let changed = false;
+    if (r.phase === 'pwin') { const pw = clamp(m.endsAt - r.until - R.PW_OUT_MS, R.PW_MIN, R.PW_MS); if (pw < (r.pwMs || R.PW_MS)) { r.pwMs = pw; changed = true; } }
+    if (r.phase === 'pw') { const cap = Math.max(now + 1500, m.endsAt - R.PW_OUT_MS); if (r.until > cap) { r.until = cap; changed = true; } }
+    // no room for another full round after this one: this one is the final round ×2 (from now)
+    const roundEnd = r.phase === 'pwin' ? r.until + (r.pwMs || R.PW_MS) + R.PW_OUT_MS : r.phase === 'pw' ? r.until + R.PW_OUT_MS : r.until;
+    const fin = m.endsAt - roundEnd < 3000 + R.PW_IN_MS + R.PW_MIN + R.PW_OUT_MS;
+    if (r.phase !== 'pwout' && fin !== !!r.final) { setFinal(m, r, fin, now, ev); r.total = r.n; changed = true; }
+    if (changed) ev.push({ t: 'round', phase: r.phase, n: r.n, total: r.total, final: r.final, ms: Math.max(0, r.until - now) });
+  }
+}
+// the teacher paused for `ms`: every pending moment moves by that much
+function shiftTimes(m, ms) {
+  m.phaseAt += ms; m.phaseUntil += ms;
+  if (m.endsAt) m.endsAt += ms;
+  if (m.round) { m.round.at += ms; m.round.until += ms; }
+  m.lastTick = 0;
+  m.boards.forEach((b) => { const f = b.fx; f.t0 += ms; f.t1 += ms; b.fhist.forEach((h) => { h.t0 += ms; h.t1 += ms; }); if (b.crab.sentAt) b.crab.sentAt += ms; });
+  Object.values(m.kids).forEach((r) => {
+    if (r.awaySince) r.awaySince += ms;
+    if (r.qNextAt) r.qNextAt += ms;
+    if (r.q && r.q.until) r.q.until += ms;
+    if (r.q && r.q.sentAt) r.q.sentAt += ms;
+    if (r.firstQW) r.firstQW += ms;
+    if (r.claw.impactAt) r.claw.impactAt += ms;
+    if (r.claw.readyAt) r.claw.readyAt += ms;
+    if (r.bot.ansAt) r.bot.ansAt += ms;
+    if (r.bot.nextAt) r.bot.nextAt += ms;
+    if (r.bot.steerAt) r.bot.steerAt += ms;
+  });
 }
 
 // ---------- questions ----------
-function nextQ(m, h, questions, imageFor, now) {
+function nextQ(m, h, questions, imageFor, now, cap) {
   if (!h.order.length || h.qi >= h.order.length) { h.order = Halcon.pickOrder(questions, m.rng); h.qi = 0; }
   if (!h.order.length) return null;
   const src = questions[h.order[h.qi++]];
@@ -306,51 +340,26 @@ function nextQ(m, h, questions, imageFor, now) {
   m.qn++;
   return {
     qid: `tc${m.id % 100000}-${h.k}-${m.qn}`, text: String(src.text), answers, correctIdx: answers.indexOf(String(src.correct)),
-    image: imageFor ? imageFor(src) || null : null, sentAt: now, until: now + R.Q_TIME_MS,
+    image: imageFor ? imageFor(src) || null : null, sentAt: now, until: Math.min(now + R.Q_TIME_MS, cap || Infinity),
   };
 }
 const qPublic = (q) => (q ? { qid: q.qid, text: q.text, answers: q.answers, image: q.image } : null);
 
-// a miss of mine (wrong / late / blind): my hammer jams, Fénec snatches a word back, El Péndulo eats the spark
-function cost(m, b, r, now, ev, why) {
-  setHam(r, 'jam', now + R.JAM_MS);
-  r.qNextAt = now + R.JAM_MS;
+// a miss of mine (wrong / late / blind): El Péndulo eats one of my charges (he grows); nobody is named on the crew
+function eat(m, b, r, now, ev, why) {
+  r.qNextAt = now + R.WRONG_WAIT_MS;
+  r.eaten++;
+  const had = r.charges;
+  if (r.charges > 0) r.charges--;
   b.lastOk = false;
-  if (!b || b.phase === 'done') return;
-  const had = b.words;
-  b.words = Math.max(0, b.words - R.SNATCH);
-  b.snatched += had - b.words;
-  ev.push({ t: 'snatch', b: b.id, n: had - b.words, words: b.words, target: b.target, why });   // (never who)
-  if (b.phase === 'play' || b.phase === 'bonk') taunt(b, now, ev, 'mias', true);
   b.anger = Math.min(R.ANGER_MAX, b.anger + 1);
-  ev.push({ t: 'feed', b: b.id, anger: b.anger });
-  if (b.anger >= R.ANGER_MAX && b.phase === 'play') bigSwing(m, b, now, ev);
+  ev.push({ t: 'eat', b: b.id, anger: b.anger, why, ate: had > r.charges });            // (to the crew: never who)
+  ev.push({ t: 'mine', b: b.id, k: r.k, charges: r.charges, ate: had > r.charges, rightQW: r.rightQW });   // (to me)
 }
-// El Péndulo full of anger: he swings across the dock, every hammer of the board knocked away KNOCK_MS
-function bigSwing(m, b, now, ev) {
-  b.phase = 'swing';
-  b.phaseUntil = now + R.SWING_MS;
-  b.swings++;
-  b.seats.forEach((k) => {
-    const o = kid(m, k);
-    if (!o) return;
-    const h = o.h;
-    if (h.st === 'jam') { h.until = Math.max(h.until, now + R.KNOCK_MS); h.pubKnock = now + R.KNOCK_MS; return; }
-    h.was = h.st === 'loaded' ? 'loaded' : null;
-    h.st = 'knock';
-    h.until = now + R.KNOCK_MS;
-    o.qNextAt = Math.max(o.qNextAt || 0, now + R.KNOCK_MS);
-  });
-  ev.push({ t: 'swing', b: b.id, ms: R.SWING_MS, knockMs: R.KNOCK_MS, anger: b.anger });
-  b.anger = R.ANGER_REST;
-  taunt(b, now, ev, 'swing', true);
-}
-
-// ---------- the actions ----------
-// A quiz answer. Right = my hammer loads (its shadow on the dock); wrong / blind = it costs. → { ok, right, ev }
+// A quiz answer. Right = +1 charge (max 4); wrong / blind = El Péndulo eats a charge. → { ok, right, ev }
 function answer(m, k, qid, idx, now) {
   const r = kid(m, k);
-  if (!r || m.phase !== 'play' || m.paused || !r.q) return { ok: false, why: 'closed', ev: [] };
+  if (!r || m.phase !== 'play' || m.paused || !r.q || !m.round || m.round.phase !== 'qw') return { ok: false, why: 'closed', ev: [] };
   if (r.q.qid !== qid) return { ok: false, why: 'stale', ev: [] };
   if (!Number.isInteger(idx) || idx < 0 || idx >= r.q.answers.length) return { ok: false, why: 'bad', ev: [] };
   const q = r.q;
@@ -362,27 +371,24 @@ function answer(m, k, qid, idx, now) {
   const ev = [];
   if (ok) {
     r.right++; r.streak++; r.best = Math.max(r.best, r.streak);
-    const ms = r.first ? R.FIRST_LOAD_MS : R.LOAD_MS;
-    r.h.guided = r.first;
-    r.first = false;
-    const knocked = r.h.st === 'knock' || (b && b.phase === 'swing');
-    if (knocked) { r.h.was = 'loaded'; if (r.h.st !== 'knock') { r.h.st = 'knock'; r.h.until = Math.max(now, b.phaseUntil) + 600; } }
-    else setHam(r, 'loaded', now + ms);
-    ev.push({ t: 'qr', b: r.b, k, qid: q.qid, idx, ok: true, correctIdx: q.correctIdx, correctText: q.answers[q.correctIdx], streak: r.streak, loadMs: ms, guided: r.h.guided });
+    r.rightQW++; r.timeQW += now - q.sentAt; if (!r.firstQW) r.firstQW = now;
+    const had = r.charges;
+    r.charges = Math.min(R.CHARGES_MAX, r.charges + 1);
+    r.qNextAt = now + R.NEXT_Q_MS;
+    ev.push({ t: 'qr', b: r.b, k, qid: q.qid, idx, ok: true, correctIdx: q.correctIdx, correctText: q.answers[q.correctIdx], streak: r.streak, charges: r.charges, gained: r.charges - had });
     if (b) {
-      if (!knocked) ev.push(hamEv(b, r, { ms: r.h.until - now, guided: r.h.guided }));
-      if (b.lastOk && b.anger > 0) { b.anger = Math.max(0, b.anger - R.CALM); ev.push({ t: 'calm', b: b.id, anger: Math.round(b.anger * 100) / 100 }); }
+      ev.push({ t: 'race', b: b.id, k, rightQW: r.rightQW, lead: leader(m, b) });                    // (the Capitán race: rights only, never charges: a drop would tell who missed)
+      if (b.lastOk && b.anger > 0) { b.anger = Math.max(0, b.anger - R.CALM); ev.push({ t: 'calm', b: b.id, anger: b.anger }); }
       b.lastOk = true;
     }
   } else {
     r.wrong++; r.streak = 0;
     if (tooFast) r.fast++;
-    ev.push({ t: 'qr', b: r.b, k, qid: q.qid, idx, ok: false, tooFast, correctIdx: q.correctIdx, correctText: q.answers[q.correctIdx], streak: 0, jamMs: R.JAM_MS });
-    if (b) cost(m, b, r, now, ev, tooFast ? 'fast' : 'wrong');
+    ev.push({ t: 'qr', b: r.b, k, qid: q.qid, idx, ok: false, tooFast, correctIdx: q.correctIdx, correctText: q.answers[q.correctIdx], streak: 0, charges: Math.max(0, r.charges - 1), waitMs: R.WRONG_WAIT_MS });
+    if (b) eat(m, b, r, now, ev, tooFast ? 'fast' : 'wrong');
   }
   return { ok: true, right: ok, ev };
 }
-// the phone painted its question on a visible screen (a pocketed phone never pays for a late one)
 function seen(m, k, qid) {
   const r = kid(m, k);
   if (!r || !r.q || r.q.qid !== qid) return false;
@@ -393,168 +399,227 @@ function late(m, r, now) {
   const q = r.q;
   r.q = null;
   r.answered++; r.wrong++; r.late++; r.streak = 0;
-  const ev = [{ t: 'qr', b: r.b, k: r.k, qid: q.qid, idx: -1, ok: false, late: true, correctIdx: q.correctIdx, correctText: q.answers[q.correctIdx], streak: 0, jamMs: R.JAM_MS }];
+  const ev = [{ t: 'qr', b: r.b, k: r.k, qid: q.qid, idx: -1, ok: false, late: true, correctIdx: q.correctIdx, correctText: q.answers[q.correctIdx], streak: 0, charges: Math.max(0, r.charges - 1), waitMs: R.WRONG_WAIT_MS }];
   const b = boardOf(m, r.b);
-  if (b) cost(m, b, r, now, ev, 'late');
+  if (b) eat(m, b, r, now, ev, 'late');
   return ev;
 }
-// my loaded hammer's aim (x 0-1 across the dock): live for the board, and Fénec reads its shadow
+
+// ---------- the play window: steer, aim, slam ----------
+const playing = (m) => m.phase === 'play' && !m.paused && m.round && m.round.phase === 'pw';
+// the Capitán drags the crab toward x (it walks there at CRAB_SPEED)
+function steer(m, k, x, now) {
+  const r = kid(m, k);
+  if (!r || !playing(m)) return null;
+  const b = boardOf(m, r.b);
+  if (!b || b.captain !== k || !Number.isFinite(Number(x))) return null;
+  if (now - r.lastSteer < R.STEER_GAP_MS) return null;
+  r.lastSteer = now;
+  b.crab.tx = clamp(Number(x) || 0, 0, MAXX);
+  return { b: b.id, k, tx: round2(b.crab.tx) };
+}
+// a martillero moves their claw (x on the dock, kept within the crab's reach)
 function aim(m, k, x, now) {
   const r = kid(m, k);
-  if (!r || m.phase !== 'play' || m.paused) return null;
-  const h = r.h;
-  if (h.st !== 'loaded' && h.st !== 'knock') return null;
+  if (!r || !m.round || (m.round.phase !== 'pw' && m.round.phase !== 'pwin') || m.paused) return null;
+  const b = boardOf(m, r.b);
+  if (!b || (r.claw.st !== 'armed' && r.claw.st !== 'back') || !Number.isFinite(Number(x))) return null;
   if (now - r.lastAim < R.AIM_GAP_MS) return null;
   r.lastAim = now;
-  h.x = clamp(Number(x) || 0, 0, 1);
-  h.spot = spotOfX(h.x);
-  return { b: r.b, k, x: Math.round(h.x * 1000) / 1000, spot: h.spot };
+  r.claw.off = clamp((Number(x) || 0) - b.crab.x, -R.REACH, R.REACH);
+  r.claw.x = clamp(b.crab.x + r.claw.off, 0, MAXX);
+  return { b: b.id, k, off: round2(r.claw.off), x: round2(r.claw.x) };
 }
-// SLAM (tap, swipe down, «¡GOLPE!»): at x when given (the finger's last place), else where it hangs
-function slam(m, k, x, now) {
+// SLAM: the hammer falls where my claw is now (at x when given: aimed there first), one charge
+function slam(m, k, x, now, lag) {
   const r = kid(m, k);
-  if (!r || m.phase !== 'play' || m.paused) return { ok: false, why: 'closed', ev: [] };
+  if (!r || !playing(m)) return { ok: false, why: 'closed', ev: [] };
   const b = boardOf(m, r.b);
   if (!b) return { ok: false, why: 'closed', ev: [] };
-  if (r.h.st !== 'loaded') return { ok: false, why: r.h.st === 'knock' ? 'knock' : 'empty', ev: [] };
-  if (b.phase === 'swing') return { ok: false, why: 'knock', ev: [] };
-  if (b.phase === 'bonk') return { ok: false, why: 'wait', ev: [] };          // (he is flat: the board watches the words fly)
-  if (x != null && Number.isFinite(Number(x))) { r.h.x = clamp(Number(x), 0, 1); r.h.spot = spotOfX(r.h.x); }
-  const ev = [];
-  startSlam(m, b, r, now, ev, false);
-  return { ok: true, ev };
+  if (r.charges <= 0 || r.claw.st === 'idle') return { ok: false, why: 'empty', ev: [] };
+  if (r.claw.st !== 'armed' || now < r.claw.readyAt) return { ok: false, why: 'wait', ev: [] };
+  if (x != null && Number.isFinite(Number(x))) { r.claw.off = clamp(Number(x) - b.crab.x, -R.REACH, R.REACH); }
+  r.claw.x = clamp(b.crab.x + r.claw.off, 0, MAXX);
+  r.charges--;
+  r.slams++;
+  r.claw.st = 'fall';
+  r.claw.fallX = r.claw.x;
+  r.claw.impactAt = now + R.FALL_MS;
+  r.claw.lag = clamp(Number(lag) || 0, 0, R.LAG_MAX);
+  return { ok: true, ev: [{ t: 'slam', b: b.id, k, x: round2(r.claw.fallX), ms: R.FALL_MS, charges: r.charges }] };
+}
+// the impact: Fénec within HIT_R of the hammer (and not lying flat already) = a BONK
+function impact(m, b, r, now, ev) {
+  const c = r.claw;
+  const t = c.impactAt - (c.lag || 0);              // (the moment the slammer saw: its screen draws his plan one trip late)
+  const f = b.fx;
+  const seen = fenAt(b, t);
+  const fx = seen.x;
+  c.st = 'back';
+  c.readyAt = now + R.BACK_MS;
+  const hit = seen.mode !== 'flat' && seen.mode !== 'up' && f.mode !== 'flat' && Math.abs(fx - c.fallX) <= R.HIT_R;
+  if (!hit) {
+    r.misses++;
+    ev.push({ t: 'impact', b: b.id, k: r.k, x: round2(c.fallX), hit: false, fx: round2(fx) });
+    taunt(b, now, ev, m.rng() < 0.5 ? 'miss' : 'miss2');
+    return;
+  }
+  const mult = m.round && m.round.final ? 2 : 1;
+  const pts = R.WORDS_BONK * mult;
+  const assists = [];
+  b.seats.forEach((k) => {
+    const o = kid(m, k);
+    if (!o || o === r || o.k === b.captain) return;
+    if ((o.claw.st === 'armed' || o.claw.st === 'fall') && Math.abs((o.claw.st === 'fall' ? o.claw.fallX : o.claw.x) - fx) <= R.TRAP_R) { o.assists++; o.words += R.ASSIST; assists.push(o.k); }
+  });
+  let cap = null;
+  if (b.captain != null && b.captain !== r.k) { const o = kid(m, b.captain); if (o) { o.words += R.CAPTAIN; o.capBonks++; cap = o.k; } }
+  else if (b.captain === r.k) r.capBonks++;
+  r.bonks++; r.words += pts;
+  b.bonks++; b.roundBonks++;
+  const before = b.words;
+  b.words += pts + assists.length * R.ASSIST + (cap != null ? R.CAPTAIN : 0);
+  f.x = fx; f.x0 = fx; f.x1 = fx; f.mode = 'flat'; f.t0 = now; f.t1 = now + R.FEN_FLAT_MS;
+  fenSnap(b);
+  ev.push({ t: 'bonk', b: b.id, k: r.k, x: round2(fx), pts, assists, cap, words: b.words, target: b.target, flying: pickWords(m, pts + assists.length + (cap != null ? 1 : 0)), ms: R.FEN_FLAT_MS, x2: mult > 1, n: b.bonks });
+  if (!b.full && before < b.target && b.words >= b.target) { b.full = true; ev.push({ t: 'full', b: b.id, words: b.words, target: b.target }); }
+}
+function pickWords(m, n) {
+  const list = m.words || [];
+  if (!list.length) return [];
+  const out = [];
+  for (let i = 0; i < Math.min(n, 6); i++) out.push(list[Math.floor(m.rng() * list.length)]);
+  return out;
 }
 function react(m, k, e, now) {
   const r = kid(m, k);
-  if (!r || m.phase !== 'play' || !R.REACTS.includes(e) || now - r.lastReact < R.REACT_GAP_MS) return null;
+  if (!r || m.phase !== 'play' || !R.REACTS.includes(e) || (r.lastReact && now - r.lastReact < R.REACT_GAP_MS)) return null;
   r.lastReact = now;
   return { b: r.b, k, e };
 }
 
-// every hammer of a board this tick: a loaded one waits through a big moment and slams by itself at its time, a falling
-// one lands, a raised / jammed / knocked one comes back
-function hammers(m, b, now, dt, ev) {
-  b.seats.forEach((k) => {
-    const r = kid(m, k);
-    if (!r) return;
-    const h = r.h;
-    if (h.pubKnock && now >= h.pubKnock) { h.pubKnock = 0; ev.push(Object.assign(hamEv(b, r), { st: 'idle', notMe: true })); }   // (the crew sees it back up like the others)
-    if (h.st === 'loaded' && b.phase !== 'play') h.until += dt;          // (a big moment plays: a loaded hammer waits)
-    if (h.st === 'loaded' && now >= h.until && b.phase === 'play') startSlam(m, b, r, now, ev, true);   // (it slams by itself)
-    else if (h.st === 'fall' && now >= h.impactAt) impact(m, b, r, now, ev);
-    else if (h.st === 'back' && now >= h.until) { setHam(r, 'idle'); r.qNextAt = Math.max(r.qNextAt || 0, now + R.NEXT_Q_MS); ev.push(hamEv(b, r)); }
-    else if (h.st === 'jam' && now >= h.until) { setHam(r, 'idle'); ev.push(Object.assign(hamEv(b, r), { only: true })); }
-    else if (h.st === 'knock' && now >= h.until) {
-      if (h.was === 'loaded') setHam(r, 'loaded', now + R.LOAD_MS); else setHam(r, 'idle');
-      h.was = null;
-      ev.push(hamEv(b, r, { ms: h.st === 'loaded' ? R.LOAD_MS : 0 }));
+// ---------- the robots (teacher-only «🤖 Probar con robots»): an average kid, fair aim ----------
+function robotTick(m, b, r, now, ev) {
+  const B = R.ROBOT, bt = r.bot, rd = m.round;
+  if (!rd) return;
+  if (rd.phase === 'qw' && r.q) {
+    if (!bt.ansAt || bt.ansFor !== r.q.qid) { bt.ansFor = r.q.qid; bt.ansAt = now + rnd(m, B.ANS_MIN, B.ANS_MAX); }
+    else if (now >= bt.ansAt) {
+      const q = r.q;
+      const idx = m.rng() < B.ACC ? q.correctIdx : (q.correctIdx + 1 + Math.floor(m.rng() * (q.answers.length - 1))) % q.answers.length;
+      ev.push.apply(ev, answer(m, r.k, q.qid, idx, now).ev);
     }
-  });
+    return;
+  }
+  if (rd.phase !== 'pw') return;
+  const f = b.fx;
+  const goal = fxAt(f, now);      // (an average kid taps where Fénec IS, not where he will land: fair, not perfect)
+  if (b.captain === r.k && now >= bt.steerAt) { bt.steerAt = now + 350; b.crab.tx = clamp(goal + (m.rng() - 0.5) * 0.6, 0, MAXX); }
+  if (r.claw.st === 'armed' && now >= r.claw.readyAt) {
+    if (!bt.nextAt) bt.nextAt = now + rnd(m, B.SLAM_MIN, B.SLAM_MAX);
+    if (now >= bt.nextAt) {
+      bt.nextAt = 0;
+      const want = goal + (m.rng() - 0.5) * 2 * B.NOISE;
+      const res = slam(m, r.k, want, now);
+      if (res.ok) ev.push.apply(ev, res.ev);
+    }
+  }
 }
 
 // ---------- the tick (every 80 ms while the game plays) ----------
 // opts: { questions, imageFor(q), online(k) → bool }. Returns the events to send.
 function tick(m, now, opts) {
   const ev = [];
-  if (m.paused || m.phase !== 'play') return ev;
+  if (m.paused || m.phase !== 'play' || !m.round) return ev;
   const o = opts || {};
-  const online = o.online || (() => true);
+  const online = (k) => { const r = kid(m, k); return !!(r && r.robot) || (o.online ? o.online(k) : true); };
   const dt = m.lastTick ? Math.max(0, Math.min(1000, now - m.lastTick)) : 0;
   m.lastTick = now;
-  Object.values(m.kids).forEach((r) => {
-    if (online(r.k)) r.awaySince = 0;
-    else if (!r.awaySince) r.awaySince = now;
-  });
-  if (!m.frenzy && frenzyLen(m) && now >= m.frenzyAt && now < m.endsAt - 1200) {
-    m.frenzy = true;
-    ev.push({ t: 'frenzy', endsMs: Math.max(0, m.endsAt - now) });
-  } else if (m.frenzy && now < m.frenzyAt - 1000) {
-    m.frenzy = false;
-    ev.push({ t: 'frenzy', off: true });
-  }
+  Object.values(m.kids).forEach((r) => { if (online(r.k)) r.awaySince = 0; else if (!r.awaySince) r.awaySince = now; });
+  const rd = m.round;
   m.boards.forEach((b) => {
-    if (b.phase === 'wait') { if (b.seats.length) { b.phase = 'play'; b.fx.nextWander = now + 1500; } return; }
+    // the crab walks toward the Capitán's finger (or back to the middle without a Capitán outside the play window)
+    const tx = rd.phase === 'pw' || rd.phase === 'pwin' ? b.crab.tx : b.crab.x;
+    const step = (R.CRAB_SPEED * dt) / 1000;
+    if (Math.abs(tx - b.crab.x) > 0.001) {
+      const was = b.crab.x;
+      b.crab.x = Math.abs(tx - was) <= step ? tx : was + Math.sign(tx - was) * step;
+      b.seats.forEach((k) => { const x = kid(m, k); if (x && (x.claw.st === 'armed' || x.claw.st === 'back')) x.claw.x = clamp(b.crab.x + x.claw.off, 0, MAXX); });
+      if (Math.abs(b.crab.x - b.crab.sentX) > 0.04 && now - b.crab.sentAt >= 90) { b.crab.sentX = b.crab.x; b.crab.sentAt = now; ev.push({ t: 'crab', b: b.id, x: round2(b.crab.x), tx: round2(tx), vol: true }); }
+    } else if (b.crab.sentX !== b.crab.x) { b.crab.sentX = b.crab.x; b.crab.sentAt = now; ev.push({ t: 'crab', b: b.id, x: round2(b.crab.x), tx: round2(tx) }); }
     // the hammers
-    hammers(m, b, now, dt, ev);
-    // the moments end
-    if (b.phase === 'bonk' && now >= b.phaseUntil) {
-      b.phase = 'play';
-      const f = b.fx;
-      const to = Math.floor(m.rng() * R.SPOTS);
-      f.from = f.at; f.at = to; f.hopAt = now; f.spookSpot = -1; f.nextWander = now + rnd(m, R.WANDER_MIN, R.WANDER_MAX);
-      ev.push({ t: 'up', b: b.id, from: f.from, to, ms: R.HOP_MS * 2 });
-      taunt(b, now, ev, 'up', true);
-    } else if (b.phase === 'swing' && now >= b.phaseUntil) {
-      b.phase = 'play';
-      ev.push({ t: 'calmdown', b: b.id, anger: b.anger });
-    }
-    if (b.phase === 'play') fennec(m, b, now, ev);
+    b.seats.forEach((k) => {
+      const r = kid(m, k);
+      if (!r) return;
+      if (r.claw.st === 'fall' && now >= r.claw.impactAt) impact(m, b, r, now, ev);
+      else if (r.claw.st === 'back' && now >= r.claw.readyAt) { r.claw.st = r.charges > 0 && rd.phase === 'pw' ? 'armed' : 'idle'; ev.push({ t: 'claw', b: b.id, k: r.k, st: r.claw.st, charges: r.charges }); }
+      if (r.robot) robotTick(m, b, r, now, ev);
+    });
+    fenTick(m, b, now, ev);
   });
-  // the quiz: every kid whose hammer is up (idle) answers to load it
-  Object.values(m.kids).forEach((r) => {
-    const b = boardOf(m, r.b);
-    if (!b) return;
-    if (b.phase === 'swing' || r.h.st === 'knock') {                    // my hammer is knocked away: my question waits (the phone hides it)
-      if (r.q && r.q.until) r.q.until += dt;
-      return;
-    }
-    if (r.q && now >= (r.q.until || r.q.sentAt + R.Q_TIME_MS) + 300) {
-      if (online(r.k) && r.q.seen) ev.push.apply(ev, late(m, r, now)); else r.q = null;
-    }
-    if (!r.q && r.h.st === 'idle' && now >= r.qNextAt && online(r.k)) {
-      r.q = nextQ(m, r, o.questions || [], o.imageFor, now);
-      if (r.q) ev.push({ t: 'q', b: r.b, k: r.k, q: r.q, ms: R.Q_TIME_MS });
-      else r.qNextAt = now + 2000;
-    }
-  });
-  if (now >= m.endsAt) ev.push.apply(ev, final(m, now));
+  // the windows
+  if (rd.phase === 'qw') {
+    Object.values(m.kids).forEach((r) => {
+      if (r.q && now >= (r.q.until || r.q.sentAt + R.Q_TIME_MS) + 300) {
+        if (online(r.k) && (r.q.seen || r.robot) && now < rd.until) ev.push.apply(ev, late(m, r, now)); else r.q = null;
+      }
+      const room = rd.until - now;
+      if (!r.q && now >= r.qNextAt && online(r.k) && room > 2500) {
+        r.q = nextQ(m, r, o.questions || [], o.imageFor, now, rd.until - 150);
+        if (r.q) { if (r.robot) r.q.seen = true; ev.push({ t: 'q', b: r.b, k: r.k, q: r.q, ms: r.q.until - now, charges: r.charges }); }
+        else r.qNextAt = now + 2000;
+      }
+    });
+    if (now >= rd.until) toPlayIn(m, now, ev);
+  } else if (rd.phase === 'pwin') { if (now >= rd.until) toPlay(m, now, ev); }
+  else if (rd.phase === 'pw') {
+    // every claw spent and landed: the window ends a little after (no waiting on nothing)
+    const live = Object.values(m.kids).some((r) => r.claw.st === 'fall' || r.claw.st === 'back' || (r.claw.st === 'armed' && r.charges > 0));
+    if (!live && rd.until - now > R.PW_EMPTY_MS) rd.until = now + R.PW_EMPTY_MS;
+    if (now >= rd.until && !Object.values(m.kids).some((r) => r.claw.st === 'fall')) toPlayOut(m, now, ev);
+  } else if (rd.phase === 'pwout') { if (now >= rd.until) nextRound(m, now, ev); }
   return ev;
 }
-// «¡FINAL!»: a falling hammer still lands (judged now), everything stops; the ceremony FINAL_MS later
+// «¡FINAL!»: the game ends (a hammer in the air lands now); the ceremony FINAL_MS later
 function final(m, now) {
   const ev = [];
   if (m.phase === 'final' || m.phase === 'done') return ev;
   if (m.phase !== 'play') startPlay(m, now);
-  m.boards.forEach((b) => {
-    if (b.phase === 'swing') b.phase = 'play';
-    b.seats.forEach((k) => { const r = kid(m, k); if (r && r.h.st === 'fall') impact(m, b, r, Math.max(now, r.h.impactAt), ev); });
-  });
-  m.boards.forEach((b) => {
-    b.phase = 'done';
-    b.caught = !!b.full || b.words >= b.target;
-    b.seats.forEach((k) => { const r = kid(m, k); if (r) { r.q = null; setHam(r, 'idle'); } });
-  });
+  if (m.phase === 'final') return ev;
+  m.boards.forEach((b) => b.seats.forEach((k) => { const r = kid(m, k); if (r && r.claw.st === 'fall') impact(m, b, r, Math.max(now, r.claw.impactAt), ev); }));
+  m.boards.forEach((b) => { b.caught = !!b.full || b.words >= b.target; b.seats.forEach((k) => { const r = kid(m, k); if (r) { r.q = null; r.claw.st = 'idle'; } }); });
   m.phase = 'final';
   m.frenzy = false;
   m.phaseAt = now;
   m.phaseUntil = now + R.FINAL_MS;
+  if (m.round) m.round.phase = 'done';
   ev.push({ t: 'final', ms: R.FINAL_MS, boards: m.boards.map((b) => ({ id: b.id, caught: !!b.caught, words: b.words, target: b.target })) });
   return ev;
 }
-// Teacher «⏭ Saltar»: every board's big moment (bonk, swing) and every jam / knock ends now
+// Teacher «⏭ Saltar»: the current window ends now
 function skip(m, now, opts) {
-  if (m.phase !== 'play' || m.paused) return [];
-  m.boards.forEach((b) => { if (b.phase === 'bonk' || b.phase === 'swing') b.phaseUntil = now; });
-  Object.values(m.kids).forEach((r) => { if (r.h.st === 'jam' || r.h.st === 'knock') { r.h.until = now; r.qNextAt = Math.min(r.qNextAt || 0, now); } });
+  if (m.phase !== 'play' || m.paused || !m.round) return [];
+  m.round.until = Math.min(m.round.until, now);
   return tick(m, now, opts);
 }
 
 // ---------- what screens see ----------
-function hamView(r, now) {
-  const h = r.h;
-  const jam = h.st === 'jam';                                       // (a jam shows only on its own phone: never who failed)
-  const st = jam ? (h.pubKnock > now ? 'knock' : 'idle') : h.st;
-  return { k: r.k, st, x: h.x, spot: h.spot, ms: !jam && h.until ? Math.max(0, h.until - now) : 0, fallMs: h.st === 'fall' ? Math.max(0, h.impactAt - now) : 0 };
-}
+function clawView(r) { return { k: r.k, st: r.claw.st, off: round2(r.claw.off), x: round2(r.claw.x), charges: r.charges }; }
 function boardView(m, b, online, now) {
   const t = now == null ? Date.now() : now;
   const clock = m.paused ? m.pausedAt : t;
   return {
-    id: b.id, phase: b.phase, phaseMs: Math.max(0, (b.phaseUntil || 0) - clock), words: b.words, target: b.target, full: !!b.full,
-    anger: Math.round(b.anger * 100) / 100, fx: fxSpotAt(b.fx, clock), bonks: b.bonks,
-    seats: b.seats.map((k) => { const r = kid(m, k); return { k, name: r.name, skin: r.skin, words: r.words, on: !online || online(k) }; }),
-    hammers: b.seats.map((k) => hamView(kid(m, k), clock)),
+    id: b.id, words: b.words, target: b.target, full: !!b.full, anger: round2(b.anger), bonks: b.bonks, captain: b.captain,
+    crab: round2(b.crab.x), fen: fenView(b.fx, clock),
+    seats: b.seats.map((k) => { const r = kid(m, k); return { k, name: r.name, skin: r.skin, words: r.words, robot: r.robot, rightQW: r.rightQW, on: r.robot || !online || online(k) }; }),
+    claws: b.seats.map((k) => clawView(kid(m, k))),
   };
+}
+function roundView(m, now) {
+  const r = m.round;
+  if (!r) return null;
+  const clock = m.paused ? m.pausedAt : now;
+  return { n: r.n, total: r.total, phase: r.phase, final: r.final, ms: Math.max(0, r.until - clock) };
 }
 function openQ(m, k, now) {
   const r = kid(m, k);
@@ -574,35 +639,37 @@ function starDefs(n) {
   const maxShare = Math.max(1, Math.floor(n / 2));
   return [
     { id: 'martillo', name: 'Mejor martillazo', unit: 'martillazos', val: (r) => r.bonks, ok: (r) => r.bonks >= 1, best: 'max', maxShare },
+    { id: 'capitan', name: 'Mejor capitán', unit: 'atrapadas al volante', val: (r) => r.capBonks, ok: (r) => r.capBonks >= 1, best: 'max', maxShare },
     { id: 'trampa', name: 'Mejor trampa', unit: 'trampas', val: (r) => r.assists, ok: (r) => r.assists >= 1, best: 'max', maxShare },
     { id: 'racha', name: 'Mejor racha', unit: 'seguidas', val: (r) => r.best, ok: (r) => r.best >= 3, best: 'max', maxShare },
   ];
 }
+// (robots sit in the crew and help, but never win a star, a place, the podium or the class ranking)
 function finish(m) {
   const row = (r) => ({
-    k: r.k, name: r.name, skin: r.skin, b: r.b, words: r.words, bonks: r.bonks, assists: r.assists, slams: r.slams,
-    right: r.right, wrong: r.wrong, answered: r.answered, best: r.best, stars: [],
+    k: r.k, name: r.name, skin: r.skin, b: r.b, robot: r.robot, words: r.words, bonks: r.bonks, assists: r.assists, capBonks: r.capBonks,
+    captained: r.captained, slams: r.slams, right: r.right, wrong: r.wrong, answered: r.answered, eaten: r.eaten, best: r.best, stars: [],
   });
   const all = Object.values(m.kids).map(row);
   const byK = {};
   all.forEach((r) => { byK[r.k] = r; });
   const boards = m.boards.filter((b) => b.seats.length).map((b) => {
-    const rows = rankRows(b.seats.map((k) => byK[k]).filter(Boolean));
-    const st = Party.stars(rows, starDefs(rows.length));
+    const people = rankRows(b.seats.map((k) => byK[k]).filter((r) => r && !r.robot));
+    const bots = b.seats.map((k) => byK[k]).filter((r) => r && r.robot);
+    const st = Party.stars(people, starDefs(people.length));
     st.forEach((s) => s.winners.forEach((k) => { if (byK[k]) byK[k].stars.push(s.id); }));
-    rows.forEach((r) => { r.of = rows.length; });
-    const winners = rows.filter((r) => r.rank === 1 && r.words > 0).map((r) => r.k);
-    return { id: b.id, rows: rows.map((r) => r.k), winners, stars: st, words: b.words, target: b.target, caught: !!b.full || b.words >= b.target, bonks: b.bonks, swings: b.swings };
+    people.forEach((r) => { r.of = people.length; });
+    bots.forEach((r) => { r.rank = null; r.of = people.length; });
+    const winners = people.filter((r) => r.rank === 1 && r.words > 0).map((r) => r.k);
+    return { id: b.id, rows: people.map((r) => r.k), robots: bots.map((r) => ({ k: r.k, name: r.name, skin: r.skin, words: r.words, bonks: r.bonks })), winners, stars: st, words: b.words, target: b.target, caught: !!b.full || b.words >= b.target, bonks: b.bonks };
   });
-  // the crews: the most words back first (then the share of the target)
-  const crews = boards.slice().sort((a, b) => (b.words / b.target) - (a.words / a.target) || b.words - a.words || a.id - b.id).map((b, i) => ({ id: b.id, words: b.words, target: b.target, caught: b.caught, rank: i + 1 }));
-  const cls = rankRows(all.map((r) => Object.assign({}, r)));
+  const crews = boards.slice().sort((a, b) => (b.words / b.target) - (a.words / a.target) || b.words - a.words || a.id - b.id).map((b, i) => ({ id: b.id, words: b.words, target: b.target, caught: b.caught, robots: b.robots.length, rank: i + 1 }));
+  const cls = rankRows(all.filter((r) => !r.robot).map((r) => Object.assign({}, r)));
   cls.forEach((r) => { byK[r.k].classRank = r.rank; });
-  return { boards, crews, rows: all, byK, order: cls.map((r) => r.k), count: all.length };
+  return { boards, crews, rows: all, byK, order: cls.map((r) => r.k), count: cls.length };
 }
 
 module.exports = {
-  R, clampDuration, spotOfX, xOfSpot, targetFor, newGame, kid, inGame, boardOf, deal, seatLate, byCode, startPlay, addTime,
-  shiftTimes, tick, final, skip, answer, seen, aim, slam, react, boardView, openQ, qPublic, finish, starDefs, fxSpotAt,
-  escapeSpot, threat, nextQ,
+  fenAt, R, clampDuration, targetFor, newGame, kid, inGame, boardOf, deal, seatLate, seatRobot, byCode, startPlay, addTime, shiftTimes, tick,
+  final, skip, answer, seen, steer, aim, slam, react, boardView, roundView, openQ, qPublic, finish, starDefs, fxAt, nextQ, MAXX,
 };

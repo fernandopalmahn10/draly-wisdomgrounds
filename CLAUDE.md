@@ -946,14 +946,19 @@ the checklist for any new game mode.
   beside the video's red Wiggler: `scripts/record-dormilon-wake.js`), and the projector lobby fits and scrolls at every
   laptop size and zoom (`scripts/check-dormilon-lobby.js`).
   «¡Atrapa a Fénec!» (new 2026-10-23, `teamcrab`, #4 of the Mario Party series, his video 7:30-8:16 «Team Crab», spec
-  `docs/specs/atrapa-a-fenec.md`, built on a branch, not deployed): his design turned the clip around: crews of 3-4 pilot a
+  `docs/specs/atrapa-a-fenec.md`, deployed 2026-10-23 c8bdf147b): his design turned the clip around: crews of 3-4 pilot a
   giant red robot crab on a Dubai beach (a cockpit with each kid's face, a wooden hammer each) and Fénec, el ladrón de
   palabras (cast.md villain, computer-played), dodges on the dock; a right answer loads my hammer, I touch Fénec and it
   slams down (the aim-and-slam is the task, the quiz only loads it); a bonk floods the crew's phones gold and the class's
   pinyin words fly back; a miss jams my hammer, Fénec snatches a word, El Péndulo (cast.md villain) eats the spark and at
   anger 5 his big swing knocks the crew's hammers away (calm right answers shrink him); a crew that empties the sack has
   caught him, else he kicks the crab to pieces (the video's ending); the slam and both endings filmed at 4 fps beside the
-  video's (`scripts/check-teamcrab-screens.js`, `scripts/record-teamcrab-end.js`).
+  video's (`scripts/check-teamcrab-screens.js`, `scripts/record-teamcrab-end.js`). **v2 «Draly Cangrejo» (2026-10-23, branch
+  `teamcrab-v2`, after he played v1)**: the Windows rhythm: a question window (right = +1 hammer charge, a miss = El
+  Péndulo eats one) then a 10-s play window where the best answerer is the ⭐ Capitán and drives the walking crab and every
+  kid with charges aims and slams; Fénec runs a readable pattern (a crouch, then 2 spots), the hit is judged where he is at
+  the impact; the skill simulation (`node scripts/test-teamcrab.js --sim`) proves skilful crews beat random tappers;
+  «🤖 Probar con robots» in the projector lobby (teacher only; it fills a crew of 1-2 phones; robots never count).
 - **The kid's phone is the product** (his correction 2026-10-11: "a beautiful projector is useless if everybody else's
   UI is terrible"). Every game ships a phone experience that feels like a competition, better than Kahoot: big colored
   answer tiles, a per-question timer with ticking, live team score, Dralingo pose reactions (right / wrong / streak /
@@ -994,6 +999,28 @@ the checklist for any new game mode.
   danger rises), on your own phone with its sound, never just «no points». Answering right must be clearly the way to
   win, and answering nothing must never be a safe strategy. Kid-friendly: a setback with a funny reaction, never
   humiliation, and fair (the same rule for everyone; a too-fast guess counts as wrong).
+- **Skill decides, never luck** (his words 2026-10-23 after playing «¡Atrapa a Fénec!»: "I tried to hit the little fox
+  and it said that it escaped… I don't really see that it's working based on skills… it should feel like kids are
+  controlling the crab… who escapes, who hits… merit-based"): who hits, escapes, wins or falls follows from what the
+  kid did (right answers, aim, timing, teamwork), with a cause the kid can SEE. A computer opponent moves at a speed and
+  in a pattern a kid can read and beat (a telegraphed jump, never an instant random dodge that overrides a good play),
+  and the kid's character or machine moves the moment they move it: they must feel they are driving it. A risk the kid
+  chooses to take (dormilon's wake-up dice, growing with every tickle they add) is fine; luck that cancels skill is not.
+  Prove it in the bots: a skilful bot clearly beats a random tapper.
+- **Two rhythms: pick the one that fits each game** (his words 2026-10-23: "there's a little order for people to
+  respond… after that window closes, based on that, the mini game of 10 seconds goes… not all mini games need to be
+  respond, interact, respond, interact… I'll leave the criteria up to you… kids who respond properly can move more…
+  whoever gets to be the team of the slammers… you create community"). (1) **Alternating** (an answer buys its action
+  at once): when each answer buys one self-contained action on something that waits for you (a dice roll, a hit on a
+  piñata, a stroke on a sleeping dragon). (2) **Windows**: a question window (~15-25 s, everyone answers) then a play
+  window (~10 s) where the answers decide roles and power (who gets on the team, how many moves or slams, who steers):
+  when the minigame needs real-time attention, coordination or a moving target (dodging, aiming at a runner, team
+  play), which a question would interrupt. Either way answers buy the power, and the play shows who earned what.
+- **«Draly Party»** (his naming 2026-10-23: "good, cool nomenclatures to every mini game that involve the words DRALY"):
+  the minigames are the «Draly Party» games (like Mario Party), each with a name that carries Draly, e.g. «Draly
+  Cangrejo · ¡Atrapa a Fénec!». A new game gets its Draly name from the start; the existing games get theirs once he
+  approves the list (renames follow «Removing or renaming something kids saw»). «Draly» is the platform's name, never
+  the mascot's (he is Dralingo).
 - **Feelings at the end of class** (his words 2026-10-14, after playing Ojos de Halcón: "the Mario Party feeling is so
   important because it makes feelings at the end of a class"): every pin game ends with a Mario Party style ceremony,
   not a plain score list: «¡FINAL!», a suspenseful reveal, the winners celebrating and the others reacting, bonus stars
