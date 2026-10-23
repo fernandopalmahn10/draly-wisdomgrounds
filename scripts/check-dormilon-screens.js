@@ -210,9 +210,19 @@ async function finish(code) {
       }
       if (f.turn && !f.turn.mine && f.turn.phase === 'pre' && !f.turn.guided && !S.guess) { S.guess = 1; await shot(p.page, 'k22-guess-' + p.tag, true); }
       if (f.cue >= 2 && f.cue < 4 && !S.danger) { S.danger = 1; await shot(p.page, 'k30-danger-cue' + f.cue + '-' + p.tag, true); }
-      if (f.cue >= 4 && !S.wake) {
+      if (f.cue >= 4 && f.raging && !S.wake) {          // (caught while the rage is on; a missed one waits for the next wake-up)
         S.wake = 1;
         await shot(p.page, 'k31-wake-' + p.tag, true);
+        // the peak of the push-in: his angry face must read (both eyes, the mustache, the mouth inside the view)
+        const A = await p.page.evaluate(() => {
+          document.getAnimations().forEach((a) => { try { const d = a.effect && a.effect.getComputedTiming ? Number(a.effect.getComputedTiming().duration) || 0 : 0; a.pause(); a.currentTime = Math.max(0, Math.min(1790, (d || 1790) - 1)); } catch (_) {} });
+          const st = window.DormilonPhone && window.DormilonPhone.stage();
+          return st && st.angryPoints ? st.angryPoints(1.07) : null;
+        }).catch(() => null);
+        try { await p.page.screenshot({ path: path.join(OUT, 'k31b-wake-peak-' + p.tag + '.png'), timeout: 15000 }); shots.push('k31b-wake-peak-' + p.tag); } catch (_) {}
+        await p.page.evaluate(() => document.getAnimations().forEach((a) => { try { a.play(); } catch (_) {} })).catch(() => {});
+        const inside = (pt) => A && pt[0] >= 8 && pt[0] <= A.W - 8 && pt[1] >= 8 && pt[1] <= A.H - 8;
+        ok(A && ['eyeL', 'eyeR', 'mustache', 'mouth'].every((k) => inside(A[k])), p.name + ' wake-up: his angry face (both eyes, the mustache, the mouth) inside the view at the peak of the push-in ' + JSON.stringify(A));
         if (!hostWake) { hostWake = true; await shot(host, 'p06-projector-wake', true); }
       }
       if (f.night >= 2 && !S.night) { S.night = 1; await shot(p.page, 'k32-new-night-' + p.tag); if (!hostNight) { hostNight = true; await shot(host, 'p07-projector-new-night'); } }

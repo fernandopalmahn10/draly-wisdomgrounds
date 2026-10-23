@@ -21,6 +21,8 @@
   // the close-up (1000×844): where his head is per pose (fractions of the picture), the zone a stroke must touch
   const CU_AR = 1000 / 844;
   const CU_HEAD = { sleep: [0.40, 0.40], stir: [0.45, 0.43], awake: [0.55, 0.36], angry: [0.55, 0.36] };
+  // his ANGRY face in the close-up (fractions of the picture): its centre, and the points that must stay on screen
+  const ANGRY = { c: [0.60, 0.47], eyes: [[0.515, 0.41], [0.70, 0.41]], mustache: [0.62, 0.51], mouth: [0.61, 0.55], ears: [[0.42, 0.29], [0.80, 0.29]] };
   const CU_ZONE = 0.3;               // a stroke counts within this distance of his head (a fraction of the picture's width)
   const reduced = () => !!(root.matchMedia && root.matchMedia('(prefers-reduced-motion: reduce)').matches);
   const HB = () => root.HalconBoard || null;
@@ -133,15 +135,18 @@
     this.geo = { W, H, bedW, bedH, left, bottom };
     // the close-up picture: covers the view, his face kept in it (tall views fill the height and centre on his face)
     let cw, ch, cl, ct;
-    if (W / H < CU_AR) { ch = H * 0.92; cw = ch * CU_AR; cl = Math.min(0, Math.max(W - cw, W * 0.5 - cw * 0.42)); ct = H - ch; }
+    const up = this.o.mode === 'phone' && this.cueN >= 4;        // (a phone: his angry face centred, like the projector shows it)
+    this.cuUp = up;
+    if (W / H < CU_AR) { ch = H * 0.92; cw = ch * CU_AR; cl = Math.min(0, Math.max(W - cw, W * 0.5 - cw * (up ? ANGRY.c[0] : 0.42))); ct = H - ch; }
     else {
       // wide views (a phone sideways, a laptop, a projector tile): his whole face (rows .20-.90 of the picture: a little
       // room for the feather above the ghutra, down to the beard) fits above the turn's bottom row; the blurred room fills
       // the sides, the picture's cut edge fades
       const hud = Math.min(H * 0.24, 78);
       ch = Math.max(H * 0.9, (H - hud) / 0.70); cw = ch * CU_AR; ct = -0.20 * ch;
-      cl = Math.min(0, Math.max(W - cw, W * 0.5 - cw * 0.40));
-      if (cw < W) cl = W * 0.5 - cw * 0.40;
+      const fxc = up ? ANGRY.c[0] : 0.40;
+      cl = Math.min(0, Math.max(W - cw, W * 0.5 - cw * fxc));
+      if (cw < W) cl = W * 0.5 - cw * fxc;
     }
     this.root.classList.toggle('cuwide', cl > 0);
     this.cuGeo = { w: cw, h: ch, l: cl, t: ct };
@@ -232,6 +237,7 @@
     Object.entries(this.beds).forEach(([k, i]) => i.classList.toggle('on', k === pose));
     if (this.cuImgs) Object.entries(this.cuImgs).forEach(([k, i]) => i.classList.toggle('on', k === cuPose));
     for (let i = 0; i <= 4; i++) this.root.classList.toggle('cue-' + i, i === n);
+    if (this.o.mode === 'phone' && this.cuUp !== undefined && this.cuUp !== (n >= 4)) this.fit();   // (re-centre on his angry face)
     this.placeFeather();
   };
   Stage.prototype.cue = function () { return this.cueN; };
@@ -282,6 +288,7 @@
   // lines from the edges, steam puffs off his head, red sparks flying out, a push-in and a strong shake
   Stage.prototype.rage = function (ms) {
     this.calm();
+    if (this.cuPops) this.cuPops.innerHTML = '';           // (the last tickle's «+1» goes: he is angry now)
     const r = el('div', 'dms-rage');
     const geo = this.geo || { W: 400, H: 300 };
     r.appendChild(el('i', 'dms-rage-tint'));
@@ -294,8 +301,10 @@
     if (!reduced()) {
       const size = Math.max(geo.W, geo.H);
       for (let i = 0; i < 6; i++) {
-        const p = el('i', 'dms-puff');                       // (from the top of his head: his eyes stay clear)
-        const ang = -Math.PI / 2 + (i - 2.5) * 0.55 + (Math.random() - 0.5) * 0.3;
+        const p = el('i', 'dms-puff');                       // (from beside his head, drifting out: his eyes and snout stay clear)
+        const side = i % 2 ? 1 : -1;
+        p.dataset.side = side;
+        const ang = (side < 0 ? -Math.PI * 0.8 : -Math.PI * 0.2) + (Math.random() - 0.5) * 0.4;
         p.style.setProperty('--dx', Math.round(Math.cos(ang) * size * (0.35 + Math.random() * 0.25)) + 'px');
         p.style.setProperty('--dy', Math.round(Math.sin(ang) * size * (0.3 + Math.random() * 0.2)) + 'px');
         p.style.animationDelay = (i * 160) + 'ms';
@@ -319,13 +328,17 @@
   };
   // the centre of his angry face (the ring, the steam, the sparks and the push-in) and the ring's size, for this view
   Stage.prototype.placeRage = function () {
-    const [hx, hy] = this.cuPoint(CU_HEAD.angry[0] - 0.03, CU_HEAD.angry[1] + 0.12);
+    const phone = this.o.mode === 'phone';
+    const [hx, hy] = phone ? this.cuPoint(...ANGRY.c) : this.cuPoint(CU_HEAD.angry[0] - 0.03, CU_HEAD.angry[1] + 0.12);
     const geo = this.geo || { W: 400, H: 300 };
     this.root.style.setProperty('--hx', Math.round(hx) + 'px');
     this.root.style.setProperty('--hy', Math.round(hy) + 'px');
-    const [tx, ty] = this.cuPoint(CU_HEAD.angry[0] - 0.02, CU_HEAD.angry[1] - 0.06);
-    this.root.style.setProperty('--px', Math.round(tx) + 'px');
-    this.root.style.setProperty('--py', Math.round(ty) + 'px');
+    const [lx, ly] = this.cuPoint(...ANGRY.ears[0]), [rx, ry] = this.cuPoint(...ANGRY.ears[1]);
+    if (this.rageEl) this.rageEl.querySelectorAll('.dms-puff').forEach((p) => {
+      const left = p.dataset.side === '-1';
+      p.style.setProperty('--px', Math.round(left ? lx : rx) + 'px');
+      p.style.setProperty('--py', Math.round(left ? ly : ry) + 'px');
+    });
     if (this.rageRing) this.rageRing.style.width = Math.round(Math.min(geo.W, geo.H) * 1.55) + 'px';
   };
   // the anger fades (soft = a short fade-out)
@@ -362,9 +375,9 @@
     const g = this.geo || { W: 300 };
     b.textContent = text;
     if (this.isCu) {                                       // (the close-up: by his face, always inside the view)
-      const [cx, cy] = this.cuPoint(CU_HEAD.angry[0] + 0.12, CU_HEAD.angry[1] + 0.05);
+      const [cx, cy] = this.cuPoint(ANGRY.c[0], 0.17);      // (above his head: never over his face or «−N 😱»)
       b.style.left = Math.max(Math.min(170, g.W / 2), Math.min(g.W - Math.min(170, g.W / 2), cx)) + 'px';   // (its whole width inside the view)
-      b.style.top = Math.max(72, Math.min((g.H || 300) - 20, cy)) + 'px';
+      b.style.top = Math.max(76, Math.min((g.H || 300) * 0.32, cy)) + 'px';
     } else {
       const [x, y] = this.headAt();
       b.style.left = Math.max(8, Math.min(g.W - 8, x)) + 'px';
@@ -395,5 +408,11 @@
   function preload() {
     ['dralingo-sleep', 'dralingo-stir', 'dralingo-awake', 'feather', 'closeup-sleep', 'closeup-stir', 'closeup-awake', 'closeup-angry'].forEach((n) => { const i = new Image(); i.src = A + n + '.webp'; });
   }
-  root.DormStage = { Stage, tiptoe, head, flip, REACT, freeze, preload, skinOk, CU_HEAD, CU_ZONE };
+  // test hook: his angry face's points on screen (stage px) at push-in scale k around the rage centre
+  Stage.prototype.angryPoints = function (k) {
+    const c = this.cuPoint(...(this.o.mode === 'phone' ? ANGRY.c : [CU_HEAD.angry[0] - 0.03, CU_HEAD.angry[1] + 0.12]));
+    const pt = (p) => { const [x, y] = this.cuPoint(...p); return [c[0] + (x - c[0]) * (k || 1), c[1] + (y - c[1]) * (k || 1)]; };
+    return { W: this.geo ? this.geo.W : 0, H: this.geo ? this.geo.H : 0, eyeL: pt(ANGRY.eyes[0]), eyeR: pt(ANGRY.eyes[1]), mustache: pt(ANGRY.mustache), mouth: pt(ANGRY.mouth) };
+  };
+  root.DormStage = { Stage, tiptoe, head, flip, REACT, freeze, preload, skinOk, CU_HEAD, CU_ZONE, ANGRY };
 })(typeof window !== 'undefined' ? window : this);

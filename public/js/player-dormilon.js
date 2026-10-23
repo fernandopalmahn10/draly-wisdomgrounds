@@ -229,15 +229,32 @@
         e.style.setProperty('--d', Math.round(Math.random() * 900) + 'ms');
         r.appendChild(e);
       }
-      [[0.12, 0.2], [0.78, 0.16], [0.18, 0.62], [0.8, 0.55]].forEach(([fx, fy], i) => {
+      // 💢 marks at the edges, never on a chip, the sound button, the top list, «−N», the word band or his face
+      // (placed once the rage layout is on: the panel stepped aside, the stage re-fitted)
+      const placeMarks = () => {
+      const avoid = ['#dm-meter', '.muted-toggle', '.dm-top', '#dm-splash', '#dm-stage .dms-band', '#dm-stage .dms-bubble'].map((q) => document.querySelector(q))
+        .filter((e) => e && e.offsetParent !== null).map((e) => e.getBoundingClientRect());
+      if (stage && stage.angryPoints) {
+        const sb = $('dm-stage').getBoundingClientRect(), ap = stage.angryPoints(1.07);
+        const xs = [ap.eyeL[0], ap.eyeR[0], ap.mouth[0]], ys = [ap.eyeL[1] - 40, ap.mouth[1] + 40];
+        avoid.push({ left: sb.left + Math.min(...xs) - 30, right: sb.left + Math.max(...xs) + 30, top: sb.top + Math.min(...ys), bottom: sb.top + Math.max(...ys) });
+      }
+      const sw = document.querySelector('.dm-stagewrap');
+      if (sw) { const w = sw.getBoundingClientRect(); avoid.push({ left: w.left + w.width / 2 - 120, right: w.left + w.width / 2 + 120, top: w.top + w.height * 0.66 - 55, bottom: w.top + w.height * 0.66 + 55 }); }   // («−N 😱» lands there)
+      const free = (x, y) => avoid.every((a) => x + 30 < a.left || x - 30 > a.right || y + 30 < a.top || y - 30 > a.bottom);
+      const spots = [[0.08, 0.36], [0.92, 0.34], [0.08, 0.6], [0.92, 0.58], [0.1, 0.8], [0.9, 0.78], [0.3, 0.9], [0.7, 0.9], [0.5, 0.26]]
+        .map(([fx, fy]) => [fx * innerWidth, fy * innerHeight]).filter(([x, y]) => free(x, y)).slice(0, 4);
+      spots.forEach(([x, y], i) => {
         const mk = document.createElement('b');
         mk.className = 'mark';
         mk.textContent = '💢';
-        mk.style.setProperty('--x', Math.round(fx * innerWidth - 22) + 'px');
-        mk.style.setProperty('--y', Math.round(fy * innerHeight - 22) + 'px');
+        mk.style.setProperty('--x', Math.round(x - 22) + 'px');
+        mk.style.setProperty('--y', Math.round(y - 22) + 'px');
         mk.style.setProperty('--d', (i * 230) + 'ms');
         r.appendChild(mk);
       });
+      };
+      requestAnimationFrame(() => requestAnimationFrame(placeMarks));
       const scr = $('screen-dormilon');
       scr.classList.remove('dm-rageshake'); void scr.offsetWidth; scr.classList.add('dm-rageshake');
       setTimeout(() => scr.classList.remove('dm-rageshake'), 1150);
@@ -821,9 +838,10 @@
       const name = nameOf(d.k);
       setScore(d.k, 0, 'zero');
       setCue(4);
-      if (stage) { stage.closeup(true); stage.featherOff(); stage.wake(); stage.rage(4000); stage.say('¡Se despertó!', 'wake'); later(1100, () => { if (stage) stage.speak(WAKE_LINES[Math.floor(Math.random() * WAKE_LINES.length)], 2400); }); }
-      rageOn(4000);                                            // he is ANGRY: the whole phone floods red
-      if (d.k === g.you && d.lost) later(150, () => splash('−' + d.lost + ' 😱', 'no', 1600));   // (my points vanish on his face)
+      if (stage) { stage.closeup(true); stage.featherOff(); stage.wake(); stage.rage(4300); stage.say('¡Se despertó!', 'wake'); later(1100, () => { if (stage) stage.speak(WAKE_LINES[Math.floor(Math.random() * WAKE_LINES.length)], 2400); }); }
+      rageOn(4300);                                            // he is ANGRY: the whole phone floods red (the whole wake-up, 4.4 s on the server)
+      $('dm-plus').classList.remove('on');                     // (no «+1 · ¡N!» left over: he is angry now)
+      if (d.k === g.you && d.lost) later(150, () => splash('−' + d.lost + ' 😱', 'no lost', 1600));   // (my points vanish, under his face: his angry eyes stay clear)
       later(260, () => sfx(A + (Math.random() < 0.5 ? 'angry-h1.mp3' : 'angry-h2.mp3'), 0.85));
       const wasMine = d.k === g.you;
       turn = null;
@@ -1130,6 +1148,7 @@
       on, phase: g && g.phase, you: g && g.you, board: g && g.b, seats: seats.map((x) => x.name + ':' + x.score + ':' + x.feathers),
       turn: turn && { k: turn.k, phase: turn.phase, mine: mine(), guided: turn.guided, safe: turn.safe }, q: myQ && myQ.text, answers: myQ && myQ.answers, feathers, cue, night, paused, frenzy,
       myturn: !!(document.getElementById('screen-dormilon') && document.getElementById('screen-dormilon').classList.contains('dm-myturn')),
+      raging: !!(document.getElementById('screen-dormilon') && document.getElementById('screen-dormilon').classList.contains('dm-raging')),
     }),
     answer: (i) => answer(i),
     // test hook: n back-and-forth rubs over his head, gapMs apart (pointer events on the touch layer, like a finger)
