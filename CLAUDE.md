@@ -70,7 +70,9 @@ the checklist for any new game mode.
   Also check the live `/api/_diag` `rooms`; if a class is on, push only after it ends (rooms back to 0).
   **Deploy in the morning** (his words 2026-10-20: "we work a lot in the early morning, until the first class, which is
   4 p.m.… I won't be doing any changes when class time is up"): live updates go out before 4 p.m. his time (UTC−6);
-  later work waits, ready, for the next morning.
+  later work waits, ready, for the next morning, unless he says to put it live now (2026-10-22 18:20, after class: "I
+  don't need to wait for tomorrow morning… I'd rather work on you deploying it… trying it first"): then deploy that
+  evening, with the same class question and room check.
 - Never commit secrets (`.render-token`, credentials JSON, `data/*` runtime files with student data).
 - **Home-screen app (PWA, since 2026-10-12)**: `public/manifest.webmanifest` + `public/sw.js` + `public/js/pwa.js`,
   icons in `public/assets/app/` (made by `../video_tools/app_icon.py` from the green-screen Dralingo original). The
