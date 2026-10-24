@@ -694,31 +694,36 @@ body.dmh-ended .dmh-mute { top: 14px; bottom: auto; }
 #screen-dormilon.dm-raging .dm-plus { display: none; }   /* (no «+1 · ¡N!» counter while he rages) */
 .dm-splash.lost { top: 66%; }   /* (the waker's «−N 😱» lands under his angry face, never over his eyes or the bubble) */
 
-/* ===== v4 (2026-10-24) · the Windows rhythm: everyone tickles at once, my tower of coins, the tally, the reveal ===== */
-/* my tower: gold coins stacked beside my feathers (it jumps with each tickle, glows in the safe, falls if I wake him) */
-.dm-tower { position: absolute; left: 10px; bottom: 132px; z-index: 2; width: 92px; height: 200px; pointer-events: none; }
-.dm-stack { position: absolute; left: 50%; bottom: 22px; width: 76px; height: calc(100% - 22px); translate: -50% 0; }
-.dm-tlabel { position: absolute; left: 50%; bottom: 0; translate: -50% 0; font-weight: 900; font-size: 12px; white-space: nowrap; padding: 2px 8px; border-radius: 999px; background: rgba(14, 21, 49, .85); color: var(--dm-gold2); }
-.dm-coin { position: absolute; left: 0; bottom: calc(var(--i, 0) * 13px); width: 76px; height: 22px; border-radius: 50%; rotate: var(--r, 0deg);
-  background: radial-gradient(ellipse at 40% 35%, #fff6c8 0 18%, #ffd55a 40%, #e2a20f 75%, #a8700a); border: 2px solid #8a5a00; box-shadow: 0 3px 0 #7a4f00, 0 4px 6px rgba(0, 0, 0, .35); }
-.dm-coin.drop { animation: dm-coindrop .32s cubic-bezier(.3, 1.5, .5, 1); }
-@keyframes dm-coindrop { 0% { transform: translateY(-46px) scale(1.15); opacity: 0; } 60% { opacity: 1; } 100% { transform: none; } }
-.dm-tnum { position: absolute; left: 50%; bottom: calc(var(--n, 0) * 13px + 34px); translate: -50% 0; transition: bottom .25s cubic-bezier(.2, 1.4, .4, 1); font: 900 34px/1 'Baloo 2', 'Nunito', sans-serif; color: var(--dm-gold2); -webkit-text-stroke: 2px var(--dm-ink); paint-order: stroke fill; white-space: nowrap; }
-.dm-tower.empty .dm-stack { border-bottom: 3px dashed rgba(255, 255, 255, .45); height: 0; bottom: 26px; }
-.dm-tower.jump .dm-stack { animation: dm-tjump .3s cubic-bezier(.2, 1.6, .4, 1); }
+/* ===== v4 (2026-10-24) · the Windows rhythm · v4.1: one unit, the feather («Tus plumas»), the tally, the reveal ===== */
+/* «Tus plumas»: my pile of golden feathers by my face (each tickle that doesn't wake him flies its feather in; this
+   round's glow until kept; a wake-up blows them away) */
+.dm-pile { position: absolute; left: 8px; bottom: 132px; z-index: 2; width: 118px; height: 190px; pointer-events: none; }
+.dm-pile::before { content: ""; position: absolute; left: 0; right: 0; bottom: 12px; height: calc(var(--n, 0) * 15px + 64px); border-radius: 22px; background: rgba(14, 21, 49, .72); border: 2px solid rgba(242, 193, 78, .55); box-shadow: 0 6px 14px rgba(0, 0, 0, .35); transition: height .25s ease-out; }
+.dm-stack { position: absolute; left: 50%; bottom: 26px; width: 108px; height: calc(100% - 26px); translate: -50% 0; }
+.dm-tlabel { position: absolute; left: 50%; bottom: 0; translate: -50% 0; display: flex; align-items: center; gap: 4px; font-weight: 900; font-size: 12px; white-space: nowrap; padding: 2px 8px 2px 3px; border-radius: 999px; background: rgba(14, 21, 49, .85); color: var(--dm-gold2); }
+.dm-tlabel img { width: 18px; height: 18px; border-radius: 50%; background: #fff; }
+.dm-pf { position: absolute; left: calc(50% + var(--x, 0px) * 1.3 - 21px); bottom: calc(var(--y, 0px) * 1.1); width: 42px; height: 42px; rotate: var(--r, 0deg);
+  background: center / contain no-repeat url(/assets/dormilon/feather.webp); filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .45)); }
+.dm-pf.risk { filter: drop-shadow(0 0 6px rgba(255, 223, 120, .95)) drop-shadow(0 2px 2px rgba(0, 0, 0, .4)); }
+.dm-pf.drop { animation: dm-pfdrop .42s cubic-bezier(.3, 1.4, .5, 1); }
+@keyframes dm-pfdrop { 0% { transform: translateY(-40px) scale(1.3); opacity: 0; } 60% { opacity: 1; } 100% { transform: none; } }
+.dm-tnum { position: absolute; left: 50%; bottom: calc(var(--n, 0) * 16px + 70px); translate: -50% 0; transition: bottom .25s cubic-bezier(.2, 1.4, .4, 1); font: 900 24px/1 'Baloo 2', 'Nunito', sans-serif; color: var(--dm-gold2); padding: 3px 10px; border-radius: 999px; background: rgba(14, 21, 49, .88); border: 2px solid rgba(242, 193, 78, .7); white-space: nowrap; }
+.dm-pile.empty .dm-tnum { display: none; }
+.dm-pile.empty .dm-stack { border-bottom: 3px dashed rgba(255, 255, 255, .45); height: 0; bottom: 34px; width: 70px; }
+.dm-pile.empty::before { height: 44px; }
+.dm-pile.jump .dm-stack { animation: dm-tjump .3s cubic-bezier(.2, 1.6, .4, 1); }
 @keyframes dm-tjump { 40% { transform: scale(1.08, .94); } }
-.dm-tower.safe .dm-coin { box-shadow: 0 3px 0 #7a4f00, 0 0 12px rgba(166, 240, 190, .9); }
-.dm-tower.safe::after { content: "\2713"; position: absolute; right: -2px; bottom: 18px; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-weight: 900; font-size: 16px; color: #0b2a17; background: #a6f0be; border: 2px solid #fff; }
-.dm-coinfly { position: fixed; z-index: 95; pointer-events: none; }
-@media (max-height: 700px) { .dm-tower { height: 150px; width: 76px; bottom: 116px; } .dm-coin { width: 60px; height: 18px; bottom: calc(var(--i, 0) * 9px); } .dm-stack { width: 60px; } .dm-tnum { bottom: calc(var(--n, 0) * 9px + 30px); font-size: 28px; } }
-@media (orientation: landscape) and (min-width: 560px) { #screen-dormilon .dm-tower { bottom: 70px; left: 14px; } }
-@media (orientation: landscape) and (max-height: 450px) { #screen-dormilon .dm-tower { height: 130px; bottom: 64px; } }
+.dm-pile.safe::after { content: "\2713"; position: absolute; right: 0; bottom: 20px; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-weight: 900; font-size: 16px; color: #0b2a17; background: #a6f0be; border: 2px solid #fff; }
+.dm-flyaway { width: 40px; height: 40px; }
+@media (max-height: 700px) { .dm-pile { height: 150px; width: 98px; bottom: 116px; } .dm-stack { width: 90px; } .dm-pf { width: 34px; height: 34px; left: calc(50% + var(--x, 0px) * 1.05 - 17px); bottom: calc(var(--y, 0px) * .9); } .dm-pile::before { height: calc(var(--n, 0) * 13px + 54px); } .dm-tnum { bottom: calc(var(--n, 0) * 13px + 60px); font-size: 20px; } }
+@media (orientation: landscape) and (min-width: 560px) { #screen-dormilon .dm-pile { bottom: 70px; left: 14px; } }
+@media (orientation: landscape) and (max-height: 450px) { #screen-dormilon .dm-pile { height: 130px; bottom: 64px; } }
 /* while he rages on my board: nothing to tap, only his angry face (the count, the hint, the hand and the buttons step aside) */
 #screen-dormilon.dm-raging .dm-count, #screen-dormilon.dm-raging .dm-rubhint, #screen-dormilon.dm-raging .dm-hand, #screen-dormilon.dm-raging .dm-hudrow, #screen-dormilon.dm-raging .dm-turnhud .dm-reacts, #screen-dormilon.dm-raging .dm-hudname { visibility: hidden; }
 #screen-dormilon.dm-safe .dm-hand { display: none; }
 /* «¡A hacerle cosquillas!» wraps on a narrow phone */
 .dm-splash.ready { white-space: normal; text-align: center; width: min(92vw, 640px); font-size: clamp(34px, 10vw, 60px); line-height: 1.02; }
-/* «¡Me retiro!» once safe: calm green, never a call to action */
+/* «¡Guardar mis plumas!» once kept: calm green, never a call to action */
 #screen-dormilon.dm-safe .dm-stop { background: #1f6b3e; color: #e9ffef; border-color: #a6f0be; box-shadow: none; }
 #screen-dormilon.dm-safe .dm-rubhint { display: none; }
 .dm-turnhud .dm-reacts { pointer-events: auto; align-self: flex-end; display: flex; gap: 8px; }
@@ -741,7 +746,7 @@ body.dmh-ended .dmh-mute { top: 14px; bottom: auto; }
 .dms-snorebub.pop { animation: dms-bubpop .45s ease-out forwards !important; }
 @keyframes dms-bubgrow { 0% { opacity: 0; transform: scale(.2); } 30% { opacity: .9; } 80% { opacity: .9; transform: scale(1.1); } 100% { opacity: 0; transform: scale(.3); } }
 @keyframes dms-bubpop { 0% { opacity: 1; transform: scale(1.2); } 60% { opacity: .8; transform: scale(1.9); border-style: dotted; } 100% { opacity: 0; transform: scale(2.3); } }
-/* the top row in the play window: whose tower grows, a check when safe, a fall */
+/* the top row in the play window: whose feathers grow, a check when kept, a flyaway */
 .dm-row.safe b { color: #a6f0be; }
 .dm-row.safe::after { content: "\2713"; position: absolute; right: -14px; color: #a6f0be; font-weight: 900; }
 .dm-row.bump b { animation: dm-bump .5s ease-out; }
@@ -760,19 +765,19 @@ body.dmh-ended .dmh-mute { top: 14px; bottom: auto; }
 @keyframes dm-tally { from { opacity: 0; transform: scale(.5); } to { opacity: 1; transform: none; } }
 .dm-splash.safe { font-size: 44px; color: #a6f0be; }
 .dm-splash.lost { top: 64%; }
-/* the reveal: every tower rises side by side */
-.dm-towers { display: flex; justify-content: center; align-items: flex-end; gap: 10px; height: 230px; margin: 10px 0 4px; }
+/* the reveal: every pile of golden feathers rises side by side */
+.dm-piles { display: flex; justify-content: center; align-items: flex-end; gap: 10px; height: 230px; margin: 10px 0 4px; }
 .dm-tcol { flex: 0 1 70px; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; }
 .dm-tcol b { font: 900 18px/1 'Baloo 2', 'Nunito', sans-serif; color: #b07a00; white-space: nowrap; }
-.dm-tbar { width: 44px; height: 0; border-radius: 10px 10px 4px 4px; transition: height 2.2s cubic-bezier(.3, .8, .3, 1);
-  background: repeating-linear-gradient(0deg, #e2a20f 0 6px, #ffd55a 6px 12px); border: 2px solid #8a5a00; }
+.dm-tbar { width: 46px; height: 0; border-radius: 12px 12px 6px 6px; transition: height 2.2s cubic-bezier(.3, .8, .3, 1);
+  background: url(/assets/dormilon/feather.webp) center bottom / 40px 26px repeat-y, linear-gradient(180deg, rgba(255, 231, 163, .55), rgba(242, 193, 78, .25)); border: 2px solid rgba(176, 122, 0, .6); }
 .dm-tcol img { width: 40px; height: 40px; border-radius: 50%; background: #fff; border: 2px solid var(--dm-gold); }
 .dm-tcol span { font-weight: 900; font-size: 13px; max-width: 72px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dm-tcol.me span { color: #b07a00; }
 .dm-tcol.top .dm-tbar { box-shadow: 0 0 22px rgba(242, 193, 78, .95); }
 .dm-tcol.top b::before { content: "\1F451  "; }
-@media (prefers-reduced-motion: reduce) { .dm-coin.drop, .dm-tower.jump .dm-stack, .dms-other, .dms-ofeather, .dms-snorebub, .dm-row.fall, .dm-row.safe-in, .dm-tallycard.on, .dms-cubox.dms-squirm { animation: none !important; } .dm-tbar { transition: none; } }
-/* v4 · the projector: the robots button, each kid's tower in the board list (✓ in the safe), robots in the lobby */
+@media (prefers-reduced-motion: reduce) { .dm-pf.drop, .dm-pile.jump .dm-stack, .dms-other, .dms-ofeather, .dms-snorebub, .dm-row.fall, .dm-row.safe-in, .dm-tallycard.on, .dms-cubox.dms-squirm { animation: none !important; } .dm-tbar { transition: none; } }
+/* v4 · the projector: the robots button, each kid's feathers in the board list (✓ in the safe), robots in the lobby */
 .dmh-robots { background: #e8e1ff; box-shadow: 0 4px 0 #8a7bc4; }
 .dmh-robots.on { background: linear-gradient(180deg, #d9ccff, #b9a6ff); box-shadow: 0 4px 0 #5b4a9e, 0 0 0 3px #fff inset; }
 .dmh-kid.robot { opacity: .9; }
@@ -790,15 +795,16 @@ body.dmh-ended .dmh-mute { top: 14px; bottom: auto; }
 .dms.dms-tile.rage .dms-band.wake { top: 86%; }
 /* the phone: «¡Despierto!» steps aside while he rages (his face and his line are the whole screen) */
 #screen-dormilon.dm-raging .dm-meter { visibility: hidden; }
-/* the board's row: the coins in the chest + this round's tower beside them (green once in the safe) */
+/* the board's row: the feathers collected + this round's beside them (green once kept) */
 .dm-rp { font-style: normal; font-weight: 900; font-size: 13px; padding: 1px 6px; border-radius: 999px; background: rgba(242, 193, 78, .28); color: var(--dm-gold2); margin-left: 2px; }
 .dm-rp.safe { background: rgba(166, 240, 190, .3); color: #a6f0be; }
 .dm-rp.fell { background: rgba(226, 72, 60, .5); color: #fff; }
 .dmh-rp { font-style: normal; font-weight: 900; font-size: .85em; padding: 0 5px; border-radius: 999px; background: rgba(242, 193, 78, .3); color: #ffe7a3; margin-left: 3px; }
 .dmh-rp.safe { background: rgba(166, 240, 190, .3); color: #a6f0be; }
-/* the towers' reveal: the robots' towers stand beside (marked, never crowned) */
+/* the piles' reveal: the robots' piles stand beside (marked, never crowned) */
 .dm-tcol.robot { opacity: .75; }
-.dm-tcol.robot .dm-tbar { background: repeating-linear-gradient(0deg, #9aa3c4 0 6px, #c8cee6 6px 12px); border-color: #5b6488; }
+.dm-tcol.robot .dm-tbar { filter: grayscale(1) opacity(.75); border-color: #5b6488; }
 .dm-robots-note { font-size: 12.5px; font-weight: 800; opacity: .8; }
 .dmh-champ-robots { margin: 2px 0 0; font-size: .8em; font-weight: 800; opacity: .75; }
-#screen-dormilon.dm-raging .dm-tower { visibility: hidden; }   /* (his anger has the whole phone; the coins of the waker fly from where the tower stood) */
+#screen-dormilon.dm-raging .dm-pile { visibility: hidden; }   /* (his anger has the whole phone; the waker's feathers fly away from where the pile stood) */
+@media (orientation: landscape) and (max-height: 450px) { #screen-dormilon.dm-myturn .dm-meter { left: auto; right: 8px; top: 50px; } }   /* (sideways: the danger chip steps right, «Tus plumas» keeps the left) */

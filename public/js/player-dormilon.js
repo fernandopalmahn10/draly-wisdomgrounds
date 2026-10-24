@@ -4,17 +4,21 @@
 //   · QUESTION WINDOW: the camera out on the bedroom (he sleeps); only my question and my 4 feather slots: a right
 //     answer = a golden feather flies into my quiver; a wrong / late / blind one = a feather flies off («fsss»), he shifts.
 //   · «¡A hacerle cosquillas!» → PLAY WINDOW (10 s): the camera in, his face fills my phone and EVERY kid of my board
-//     rubs at once on their own phone. Each back-and-forth rub = a feather → +1 coin on MY tower (it jumps, «clink»), he
-//     giggles / squirms / a snore bubble pops; my friends' tickles land live on his face (their head + «+1») and their
-//     towers grow in the top row. «¡Me retiro!» puts my tower in the safe. If MY stroke wakes him: my tower falls (coins
-//     everywhere), the ANGRY wake-up floods the whole phone (v3's rage); then he sleeps again and the window goes on.
-//   · the tally: my tower slides into my safe («+3 🪙 · total 7»), then the next question window. The final round ×2.
-//   · «¡FINAL!» → my board's ceremony: the bonus stars, the towers rise side by side (the reveal), the winner, my card.
+//     rubs at once on their own phone. Each back-and-forth rub spends a feather from my hand; if he stays asleep that
+//     feather flies into MY collection «Tus plumas» (a pile of golden feathers by my face, it grows with a soft swish;
+//     2 a tickle in the final round); he giggles / squirms / a snore bubble pops; my friends' tickles land live on his
+//     face (their head + «+1») and their feathers grow in the top row. «🪶 ¡Guardar mis plumas!» keeps this round's
+//     feathers safe. If MY stroke wakes him: the feathers I collected THIS round fly away («fsss»), the ANGRY wake-up
+//     floods the whole phone (v3's rage); then he sleeps again and the window goes on.
+//   · v4.1 (2026-10-24, his «Everything belongs to the game's story»: "you're not building a tower, you're collecting
+//     golden feathers… who has most feathers wins"): one unit, the feather (no coins, no tower).
+//   · the tally: «+3 🪶 · Tus plumas: 7», then the next question window.
+//   · «¡FINAL!» → my board's ceremony: the bonus stars, the feather piles rise side by side (the reveal), the winner, my card.
 // Test hooks: DormilonPhone.frame(), .answer(i), .rub(n, gapMs), .stop(), .freeze(v), .stage().
 (function () {
   'use strict';
   const A = '/assets/dormilon/', H = '/assets/halcon/', K = '/assets/kingdoms/', PARTY = '/assets/party/', MO = '/assets/monopoly/';
-  const COIN = '/assets/sixseven/coins.mp3', CRASH = '/assets/teamcrab/crash.mp3';
+  const SWISH = A + 'stroke.mp3', POP = '/assets/halcon/pop.mp3', FLYAWAY = A + 'lose-feather-h1.mp3';   // (a feather lands softly; this round's feathers fly away «fsss»)
   const $ = (id) => document.getElementById(id);
   const S = () => window.DormStage;
   const HB = () => window.HalconBoard;
@@ -26,13 +30,13 @@
   const COLORS = ['red', 'blue', 'yellow', 'green'];
   const SHAPES = ['▲', '◆', '●', '■'];
   const MAXF = 4;
-  // the music steps back in the play window so the snore, the giggles and the coins carry (player-kingdoms-skin.js musicVol)
+  // the music steps back in the play window so the snore, the giggles and the feathers carry (player-kingdoms-skin.js musicVol)
   const duck = (low) => { const k = window.KingdomsSkin; if (k && k.musicVol) k.musicVol(low ? 0.08 : 0.32); };
   // Dralingo woken up: funny-grumpy, never scary (his personality: wise, super friendly — cast.md)
   const WAKE_LINES = ['¡¿QUIÉN ME DESPERTÓ?! ¡Soñaba con dumplings! 🥟', '¡Grrr! ¡Hasta un dragón sabio necesita su siesta! 😤', '¡Te vi con esa pluma! 😠', '¡Grrr… cinco minutitos más! 💢', '¡¿Otra vez cosquillas?! ¡Grrr!'];
   const fmtClock = (ms) => { const s = Math.max(0, Math.ceil(ms / 1000)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
 
-  let ctx = null, on = false, stage = null, myGot = 0, awakeUntil = 0, tallyShown = false;
+  let ctx = null, on = false, stage = null, myGot = 0, awakeUntil = 0, tallyShown = false, keepTold = false, keepShown = false;
   let g = null;             // { id, you (k), b, phase }
   let seats = [];            // my board [{ k, name, skin, score, pile, safe, feathers, on, robot }]
   let rd = null;             // the round { n, total, phase: 'qw'|'pwin'|'pw'|'pwout', final, until }
@@ -59,7 +63,7 @@
     document.body.classList.toggle('dm-on', on);
     if (!on) { stopAll(); placeMute(false); }
   }
-  // the platform's «🔊 Sonido» sits in the bedroom's corner while the game plays (never over the tiles or «¡Me retiro!»)
+  // the platform's «🔊 Sonido» sits in the bedroom's corner while the game plays (never over the tiles or «¡Guardar mis plumas!»)
   let muteHome = null;
   function placeMute(inStage) {
     const b = $('mute-btn');
@@ -97,7 +101,7 @@
     requestAnimationFrame(() => { if (stage) { stage.fit(); if (v) stage.featherAt(null, null, skinOf(g && g.you)); } });
     duck(!!v);
   }
-  // my board in the top row: each kid's head, name and coins (in the play window: the tower being built, ✓ in the safe)
+  // my board in the top row: each kid's head, name and feathers collected (in the play window: this round's beside them, ✓ kept)
   function paintList() {
     const box = $('dm-list');
     if (!box) return;
@@ -113,16 +117,16 @@
       const n = document.createElement('span');
       n.className = 'dm-rn';
       n.textContent = g && x.k === g.you ? 'Tú' : x.name;
-      // the coins in the chest stay (never «3 → 0» at «¡A hacerle cosquillas!»); this round's tower rides beside them
+      // the feathers collected stay (never «3 → 0» at «¡A hacerle cosquillas!»); this round's ride beside them
       const sc = document.createElement('b');
       sc.id = 'dm-sc-' + x.k;
-      sc.textContent = '🪙' + (x.score || 0);
+      sc.textContent = '🪶' + (x.score || 0);
       r.append(i, n, sc);
       if (play) { const rp = document.createElement('i'); rp.className = 'dm-rp' + (x.safe && x.got ? ' safe' : ''); rp.id = 'dm-rp-' + x.k; rp.textContent = (x.pile || x.got) ? '+' + (x.pile || x.got) : ''; if (!rp.textContent) rp.style.visibility = 'hidden'; r.appendChild(rp); }
       box.appendChild(r);
     });
   }
-  // this round's tower beside a kid's coins in the top row (cls: '' growing · 'safe' in the safe · 'fell')
+  // this round's feathers beside a kid's collection in the top row (cls: '' growing · 'safe' kept · 'fell' flown away)
   function setRp(k, n, cls) {
     const e = $('dm-rp-' + k);
     if (!e) return;
@@ -135,7 +139,7 @@
     if (!r || reduced()) return;
     r.classList.remove('bump', 'fall', 'safe-in'); void r.offsetWidth; r.classList.add(cls);
   }
-  function paintMe() { $('dm-me').textContent = '🪙 ' + score; }
+  function paintMe() { $('dm-me').textContent = '🪶 ' + score; }
   // my quiver: 4 slots, the gold ones are my feathers (in the question panel and in the play window's HUD)
   function paintQuiver(pop) {
     ['dm-quiver', 'dm-hudq'].forEach((id) => {
@@ -209,48 +213,78 @@
     setTimeout(() => fl.remove(), 920);
   }
 
-  // ---------- my tower of coins (the play window) ----------
-  const TOWER_MAX = 12;                     // coins drawn (a taller tower shows its number)
-  function paintTower(n, how) {
-    const t = $('dm-tower');
+  // ---------- «Tus plumas»: my collection of golden feathers (the play window) ----------
+  // a pile by my face: every feather I collected in the game (the ones kept in earlier rounds settled, this round's
+  // glowing on top); a tickle that doesn't wake him flies its feather from my hand into the pile
+  const PILE_MAX = 15;                       // feathers drawn (a bigger collection shows its number)
+  const PILE_AT = (() => { const out = []; [5, 4, 3, 2, 1].forEach((n, r) => { for (let j = 0; j < n; j++) out.push([(j - (n - 1) / 2) * 13, r * 15]); }); return out; })();
+  function paintPile(how) {
+    const t = $('dm-pile');
     if (!t) return;
+    const total = score + pile;                // everything I collected: kept + this round's still at stake
     const stack = t.querySelector('.dm-stack');
-    const want = Math.min(TOWER_MAX, n);
+    const want = Math.min(PILE_MAX, total);
     while (stack.childElementCount > want) stack.lastChild.remove();
     while (stack.childElementCount < want) {
+      const i = stack.childElementCount;
       const c = document.createElement('i');
-      c.className = 'dm-coin';
-      c.style.setProperty('--i', stack.childElementCount);
-      c.style.setProperty('--r', ((Math.random() - 0.5) * 6).toFixed(1) + 'deg');
+      c.className = 'dm-pf';
+      c.style.setProperty('--x', PILE_AT[i][0] + 'px');
+      c.style.setProperty('--y', PILE_AT[i][1] + 'px');
+      c.style.setProperty('--r', ((i % 2 ? 1 : -1) * (18 + (i * 37) % 40)) + 'deg');
       stack.appendChild(c);
       if (how === 'add' && !reduced()) c.classList.add('drop');
     }
-    t.style.setProperty('--n', want);
-    t.querySelector('.dm-tnum').textContent = n ? n + ' 🪙' : '';
-    t.classList.toggle('empty', !n);
-    t.classList.toggle('safe', !!safe);
+    const atStake = Math.min(pile, want);       // this round's, not kept yet: they glow (a wake-up takes them)
+    [...stack.children].forEach((c, i) => c.classList.toggle('risk', i >= want - atStake));
+    t.style.setProperty('--n', Math.ceil(want / 5));
+    t.querySelector('.dm-tnum').textContent = total ? total + ' 🪶' : '';
+    t.classList.toggle('empty', !total);
+    t.classList.toggle('safe', !!safe && myGot > 0);
     if (how === 'add' && !reduced()) { t.classList.remove('jump'); void t.offsetWidth; t.classList.add('jump'); }
   }
-  // my tower falls: every coin flies off (the waker's comic moment)
-  function collapseTower(lost) {
-    const t = $('dm-tower');
+  // a tickle that didn't wake him: the feather flies from my hand (the slot it left) into my pile
+  function featherToPile() {
+    if (reduced()) return;
+    const q = $('dm-hudq'), t = $('dm-pile');
+    if (!q || !t) return;
+    const slots = q.querySelectorAll('.dm-qs');
+    const from = slots[Math.max(0, Math.min(slots.length - 1, feathers))] || q;
+    const a = from.getBoundingClientRect(), b = t.querySelector('.dm-stack').getBoundingClientRect();
+    const f = document.createElement('img');
+    f.src = A + 'feather.webp';
+    f.alt = '';
+    f.className = 'dm-flyf';
+    f.style.left = (a.left + a.width / 2 - 22) + 'px';
+    f.style.top = (a.top + a.height / 2 - 22) + 'px';
+    document.body.appendChild(f);
+    const dx = b.left + b.width / 2 - (a.left + a.width / 2), dy = b.top + b.height * 0.4 - (a.top + a.height / 2);
+    f.animate([{ transform: 'translate(0,0) rotate(0deg) scale(.8)', opacity: 1 }, { transform: `translate(${dx * 0.5}px, ${dy * 0.5 - 70}px) rotate(140deg) scale(1.15)`, opacity: 1, offset: 0.5 }, { transform: `translate(${dx}px, ${dy}px) rotate(300deg) scale(.7)`, opacity: 0.85 }], { duration: 560, easing: 'cubic-bezier(.3,.7,.4,1)' });
+    setTimeout(() => f.remove(), 580);
+  }
+  // he woke up on my tickle: the feathers I collected THIS round fly away out of my pile («fsss»)
+  function feathersFlyAway(lost) {
+    const t = $('dm-pile');
     if (!t) return;
-    const coins = [...t.querySelectorAll('.dm-coin')];
+    const all = [...t.querySelectorAll('.dm-pf')];
+    const going = all.slice(Math.max(0, all.length - lost));
     if (!reduced()) {
-      coins.forEach((c, i) => {
+      going.forEach((c, i) => {
         const a = c.getBoundingClientRect();
-        const f = document.createElement('i');
-        f.className = 'dm-coin dm-coinfly';
-        f.style.left = a.left + 'px'; f.style.top = a.top + 'px'; f.style.width = a.width + 'px'; f.style.height = a.height + 'px';
+        const f = document.createElement('img');
+        f.src = A + 'feather.webp';
+        f.alt = '';
+        f.className = 'dm-flyf dm-flyaway';
+        f.style.left = a.left + 'px'; f.style.top = a.top + 'px';
         document.body.appendChild(f);
-        const dx = (Math.random() - 0.3) * innerWidth * 0.6, dy = -120 - Math.random() * 160;
-        f.animate([{ transform: 'translate(0,0) rotate(0)', opacity: 1 }, { transform: `translate(${dx * 0.5}px, ${dy}px) rotate(${200 + i * 40}deg)`, opacity: 1, offset: 0.45 }, { transform: `translate(${dx}px, ${innerHeight * 0.7}px) rotate(${520 + i * 60}deg)`, opacity: 0 }], { duration: 1300 + i * 60, easing: 'cubic-bezier(.25,.6,.5,1)' });
-        setTimeout(() => f.remove(), 1500 + i * 60);
+        const side = i % 2 ? 1 : -1, dx = side * (60 + Math.random() * innerWidth * 0.35), dy = -(innerHeight * (0.45 + Math.random() * 0.3));
+        f.animate([{ transform: 'translate(0,0) rotate(0)', opacity: 1 }, { transform: `translate(${dx * 0.3}px, ${dy * 0.35}px) rotate(${side * 70}deg)`, opacity: 1, offset: 0.35 }, { transform: `translate(${dx * 0.7}px, ${dy * 0.7}px) rotate(${-side * 40}deg)`, opacity: 0.8, offset: 0.7 }, { transform: `translate(${dx}px, ${dy}px) rotate(${side * 110}deg)`, opacity: 0 }], { duration: 1500 + i * 90, easing: 'ease-out' });
+        setTimeout(() => f.remove(), 1700 + i * 90);
       });
     }
     pile = 0;
-    paintTower(0);
-    if (lost) later(150, () => splash('−' + lost + ' 🪙 😱', 'no lost', 1700));
+    paintPile();
+    if (lost) later(150, () => splash('−' + lost + ' 🪶 ¡Se volaron!', 'no lost', 1700));
   }
 
   // the ANGRY wake-up on the whole phone: the screen floods red, sparks and anger marks fly around, the panel shakes
@@ -275,7 +309,7 @@
       }
       // 💢 marks at the edges, never on a chip, the sound button, the top row, «−N», the band or his face
       const placeMarks = () => {
-        const avoid = ['#dm-meter', '.muted-toggle', '.dm-top', '#dm-splash', '#dm-stage .dms-band', '#dm-stage .dms-bubble', '#dm-tower', '.dm-hudrow'].map((q) => document.querySelector(q))
+        const avoid = ['#dm-meter', '.muted-toggle', '.dm-top', '#dm-splash', '#dm-stage .dms-band', '#dm-stage .dms-bubble', '#dm-pile', '.dm-hudrow'].map((q) => document.querySelector(q))
           .filter((e) => e && e.offsetParent !== null).map((e) => e.getBoundingClientRect());
         if (stage && stage.angryPoints) {
           const sb = $('dm-stage').getBoundingClientRect(), ap = stage.angryPoints(1.07);
@@ -522,7 +556,7 @@
     sfx(A + 'tap.mp3', 0.6);
     ctx.socket.emit('player:dm-stop', { pin: ctx.getPin() });
   }
-  // the HUD of the play window: my state in one line (guided the first time), «¡Me retiro!» or «¡A salvo!»
+  // the HUD of the play window: my state in one line (guided the first time), «¡Guardar mis plumas!» or «¡Guardadas!»
   function paintHud() {
     const hn = $('dm-hudname');
     let line = '';
@@ -530,8 +564,8 @@
     if (awake) line = '';
     else if (empty && inPlay()) line = 'Sin plumas esta ronda 🪶 ¡Mira y anima! Responde bien en la próxima';
     else if (safe) line = '';
-    else if (first && rd && rd.phase === 'pw' && myPats < 2) line = '¡Frota su cabeza! Cada cosquilla = +1 🪙';
-    else if (first && rd && rd.phase === 'pw' && myPats >= 2) line = '¿Otra más o «Me retiro»? Si lo despiertas tú, ¡se cae tu torre!';
+    else if (first && rd && rd.phase === 'pw' && !pile) line = '¡Frota su cabeza! Si sigue dormido, la pluma es tuya 🪶';
+    else if (!keepTold && rd && rd.phase === 'pw' && pile) { line = 'Guárdalas y nadie te las quita esta ronda'; keepShown = true; }
     hn.textContent = line;
     hn.classList.toggle('hidden', !line);
     $('screen-dormilon').classList.toggle('dm-guided', !!line);
@@ -540,7 +574,7 @@
     if (empty) { const h = $('dm-rubhint'); h.textContent = ''; h.classList.remove('warn'); }
     const st = $('dm-stop');
     st.disabled = !(rd && rd.phase === 'pw') || safe || awake || paused;
-    st.textContent = empty ? '🪶 Sin plumas' : safe ? '✓ ¡A salvo!' : '✋ ¡Me retiro!';
+    st.textContent = empty ? 'Sin plumas' : safe ? '✓ ¡Plumas guardadas!' : '🪶 ¡Guardar mis plumas!';
     $('dm-reacts2').classList.toggle('hidden', !safe || awake);
   }
   // the video's «START!»: a big word lands on his face
@@ -564,6 +598,7 @@
 
   // ---------- the windows ----------
   function enterQW(ms) {
+    if (keepShown) keepTold = true;          // (the «Guárdalas…» line: one window is enough)
     rageOff();
     awake = false;
     setPlay(false);
@@ -573,7 +608,7 @@
     { const qf = $('dm-qfeed'); qf.textContent = ''; qf.className = 'dm-qfeed'; }
     seats.forEach((x) => { x.pile = 0; x.safe = false; x.got = 0; });
     pile = 0; safe = false; myGot = 0;
-    paintTower(0);
+    paintPile();
     paintList();
     paintRound();
     paintStatus();
@@ -583,7 +618,7 @@
     myQ = null; paintedQid = null;
     awake = false;
     pile = 0; myGot = 0; safe = feathers <= 0;
-    paintTower(0);
+    paintPile();
     setPlay(true);
     paintHud();
     paintList();
@@ -625,15 +660,15 @@
       setPlay(false);
       rageOff();
       { const st = $('dm-status'); if (st) st.textContent = ''; }
-      if (rd && rd.final) msg('¡Ronda final terminada!', '¡Ahora vemos quién construyó la torre más alta! 🏯', 'calm');
+      if (rd && rd.final) msg('¡Ronda final terminada!', '¡Ahora vemos quién juntó más plumas! 🪶', 'calm');
       else msg('Ahora, ¡a responder!', feathers >= MAXF ? 'Tu aljaba está llena 🪶' : 'Cada acierto = una pluma 🪶 para la próxima ronda', 'calm');
       const c = $('dm-tallycard');
       c.classList.remove('hidden');
-      $('dm-tc-big').textContent = got ? '+' + got + ' 🪙' : '+0';
-      $('dm-tc-small').textContent = 'Tu cofre: ' + score + ' 🪙' + (feathers ? ' · te quedan ' + feathers + (feathers === 1 ? ' pluma' : ' plumas') : '');
+      $('dm-tc-big').textContent = got ? '+' + got + ' 🪶' : '+0';
+      $('dm-tc-small').textContent = 'Tus plumas: ' + score + (feathers ? ' · en la mano: ' + feathers : '');
       c.classList.toggle('zero', !got);
       if (!reduced()) { c.classList.remove('on'); void c.offsetWidth; c.classList.add('on'); }
-      if (got) { sfx(COIN, 0.6); buzz(20); }
+      if (got) { sfx(POP, 0.55); buzz(20); }
       paintMe();
     });
     first = false;
@@ -663,11 +698,12 @@
       setCue(bd.cue || 0);
     }
     paintMe();
+    { const h = $('dm-tlhead'); if (h && S() && g) h.src = S().head(skinOf(g.you)); }   // (my face on «Tus plumas»)
     paintQuiver();
     paintRound();
     const play = inPlay();
     setPlay(play);
-    paintTower(pile || myGot);
+    paintPile();
     if (play) { paintHud(); paintClock(); }
     if (awake && stage) { stage.wake(); stage.rage(Math.min(4000, bd.wakeMs || 0)); rageOn(Math.min(4000, bd.wakeMs || 0)); } else rageOff();
     if (d.q && rd && rd.phase === 'qw') { if (!myQ || myQ.qid !== d.q.qid || $('dm-quiz').classList.contains('hidden')) { myQ = d.q; myQ.total = 12000; myQ.until = Date.now() + (d.q.ms != null ? d.q.ms : 12000); paintMyQ(); } }
@@ -723,7 +759,7 @@
     });
     s.on('countdown', () => {
       if (!on) return;
-      stopAll(); g = null; rd = null; myQ = null; endsAt = 0; cue = 0; feathers = 0; streak = 0; pile = 0; safe = false; score = 0; first = true; awake = false;
+      stopAll(); g = null; rd = null; myQ = null; endsAt = 0; cue = 0; feathers = 0; streak = 0; pile = 0; safe = false; score = 0; first = true; awake = false; keepTold = false; keepShown = false;
       setPlay(false);
       document.body.classList.remove('dm-ended', 'dm-frenzy');
       const old = $('dm-cer'); if (old) old.remove();
@@ -847,7 +883,7 @@
       if (!on || !d) return;
       if (d.why === 'empty') { rubHint(false); $('dm-rubhint').textContent = '¡Sin plumas!'; }
     });
-    // a tickle on my board: mine builds my tower; a friend's lands live on his face with their head
+    // a tickle on my board: mine flies its feather into my collection; a friend's lands live on his face with their head
     s.on('dm:pat', (d) => {
       if (!on || !g || d.b !== g.b) return;
       ctx.markActivity();
@@ -867,8 +903,8 @@
         pile = d.pile;
         myPats++;
         paintQuiver();
-        paintTower(pile, 'add');
-        later(90, () => sfx(COIN, 0.55));
+        const woke = d.cue >= 4;
+        if (!woke) { featherToPile(); later(420, () => { paintPile('add'); sfx(POP, 0.45); }); } else paintPile();
         if (stage && d.cue < 4) stage.tickled(true);
         buzz(d.fast ? [25, 30, 25] : 14);
         paintHud();
@@ -881,17 +917,18 @@
       if (x) { x.safe = true; x.got = (x.got || 0) + (d.pile || 0); x.pile = 0; x.score = d.score; }
       bumpRow(d.k, 'safe-in');
       setRp(d.k, x ? x.got : d.pile, 'safe');
-      const sc = $('dm-sc-' + d.k); if (sc) sc.textContent = '🪙' + d.score;
+      const sc = $('dm-sc-' + d.k); if (sc) sc.textContent = '🪶' + d.score;
       if (d.k === g.you) {
         safe = true; score = d.score; myGot += d.pile || 0; pile = 0;
         if (d.feathers != null) feathers = d.feathers;
         paintQuiver();
-        paintTower(myGot);
+        paintPile();
+        keepTold = true;
         paintHud();
         rub = null;
         if (stage) stage.featherOff();
-        if (d.pile) { splash('¡A salvo! +' + d.pile + ' 🪙', 'safe', 1300); sfx(K + 'correct.mp3', 0.6); later(160, () => sfx(COIN, 0.6)); buzz([20, 30, 20]); }
-        else splash('¡Te retiraste!', 'safe', 1000);
+        if (d.pile) { splash('¡Guardadas! +' + d.pile + ' 🪶', 'safe', 1300); sfx(K + 'correct.mp3', 0.6); later(160, () => sfx(SWISH, 0.5)); buzz([20, 30, 20]); }
+        else splash('¡Plumas guardadas!', 'safe', 1000);
       }
     });
     s.on('dm:wake', (d) => {
@@ -902,7 +939,7 @@
       rub = null;
       const name = nameOf(d.k);
       const fell = (d.fell || []).find((x) => x.k === d.k);
-      const lost = fell ? fell.coins : 0;
+      const lost = fell ? fell.lost : 0;
       const x = seat(d.k);
       if (x) x.pile = 0;
       bumpRow(d.k, 'fall');
@@ -914,8 +951,8 @@
       later(260, () => sfx(A + (Math.random() < 0.5 ? 'angry-h1.mp3' : 'angry-h2.mp3'), 0.85));
       sfx(A + 'wake-h1.mp3', 0.9);
       if (d.k === g.you) {
-        collapseTower(lost);
-        later(120, () => sfx(CRASH, 0.7));
+        feathersFlyAway(lost);
+        later(120, () => sfx(FLYAWAY, 0.85));
         later(1600, () => sfx(MO + 'lose.mp3', 0.6));
         buzz([80, 60, 200]);
       } else {
@@ -944,7 +981,7 @@
       document.body.classList.toggle('dm-frenzy', frenzy);
       $('dm-frenzy').classList.toggle('hidden', !frenzy);
       if (frenzy) {
-        if (P() && P().news) P().news('¡Ronda final! 🌕', { sub: 'Luna llena: cada cosquilla vale 2 🪙', kind: 'alarm', ms: 2800 });
+        if (P() && P().news) P().news('¡Ronda final! 🌕', { sub: 'Luna llena: cada cosquilla te da 2 plumas 🪶', kind: 'alarm', ms: 2800 });
         sfx(PARTY + 'hurry.mp3', 0.8);
         buzz([60, 40, 60]);
       }
@@ -991,8 +1028,8 @@
       box.innerHTML = '<div class="dm-you"><img id="dm-you-img" alt=""><span>Vas a jugar como<b id="dm-you-name"></b></span></div>'
         + '<div class="dm-how-title">Así se juega</div><ol>'
         + '<li><div class="dm-step s1"><i class="t r">▲</i><i class="t b">◆</i><i class="t y ok">●</i><i class="t g">■</i><img class="fl" src="' + A + 'feather.webp" alt=""></div><span>Responde bien<small>= una pluma 🪶 · si fallas, se va una</small></span></li>'
-        + '<li><div class="dm-step s2"><img src="' + A + 'closeup-sleep.webp" alt=""><img class="f" src="' + A + 'feather.webp" alt=""><b>+1 🪙</b></div><span>¡Todos a la vez!<small>frota su cabeza = +1 🪙 a tu torre</small></span></li>'
-        + '<li><div class="dm-step s3"><img src="' + A + 'closeup-awake.webp" alt=""><b>✋</b></div><span>¡No lo despiertes!<small>si lo despiertas tú, se cae tu torre · «Me retiro» la guarda</small></span></li>'
+        + '<li><div class="dm-step s2"><img src="' + A + 'closeup-sleep.webp" alt=""><img class="f" src="' + A + 'feather.webp" alt=""><b>+1 🪶</b></div><span>¡Todos a la vez!<small>frota su cabeza: si sigue dormido, la pluma es tuya</small></span></li>'
+        + '<li><div class="dm-step s3"><img src="' + A + 'closeup-awake.webp" alt=""><b>✋</b></div><span>¡No lo despiertes!<small>si lo despiertas tú, se vuelan tus plumas de la ronda · «Guardar mis plumas» las protege</small></span></li>'
         + '</ol>';
       head.after(box);
     }
@@ -1001,7 +1038,7 @@
     $('dm-you-name').textContent = (window.Saga && window.Saga.labelOf && window.Saga.labelOf(skin)) || 'Dralingo';
   }
 
-  // ---------- the end: my board's ceremony (the towers rise side by side), then my card ----------
+  // ---------- the end: my board's ceremony (the feather piles rise side by side), then my card ----------
   let cer = null;
   function skipCeremony() { if (cer && cer.toCard) cer.toCard(); }
   function end(data) {
@@ -1061,11 +1098,11 @@
       showEl.appendChild(c);
       return c;
     }
-    // the reveal: every kid's tower of coins rises at once, side by side, the numbers counting up (the tallest wins)
-    function towers(list) {
-      const c = scene('¿Quién construyó la torre más alta?', null, null, 'drum');
+    // the reveal: every kid's pile of golden feathers rises at once, side by side, the numbers counting up (the most wins)
+    function piles(list) {
+      const c = scene('¿Quién juntó más plumas?', null, null, 'drum');
       const box2 = document.createElement('div');
-      box2.className = 'dm-towers n' + Math.min(5, list.length);
+      box2.className = 'dm-piles n' + Math.min(5, list.length);
       const top = Math.max(1, ...list.map((r) => r.score));
       const cols = list.map((r) => {
         const col = document.createElement('div');
@@ -1089,17 +1126,17 @@
       const t0 = performance.now();
       const step = () => {
         const k = T ? Math.min(1, (performance.now() - t0) / T) : 1;
-        cols.forEach((x) => { x.num.textContent = Math.round(x.r.score * k) + ' 🪙'; });
+        cols.forEach((x) => { x.num.textContent = Math.round(x.r.score * k) + ' 🪶'; });
         if (k < 1 && document.body.contains(box2)) requestAnimationFrame(step);
         else cols.forEach((x) => { if (x.r.rank === 1 && x.r.score > 0) x.col.classList.add('top'); });
       };
       requestAnimationFrame(step);
       sfx('/assets/mochi/drum.mp3', 0.7);
-      at(T * 0.4, () => sfx(COIN, 0.5));
-      at(T * 0.8, () => sfx(COIN, 0.6));
+      at(T * 0.4, () => sfx(SWISH, 0.45));
+      at(T * 0.8, () => sfx(SWISH, 0.55));
     }
-    const STAR_ICO = { torre: '🏯', prudente: '🛡️', valiente: '🦁', racha: '🔥' };
-    const UNIT = { torre: ['moneda en una ronda', 'monedas en una ronda'], prudente: ['torre a salvo', 'torres a salvo'], valiente: ['cosquilla', 'cosquillas'], racha: ['seguida', 'seguidas'] };
+    const STAR_ICO = { ronda: '🪶', prudente: '🛡️', valiente: '🦁', racha: '🔥' };
+    const UNIT = { ronda: ['pluma en una ronda', 'plumas en una ronda'], prudente: ['ronda guardada', 'rondas guardadas'], valiente: ['cosquilla', 'cosquillas'], racha: ['seguida', 'seguidas'] };
     const starValue = (s) => s.value + ' ' + (UNIT[s.id] ? UNIT[s.id][s.value === 1 ? 0 : 1] : s.unit);
     const stars = bd.stars || [];
     let t = 200;
@@ -1117,11 +1154,11 @@
       });
     }
     const bots = (bd.robots || []).map((r) => Object.assign({ robot: true, rank: null }, r));   // (robots stand beside, never crowned)
-    if (rows.length) { at(t, () => towers(rows.concat(bots).slice(0, 5))); t += 3600; }
+    if (rows.length) { at(t, () => piles(rows.concat(bots).slice(0, 5))); t += 3600; }
     const winners = (bd.winners || []).map((k) => byK[k]).filter(Boolean);
     at(t, () => {
       if (winners.length) {
-        scene(winners.length > 1 ? '¡Empate de campeones!' : '¡' + winners[0].name + ' gana!', winners.map((w) => w.score + ' 🪙').join(' · ') + ' · ¡Shhh, que no se despierte! 🤫', winners.map((w) => [w.skin, 'win', w.name]), 'win');
+        scene(winners.length > 1 ? '¡Empate de campeones!' : '¡' + winners[0].name + ' gana!', winners.map((w) => w.score + ' 🪶').join(' · ') + ' · ¡Shhh, que no se despierte! 🤫', winners.map((w) => [w.skin, 'win', w.name]), 'win');
         if (stg) { stg.kid(winners[0].skin, winners[0].name, { me: winners[0].k === me.k }); stg.say('¡Shhh! 🤫', 'calm'); }
         sfx(K + 'sting-win.mp3', 0.85);
         if (me.won) buzz([60, 40, 60, 40, 200]);
@@ -1148,10 +1185,10 @@
       h.textContent = me.guest ? '¡Se acabó la noche!' : me.won ? (winners.length > 1 ? '¡Empate en tu tablero! 🌙' : '¡Ganaste tu tablero! 🌙') : !me.score ? '¡La próxima es tuya!' : 'Puesto ' + (me.rank || '-') + ' de ' + (me.of || '-') + ' en tu tablero';
       const l1 = document.createElement('p');
       l1.className = 'dm-line';
-      // never a «0» (his rule: «¡La próxima es tuya!»): a kid whose tower fell hears what happened instead
+      // never a «0» (his rule: «¡La próxima es tuya!»): a kid whose feathers flew away hears what happened instead
       if (me.guest) l1.textContent = 'Mira el proyector: ¡ahí están los campeones! 👀';
-      else if (me.score) { l1.innerHTML = 'Tu torre: <b></b>'; l1.querySelector('b').textContent = me.score + ' 🪙'; }
-      else if (me.lost) l1.textContent = 'Tu torre tenía ' + me.lost + ' 🪙… ¡y lo despertaste! 😱';
+      else if (me.score) { l1.innerHTML = 'Tus plumas: <b></b>'; l1.querySelector('b').textContent = me.score + ' 🪶'; }
+      else if (me.lost) l1.textContent = 'Juntaste ' + me.lost + (me.lost === 1 ? ' pluma' : ' plumas') + '… ¡y se volaron al despertarlo! 😱';
       else l1.textContent = 'Responde para ganar plumas 🪶 y luego, ¡frota su cabeza!';
       const l2 = document.createElement('p');
       l2.className = 'dm-small';
@@ -1178,7 +1215,7 @@
         const n = document.createElement('span');
         n.textContent = r.rank + '. ' + r.name;
         const sc = document.createElement('b');
-        sc.textContent = r.score + ' 🪙';
+        sc.textContent = r.score + ' 🪶';
         li.append(im, n, sc);
         list.appendChild(li);
       });

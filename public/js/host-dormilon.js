@@ -5,8 +5,8 @@
 // the class podium. Teacher buttons always work: Pausa, +30 s, −30 s, Saltar, Terminar, Sonido.
 // v4 (2026-10-24, the Windows rhythm): in the question window every board's bedroom sleeps (a wrong answer makes him
 // shift); in the play window every tile closes in on his face and EVERY kid's tickle lands live (their head + «+1»),
-// each kid's tower of coins grows in the board's list (✓ in the safe); a wake-up floods that tile red and the waker's
-// tower falls; the tally, then the next round. «🤖 Probar con robots» in the lobby (teacher only, never counted).
+// each kid's feathers grow in the board's list (this round's beside them, ✓ once kept); a wake-up floods that tile red
+// and the waker's feathers of the round fly away; the tally, then the next round. v4.1: one unit, the feather. «🤖 Probar con robots» in the lobby (teacher only, never counted).
 // Test hooks: DormHost.frame(), DormHost.freeze(v).
 (function () {
   'use strict';
@@ -270,7 +270,7 @@
     e.className = 'dmh-bcue c' + c;
     e.textContent = c >= 4 ? '😡' : c >= 3 ? '😣' : c >= 2 ? '😟' : c >= 1 ? '😪' : '😴';
   }
-  // each kid of the board: head, name, coins (in the play window: the tower being built, ✓ once in the safe)
+  // each kid of the board: head, name, feathers collected (in the play window: this round's beside them, ✓ once kept)
   function paintList(b) {
     const box = b.el.querySelector('.dmh-blist');
     box.innerHTML = '';
@@ -285,7 +285,7 @@
       const n = document.createElement('span');
       n.textContent = x.name;
       const sc = document.createElement('b');
-      sc.textContent = '🪙' + (x.score || 0);
+      sc.textContent = '🪶' + (x.score || 0);
       sc.dataset.k = x.k;
       r.append(i, n, sc);
       if (play && (x.pile || x.got)) { const rp = document.createElement('i'); rp.className = 'dmh-rp' + (x.safe ? ' safe' : ''); rp.textContent = '+' + (x.pile || x.got); r.appendChild(rp); }
@@ -294,7 +294,7 @@
   }
   function setCoins(b, k, v, cls) {
     const e = b.el.querySelector('.dmh-blist b[data-k="' + k + '"]');
-    if (e) { e.textContent = '🪙' + v; if (cls && !reduced()) { e.classList.remove('bump', 'zero'); void e.offsetWidth; e.classList.add(cls); } }
+    if (e) { e.textContent = '🪶' + v; if (cls && !reduced()) { e.classList.remove('bump', 'zero'); void e.offsetWidth; e.classList.add(cls); } }
   }
   function paintTop(top) {
     const box = $('top3');
@@ -309,7 +309,7 @@
       n.innerHTML = '<i>' + (i + 1) + '</i>';
       n.appendChild(document.createTextNode(r.name));
       const sc = document.createElement('b');
-      sc.textContent = r.score + ' 🪙';
+      sc.textContent = r.score + ' 🪶';
       li.append(im, n, sc);
       box.appendChild(li);
     });
@@ -386,7 +386,7 @@
       Object.values(boards).forEach((b) => { b.stage.closeup(true); paintList(b); });
     } else if (d.phase === 'pw') {
       sfx('whoosh', 0.5);
-      say('¡Frótenlo con cuidado! Si lo despiertas tú, se cae tu torre');
+      say('¡Frótenlo con cuidado! Si lo despiertas tú, se vuelan tus plumas de la ronda');
     } else if (d.phase === 'pwout') {
       (d.tally || []).forEach((t) => {
         const b = boards[t.b];
@@ -394,7 +394,7 @@
         t.rows.forEach((x) => { const s = seatOf(b, x.k); if (s) { s.score = x.score; s.got = x.got; s.pile = 0; s.safe = true; } });
         const best = t.rows.slice().sort((a, c) => c.got - a.got)[0];
         const s = best && best.got ? seatOf(b, best.k) : null;
-        setTurnLabel(b, s ? '🏆 ' + s.name + ' +' + best.got + ' 🪙' : '');
+        setTurnLabel(b, s ? '🏆 ' + s.name + ' +' + best.got + ' 🪶' : '');
         paintList(b);
       });
       later(600, () => Object.values(boards).forEach((b) => { if (!b.view.awake) b.stage.closeup(false); }));
@@ -407,7 +407,7 @@
     (d.rows || []).forEach((x) => { const s = seatOf(b, x.k); if (s) { s.score = x.score; s.got = x.got; s.pile = 0; s.safe = true; } });
     const best = (d.rows || []).slice().sort((a, c) => c.got - a.got)[0];
     const s = best && best.got ? seatOf(b, best.k) : null;
-    setTurnLabel(b, s ? '🏆 ' + s.name + ' +' + best.got + ' 🪙' : '¡Todos a salvo!');
+    setTurnLabel(b, s ? '🏆 ' + s.name + ' +' + best.got + ' 🪶' : '¡Todos guardaron sus plumas!');
     paintList(b);
   });
   onDm('dm:ready', (d) => { const b = boards[d.b]; if (b) { b.view.cue = d.cue; b.stage.setCue(d.cue || 0); paintCue(b, d.cue || 0); } });
@@ -451,7 +451,7 @@
     paintCue(b, 4);
     paintList(b);
     { const e = b.el.querySelector('.dmh-blist b[data-k="' + d.k + '"]'); if (e && !reduced()) { e.classList.remove('zero'); void e.offsetWidth; e.classList.add('zero'); } }
-    setTurnLabel(b, (s ? s.name : '') + (fell && fell.coins ? ': ¡se cayó su torre! −' + fell.coins + ' 🪙' : ' lo despertó'));
+    setTurnLabel(b, (s ? s.name : '') + (fell && fell.lost ? ': ¡se le volaron ' + fell.lost + ' 🪶!' : ' lo despertó'));
     sfx('wake', 0.75, 900);
     later(260, () => sfx('angry', 0.7, 900));
     later(650, () => sfx('aww', 0.45, 900));
@@ -498,7 +498,7 @@
     $('frenzy-chip').classList.toggle('hidden', !frenzy);
     document.body.classList.toggle('dmh-frenzy', frenzy);
     if (music) music.playbackRate = frenzy ? 1.18 : 1;
-    if (frenzy) { bigBand('🌕 ¡Ronda final! Cosquillas ×2', 'go', 2200); sfx('hurry', 0.8); say('¡Ronda final! Cada cosquilla vale 2 🪙'); }
+    if (frenzy) { bigBand('🌕 ¡Ronda final! Cosquillas ×2', 'go', 2200); sfx('hurry', 0.8); say('¡Ronda final! Cada cosquilla da 2 plumas 🪶'); }
   });
   onDm('dm:time', (d) => { endsAt = Date.now() + (d.endsMs || 0); if (paused) pausedLeft = d.endsMs || 0; paintClock(); if (d.add) bigBand((d.add > 0 ? '+' : '−') + Math.abs(d.add) + ' s', 'calm', 900); });
   onDm('dm:pause', (d) => {
@@ -547,12 +547,12 @@
       if ((bd.robots || []).length) { const rb = document.createElement('p'); rb.className = 'dmh-champ-robots'; rb.textContent = '🤖 ' + bd.robots.map((r) => r.name.replace('🤖', '').trim()).join(', ') + ': robots de prueba (no cuentan)'; c.appendChild(rb); }
       const n = document.createElement('p');
       n.className = 'dmh-champ-name';
-      n.textContent = win.length ? win.map((w) => w.name).join(' y ') + ' · ' + win[0].score + ' 🪙' : 'Sin campeón: ¡se despertó demasiado!';
+      n.textContent = win.length ? win.map((w) => w.name).join(' y ') + ' · ' + win[0].score + ' 🪶' : 'Sin campeón: ¡se despertó demasiado!';
       c.appendChild(n);
       if ((bd.stars || []).length) {
         const st = document.createElement('div');
         st.className = 'dmh-champ-stars';
-        const ICO = { torre: '🏯', prudente: '🛡️', valiente: '🦁', racha: '🔥' };
+        const ICO = { ronda: '🪶', prudente: '🛡️', valiente: '🦁', racha: '🔥' };
         bd.stars.forEach((s) => {
           const who = (bd.rows || []).filter((r) => (s.winners || []).includes(r.k)).map((r) => r.name).join(' y ');
           const sp = document.createElement('span');
@@ -577,7 +577,7 @@
         const n = document.createElement('span');
         n.textContent = r.name;
         const sc = document.createElement('b');
-        sc.textContent = r.score + ' 🪙';
+        sc.textContent = r.score + ' 🪶';
         col.append(im, n, sc);
       }
       const step = document.createElement('div');

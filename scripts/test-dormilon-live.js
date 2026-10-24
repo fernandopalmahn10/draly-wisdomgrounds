@@ -3,8 +3,8 @@
 // v4 (the Windows rhythm): one teacher + 4 kids (one board of 4): the deal at «Empezar», «Saltar» in the intro, the
 // question window (everyone's questions at once, never the answer; right = a feather, wrong / blind = a feather off + he
 // shifts on the board; no strokes there), «Saltar» → «¡A hacerle cosquillas!» → the play window: several kids rub AT
-// ONCE and the whole board + the projector see each tickle with its place (x, y) and the kid's tower, «¡Me retiro!»
-// banks, pause holds everything, the tally; a dropped phone comes back to its seat and coins; «+30 s» / «−30 s» re-plan
+// ONCE and the whole board + the projector see each tickle with its place (x, y) and the kid's feathers of the round,
+// «🪶 ¡Guardar mis plumas!» keeps them, pause holds everything, the tally; a dropped phone comes back to its seat and feathers; «+30 s» / «−30 s» re-plan
 // the window; «Terminar» → «¡FINAL!» → each phone its board's ceremony; the projector's show again after a reconnect;
 // «Otra ronda» = a clean game. Then «🤖 Probar con robots»: one phone + 3 robots that play and never count.
 'use strict';
@@ -94,7 +94,7 @@ async function answerOpen(x, right, wait) {
   host.emit('host:start', { pin });
   const hi = await next(host, 'dm:init', 3000);
   ok(hi.phase === 'countdown' && hi.boards.length === 1 && hi.boards[0].seats.length === 4, '4 kids = one board of 4, dealt at «Empezar»');
-  ok(hi.boards[0].seats.every((x) => x.feathers === 0 && x.pile === 0 && x.score === 0 && !x.robot), 'everyone starts with an empty quiver and no coins');
+  ok(hi.boards[0].seats.every((x) => x.feathers === 0 && x.pile === 0 && x.score === 0 && !x.robot), 'everyone starts with an empty hand and no feathers collected');
   await sleep(200);
   ok(kids.every((x) => x.init && x.init.board && x.init.you), 'every phone got its own board and seat');
   await next(host, 'dm:intro', 6000);
@@ -158,7 +158,7 @@ async function answerOpen(x, right, wait) {
   if (rubbers.length) {
     ok(hostPats.length >= 1, 'tickles land at once (' + hostPats.length + ')');
     const p0 = hostPats[0];
-    ok(p0.pile >= 1 && p0.x > 0 && p0.y > 0 && p0.pts >= 1, 'a tickle carries the kid\'s tower and where it landed');
+    ok(p0.pile >= 1 && p0.x > 0 && p0.y > 0 && p0.pts >= 1, 'a tickle carries the kid\'s feathers of the round and where it landed');
     ok(kids.every((x) => x.pats.length === hostPats.length), 'the whole board sees every tickle live');
   }
   // pause holds everything
@@ -170,20 +170,20 @@ async function answerOpen(x, right, wait) {
   host.emit('host:pause', { pin, paused: false });
   await next(host, 'dm:pause', 2000);
   await sleep(300);
-  // «¡Me retiro!»
+  // «🪶 ¡Guardar mis plumas!»
   const banker = rubbers.find((x) => !hostPats.some((p) => p.k === x.init.you.k && false)) || kids[0];
   const bankP = next(host, 'dm:bank', 3000, (d) => d.k === banker.init.you.k).catch(() => null);
   banker.s.emit('player:dm-stop', { pin });
   const bank = await bankP;
-  ok(bank === null || (bank.score >= 0 && bank.why), '«¡Me retiro!» puts my tower in the safe (or he had already woken / it was banked)');
+  ok(bank === null || (bank.score >= 0 && bank.why), '«¡Guardar mis plumas!» keeps my feathers of the round (or he had already woken / they were kept)');
   // the tally
   const out = await next(host, 'dm:round', 16000, (d) => d.phase === 'pwout');
   ok(out.tally && out.tally.length === 1 && out.tally[0].rows.length === 4, 'the tally: every kid of the board');
-  ok(out.tally[0].rows.every((r) => r.score >= 0 && r.got >= 0), 'every tower went to the safe');
+  ok(out.tally[0].rows.every((r) => r.score >= 0 && r.got >= 0), 'everyone\'s feathers of the round were kept');
   const qw2 = await next(host, 'dm:round', 9000, (d) => d.phase === 'qw');
   ok(qw2.n === 2, 'round 2');
 
-  // a kid's phone drops: back to its seat and coins
+  // a kid's phone drops: back to its seat and feathers
   const dropKid = kids[2];
   const keptK = dropKid.init.you.k;
   dropKid.s.disconnect();
@@ -223,7 +223,7 @@ async function answerOpen(x, right, wait) {
   ok(he.dormilon && he.dormilon.boards.length === 1 && Array.isArray(he.dormilon.podium), 'the projector gets every board + the podium');
   const ke = await Promise.all(endKids);
   ke.forEach((d, i) => ok(d.me && d.dormilon && d.dormilon.board && d.dormilon.board.rows.some((r) => r.k === d.me.k), `kid ${i} gets its board and its card`));
-  ok(ke.every((d) => d.me.of === 4 && d.me.classOf === 4 && typeof d.me.score === 'number'), 'places in the board and the class, coins on the card');
+  ok(ke.every((d) => d.me.of === 4 && d.me.classOf === 4 && typeof d.me.score === 'number'), 'places in the board and the class, feathers on the card');
 
   // the projector drops after the end: its show again
   host.disconnect();

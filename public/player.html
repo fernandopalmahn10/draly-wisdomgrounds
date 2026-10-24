@@ -28,7 +28,7 @@
   <link rel="stylesheet" href="/css/escape.css?v=20261019ch">
   <link rel="stylesheet" href="/css/halcon.css?v=20261019zc">
   <!-- ¡No despiertes a Dralingo! -->
-  <link rel="stylesheet" href="/css/dormilon.css?v=20261024v4">
+  <link rel="stylesheet" href="/css/dormilon.css?v=20261024v41">
   <link rel="stylesheet" href="/css/teamcrab.css?v=20261023tc5">
   <link rel="stylesheet" href="/css/mochi.css?v=20261019zc">
   <link rel="stylesheet" href="/css/party.css?v=20261019zc">
@@ -680,9 +680,10 @@
   </div>
 
   <!-- Draly Siesta · ¡No despiertes a Dralingo! v4 (js/player-dormilon.js + js/dormilon-stage.js + css/dormilon.css): my
-       board on top (faces + coins). QUESTION WINDOW: the bedroom above, my question + my 4 feathers below. PLAY WINDOW:
-       his face fills the phone and EVERY kid rubs at once (the touch layer; the HUD: the 10-s count, my coin tower, my
-       feathers, «¡Me retiro!»; reactions once my tower is safe). The tally card after each play window. -->
+       board on top (faces + feathers collected). QUESTION WINDOW: the bedroom above, my question + my 4 feathers below.
+       PLAY WINDOW: his face fills the phone and EVERY kid rubs at once (the touch layer; the HUD: the 10-s count, «Tus
+       plumas» = my pile of golden feathers, the feathers in my hand, «🪶 ¡Guardar mis plumas!»; reactions once they are
+       kept). The tally card after each play window. v4.1: one unit, the feather. -->
   <div id="screen-dormilon" class="hidden">
     <div class="dm-rage hidden" id="dm-rage" aria-hidden="true"></div>
     <div class="dm-top">
@@ -690,7 +691,7 @@
       <div class="dm-chips">
         <b class="dm-clock" id="dm-clock">·:··</b>
         <span class="dm-night" id="dm-night"></span>
-        <span class="dm-me" id="dm-me">🪙 0</span>
+        <span class="dm-me" id="dm-me">🪶 0</span>
         <span class="dm-fchip hidden" id="dm-frenzy">🌕 ×2</span>
       </div>
     </div>
@@ -704,13 +705,13 @@
       <div class="dm-turnhud hidden" id="dm-turnhud">
         <div class="dm-hudtop"><b class="dm-count" id="dm-count">6</b><span class="dm-hudname" id="dm-hudname"></span></div>
         <i class="dm-hand hidden" id="dm-hand" aria-hidden="true"></i>
-        <div class="dm-tower empty" id="dm-tower" aria-label="Tu torre de monedas"><div class="dm-stack"></div><b class="dm-tnum"></b><span class="dm-tlabel">Tu torre</span></div>
+        <div class="dm-pile empty" id="dm-pile" aria-label="Tus plumas"><div class="dm-stack"></div><b class="dm-tnum"></b><span class="dm-tlabel"><img id="dm-tlhead" alt="">Tus plumas</span></div>
         <div class="dm-hudbot">
           <div class="dm-rubhint" id="dm-rubhint">Ida y vuelta = una cosquilla</div>
           <div class="dm-reacts hidden" id="dm-reacts2" aria-label="Reacciones">
             <button type="button" data-e="shh" aria-label="Silencio">🤫</button><button type="button" data-e="wow" aria-label="¡Uy!">😱</button><button type="button" data-e="lol" aria-label="Risa">😂</button><button type="button" data-e="clap" aria-label="Aplausos">👏</button>
           </div>
-          <div class="dm-hudrow"><div class="dm-hudq" id="dm-hudq" aria-label="Tus plumas"></div><button class="dm-stop" id="dm-stop" type="button">✋ ¡Me retiro!</button></div>
+          <div class="dm-hudrow"><div class="dm-hudq" id="dm-hudq" aria-label="Plumas en la mano"></div><button class="dm-stop" id="dm-stop" type="button">🪶 ¡Guardar mis plumas!</button></div>
         </div>
       </div>
     </div>
@@ -879,7 +880,7 @@
   <script src="/js/halcon-board.js?v=20261019zc"></script>
   <script src="/js/player-halcon.js?v=20261023names"></script>
   <script src="/js/dormilon-stage.js?v=20261024v4"></script>
-  <script src="/js/player-dormilon.js?v=20261024v4"></script>
+  <script src="/js/player-dormilon.js?v=20261024v41"></script>
   <script src="/js/teamcrab-stage.js?v=20261023tc5"></script>
   <script src="/js/player-teamcrab.js?v=20261023tc6"></script>
   <script src="/js/monopoly-map.js?v=20261016a"></script>

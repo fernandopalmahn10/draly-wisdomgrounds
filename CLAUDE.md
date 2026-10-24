@@ -111,7 +111,11 @@ the checklist for any new game mode.
   round. Content lives in `core/packs/<level>.js` (words + exam-style items; built into questions by `core/packs.js`).
   Pictures come from Higgsfield (Nano Banana Pro, Unlimited ON) in his Chrome, saved to `assets-library/higgsfield/`,
   web copies in `public/assets/packs/<level>/<world>/`; the brief per level is `content/packs/<level>-pictures.json`.
-  Pinyin without tone marks in games. `node scripts/test-packs.js` must pass before a deploy.
+  **Pinyin in the pin games WITH tone marks** (his rule 2026-10-24, replacing «without tone marks»: "do include the tones
+  in pinyin when you're asking the question"), in the question and in its pinyin answer tiles; answers are still checked
+  on the plain form. **The part a question asks about is red and bold** (same day: "everything that's in the question…
+  «here»… can go in red and in bold"): the word or phrase inside «…» («¿Qué significa «jiějie»?»), on every phone and
+  projector of every pin game. `node scripts/test-packs.js` must pass before a deploy.
 - **Every question says exactly what it asks** (his correction 2026-10-11: "who is him? … how are we going to know just by a
   picture? Completely out of context"). Name the word («¿Cómo se dice «hermano mayor» en Chino Mandarín?»), never a bare
   picture with «¿Quién es?»; pronouns go in a scene with the cast («Dralingo saluda a Hamdan: "___ hao!"»). Test-day
@@ -946,10 +950,11 @@ the checklist for any new game mode.
   beside the video's red Wiggler: `scripts/record-dormilon-wake.js`), and the projector lobby fits and scrolls at every
   laptop size and zoom (`scripts/check-dormilon-lobby.js`). **v4 (2026-10-24, branch `dormilon-v4`, his «every kid in,
   every moment; build, then the reveal»)**: the Windows rhythm, no turns: a question window (everyone answers; a feather
-  per right answer, max 4), then a 10-s play window where EVERY kid of the board rubs at once, each tickle = +1 coin on
-  the kid's tower and a roll of the shared wake-up dice (he wakes in ~70 % of play windows); the waker's tower of that
-  round falls, «¡Me retiro!» banks it, the window waits while he rages; the towers rise side by side at the end;
-  «🤖 Probar con robots»; the play window filmed at 4 fps by `scripts/check-dormilon-screens.js` (turn-frames/).
+  per right answer, max 4), then a 10-s play window where EVERY kid of the board rubs at once, each tickle = a feather
+  from the hand into the kid's collection «Tus plumas» (v4.1, his «Everything belongs to the game's story»: no coins,
+  no tower) and a roll of the shared wake-up dice (he wakes in ~70 % of play windows); the waker's feathers of that
+  round fly away, «🪶 ¡Guardar mis plumas!» keeps them, the window waits while he rages; the feather piles rise side by
+  side at the end; «🤖 Probar con robots»; the play window filmed at 4 fps by `scripts/check-dormilon-screens.js`.
   «¡Atrapa a Fénec!» (new 2026-10-23, `teamcrab`, #4 of the Mario Party series, his video 7:30-8:16 «Team Crab», spec
   `docs/specs/atrapa-a-fenec.md`, deployed 2026-10-23 c8bdf147b): his design turned the clip around: crews of 3-4 pilot a
   giant red robot crab on a Dubai beach (a cockpit with each kid's face, a wooden hammer each) and Fénec, el ladrón de
@@ -1010,6 +1015,11 @@ the checklist for any new game mode.
   (their turn, a bet, a reaction that counts), and a question gives enough time to read and answer; each action builds
   something the kid SEES grow (points stacking, a tower, a pile) toward a reveal at the end; one focus per screen (the
   task or the question, never both fighting), few labels; the game's threat comes often enough to keep the tension.
+  **Everything belongs to the game's story** (his words 2026-10-24 on Draly Siesta v4's coin towers: "you don't need to
+  make things that don't make sense within the game… you're not building a tower, you're collecting feathers… at the end
+  who has most feathers wins… it makes sense to the game theme"): what a kid collects, risks and wins is the game's own
+  thing (feathers in the sleeping-dragon game, words in Fénec's sack), never a generic coin, tower or meter bolted on,
+  and a button says what it does in the game's words.
 - **Every pin game is playable with robots** (his rule 2026-10-24: "make all games from here on be playable with robots
   so that I understand what's going on"): a teacher-only «🤖 Probar con robots» in the projector lobby fills the room or
   his board with robot players marked 🤖 who play like an average kid and never count (no record, coin, star, podium or

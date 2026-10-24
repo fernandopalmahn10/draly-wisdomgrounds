@@ -7,8 +7,30 @@
 plumas, luego frota con el dedo» live the same day (6254b16c9, giggle d774da097: "it feels more interactive now");
 **v3** (his picks 15:44: random early wake-ups, 2 minutes, an ANGRY wake-up on every screen, a wrong or late answer
 costs, the projector lobby fixed) live 2026-10-22 evening (a0388210b). **v4** (2026-10-24, the Windows rhythm: everyone
-tickles at once, coin towers, frequent wake-ups, robots) on branch `dormilon-v4` (bundle), not deployed. Read «v4» first,
-then «v3», «v2»; «Our version» keeps v1's text for what none changed (the place, boards, the clock).
+tickles at once, frequent wake-ups, robots) live 2026-10-24 (59d5e5127; he liked it); **v4.1** (one unit, the feather: no
+coins, no tower) on branch `dormilon-v41` (bundle), not deployed. Read «v4.1», then «v4», «v3», «v2»; «Our version» keeps v1's text for what none changed (the place, boards, the clock).
+
+## v4.1 · one unit, the feather (2026-10-24, after he played v4 live and liked it)
+
+His words: "you don't need to make things that don't make sense within the game. You're not building a tower, you're
+collecting golden feathers. If you don't wake him up, then you indeed get the feathers. At the end, who has most
+feathers wins. It makes sense to the game theme." (his new rule «Everything belongs to the game's story», CLAUDE.md).
+- The feathers a kid earns by answering are what they tickle with. Each tickle that doesn't wake him moves that feather
+  into the kid's own collection «Tus plumas»: a pile of golden feathers on a dark plate by the kid's face (this round's
+  glow until kept), the feather flies from the hand slots into the pile with a soft pop; 2 a tickle in the final round.
+- Waking him: the feathers the waker collected THIS round fly away out of the pile («fsss», «−N 🪶 ¡Se volaron!»).
+- «🪶 ¡Guardar mis plumas!» (was «¡Me retiro!») keeps this round's feathers; the first play window where a kid has some,
+  one line: «Guárdalas y nadie te las quita esta ronda». Kept: «✓ ¡Plumas guardadas!»; nothing in the hand: «Sin plumas».
+- The top rows (phone and projector) show each kid's feathers collected «🪶N» and this round's «+N»; the tally «+N 🪶 ·
+  Tus plumas: N · en la mano: N»; the reveal «¿Quién juntó más plumas?» (columns of golden feathers rising side by side);
+  the stars 🪶 Mejor ronda (plumas en una ronda), 🛡️ Más prudente (rondas guardadas), 🦁 Más valiente, 🔥 Mejor racha;
+  the card «Tus plumas: N 🪶»; the projector's lists, labels, podium and champions in feathers.
+- No coin or tower left in this game (art, words, sounds): the coin clink and the crash are gone; sounds reused (0
+  credits): the feather stroke (stroke.mp3), a soft pop as a feather lands (halcon/pop.mp3), «fsss» as they fly away
+  (lose-feather-h1.mp3).
+- Everything else of v4 stays: the rhythm, the wake odds, waker-only loss, the robots, little on screen, the ×2 final round.
+- Proof: `dormilon-shots/v41b/` (4 phone / laptop sizes + the projector: the play window, the pile growing, a wake-up
+  taking the round's feathers, the kept feathers by a REAL tap on «Guardar mis plumas», the final reveal, the card).
 
 ## v4 · the Windows rhythm: everyone tickles at once, coin towers, frequent wake-ups, robots (2026-10-24)
 

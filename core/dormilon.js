@@ -9,13 +9,14 @@
 //   QUESTION WINDOW (~16 s, everyone at once): a right answer = a golden feather (at most 4; unused ones stay for the
 //   next round); a wrong, late or blind answer = a feather flies off and he shifts in his sleep (the board's danger +1).
 //   «¡A hacerle cosquillas!» → PLAY WINDOW (10 s): EVERY kid of the board rubs his head on their own phone AT THE SAME
-//   TIME. One stroke spends a feather and puts +1 coin on MY tower of this round (+2 in the final round ×2), and raises
+//   TIME. One stroke spends a feather from my hand; if he stays asleep it goes into MY collection («Tus plumas»; 2 in
+//   the final round ×2: v4.1, his «Everything belongs to the game's story»: no coins, no tower), and raises
 //   the board's danger (+1, a scribble +2): each unit is a dice roll whose chance grows with the danger since he fell
-//   asleep, so he wakes in most play windows and never predictably. «¡Me retiro!» (or my last feather spent) puts my
-//   tower in the safe. He wakes → the WAKER's tower of this round falls (comic, named on the board; everyone else's
+//   asleep, so he wakes in most play windows and never predictably. «🪶 ¡Guardar mis plumas!» (or my last feather spent)
+//   keeps this round's feathers. He wakes → the feathers the WAKER collected this round fly away (named on the board; everyone else's
 //   stands: the risk is the one I choose with each stroke), the ANGRY wake-up on every phone of the board; then he falls asleep again (a new night, danger 0) and the window goes on.
-//   The window ends → every standing tower goes to the safe → the tally.
-// The clock ends the game: «¡FINAL!», the reveal of whose towers rose highest, the ceremony (bonus stars as honours).
+//   The window ends → every kid's feathers of the round are kept → the tally.
+// The clock ends the game: «¡FINAL!», the reveal of who collected most feathers, the ceremony (bonus stars as honours).
 // «🤖 Probar con robots» (teacher only): robots fill a board of 1-2 phones and play like an average kid; they never count.
 // Every kid's numbers live in m.kids[k] (k = the server's stable id p.dmK), so a kid who left still counts at the end.
 // Spec: docs/specs/no-despiertes-a-dralingo.md. The server emits the events every function returns ({ t, b, … }).
@@ -39,7 +40,7 @@ const R = {
   CUES: [[0.07, 0.085], [0.11, 0.13], [0.17, 0.19]],   // the chance where his cues 1 · 2 · 3 start (jittered per night; sim-tuned)
   SAFE_FIRST: 1,             // the game's first play window: this many tickles per kid of the board never wake him (they learn the rub; sim: he still wakes in ~15 % of first windows)
   KEEP: 1,                   // the share of the danger that survives the question window (1 = he stays restless: sim-tuned)
-  WAKE_MS: 3800,             // «¡Se despertó!»: he bolts up ANGRY on every phone of the board, the waker's tower falls
+  WAKE_MS: 3800,             // «¡Se despertó!»: he bolts up ANGRY on every phone of the board, the waker's feathers of the round fly away
   PW_EXTRA_MAX: 7600,        // the play window waits for a wake-up (its time stands still while he rages): at most two wake-ups' worth per board
   FINAL_MS: 2400,            // «¡FINAL!» before the ceremony (game-end)
   BOARD: 4, BOARD_MAX: 5,    // the size of a Mario Party match; a late joiner can make a board of 5, never 6
@@ -66,8 +67,8 @@ const boardOf = (m, id) => (m ? m.boards.find((b) => b.id === id) || null : null
 function newKid(k, name, skin, b, code, robot) {
   return {
     k, name: String(name || ''), skin: skin || 'dralingo', b, code: code ? String(code) : '', robot: !!robot,  // (code: server only, never in a view)
-    score: 0,                  // the coins in the safe (the game's points)
-    pile: 0, safe: false,      // my tower of this round (not in the safe yet) · it is in the safe this round
+    score: 0,                  // the feathers in my collection, kept (the game's points)
+    pile: 0, safe: false,      // the feathers I collected this round, not kept yet · this round's are kept
     feathers: 0, pats: 0, right: 0, wrong: 0, late: 0, fast: 0, answered: 0, streak: 0, best: 0,
     wakes: 0, falls: 0, lost: 0, saved: 0, big: 0, scribbles: 0, earned: 0, featherLost: 0, rounds: 0,
     first: true, awaySince: 0, lastReact: 0, lastStroke: 0, q: null, qNextAt: 0, order: [], qi: 0, got: 0,
@@ -195,7 +196,7 @@ function toPlay(m, now, ev) {
   });
   ev.push({ t: 'round', phase: 'pw', n: r.n, total: r.total, final: r.final, ms: r.until - now });
 }
-// the play window ends: every tower still standing goes to the safe; the tally (it waits for a board still raging)
+// the play window ends: every kid's feathers of the round are kept; the tally (it waits for a board still raging)
 function toPlayOut(m, now, ev) {
   const r = m.round;
   let until = now + R.PW_OUT_MS;
@@ -378,14 +379,14 @@ function bankIt(m, r) {
   if (r.pile > 0) { r.score += r.pile; r.got += r.pile; r.saved++; r.big = Math.max(r.big, r.got); }
   r.pile = 0;
 }
-// He wakes up: the waker's tower of this round falls (the others stand), the ANGRY wake-up on the board; he sleeps
+// He wakes up: the feathers the waker collected this round fly away (the others' stay), the ANGRY wake-up on the board; he sleeps
 // again WAKE_MS later (a new night) and the window goes on.
 function wake(m, b, now, k, ev) {
   const fell = [];
   b.seats.forEach((x) => {
     const r = kid(m, x);
     if (!r || r.k !== k || r.pile <= 0) return;
-    fell.push({ k: r.k, coins: r.pile });
+    fell.push({ k: r.k, lost: r.pile });
     r.lost += r.pile; r.falls++;
     r.pile = 0;
   });
@@ -410,8 +411,8 @@ function wake(m, b, now, k, ev) {
   }
 }
 // One stroke of a golden feather on his head (my finger: one back-and-forth rub), play window only: a feather → +1
-// coin on my tower (+2 in the final round); gentle = +1 danger, a scribble (sooner than GENTLE_MS after my last) = +2.
-// My last feather puts my tower in the safe. → { ok, why, ev } (ev: pat, then maybe wake / bank)
+// feather into my collection (+2 in the final round); gentle = +1 danger, a scribble (sooner than GENTLE_MS after my last) = +2.
+// My last feather keeps my feathers of the round. → { ok, why, ev } (ev: pat, then maybe wake / bank)
 function stroke(m, k, now) {
   const r = kid(m, k);
   if (!r || !playing(m)) return { ok: false, why: 'closed', ev: [] };
@@ -434,7 +435,7 @@ function stroke(m, k, now) {
   else if (r.feathers <= 0) { const pile = r.pile; bankIt(m, r); ev.push({ t: 'bank', b: b.id, k, pile, score: r.score, why: 'empty' }); }
   return { ok: true, ev };
 }
-// «¡Me retiro!»: my tower of this round goes to the safe (feathers kept for the next round)
+// «🪶 ¡Guardar mis plumas!»: my feathers of this round are kept (the ones still in my hand stay for the next round)
 function bank(m, k) {
   const r = kid(m, k);
   if (!r || !playing(m) || r.safe) return [];
@@ -453,7 +454,7 @@ function react(m, k, e, now) {
 }
 
 // ---------- the robots (teacher-only «🤖 Probar con robots»): an average kid ----------
-// answers at 70 % in 1.5-3.6 s; rubs gently (a scribble now and then), and puts the tower in the safe at a height it
+// answers at 70 % in 1.5-3.6 s; rubs gently (a scribble now and then), and keeps its feathers at a number it
 // picked or when his face says «careful» (cue 2+), like a kid who watches him
 function robotTick(m, b, r, now, ev) {
   const B = R.ROBOT, bt = r.bot, rd = m.round;
@@ -529,7 +530,7 @@ function tick(m, now, opts) {
   } else if (rd.phase === 'pwout') { if (now >= rd.until) nextRound(m, now, ev); }
   return ev;
 }
-// «¡FINAL!»: every tower still standing goes to the safe; the ceremony FINAL_MS later
+// «¡FINAL!»: every kid's feathers of the round are kept; the ceremony FINAL_MS later
 function final(m, now) {
   const ev = [];
   if (m.phase === 'final' || m.phase === 'done') return ev;
@@ -590,8 +591,8 @@ function rankRows(rows) {
 function starDefs(n) {
   const maxShare = Math.max(1, Math.floor(n / 2));
   return [
-    { id: 'torre', name: 'Torre más alta', unit: 'monedas en una ronda', val: (r) => r.big, ok: (r) => r.big >= 3, best: 'max', maxShare },
-    { id: 'prudente', name: 'Más prudente', unit: 'torres a salvo', val: (r) => r.saved, ok: (r) => r.saved >= 2 && r.falls === 0, best: 'max', maxShare },
+    { id: 'ronda', name: 'Mejor ronda', unit: 'plumas en una ronda', val: (r) => r.big, ok: (r) => r.big >= 3, best: 'max', maxShare },
+    { id: 'prudente', name: 'Más prudente', unit: 'rondas guardadas', val: (r) => r.saved, ok: (r) => r.saved >= 2 && r.falls === 0, best: 'max', maxShare },
     { id: 'valiente', name: 'Más valiente', unit: 'cosquillas', val: (r) => r.pats, ok: (r) => r.pats >= 4, best: 'max', maxShare },
     { id: 'racha', name: 'Mejor racha', unit: 'seguidas', val: (r) => r.best, ok: (r) => r.best >= 3, best: 'max', maxShare },
   ];

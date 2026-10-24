@@ -2,9 +2,10 @@
 // v4 (2026-10-24, his «every kid in, every moment; build, then the reveal; the dragon needs to awaken more often»): the
 // Windows rhythm. A question window (everyone answers; right = a golden feather, max 4, kept between rounds; wrong / late
 // / blind = a feather flies off + he shifts), then a play window where EVERY kid of the board rubs at once: a stroke =
-// a feather → +1 coin on my tower (+2 in the final round), the board's danger +1 (a scribble +2), each unit a dice roll;
-// «¡Me retiro!» (or my last feather) puts my tower in the safe; he wakes → every tower not in the safe falls, the angry
-// wake-up, a new night, the window goes on; the window's end puts the standing towers in the safe.
+// a feather from my hand → +1 feather in my collection «Tus plumas» (+2 in the final round), the board's danger +1 (a
+// scribble +3), each unit a dice roll; «🪶 ¡Guardar mis plumas!» (or my last feather) keeps this round's feathers; he
+// wakes → the feathers the WAKER collected this round fly away (the others' stay), the angry wake-up, a new night, the
+// window goes on; the window's end keeps everyone's feathers of the round. (v4.1: one unit, the feather.)
 // Checks: boards, robots (never count), the windows and their clock (±30 s, pause, the final round ×2), the quiz and its
 // costs, strokes / banks / wake-ups, the end. Then a class simulation (kids at a human pace): he wakes in MOST play
 // windows of a board of 4, never predictably; a careful kid (answers well, banks when his face says «careful») beats a
@@ -62,7 +63,7 @@ function ans(m, k, now, right) {
   const { m } = game(8);
   const b = D.seatLate(m, 99, 'Late', 'fer');
   ok(b && b.seats[b.seats.length - 1] === 99 && D.seatLate(m, 99, 'Late', 'fer') === null, 'a late joiner sits last; a seated kid keeps the seat');
-  ok(D.kid(m, 99).feathers === 0 && D.kid(m, 99).score === 0, 'a late joiner starts with an empty quiver and no coins');
+  ok(D.kid(m, 99).feathers === 0 && D.kid(m, 99).score === 0, 'a late joiner starts with an empty hand and no feathers collected');
 }
 // ---------- robots: only a board of 1-2 phones, never counted ----------
 {
@@ -76,7 +77,7 @@ function ans(m, k, now, right) {
   for (let i = 0; i < 1300; i++) { now += 100; D.tick(m, now, opts((k) => k === 1)); }   // (130 s: the robots play the whole game)
   const bots = [101, 102, 103].map((k) => D.kid(m, k));
   ok(bots.every((r) => r.answered >= 4), 'robots answer questions', bots.map((r) => r.answered));
-  ok(bots.some((r) => r.pats >= 2) && bots.some((r) => r.score > 0), 'robots rub and build towers', bots.map((r) => [r.pats, r.score]));
+  ok(bots.some((r) => r.pats >= 2) && bots.some((r) => r.score > 0), 'robots rub and collect feathers', bots.map((r) => [r.pats, r.score]));
   const fin = D.finish(m);
   ok(fin.count === 1 && fin.order.length === 1 && fin.order[0] === 1, 'robots are never in the class ranking', fin.order);
   ok(fin.boards[0].rows.length === 1 && fin.boards[0].robots.length === 3 && fin.boards[0].stars.every((s) => s.winners.every((k) => k === 1)), 'robots never win a place or a star', fin.boards[0]);
@@ -123,21 +124,21 @@ function ans(m, k, now, right) {
   const k1 = D.kid(m, 1);
   const f = k1.feathers;
   const s = D.stroke(m, 1, now + 100);
-  ok(s.ok && k1.pile === 1 && k1.feathers === f - 1 && evOf(s.ev, 'pat')[0].pile === 1, 'a stroke: a feather → +1 coin on my tower', [k1.pile, k1.feathers]);
+  ok(s.ok && k1.pile === 1 && k1.feathers === f - 1 && evOf(s.ev, 'pat')[0].pile === 1, 'a stroke: a feather from my hand → +1 in my collection', [k1.pile, k1.feathers]);
   ok(!D.stroke(m, 1, now + 200).ok, 'strokes closer than 250 ms are noise');
   // the board's danger is shared
   const dd = m.boards[0].danger;
   if (!m.boards[0].awake && D.kid(m, 3).feathers > 0) { D.stroke(m, 3, now + 300); ok(m.boards[0].danger >= dd + 1 || m.boards[0].awake, 'another kid\'s stroke raises the same danger'); }
-  // «¡Me retiro!» banks my tower
+  // «🪶 ¡Guardar mis plumas!» keeps my feathers of the round
   if (!m.boards[0].awake) {
     const sc = k1.score, pile = k1.pile;
     const bk = D.bank(m, 1);
-    ok(bk.length === 1 && k1.safe && k1.score === sc + pile && k1.pile === 0, '«¡Me retiro!»: my tower goes to the safe', bk);
+    ok(bk.length === 1 && k1.safe && k1.score === sc + pile && k1.pile === 0, '«¡Guardar mis plumas!»: this round\'s feathers are kept', bk);
     ok(!D.stroke(m, 1, now + 2000).ok, 'a banked kid rubs no more this window');
     ok(k1.feathers === f - 1, 'the feathers I did not spend stay for the next round');
   }
 }
-// ---------- a wake-up: every tower not in the safe falls; he sleeps again and the window goes on ----------
+// ---------- a wake-up: the waker's feathers of the round fly away; he sleeps again and the window goes on ----------
 {
   const { m, now: t0 } = game(4, 11, 240);
   D.startPlay(m, t0);
@@ -161,19 +162,19 @@ function ans(m, k, now, right) {
   }
   ok(!!woke, 'a restless night: he wakes on a stroke');
   ok(b.owed === R.WAKE_MS && m.round.until >= m.round.base + R.WAKE_MS, 'the play window\'s clock stands still while he rages (the board gets the rage\'s time back)', [b.owed, m.round.until - m.round.base]);
-  ok(woke && woke.fell.length >= 1 && woke.fell.every((x) => x.k !== 1) && woke.fell.some((x) => x.k === woke.k), 'the towers not in the safe fall (the waker\'s too), the banked one stays', woke);
-  ok(D.kid(m, 1).score === safe1, 'a tower in the safe never falls');
+  ok(woke && woke.fell.length >= 1 && woke.fell.every((x) => x.k !== 1 && x.lost >= 1) && woke.fell.some((x) => x.k === woke.k), 'only the waker\'s feathers of the round fly away; kept ones stay', woke);
+  ok(D.kid(m, 1).score === safe1, 'kept feathers never fly away');
   ok(b.awake && b.danger === 0 && b.night === 2, 'he is awake; the next night starts calm', [b.awake, b.danger, b.night]);
   ok(!D.stroke(m, 3, now + 400).ok, 'nobody rubs while he is angry');
   const sl = until(m, now, 'sleep', R.WAKE_MS + 400);
   ok(sl.hit && !b.awake, 'he falls asleep again after the angry wake-up', sl.hit);
-  if (m.round.phase === 'pw') { D.kid(m, 3).feathers = 2; const again = D.stroke(m, 3, sl.now + 50); ok(again.ok && D.kid(m, 3).pile >= 1, 'the window goes on: a new tower from 0'); }
-  // the window ends: standing towers go to the safe
+  if (m.round.phase === 'pw') { D.kid(m, 3).feathers = 2; const again = D.stroke(m, 3, sl.now + 50); ok(again.ok && D.kid(m, 3).pile >= 1, 'the window goes on: new feathers collected from 0'); }
+  // the window ends: everyone's feathers of the round are kept
   const out = toPhase(m, sl.now, 'pwout');
   const tally = out.hit.tally[0];
-  ok(tally && tally.rows.length === 4 && Object.values(m.kids).every((r) => r.pile === 0 && r.safe), 'the tally: every standing tower went to the safe', tally);
+  ok(tally && tally.rows.length === 4 && Object.values(m.kids).every((r) => r.pile === 0 && r.safe), 'the tally: everyone\'s feathers of the round were kept', tally);
 }
-// ---------- my last feather puts my tower in the safe; a full window of banked kids ends early ----------
+// ---------- my last feather keeps my feathers; a window where everyone is done ends early ----------
 {
   const { m, now: t0 } = game(2, 5, 240);
   D.startPlay(m, t0);
@@ -182,7 +183,7 @@ function ans(m, k, now, right) {
   m.boards[0].danger = 0;
   const r = D.stroke(m, 1, now + 50);
   const wokeNow = r.ev.some((e) => e.t === 'wake');
-  ok(wokeNow || (evOf(r.ev, 'bank').length === 1 && D.kid(m, 1).safe && D.kid(m, 1).score >= 1), 'my last feather: my tower goes to the safe');
+  ok(wokeNow || (evOf(r.ev, 'bank').length === 1 && D.kid(m, 1).safe && D.kid(m, 1).score >= 1), 'my last feather: my feathers of the round are kept');
   const e = until(m, now + 50, 'round', 3000, null, (x) => x.phase === 'pwout');
   ok(e.hit && e.now - now <= 2000 + (wokeNow ? R.WAKE_MS + 600 : 0), 'everyone done: the window ends at once (no waiting on nothing)', e.now - now);
 }
@@ -199,7 +200,7 @@ function ans(m, k, now, right) {
   }
   ok(fin && n >= 3 && n === m.round.n, 'the last round is the final round ×2', [n, m.round.n]);
   ok(now - t0 >= 120000 - 14000 && now - t0 <= 120000 + 6000, '«¡FINAL!» lands near the clock\'s end (a final window everyone finished ends early)', now - t0);
-  // ×2: a stroke in the final round puts 2 coins
+  // ×2: a stroke in the final round collects 2 feathers
   const g2 = game(4, 21, 60).m;
   D.startPlay(g2, t0);
   ok(g2.round.total === 2 && !g2.round.final, 'a 1-minute game: two rounds, the second one final', g2.round);
@@ -230,7 +231,7 @@ function ans(m, k, now, right) {
   D.startPlay(g5, t0);
   const sk = D.skip(g5, t0 + 500, opts());
   ok(evOf(sk, 'round').some((x) => x.phase === 'pwin'), '«Saltar» closes the question window');
-  // «¡FINAL!» puts the standing towers in the safe
+  // «¡FINAL!» keeps everyone's feathers of the round
   const g6 = game(4, 29, 240).m;
   D.startPlay(g6, t0);
   g6.kids[1].feathers = 3;
@@ -239,14 +240,14 @@ function ans(m, k, now, right) {
   D.stroke(g6, 1, p6.now + 20);
   const had = g6.kids[1].pile, sc = g6.kids[1].score;
   const f6 = D.final(g6, p6.now + 100);
-  ok(evOf(f6, 'final').length === 1 && (g6.kids[1].score === sc + had), '«¡FINAL!»: the standing towers go to the safe', [had, g6.kids[1].score]);
+  ok(evOf(f6, 'final').length === 1 && (g6.kids[1].score === sc + had), '«¡FINAL!»: everyone\'s feathers of the round are kept', [had, g6.kids[1].score]);
 }
 // ---------- views and the end ----------
 {
   const { m, now: t0 } = game(4, 31, 120);
   D.startPlay(m, t0);
   const v = D.boardView(m, m.boards[0], () => true, t0);
-  ok(v.seats.length === 4 && v.seats.every((s) => 'pile' in s && 'safe' in s && 'feathers' in s && 'score' in s) && !('code' in v.seats[0]), 'a board view: towers, safe, feathers; never a code');
+  ok(v.seats.length === 4 && v.seats.every((s) => 'pile' in s && 'safe' in s && 'feathers' in s && 'score' in s) && !('code' in v.seats[0]), 'a board view: feathers collected, this round\'s, kept, in hand; never a code');
   const u = until(m, t0, 'q', 2000);
   const oq = D.openQ(m, u.hit.k, u.now);
   ok(oq && !('correctIdx' in oq) && oq.ms > 0, 'a reconnect gets its open question again, never its answer');
@@ -257,7 +258,7 @@ function ans(m, k, now, right) {
 
 // ---------- a class simulation (the pace, the wake-ups, skill over luck) ----------
 // styles: avg = an average kid (70 %, rubs gently, banks at a height it picked or when his face says «careful»);
-// careful = 90 %, gentle, banks at cue 1+ or 2 coins; greedy = 70 %, scribbles, never banks; random = taps the first
+// careful = 90 %, gentle, keeps its feathers when his face says «careful»; greedy = 70 %, scribbles, never banks; random = taps the first
 // answer at once and scribbles; silent = never answers
 const STY = {
   avg: { acc: 0.7, ans: [1500, 3600], gap: [520, 1100], bank: (r, b, want) => r.pile >= want || (b.cue >= 2 && Math.random() < 0.6) },

@@ -3,14 +3,14 @@
 // right 80 % of the time) to earn feathers (max 4); every 6th bot is «silent» and never answers (its questions run out:
 // late = a feather lost, it builds nothing: E.byStyle in the report). In the PLAY WINDOW every bot with feathers RUBS at
 // the same time: one player:dm-stroke (with the finger's x, y) every 0.45-1 s (greedy bots scribble and never stop,
-// careful bots stop with «¡Me retiro!» when his face says «careful» (cue 2+), normal bots at 3 coins or cue 3), reacts
+// careful bots keep their feathers («¡Guardar mis plumas!») when his face says «careful» (cue 2+), normal bots at 3 or cue 3), reacts
 // once safe.
 // Frozen = the bot's board shows no event for 20 s while the game runs; or a bot in a question window with room in its
 // quiver gets no question within 6 s of its last answer; or a play window with feathers where not one stroke of mine
 // got through within 3 s. Rules checked on every event a bot sees: a question never carries its answer; nothing carries
-// the danger; strokes only in the play window; a stroke = +1 (+2 in the final round) on my tower and one feather; a right
-// answer = one feather (max 4), a miss costs one; the waker's tower falls (exactly its coins), the others' stand; a bank
-// adds my tower to my coins; the tally = my coins; the end payload has the bot's board, its place and its card.
+// the danger; strokes only in the play window; a stroke = one feather from my hand → +1 collected (+2 in the final round); a right
+// answer = one feather (max 4), a miss costs one; the waker's feathers of the round fly away (exactly them), the others'
+// stay; keeping adds this round's feathers to my collection; the tally = my collection; the end payload has the bot's board, its place and its card.
 'use strict';
 const os = require('os');
 const fs = require('fs');
@@ -76,7 +76,7 @@ module.exports = (bot, ctx) => {
       const row = t && t.rows.find((x) => x.k === me);
       E.ruleChecks++;
       if (!row) fail('the tally has my row', d);
-      else if (row.score !== score + pile) fail('the tally: my tower went to the safe', { row, score, pile });
+      else if (row.score !== score + pile) fail('the tally: my feathers of the round were kept', { row, score, pile });
       if (row) { score = row.score; feathers = row.feathers; }
       if (t && t.wakes) E.wakeWindows[b + ':' + round] = t.wakes;
       else if (t) E.wakeWindows[b + ':' + round] = E.wakeWindows[b + ':' + round] || 0;
@@ -142,7 +142,7 @@ module.exports = (bot, ctx) => {
     if (recentPats.some((p) => p.k !== d.k)) E.simul++;
     recentPats.push({ k: d.k, t: now });
     if (d.k !== me) { E.othersSeen++; return; }
-    if (d.pile !== pile + d.pts) fail('my tower after a stroke', { d, pile });
+    if (d.pile !== pile + d.pts) fail('my feathers of the round after a stroke', { d, pile });
     if (d.feathers !== feathers - 1) fail('a stroke spends one feather', { d, feathers });
     pile = d.pile; feathers = d.feathers; E.strokes++; if (d.fast) E.fast++;
     if (!firstStrokeAt) firstStrokeAt = now;
@@ -152,7 +152,7 @@ module.exports = (bot, ctx) => {
     seen();
     if (d.k !== me) return;
     E.ruleChecks++;
-    if (d.score !== score + d.pile || d.pile !== pile) fail('«¡Me retiro!» puts exactly my tower in the safe', { d, score, pile });
+    if (d.score !== score + d.pile || d.pile !== pile) fail('«¡Guardar mis plumas!» keeps exactly my feathers of the round', { d, score, pile });
     score = d.score; pile = 0; safe = true;
     if (rubT) { clearTimeout(rubT); rubT = null; }
     if (Math.random() < 0.4) timers.push(setTimeout(() => { E.reacts++; bot.emit('player:dm-react', { pin: ctx.pin, e: ['wow', 'lol', 'clap', 'shh'][Math.floor(Math.random() * 4)] }); }, 400 + Math.random() * 1500));
@@ -165,9 +165,9 @@ module.exports = (bot, ctx) => {
     const f = (d.fell || []).find((x) => x.k === me);
     if (d.k === me) {
       E.wakes++;
-      if (!f || f.coins !== pile) fail('the waker\'s tower falls with exactly its coins', { d, pile });
+      if (!f || f.lost !== pile) fail('the waker\'s feathers of the round fly away, exactly them', { d, pile });
       pile = 0;
-    } else if (f) fail('only the waker\'s tower falls', d);
+    } else if (f) fail('only the waker\'s feathers fly away', d);
   });
   bot.on('dm:sleep', (d) => { if (mine(d)) { seen(); awake = false; calmAt = Date.now(); cue = d.cue || 0; if (phase === 'pw' && !safe && feathers > 0 && !rubT) rubT = setTimeout(rub, 300 + Math.random() * 500); } });
   bot.on('dm:shift', (d) => { if (mine(d)) { seen(); cue = d.cue; if (d.k === me) E.shifts++; } });
@@ -184,11 +184,11 @@ module.exports = (bot, ctx) => {
     const row = rows.find((r) => r.k === me);
     if (!row) fail('end payload: my row in my board', dm.board);
     if (d.me.score !== (row && row.score)) fail('end payload: my card = my row', { me: d.me, row });
-    if (d.me.score !== score + pile) fail('end payload: my coins', { me: d.me.score, score, pile });
+    if (d.me.score !== score + pile) fail('end payload: my feathers', { me: d.me.score, score, pile });
     if (!(d.me.rank >= 1 && d.me.of === rows.length && d.me.classOf >= rows.length)) fail('end payload me', d.me);
     const top = Math.max(0, ...rows.map((r) => r.score));
     const w = dm.board.winners || [];
-    if (top > 0 && !w.length) fail('a board with coins has a winner', dm.board);
+    if (top > 0 && !w.length) fail('a board with feathers has a winner', dm.board);
     if (w.some((k) => (rows.find((r) => r.k === k) || {}).score !== top)) fail('the winner has the top score', dm.board);
     if (ctx.name === 'Bot01') E.ends++;
   });

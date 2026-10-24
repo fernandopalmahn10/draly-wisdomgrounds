@@ -8022,8 +8022,8 @@ function mnFinish(pin, g) {
 // questions to them only, dm:q → a right answer = a golden feather, a miss = a feather flies off and he shifts: dm:qr to
 // me, dm:plume + dm:shift to the board) → dm:ready + dm:round 'pwin' «¡A hacerle cosquillas!» → dm:round 'pw': EVERY
 // kid rubs at once (player:dm-stroke with the finger's x, y = one completed stroke: dm:pat to the board, every phone
-// sees whose tower grew and where), «¡Me retiro!» (player:dm-stop → dm:bank), a stroke that wakes him (dm:wake: the
-// waker's tower falls, the ANGRY wake-up on the board's phones, then dm:sleep) → dm:round 'pwout' with the tally → …
+// sees whose tickle landed where), «🪶 ¡Guardar mis plumas!» (player:dm-stop → dm:bank), a stroke that wakes him (dm:wake:
+// the waker's feathers of the round fly away, the ANGRY wake-up on the board's phones, then dm:sleep) → dm:round 'pwout' with the tally → …
 // the final round ×2 (dm:frenzy) → «¡FINAL!» → game-end (each phone its board's ceremony and card, the projector every
 // board's champion + the class podium). «🤖 Probar con robots» (host:dm-robots, lobby, teacher only): robots fill a
 // board of 1-2 phones and play like an average kid; they never count. Each board is a socket.io room of its own (the
@@ -8192,7 +8192,7 @@ function dmTick(pin, m) {
     }
   } catch (e) { console.error('[dormilon] tick', e); }
 }
-// «¡FINAL!» on every screen (the standing towers go to the safe); the tick ends the game FINAL_MS later.
+// «¡FINAL!» on every screen (every kid's feathers of the round are kept); the tick ends the game FINAL_MS later.
 function dmFinal(pin, g) {
   const m = g.dm;
   if (!m || m.phase === 'final' || m.phase === 'done') return;
@@ -14658,10 +14658,10 @@ io.on('connection', (socket) => {
     } catch (e) { console.error('[host:dr-skip]', e); }
   });
   // Draly Siesta · ¡No despiertes a Dralingo!: a kid's answer (its qid; a stale or double tap is ignored and the phone
-  // hears why), the stroke, «¡Me retiro!» and the reactions (🤫 😱 😂 👏).
+  // hears why), the stroke, «¡Guardar mis plumas!» and the reactions (🤫 😱 😂 👏).
   // v4: one completed stroke of a kid's finger on his head in the play window (the phone counts a back-and-forth rub;
   // x, y = where, 0-1 of his face picture, so the board sees whose tickle landed where); the server judges gentle /
-  // scribble by the time since my last stroke, spends the feather, builds my tower, and may wake him
+  // scribble by the time since my last stroke, spends the feather (into my collection if he stays asleep), and may wake him
   socket.on('player:dm-stroke', (data) => {
     try {
       const pin = data && data.pin;
@@ -14699,7 +14699,7 @@ io.on('connection', (socket) => {
       Dorm.seen(g.dm, p.dmK, String(qid || ''));
     } catch (e) { console.error('[player:dm-seen]', e); }
   });
-  // «¡Me retiro!»: my tower of this round goes to the safe
+  // «🪶 ¡Guardar mis plumas!»: my feathers of this round are kept
   socket.on('player:dm-stop', (data) => {
     try {
       const pin = data && data.pin;

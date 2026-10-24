@@ -3,13 +3,14 @@
 //   node scripts/check-dormilon-screens.js --url http://localhost:4313 --password <the local teacher code> [--out <folder>]
 // The projector (1600×900, the teacher types the code on the key screen) + four phones (390×844, 360×640, sideways
 // 844×390, a laptop 1366×657) + socket bots that fill the boards and play like kids (answer in 1-3 s; in the play window
-// they rub at the same time, some stop with «¡Me retiro!», they react), a phone that joins late. A whole short game
+// they rub at the same time, some keep their feathers with «¡Guardar mis plumas!», they react), a phone that joins late. A whole short game
 // (3 min) is played and each moment is photographed as it happens: the lobby, a question window (my question + my 4
-// feathers), «¡A hacerle cosquillas!», my guided first play window, rubbing with my tower growing while my friends'
-// tickles land live, my tower in the safe, the danger rising, the wake-up (and its peak: his angry face inside the view),
-// the tally, the final round ×2, «¡FINAL!», the towers' reveal, my card, the projector's end. One play window of the
+// feathers), «¡A hacerle cosquillas!», my guided first play window, rubbing with «Tus plumas» growing while my friends'
+// tickles land live, my feathers kept by a REAL tap on «🪶 ¡Guardar mis plumas!», the danger rising, the wake-up (and its
+// peak: his angry face inside the view; the waker's feathers of the round flying away), the tally, the final round ×2,
+// «¡FINAL!», the feather piles' reveal, my card, the projector's end. (v4.1: one unit, the feather.) One play window of the
 // 390×844 phone is filmed at 4 fps (turn-frames/) for the side-by-side with the original. Each phone must show
-// #screen-dormilon, never an empty screen, nothing wider than the window, «¡Me retiro!» and the tiles inside it.
+// #screen-dormilon, never an empty screen, nothing wider than the window, «¡Guardar mis plumas!» and the tiles inside it.
 // Gentle with the laptop: one browser, low priority, every step under a timeout, closed at the end.
 'use strict';
 const os = require('os');
@@ -88,6 +89,17 @@ async function shot(page, name, freeze) {
     if (freeze) await page.evaluate(() => { if (window.DormStage) window.DormStage.freeze(false); });
   } catch (e) { console.log('shot failed', name, e.message); }
 }
+// «🪶 ¡Guardar mis plumas!» with a real tap (a mouse click on the laptop), then the phone must say they are kept
+const taps = { tries: 0, kept: 0 };
+async function keepTap(p) {
+  taps.tries++;
+  const before = await frame(p.page);
+  try { if (p.w < 900) await p.page.tap('#dm-stop', { force: true, timeout: 3000 }); else await p.page.click('#dm-stop', { force: true, timeout: 3000 }); } catch (_) { return; }
+  await sleep(500);
+  const f = await frame(p.page);
+  if (f && f.safe && before && !before.safe) taps.kept++;
+  if (f && f.safe && !p.seen.tapShot) { p.seen.tapShot = 1; await shot(p.page, 'k15-kept-by-a-real-tap-' + p.tag, true); }
+}
 const frame = (page) => page.evaluate(() => (window.DormilonPhone ? window.DormilonPhone.frame() : null)).catch(() => null);
 const LOOK = () => {
   const vis = [...document.querySelectorAll('[id^=screen-]')].filter((e) => !e.classList.contains('hidden')).map((e) => e.id);
@@ -96,13 +108,13 @@ const LOOK = () => {
   const tiles = [...document.querySelectorAll('#dm-tiles .dm-tile')].map((b) => b.getBoundingClientRect());
   const inside = tiles.every((t) => t.top >= 0 && t.bottom <= innerHeight + 1 && t.left >= 0 && t.right <= innerWidth + 1 && t.height >= 44);
   const box = (id) => { const e = document.getElementById(id); return e ? e.getBoundingClientRect() : { height: 0 }; };
-  const stop = box('dm-stop'), cnt = box('dm-count'), tower = box('dm-tower'), quiver = box('dm-hudq');
+  const stop = box('dm-stop'), cnt = box('dm-count'), pileB = box('dm-pile'), quiver = box('dm-hudq');
   const wide = document.documentElement.scrollWidth <= innerWidth + 1;
   const inV = (b) => b.height === 0 || (b.top >= -1 && b.bottom <= innerHeight + 1 && b.left >= -1 && b.right <= innerWidth + 1);
-  const turnIn = stop.height === 0 || (inV(stop) && inV(cnt) && inV(tower) && inV(quiver) && stop.height >= 44);
+  const turnIn = stop.height === 0 || (inV(stop) && inV(cnt) && inV(pileB) && inV(quiver) && stop.height >= 44);
   // the HUD's pieces never sit on top of each other
   const ov = (a, b) => a.height && b.height && !(a.right <= b.left || b.right <= a.left || a.bottom <= b.top || b.bottom <= a.top);
-  const clash = ov(tower, stop) || ov(quiver, stop) || ov(tower, quiver);
+  const clash = ov(pileB, stop) || ov(quiver, stop) || ov(pileB, quiver);
   return { vis, stage: r ? [Math.round(r.width), Math.round(r.height)] : null, tiles: tiles.length, inside, hudIn: turnIn, clash, wide };
 };
 
@@ -162,13 +174,13 @@ async function finish(code) {
 
   const t0 = Date.now();
   const H = {};
-  const allPhones = phones.concat([{ name: 'Eli', page: late, tag: 'eli-390x844', seen: {} }]);
+  const allPhones = phones.concat([{ name: 'Eli', w: 390, h: 844, page: late, tag: 'eli-390x844', seen: {} }]);
   const REC = path.join(OUT, 'turn-frames');
   fs.mkdirSync(REC, { recursive: true });
   fs.readdirSync(REC).forEach((f) => { if (/^f\d+\.png$/.test(f)) fs.unlinkSync(path.join(REC, f)); });
   // a whole play window of Ana's phone at 4 fps (a frame every 250 ms while she rubs), for the side-by-side
   async function recordWindow(p) {
-    // she plays the whole window like a kid: rubs gently while he sleeps, «¡Me retiro!» at 3 coins or when he looks restless
+    // she plays the whole window like a kid: rubs gently while he sleeps, keeps her feathers (a real tap) at 3 or when he looks restless
     let filming = true;
     const go = (async () => {
       while (filming) {
@@ -176,7 +188,7 @@ async function finish(code) {
         if (!f || !f.round || f.round.phase !== 'pw') { await sleep(150); continue; }
         if (f.safe || f.feathers <= 0) break;
         if (f.awake) { await sleep(200); continue; }
-        if (f.pile >= 3 || (f.pile >= 1 && f.cue >= 3)) { await p.page.evaluate(() => window.DormilonPhone.stop()).catch(() => {}); break; }
+        if (f.pile >= 3 || (f.pile >= 1 && f.cue >= 3)) { await keepTap(p); break; }
         await p.page.evaluate(() => window.DormilonPhone.rub(1, 760)).catch(() => {});
         await sleep(120);
       }
@@ -233,7 +245,7 @@ async function finish(code) {
         }
         if (f.awake) continue;
         if (f.safe) {
-          if (!S.safe && f.score >= 0 && S.rubbed) { S.safe = 1; await sleep(300); await shot(p.page, 'k14-my-tower-safe-' + p.tag, true); const L = await p.page.evaluate(LOOK); ok(L.hudIn && !L.clash && L.wide, p.name + ' safe: the HUD fits: ' + JSON.stringify(L)); }
+          if (!S.safe && f.score >= 0 && S.rubbed) { S.safe = 1; await sleep(300); await shot(p.page, 'k14-my-feathers-kept-' + p.tag, true); const L = await p.page.evaluate(LOOK); ok(L.hudIn && !L.clash && L.wide, p.name + ' safe: the HUD fits: ' + JSON.stringify(L)); }
           continue;
         }
         if (f.feathers > 0 && !S.busy) {
@@ -242,13 +254,13 @@ async function finish(code) {
           S.busy = 1;
           S.windows = (S.windows || 0) + (S.lastWin !== f.round.n ? 1 : 0);
           S.lastWin = f.round.n;
-          if (!S.guided && S.windows === 1) { S.guided = 1; await sleep(250); await shot(p.page, 'k10-guided-' + p.tag, true); const L = await p.page.evaluate(LOOK); ok(L.hudIn && !L.clash && L.wide, p.name + ' play window: the count, my tower, my feathers and «¡Me retiro!» fit: ' + JSON.stringify(L)); }
+          if (!S.guided && S.windows === 1) { S.guided = 1; await sleep(250); await shot(p.page, 'k10-guided-' + p.tag, true); const L = await p.page.evaluate(LOOK); ok(L.hudIn && !L.clash && L.wide, p.name + ' play window: the count, «Tus plumas», the feathers in my hand and «¡Guardar mis plumas!» fit: ' + JSON.stringify(L)); }
           const n = 1 + Math.floor(Math.random() * Math.min(3, f.feathers));
           p.page.evaluate((k) => window.DormilonPhone.rub(k, 760), n).catch(() => {}).then(async () => {
             S.rubbed = 1;
-            if (!S.rubShot) { S.rubShot = 1; await shot(p.page, 'k12-rubbing-tower-' + p.tag); }
+            if (!S.rubShot) { S.rubShot = 1; await shot(p.page, 'k12-rubbing-pile-' + p.tag); }
             const f3 = await frame(p.page);
-            if (f3 && f3.pile > 0 && !f3.safe && Math.random() < 0.6) await p.page.evaluate(() => window.DormilonPhone.stop()).catch(() => {});
+            if (f3 && f3.pile > 0 && !f3.safe && Math.random() < 0.6) await keepTap(p);
             S.busy = 0;
           });
         }
@@ -264,10 +276,10 @@ async function finish(code) {
   await shot(phones[0].page, 'k50-final-' + phones[0].tag);
   await sleep(2600);
   for (const p of allPhones.slice(0, 3)) await shot(p.page, 'k51-ceremony-start-' + p.tag);
-  // the towers' reveal (whatever stars came first): photographed when it shows
+  // the feather piles' reveal (whatever stars came first): photographed when it shows
   for (let i = 0; i < 40; i++) {
-    const has = await phones[0].page.evaluate(() => !!document.querySelector('.dm-towers')).catch(() => false);
-    if (has) { await sleep(2400); await shot(phones[0].page, 'k52-towers-reveal-' + phones[0].tag); await shot(phones[1].page, 'k52-towers-reveal-' + phones[1].tag); break; }
+    const has = await phones[0].page.evaluate(() => !!document.querySelector('.dm-piles')).catch(() => false);
+    if (has) { await sleep(2400); await shot(phones[0].page, 'k52-piles-reveal-' + phones[0].tag); await shot(phones[1].page, 'k52-piles-reveal-' + phones[1].tag); break; }
     await sleep(500);
   }
   await shot(host, 'p10-projector-end');
@@ -283,5 +295,6 @@ async function finish(code) {
     ok(c && c.home, p.name + ' got its card with «Inicio»: ' + JSON.stringify(c));
   }
   for (const p of allPhones) ok(p.seen.pwin && (p.seen.rubbed || p.seen.safe), p.name + ' played a play window: ' + JSON.stringify(p.seen));
+  ok(taps.kept >= 1, 'a real tap on «🪶 ¡Guardar mis plumas!» keeps the feathers (' + taps.kept + ' of ' + taps.tries + ' taps)');
   await finish();
 })().catch((e) => { console.log('FAIL · ' + e.message); finish(1); });
