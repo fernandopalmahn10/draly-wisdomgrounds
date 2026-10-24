@@ -6,8 +6,107 @@
 «Don't Wake Wiggler»), his picks 2026-10-22. Status: v1 live 2026-10-22 08:37 (219cee484, sounds ab51bf2cc); v2 «Gana
 plumas, luego frota con el dedo» live the same day (6254b16c9, giggle d774da097: "it feels more interactive now");
 **v3** (his picks 15:44: random early wake-ups, 2 minutes, an ANGRY wake-up on every screen, a wrong or late answer
-costs, the projector lobby fixed) on branch `dormilon-v3` (bundle), not deployed. Read «v3», then «v2»; «Our version»
-keeps v1's text for what neither changed (the place, boards, the clock, the ending).
+costs, the projector lobby fixed) live 2026-10-22 evening (a0388210b). **v4** (2026-10-24, the Windows rhythm: everyone
+tickles at once, coin towers, frequent wake-ups, robots) on branch `dormilon-v4` (bundle), not deployed. Read «v4» first,
+then «v3», «v2»; «Our version» keeps v1's text for what none changed (the place, boards, the clock).
+
+## v4 · the Windows rhythm: everyone tickles at once, coin towers, frequent wake-ups, robots (2026-10-24)
+
+His words after playing v3: "it just lacks that Mario Party minigame feeling… how do you get all the kids involved… very
+little window time to answer questions… every time you use the feather nothing happens… when it's your turn, you
+build, construct, and at the end you see who wins… sometimes leave a window for questions and then after 10 seconds
+people play… make all games playable with robots… not too many things on the screen… the dragon needs to awaken more
+often". Branch `dormilon-v4` (bundle), not deployed.
+
+- **Rhythm = windows** (his rule «Two rhythms», core/teamcrab.js's machinery): class-wide rounds, ~4 in 2 minutes.
+  QUESTION WINDOW (12-20 s, everyone at once; a question has 12 s and never outlives its window: withdrawn free): a right
+  answer = a golden feather (max 4, unused ones stay for the next round); a wrong, late or blind (< 0.5 s) answer = a
+  feather flies off («fsss») and he shifts in his sleep (the board's danger +1, no roll; never who). On screen only the
+  question and my 4 feather slots, the bedroom asleep above.
+- «¡A hacerle cosquillas!» (1.6 s, the camera moves in) → PLAY WINDOW (10 s): EVERY kid of the board rubs his face at
+  the same time on their own phone. One back-and-forth rub = one feather → +1 coin on MY tower (it jumps, «clink»;
+  +2 in the final round ×2); he giggles, squirms or his snore bubble pops; my friends' tickles land live on his face
+  (their head + a feather + «+1»), their towers grow in the top row («🪙 chest +N this round»). On screen: his face, the
+  10-s count, my tower, my feathers, «✋ ¡Me retiro!».
+- **The danger**: each tickle (a scribble = 3) is a roll of the board's shared dice, whose chance grows with every
+  tickle since he fell asleep (the danger stays from one window to the next while he sleeps); his face says how risky
+  it is (snores louder, an eye cracks open, he trembles), never a number. Each kid's first tickle of the game is safe
+  (the guided window: a hand shows the rub, «¡Frota su cabeza! Cada cosquilla = +1 🪙», then «¿Otra más o "Me
+  retiro"? Si lo despiertas tú, ¡se cae tu torre!»).
+- **He wakes** → the WAKER's tower of this round falls (the coins fly off the phone, «−N 🪙 😱», a crash), the ANGRY
+  wake-up floods every phone of the board (v3's rage), «¡X lo despertó!» on the board; then «¡Se durmió! ¡Sigue!»: a new
+  night (danger 0) and the window goes on. The window's clock stands still while he rages (each board is owed the
+  rage's time, at most two wake-ups' worth; the class window lasts until the latest board's make-up time).
+  Why only the waker's tower (decided by the simulation, 2026-10-24 09:20): with «every tower not in the safe falls»,
+  rubbing fast and finishing first beat careful play (luck and speed over skill); with the waker's only, the kid who
+  stops when his face says «careful» wins (the risk is the one I choose with each stroke: his «Skill decides»).
+- «¡Me retiro!» (or my last feather) puts my tower in the safe for the round; a board where everyone is done gets its
+  tally at once (no still seconds while other boards play); the window's end banks every standing tower → the tally
+  card «+N 🪙 · Tu cofre: N».
+- The end: «¡FINAL!» → the board's bonus stars (🏯 Torre más alta, 🛡️ Más prudente, 🦁 Más valiente, 🔥 Mejor racha) →
+  «¿Quién construyó la torre más alta?»: every tower rises side by side, the numbers counting up (the build, then the
+  reveal) → the winner by the bed → my card. The projector: every board (bedrooms in the question window, close-ups in
+  the play window with every tickle landing, each kid's coins + this round's tower), the champions and the podium.
+- **«🤖 Probar con robots»** (his rule 2026-10-24, the pattern of core/teamcrab.js): a teacher-only lobby button
+  (`host:dm-robots`) seats 3 robots (🤖 Robi, Roba, Robo) beside a board of 1-2 phones: they answer at 70 %, rub at a
+  kid's pace, wait a moment after he falls asleep, bank when his face says «careful»; marked 🤖, never ranked, starred,
+  on the podium, the class list or paid (their towers stand grey beside the reveal).
+- Kept from v3: the ANGRY wake-up on every screen, «a wrong or late answer always costs», the projector lobby that fits
+  and scrolls, 2 / 3 / 4 min (default 2). El Péndulo: not added (one threat per game: the sleeping dragon is the clock;
+  a second villain would put more on the screen).
+
+### The simulation (`node scripts/test-dormilon.js --sim`, 2-minute games, 12 and 28 kids, 8 seeds each)
+- Average kids (70 % right, stop at a height they picked or when his face says «careful»): he wakes in **70 % of the
+  play windows after the first** (15 % of the first, the lesson), **3.2 wake-ups per board** in a 2-minute game, ~4
+  rounds, 4.8 questions per kid per question window.
+- **Skill decides** (a board of 4 mixed kids): careful (90 %, gentle, stops when his face says «careful») **9.7 coins** ·
+  average 6.3 · greedy (scribbles, never stops) 5.5 · random tapper 1.3 · a kid who never answers 0.
+- The 30-bot class (`scripts/playtest-bots.js --game dormilon --bots 30 --seconds 120`): careful bots 9.0 · normal 8.6 ·
+  greedy 7.5 · silent 0; he woke in 22 of 32 board windows.
+
+### The play window side by side with the video (his rule «Never call it done unless it FEELS like Mario Party»)
+`.claude/handoff/dormilon-shots/v4-side-by-side.jpg` (the original's frames from the saved v2 / v3 sheets: the video in
+the scratchpad was emptied by the PC's cleanup), our whole play window at 4 fps in `dormilon-shots/v4e/turn-frames/`
+(Ana rubs 2 coins, wakes him with the 3rd: «−2», her tower flies, the rage, «¡Se durmió! ¡Sigue!», she rubs 2 more,
+«¡A salvo! +2», her board is done: the tally at once).
+- Where we win: everyone plays at the same time (Mario Party: one plays, three watch); each tickle builds MY tower that
+  I see grow, and my friends' tickles land live with their faces; he reacts to every tickle (giggle, squirm, snore
+  bubble; Wiggler stays still); the wake-up knocks MY tower down on top of the red fury, and the window waits for it;
+  the round ends with my «+N · Tu cofre» and the game with every tower rising side by side.
+- The same: «START!» ↔ «¡A hacerle cosquillas!» with the camera on his face; the count red at 3 with tick-tock; the
+  angry wake-up (ring, lines, steam, shake, his line).
+- Where we lose: nothing left. (Found and fixed on the way: a phone standing still for 5 s after banking → the board's
+  tally comes as soon as the board is done; a wake-up eating the window → the window waits; the guided first window
+  waking him at once → each kid's first tickle is safe; the tower too small to see → a big tower on the left.)
+
+### Scorecard · v4 · 2026-10-24 · branch `dormilon-v4`
+```
+Hard gates: bots PASS (30 kids · 2 min: 8 boards, 4 rounds, 430 answers, 241 tickles, 632 of them within a second of a
+            friend's, 38 wake-ups, 39 «¡Me retiro!», 10 late, 47 feathers lost, 0 frozen, 0 errors; the playtester's 20 and
+            30 kids PASS) · teacher controls ✓ (Pausa, +30 s, −30 s, Saltar, Terminar, Sonido, «🤖 Probar con robots»;
+            the lobby keeps PIN, QR, time, «¡Empezar!» and the robots on the first screen at 8 sizes: 20/20) · saga only
+            ✓ · Spanish / pinyin without tones / level words ✓ · kid-safe ✓ (funny-angry, a miss never names anyone)
+1 Real place ........ 2/2  the palace bedroom while they answer, his face on the pillow while they tickle, the angry close-up
+2 The gang .......... 2/2  every friend's face lands on his face with each tickle; the cast whispers; his funny-angry lines
+3 Every tap ......... 2/2  a tickle: my tower jumps with a clink, he giggles / squirms / his bubble pops; a right answer
+                           flies a feather in, a wrong / late one flies it out («fsss»)
+4 Feedback .......... 2/2  the waker's tower falls (coins fly, «−N»), the ANGRY wake-up on every phone of the board; the
+                           tally card «+N · Tu cofre»; the top row shows every chest and this round's towers live
+5 Finale ............ 2/2  the final round ×2, «¡FINAL!», bonus stars (Torre más alta, Más prudente, Más valiente, Mejor
+                           racha), the towers rising side by side, the winner by the bed, my card
+6 Fair, no stall .... 2/2  skill decides (sim: careful 9.7 > average 6.3 > greedy 5.5 > random 1.3; silent 0), only the
+                           waker's tower falls, each kid's first tickle safe, the window waits for a wake-up, a board done
+                           gets its tally at once, robots never count, 0 frozen phones
+7 Product feel ...... 2/2  every kid in every moment (all rub at once), little on screen (QW: question + 4 feathers; PW:
+                           face + count + tower + feathers + «¡Me retiro!»), the play window filmed beside the video:
+                           where we lose, nothing
+Total 14/14 → ships (his try first: nothing goes live without his word).
+```
+Evidence: `scripts/test-dormilon.js` (99 checks + the simulation), `scripts/test-dormilon-live.js` (60 checks, robots
+included), `scripts/check-dormilon-screens.js` (37/37: 5 phone / laptop sizes + the projector, every moment and its peak:
+`dormilon-shots/v4e/`), `scripts/check-dormilon-lobby.js` (20/20), the bots above, the classroom playtester (robots
+scenario + a class of 12 with reloads, a late joiner, every teacher button: PASS; its 9 findings fixed) and a fresh-eyes
+code review (no blockers; its 11 findings fixed).
 
 ## v3 · random wake-ups, 2 minutes, he wakes up ANGRY, a wrong answer costs (his picks 2026-10-22 15:44)
 His words after playing v2: "it's okay if the round ends randomly… someone awakens the dragon in the first round… you

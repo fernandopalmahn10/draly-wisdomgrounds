@@ -28,7 +28,7 @@
   <link rel="stylesheet" href="/css/escape.css?v=20261019ch">
   <link rel="stylesheet" href="/css/halcon.css?v=20261019zc">
   <!-- ¡No despiertes a Dralingo! -->
-  <link rel="stylesheet" href="/css/dormilon.css?v=20261023names">
+  <link rel="stylesheet" href="/css/dormilon.css?v=20261024v4">
   <link rel="stylesheet" href="/css/teamcrab.css?v=20261023tc5">
   <link rel="stylesheet" href="/css/mochi.css?v=20261019zc">
   <link rel="stylesheet" href="/css/party.css?v=20261019zc">
@@ -679,18 +679,18 @@
     <div class="hc-pause hidden" id="hc-pause"><div><img src="/assets/dralingo/wise.webp" alt=""><b>⏸ Pausa</b><span>Mira al profe</span></div></div>
   </div>
 
-  <!-- ¡No despiertes a Dralingo! v2 (js/player-dormilon.js + js/dormilon-stage.js + css/dormilon.css): my board on top
-       like the video (faces, scores, feathers, whose turn). MY TURN: his sleeping face fills the phone and I rub his head
-       with my finger (the touch layer; the HUD: the 6-s count, my feathers, «¡Me retiro!»). NOT MY TURN: my friend's turn
-       live above, the quiz below (each right answer = a feather), the «¿Se despierta?» guess, reactions. -->
+  <!-- Draly Siesta · ¡No despiertes a Dralingo! v4 (js/player-dormilon.js + js/dormilon-stage.js + css/dormilon.css): my
+       board on top (faces + coins). QUESTION WINDOW: the bedroom above, my question + my 4 feathers below. PLAY WINDOW:
+       his face fills the phone and EVERY kid rubs at once (the touch layer; the HUD: the 10-s count, my coin tower, my
+       feathers, «¡Me retiro!»; reactions once my tower is safe). The tally card after each play window. -->
   <div id="screen-dormilon" class="hidden">
     <div class="dm-rage hidden" id="dm-rage" aria-hidden="true"></div>
     <div class="dm-top">
       <div class="dm-list" id="dm-list"></div>
       <div class="dm-chips">
         <b class="dm-clock" id="dm-clock">·:··</b>
-        <span class="dm-night" id="dm-night">Noche 1</span>
-        <span class="dm-me" id="dm-me">0 ⭐</span>
+        <span class="dm-night" id="dm-night"></span>
+        <span class="dm-me" id="dm-me">🪙 0</span>
         <span class="dm-fchip hidden" id="dm-frenzy">🌕 ×2</span>
       </div>
     </div>
@@ -699,17 +699,17 @@
       <div class="dm-meter c0" id="dm-meter" role="status">😴 Duerme profundo</div>
       <b class="dm-plus" id="dm-plus" aria-live="polite"></b>
       <b class="dm-splash hidden" id="dm-splash" aria-hidden="true"></b>
-      <div class="dm-guess hidden" id="dm-guess">
-        <p id="dm-guess-q">¿Se despierta?</p>
-        <div class="dm-guess-btns"><button type="button" data-g="sleep">😴 Sigue dormido</button><button type="button" data-g="wake">😱 ¡Se despierta!</button></div>
-        <small id="dm-tally"></small>
-      </div>
+      <div class="dm-tallycard hidden" id="dm-tallycard" role="status"><b id="dm-tc-big"></b><span id="dm-tc-small"></span></div>
       <div class="dm-touch" id="dm-touch" aria-label="Frota su cabeza con el dedo"></div>
       <div class="dm-turnhud hidden" id="dm-turnhud">
         <div class="dm-hudtop"><b class="dm-count" id="dm-count">6</b><span class="dm-hudname" id="dm-hudname"></span></div>
         <i class="dm-hand hidden" id="dm-hand" aria-hidden="true"></i>
+        <div class="dm-tower empty" id="dm-tower" aria-label="Tu torre de monedas"><div class="dm-stack"></div><b class="dm-tnum"></b><span class="dm-tlabel">Tu torre</span></div>
         <div class="dm-hudbot">
           <div class="dm-rubhint" id="dm-rubhint">Ida y vuelta = una cosquilla</div>
+          <div class="dm-reacts hidden" id="dm-reacts2" aria-label="Reacciones">
+            <button type="button" data-e="shh" aria-label="Silencio">🤫</button><button type="button" data-e="wow" aria-label="¡Uy!">😱</button><button type="button" data-e="lol" aria-label="Risa">😂</button><button type="button" data-e="clap" aria-label="Aplausos">👏</button>
+          </div>
           <div class="dm-hudrow"><div class="dm-hudq" id="dm-hudq" aria-label="Tus plumas"></div><button class="dm-stop" id="dm-stop" type="button">✋ ¡Me retiro!</button></div>
         </div>
       </div>
@@ -717,15 +717,12 @@
     <div class="dm-panel">
       <div class="dm-status" id="dm-status"></div>
       <div class="dm-quiz" id="dm-quiz">
-        <div class="dm-qhead"><span>Gana plumas:</span><div class="dm-quiver" id="dm-quiver" aria-label="Tus plumas"></div><b id="dm-qcount">3 de 6</b></div>
+        <div class="dm-qhead"><span>Gana plumas:</span><div class="dm-quiver" id="dm-quiver" aria-label="Tus plumas"></div><b id="dm-qcount">0 de 4</b></div>
         <div class="dm-mq wait" id="dm-mq"><img id="dm-mq-img" class="hidden" alt=""><b id="dm-mq-text">…</b><i class="dm-qtime" id="dm-qtime" aria-hidden="true"><i></i></i></div>
         <div class="dm-tiles" id="dm-tiles"></div>
         <p class="dm-qfeed" id="dm-qfeed"></p>
       </div>
       <div class="dm-msg calm hidden" id="dm-msg"><img id="dm-msg-img" class="hidden" alt=""><b id="dm-msg-big"></b><span id="dm-msg-small"></span></div>
-      <div class="dm-reacts" id="dm-reacts" aria-label="Reacciones">
-        <button type="button" data-e="shh" aria-label="Silencio">🤫</button><button type="button" data-e="wow" aria-label="¡Uy!">😱</button><button type="button" data-e="lol" aria-label="Risa">😂</button><button type="button" data-e="clap" aria-label="Aplausos">👏</button>
-      </div>
       <div class="dm-cheer hidden" id="dm-cheer"></div>
     </div>
     <div class="dm-pause hidden" id="dm-pause"><div><img src="/assets/dralingo/wise.webp" alt=""><b>⏸ Pausa</b><span>Mira al profe</span></div></div>
@@ -881,8 +878,8 @@
   <script src="/js/player-escape.js?v=20261023names"></script>
   <script src="/js/halcon-board.js?v=20261019zc"></script>
   <script src="/js/player-halcon.js?v=20261023names"></script>
-  <script src="/js/dormilon-stage.js?v=20261023v3"></script>
-  <script src="/js/player-dormilon.js?v=20261023end"></script>
+  <script src="/js/dormilon-stage.js?v=20261024v4"></script>
+  <script src="/js/player-dormilon.js?v=20261024v4"></script>
   <script src="/js/teamcrab-stage.js?v=20261023tc5"></script>
   <script src="/js/player-teamcrab.js?v=20261023tc6"></script>
   <script src="/js/monopoly-map.js?v=20261016a"></script>

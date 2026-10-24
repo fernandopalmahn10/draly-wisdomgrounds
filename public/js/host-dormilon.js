@@ -3,8 +3,10 @@
 // of 4 as its own bedroom (Dralingo asleep, the turn kid tiptoeing with the golden feather, the board's scores with an
 // arrow on whose turn it is, strokes / stirs / wake-ups live) + the class top 3 → «¡FINAL!» → each board's champion and
 // the class podium. Teacher buttons always work: Pausa, +30 s, −30 s, Saltar, Terminar, Sonido.
-// v2 (2026-10-22): during a turn a board's tile is the close-up of his face, the turn kid's feather moving live (dm:fe)
-// and each stroke landing (+1, the squish; a scribble wobbles); every kid's feathers (🪶N) beside their score.
+// v4 (2026-10-24, the Windows rhythm): in the question window every board's bedroom sleeps (a wrong answer makes him
+// shift); in the play window every tile closes in on his face and EVERY kid's tickle lands live (their head + «+1»),
+// each kid's tower of coins grows in the board's list (✓ in the safe); a wake-up floods that tile red and the waker's
+// tower falls; the tally, then the next round. «🤖 Probar con robots» in the lobby (teacher only, never counted).
 // Test hooks: DormHost.frame(), DormHost.freeze(v).
 (function () {
   'use strict';
@@ -45,7 +47,7 @@
   let game = null;              // { id, phase }
   let boards = {};              // id → { view, stage, el, turn }
   let lobbyStage = null, countStage = null, lobbyKey = '', seenKids = new Set(), clockT = null, timers = [];
-  let frozen = false, queue = [];
+  let frozen = false, queue = [], robots = [], rd = null;
   const onDm = (ev, fn) => socket.on(ev, (d) => { if (frozen && ev.indexOf('dm:') === 0) { queue.push([fn, d]); return; } fn(d); });
 
   // ---------- sound ----------
@@ -134,6 +136,17 @@
     socket.emit('host:set-duration', { pin, duration });
   }));
   $('start-btn').addEventListener('click', () => { $('start-btn').disabled = true; socket.emit('host:start', { pin }); });
+  // «🤖 Probar con robots»: 3 robots join his board (he can try the game with one phone); a second tap takes them away
+  $('robots-btn').addEventListener('click', () => { if (pin) socket.emit('host:dm-robots', { pin, on: !robots.length }); });
+  socket.on('dm:robots', (d) => {
+    robots = (d && d.on && d.robots) || [];
+    const b = $('robots-btn');
+    b.classList.toggle('on', !!robots.length);
+    b.setAttribute('aria-pressed', robots.length ? 'true' : 'false');
+    b.textContent = robots.length ? '🤖 Robots: sí (quitar)' : '🤖 Probar con robots';
+    lobbyKey = '';
+    if (state) renderLobby(state.players);
+  });
   $('skip-btn').addEventListener('click', () => {
     const b = $('skip-btn');
     if (b.disabled) return;
@@ -166,12 +179,13 @@
   socket.on('state', (s) => {
     state = s;
     if (s.state === 'lobby') { renderLobby(s.players); updateStartBtn(); }
+    $('robots-btn').disabled = s.state !== 'lobby';
     if (s.state === 'active' && game) {
       const off = {};
       Object.values(s.players || {}).forEach((p) => { off[String(p.name).toLowerCase()] = !!p.off; });
       Object.values(boards).forEach((b) => {
         let ch = false;
-        b.view.seats.forEach((x) => { const k = String(x.name).toLowerCase(); if (k in off && x.on === off[k]) { x.on = !off[k]; ch = true; } });
+        b.view.seats.forEach((x) => { if (x.robot) return; const k = String(x.name).toLowerCase(); if (k in off && x.on === off[k]) { x.on = !off[k]; ch = true; } });
         if (ch) paintList(b);
       });
     }
@@ -180,20 +194,23 @@
   // ---------- lobby ----------
   function renderLobby(players) {
     if (!lobbyStage) { lobbyStage = new S.Stage($('lobby-stage'), { mode: 'big' }); lobbyStage.say('¡Shhh! Dralingo duerme…', 'calm'); }
-    const list = Object.values(players || {}).filter((p) => !p.off);
+    const humans = Object.values(players || {}).filter((p) => !p.off);
+    const showBots = robots.length && humans.length <= 2;      // (robots sit only beside 1-2 phones: a real class never sees them)
+    const list = humans.concat(showBots ? robots.map((r) => ({ name: r.name, avatar: r.skin, robot: true })) : []);
     const key = JSON.stringify(list.map((p) => [p.name, p.avatar]));
     if (key === lobbyKey) return;
     lobbyKey = key;
     const box = $('players-all');
     box.innerHTML = '';
-    $('count-all').textContent = list.length === 1 ? '1 jugador' : `${list.length} jugadores`;
+    $('count-all').textContent = (humans.length === 1 ? '1 jugador' : `${humans.length} jugadores`) + (showBots ? ' + ' + robots.length + ' 🤖' : '');
     const nb = list.length <= 5 ? 1 : Math.ceil(list.length / 4);
     if (list.length) lobbyStage.say((list.length === 1 ? "1 jugador" : list.length + " jugadores") + (nb === 1 ? " · 1 tablero" : " · " + nb + " tableros"), "calm");
     list.forEach((p) => {
       const d = document.createElement('div');
       d.className = 'dmh-kid' + (seenKids.has(p.name) ? '' : ' new');
       seenKids.add(p.name);
-      const skin = skinFor(p.avatar, p.name);
+      const skin = p.robot ? p.avatar : skinFor(p.avatar, p.name);
+      if (p.robot) d.classList.add('robot');
       const im = document.createElement('img');
       im.src = S.tiptoe(skin);
       if (S.flip(skin)) im.className = 'flip';
@@ -241,17 +258,9 @@
   }
   function applyView(b, v) {
     b.view = v;
-    if (v.phase === 'wake') b.stage.wake(); else b.stage.sleep();
+    if (v.awake) { b.stage.closeup(true); b.stage.wake(); } else b.stage.sleep();
     b.stage.setCue(v.cue || 0);
-    const tk = v.turn;
-    if (tk != null && (v.phase === 'pre' || v.phase === 'turn')) {
-      const s = seatOf(b, tk);
-      b.turn = tk;
-      b.stage.kid(s ? s.skin : 'dralingo', s ? s.name : '');
-      b.stage.closeup(v.phase === 'turn');
-      if (v.phase === 'turn') b.stage.featherAt(null, null, s ? s.skin : 'dralingo');
-      setTurnLabel(b, v.phase === 'pre' ? 'Turno de ' + (s ? s.name : '…') : (s ? s.name : '') + ' le hace cosquillas…');
-    } else { b.turn = null; b.stage.kid(null); b.stage.closeup(v.phase === 'wake'); setTurnLabel(b, v.phase === 'night' ? 'Noche ' + v.night : ''); }
+    b.stage.closeup(!!v.awake || !!(rd && (rd.phase === 'pw' || rd.phase === 'pwin')));
     paintCue(b, v.cue || 0);
     paintList(b);
   }
@@ -261,39 +270,31 @@
     e.className = 'dmh-bcue c' + c;
     e.textContent = c >= 4 ? '😡' : c >= 3 ? '😣' : c >= 2 ? '😟' : c >= 1 ? '😪' : '😴';
   }
+  // each kid of the board: head, name, coins (in the play window: the tower being built, ✓ once in the safe)
   function paintList(b) {
     const box = b.el.querySelector('.dmh-blist');
     box.innerHTML = '';
+    const play = !!(rd && (rd.phase === 'pw' || rd.phase === 'pwin' || rd.phase === 'pwout'));
     (b.view.seats || []).forEach((x) => {
       const r = document.createElement('div');
-      r.className = 'dmh-row' + (b.turn === x.k ? ' turn' : '') + (x.on === false ? ' off' : '');
+      r.className = 'dmh-row' + (x.on === false ? ' off' : '') + (play && x.safe && x.got ? ' safe' : '');
+      r.dataset.k = x.k;
       const i = document.createElement('img');
       i.alt = '';
       i.src = S.head(x.skin);
       const n = document.createElement('span');
       n.textContent = x.name;
-      const fe = document.createElement('i');
-      fe.className = 'dmh-rf';
-      fe.dataset.k = x.k;
-      fe.textContent = '🪶' + (x.feathers != null ? x.feathers : '');
       const sc = document.createElement('b');
-      sc.textContent = x.score;
+      sc.textContent = '🪙' + (x.score || 0);
       sc.dataset.k = x.k;
-      r.append(i, n, fe, sc);
+      r.append(i, n, sc);
+      if (play && (x.pile || x.got)) { const rp = document.createElement('i'); rp.className = 'dmh-rp' + (x.safe ? ' safe' : ''); rp.textContent = '+' + (x.pile || x.got); r.appendChild(rp); }
       box.appendChild(r);
     });
   }
-  function setScore(b, k, v, cls) {
-    const s = seatOf(b, k);
-    if (s) s.score = v;
+  function setCoins(b, k, v, cls) {
     const e = b.el.querySelector('.dmh-blist b[data-k="' + k + '"]');
-    if (e) { e.textContent = v; if (cls && !reduced()) { e.classList.remove('bump', 'zero'); void e.offsetWidth; e.classList.add(cls); } }
-  }
-  function setFeathers(b, k, n) {
-    const s = seatOf(b, k);
-    if (s) s.feathers = n;
-    const e = b.el.querySelector('.dmh-blist i[data-k="' + k + '"]');
-    if (e) e.textContent = '🪶' + n;
+    if (e) { e.textContent = '🪙' + v; if (cls && !reduced()) { e.classList.remove('bump', 'zero'); void e.offsetWidth; e.classList.add(cls); } }
   }
   function paintTop(top) {
     const box = $('top3');
@@ -308,7 +309,7 @@
       n.innerHTML = '<i>' + (i + 1) + '</i>';
       n.appendChild(document.createTextNode(r.name));
       const sc = document.createElement('b');
-      sc.textContent = r.score + ' ⭐';
+      sc.textContent = r.score + ' 🪙';
       li.append(im, n, sc);
       box.appendChild(li);
     });
@@ -367,101 +368,106 @@
     requestAnimationFrame(() => Object.values(boards).forEach((b) => b.stage.fit()));
     bigBand('¡Shhh! Dralingo duerme…', 'calm', (d.ms || 2600) - 600);
     later((d.ms || 2600) - 600, () => { bigBand('¡YA!', 'go', 700); sfx('start', 0.7); });
-    say('Respondan para ganar plumas… y en su turno, ¡a frotar sin despertarlo!');
+    say('Respondan para ganar plumas… y luego, ¡todos a frotar sin despertarlo!');
   });
   onDm('dm:play', (d) => { if (game) game.phase = 'play'; endsAt = Date.now() + (d.endsMs || 0); runClock(); });
-  onDm('dm:pre', (d) => {
+  // the rounds: the question window (bedrooms asleep), «¡A hacerle cosquillas!», the play window (close-ups), the tally
+  onDm('dm:round', (d) => {
+    rd = { n: d.n, total: d.total, phase: d.phase, final: !!d.final };
+    const label = d.final ? '🌕 ¡Ronda final! ×2' : 'Ronda ' + d.n + (d.total ? ' de ' + d.total : '');
+    if (d.phase === 'qw') {
+      $('headline').textContent = label + ' · ¡Respondan para ganar plumas! 🪶';
+      Object.values(boards).forEach((b) => { (b.view.seats || []).forEach((x) => { x.pile = 0; x.safe = false; x.got = 0; }); b.stage.calm(); b.stage.featherOff(); if (!b.view.awake) b.stage.closeup(false); setTurnLabel(b, ''); paintList(b); });
+      if (Date.now() - lastWhisper > 6000) { lastWhisper = Date.now(); const id = pick1(Object.keys(WHISPER)); hostLine(id, pick1(WHISPER[id])); }
+    } else if (d.phase === 'pwin') {
+      $('headline').textContent = label + ' · ¡A hacerle cosquillas! Todos a la vez';
+      bigBand('¡A hacerle cosquillas!', 'go', 1400);
+      sfx('round', 0.6);
+      Object.values(boards).forEach((b) => { b.stage.closeup(true); paintList(b); });
+    } else if (d.phase === 'pw') {
+      sfx('whoosh', 0.5);
+      say('¡Frótenlo con cuidado! Si lo despiertas tú, se cae tu torre');
+    } else if (d.phase === 'pwout') {
+      (d.tally || []).forEach((t) => {
+        const b = boards[t.b];
+        if (!b) return;
+        t.rows.forEach((x) => { const s = seatOf(b, x.k); if (s) { s.score = x.score; s.got = x.got; s.pile = 0; s.safe = true; } });
+        const best = t.rows.slice().sort((a, c) => c.got - a.got)[0];
+        const s = best && best.got ? seatOf(b, best.k) : null;
+        setTurnLabel(b, s ? '🏆 ' + s.name + ' +' + best.got + ' 🪙' : '');
+        paintList(b);
+      });
+      later(600, () => Object.values(boards).forEach((b) => { if (!b.view.awake) b.stage.closeup(false); }));
+    }
+  });
+  // a board where everyone is done: its tally now
+  onDm('dm:bdone', (d) => {
     const b = boards[d.b];
     if (!b) return;
-    b.turn = d.k;
-    Object.assign(b.view, { phase: 'pre', turn: d.k, night: d.night || b.view.night });
-    const s = seatOf(b, d.k);
-    b.stage.closeup(false);
-    b.stage.kid(s ? s.skin : 'dralingo', s ? s.name : '');
-    b.stage.featherOn(false);
-    b.stage.say('');
-    setTurnLabel(b, 'Turno de ' + (s ? s.name : '…'));
+    (d.rows || []).forEach((x) => { const s = seatOf(b, x.k); if (s) { s.score = x.score; s.got = x.got; s.pile = 0; s.safe = true; } });
+    const best = (d.rows || []).slice().sort((a, c) => c.got - a.got)[0];
+    const s = best && best.got ? seatOf(b, best.k) : null;
+    setTurnLabel(b, s ? '🏆 ' + s.name + ' +' + best.got + ' 🪙' : '¡Todos a salvo!');
     paintList(b);
-    if (Date.now() - lastWhisper > 6000) { lastWhisper = Date.now(); const id = pick1(Object.keys(WHISPER)); hostLine(id, pick1(WHISPER[id])); }
-    b.el.querySelector('.dmh-bq').classList.add('hidden');
-    if (Object.keys(boards).length === 1) { b.stage.say('Turno de ' + (s ? s.name : ''), 'calm', 1600); sfx('round', 0.5); }
   });
-  onDm('dm:skip', (d) => { const b = boards[d.b]; if (b && d.k != null) { const s = seatOf(b, d.k); b.stage.say((s ? s.name : 'Alguien') + ' no está', 'calm', 1300); } });
-  onDm('dm:go', (d) => {
-    const b = boards[d.b];
-    if (!b) return;
-    const s = seatOf(b, d.k);
-    Object.assign(b.view, { phase: 'turn', turn: d.k });
-    b.stage.closeup(true);
-    b.stage.featherAt(null, null, s ? s.skin : 'dralingo');
-    setTurnLabel(b, (s ? s.name : '') + ' le hace cosquillas…');
-  });
-  onDm('dm:bq', (d) => {
-    const b = boards[d.b];
-    if (!b) return;
-    const q = b.el.querySelector('.dmh-bq');
-    q.textContent = d.text;
-    q.classList.remove('hidden');
-  });
+  onDm('dm:ready', (d) => { const b = boards[d.b]; if (b) { b.view.cue = d.cue; b.stage.setCue(d.cue || 0); paintCue(b, d.cue || 0); } });
   onDm('dm:pat', (d) => {
     const b = boards[d.b];
     if (!b) return;
-    b.stage.cuStroke(d.pts, d.fast);
+    const s = seatOf(b, d.k);
+    if (s) { s.pile = d.pile; s.feathers = d.feathers; }
+    b.stage.closeup(true);
+    b.stage.otherStroke(d.x, d.y, s ? s.skin : 'dralingo', d.pts, d.fast);
+    b.stage.tickled();
     b.view.cue = d.cue;
     b.stage.setCue(d.cue);
     paintCue(b, d.cue);
-    setScore(b, d.k, d.score, 'bump');
-    setFeathers(b, d.k, d.feathers);
-    sfx('stroke', 0.55, 250);
-    if (d.fast) sfx('creak', 0.45, 500);
+    paintList(b);
+    const e = b.el.querySelector('.dmh-blist b[data-k="' + d.k + '"]'); if (e && !reduced()) { e.classList.remove('bump'); void e.offsetWidth; e.classList.add('bump'); }
+    sfx('stroke', 0.45, 250);
+    if (d.fast) sfx('creak', 0.4, 500);
     else if (Date.now() - (lastSfx.giggle || 0) > 900) { lastSfx.giggle = Date.now(); setTimeout(() => sfx('giggle' + (1 + Math.floor(Math.random() * 3)), 0.5), 200); }   // his sleepy giggle (one at a time with many boards)
   });
-  onDm('dm:miss', (d) => {
+  onDm('dm:bank', (d) => {
     const b = boards[d.b];
     if (!b) return;
-    b.stage.stir();
-    b.view.cue = d.cue;
-    b.stage.setCue(d.cue);
-    paintCue(b, d.cue);
-    sfx('creak', 0.55, 400);
+    const s = seatOf(b, d.k);
+    if (s) { s.safe = true; s.got = (s.got || 0) + (d.pile || 0); s.pile = 0; s.score = d.score; }
+    paintList(b);
   });
   onDm('dm:wake', (d) => {
     const b = boards[d.b];
     if (!b) return;
     const s = seatOf(b, d.k);
-    Object.assign(b.view, { phase: 'wake', turn: null, cue: 4 });
+    const fell = (d.fell || []).find((x) => x.k === d.k);
+    if (s) s.pile = 0;
+    Object.assign(b.view, { awake: true, cue: 4 });
     b.stage.closeup(true);
     b.stage.featherOff();
     b.stage.wake();
-    b.stage.rage(4000);                                  // he is ANGRY: the tile floods red (ring, lines, steam, sparks)
-    b.stage.say('¡Se despertó!', 'wake');
+    b.stage.rage(d.ms || 3800);                          // he is ANGRY: the tile floods red (ring, lines, steam, sparks)
+    b.stage.say('¡' + (s ? s.name : 'Alguien') + ' lo despertó!', 'wake');
     flashRed();
     paintCue(b, 4);
-    setScore(b, d.k, 0, 'zero');
-    b.turn = null;
     paintList(b);
-    setTurnLabel(b, (s ? s.name : '') + (d.lost ? ' pierde ' + d.lost + (d.lost === 1 ? ' punto' : ' puntos') : ' lo despertó'));
-    b.el.querySelector('.dmh-bq').classList.add('hidden');
+    { const e = b.el.querySelector('.dmh-blist b[data-k="' + d.k + '"]'); if (e && !reduced()) { e.classList.remove('zero'); void e.offsetWidth; e.classList.add('zero'); } }
+    setTurnLabel(b, (s ? s.name : '') + (fell && fell.coins ? ': ¡se cayó su torre! −' + fell.coins + ' 🪙' : ' lo despertó'));
     sfx('wake', 0.75, 900);
     later(260, () => sfx('angry', 0.7, 900));
     later(650, () => sfx('aww', 0.45, 900));
     const line = pick1(WAKE_LINES);
     hostLine('dralingo', 'Dralingo: «' + line + '»');
-    later(1100, () => b.stage.speak(line, 2400));
+    later(1100, () => b.stage.speak(line, 2200));
   });
-  onDm('dm:end', (d) => {
+  onDm('dm:sleep', (d) => {
     const b = boards[d.b];
     if (!b) return;
-    const s = seatOf(b, d.k);
-    Object.assign(b.view, { phase: 'post', turn: null });
-    b.stage.closeup(false);
-    b.stage.featherOff();
-    b.stage.featherOn(false);
-    setScore(b, d.k, d.score);
-    if (d.feathers != null) setFeathers(b, d.k, d.feathers);
-    b.el.querySelector('.dmh-bq').classList.add('hidden');
-    const pts = d.pts != null ? d.pts : d.pats;
-    if (d.why !== 'final') setTurnLabel(b, (s ? s.name : '') + (pts ? ': ¡a salvo! +' + pts : ': turno terminado'));
+    Object.assign(b.view, { awake: false, cue: d.cue || 0 });
+    b.stage.sleep();
+    b.stage.setCue(d.cue || 0);
+    paintCue(b, d.cue || 0);
+    b.stage.say('Se vuelve a dormir… 🌙', 'calm', 1500);
+    if (!(rd && rd.phase === 'pw')) b.stage.closeup(false);
   });
   // a wrong / late answer on a board: he shifts in his sleep there
   onDm('dm:shift', (d) => {
@@ -484,19 +490,7 @@
     document.body.appendChild(r);
     setTimeout(() => r.remove(), 1700);
   }
-  onDm('dm:night', (d) => {
-    const b = boards[d.b];
-    if (!b) return;
-    Object.assign(b.view, { phase: 'night', turn: null, cue: 0, night: d.night });
-    b.stage.closeup(false);
-    b.stage.sleep();
-    b.stage.kid(null);
-    paintCue(b, 0);
-    b.stage.say('Noche ' + d.night + ' 🌙', 'calm', 2000);
-    setTurnLabel(b, 'Se vuelve a dormir…');
-  });
-  onDm('dm:fe', (d) => { const b = boards[d.b]; if (b && b.view.phase === 'turn') { const s = seatOf(b, d.k); b.stage.featherAt(d.x, d.y, s ? s.skin : 'dralingo'); } });
-  onDm('dm:plume', (d) => { const b = boards[d.b]; if (b) setFeathers(b, d.k, d.feathers); });
+  onDm('dm:plume', (d) => { const b = boards[d.b]; if (b) { const s = seatOf(b, d.k); if (s) s.feathers = d.feathers; } });
   onDm('dm:react', (d) => { const b = boards[d.b]; if (b) { const s = seatOf(b, d.k); b.stage.react(d.e, s ? s.skin : null); } });
   onDm('dm:top', (d) => paintTop(d.top));
   onDm('dm:frenzy', (d) => {
@@ -504,7 +498,7 @@
     $('frenzy-chip').classList.toggle('hidden', !frenzy);
     document.body.classList.toggle('dmh-frenzy', frenzy);
     if (music) music.playbackRate = frenzy ? 1.18 : 1;
-    if (frenzy) { bigBand('🌕 ¡Luna llena! Cosquillas ×2', 'go', 2200); sfx('hurry', 0.8); say('¡Últimos 30 segundos! Cada cosquilla vale 2'); }
+    if (frenzy) { bigBand('🌕 ¡Ronda final! Cosquillas ×2', 'go', 2200); sfx('hurry', 0.8); say('¡Ronda final! Cada cosquilla vale 2 🪙'); }
   });
   onDm('dm:time', (d) => { endsAt = Date.now() + (d.endsMs || 0); if (paused) pausedLeft = d.endsMs || 0; paintClock(); if (d.add) bigBand((d.add > 0 ? '+' : '−') + Math.abs(d.add) + ' s', 'calm', 900); });
   onDm('dm:pause', (d) => {
@@ -514,7 +508,6 @@
     $('pause-btn').textContent = paused ? '▶ Seguir' : '⏸ Pausa';
     if (paused) stopMusic(); else musicFor();
   });
-  onDm('dm:guess', () => {});
   onDm('dm:final', (d) => {
     if (game) game.phase = 'final';
     paintMinus();
@@ -544,21 +537,22 @@
       c.className = 'dmh-champ';
       const win = (bd.rows || []).filter((r) => (bd.winners || []).includes(r.k));
       const h = document.createElement('h3');
-      h.textContent = (dm.boards.length > 1 ? 'Tablero ' + (i + 1) : 'El tablero') + (bd.nights > 1 ? ' · ' + bd.nights + ' noches' : '');
+      h.textContent = (dm.boards.length > 1 ? 'Tablero ' + (i + 1) : 'El tablero') + (bd.wakes ? ' · lo despertaron ' + (bd.wakes === 1 ? '1 vez' : bd.wakes + ' veces') : '');
       c.appendChild(h);
       const figs = document.createElement('div');
       figs.className = 'dmh-champ-figs';
       if (win.length) win.forEach((w) => { const im = document.createElement('img'); im.alt = ''; im.src = fig(w.skin, 'win'); figs.appendChild(im); });
       else { const im = document.createElement('img'); im.alt = ''; im.src = A + 'dralingo-awake.webp'; im.className = 'awake'; figs.appendChild(im); }
       c.appendChild(figs);
+      if ((bd.robots || []).length) { const rb = document.createElement('p'); rb.className = 'dmh-champ-robots'; rb.textContent = '🤖 ' + bd.robots.map((r) => r.name.replace('🤖', '').trim()).join(', ') + ': robots de prueba (no cuentan)'; c.appendChild(rb); }
       const n = document.createElement('p');
       n.className = 'dmh-champ-name';
-      n.textContent = win.length ? win.map((w) => w.name).join(' y ') + ' · ' + win[0].score + ' ⭐' : 'Sin campeón: ¡se despertó demasiado!';
+      n.textContent = win.length ? win.map((w) => w.name).join(' y ') + ' · ' + win[0].score + ' 🪙' : 'Sin campeón: ¡se despertó demasiado!';
       c.appendChild(n);
       if ((bd.stars || []).length) {
         const st = document.createElement('div');
         st.className = 'dmh-champ-stars';
-        const ICO = { valiente: '🦁', prudente: '🛡️', racha: '🔥', adivino: '🔮' };
+        const ICO = { torre: '🏯', prudente: '🛡️', valiente: '🦁', racha: '🔥' };
         bd.stars.forEach((s) => {
           const who = (bd.rows || []).filter((r) => (s.winners || []).includes(r.k)).map((r) => r.name).join(' y ');
           const sp = document.createElement('span');
@@ -583,7 +577,7 @@
         const n = document.createElement('span');
         n.textContent = r.name;
         const sc = document.createElement('b');
-        sc.textContent = r.score + ' ⭐';
+        sc.textContent = r.score + ' 🪙';
         col.append(im, n, sc);
       }
       const step = document.createElement('div');
@@ -597,7 +591,7 @@
   }
 
   window.DormHost = {
-    frame: () => ({ pin, phase: game && game.phase, boards: Object.keys(boards).length, paused, frenzy, clock: $('clock').textContent }),
+    frame: () => ({ pin, phase: game && game.phase, round: rd, boards: Object.keys(boards).length, paused, frenzy, clock: $('clock').textContent, robots: robots.length }),
     freeze: (v) => { frozen = !!v; if (!frozen) { const q = queue; queue = []; q.forEach(([fn, d]) => fn(d)); } if (S.freeze) S.freeze(v); return queue.length; },
   };
 })();

@@ -1,3 +1,5 @@
+// ⚠ v3 ONLY (turns + «¿Se despierta?»): v4 (2026-10-24, the Windows rhythm) has no turns; its play window is filmed at
+// 4 fps by scripts/check-dormilon-screens.js (turn-frames/) and its wake-up by the same run (k31 / k31b). Kept for the record.
 // ¡No despiertes a Dralingo! · a WAKE-UP filmed at 4 fps on a real phone (390×844, headless Chrome) for the side-by-side
 // with the video's (his rule «Big moments take over the whole screen with their emotion»: the Wiggler turns red, rays,
 // shake, steam, the points vanish).

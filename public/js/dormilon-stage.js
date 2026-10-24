@@ -213,6 +213,37 @@
     this.cuBox.classList.remove('dms-cuwobble', 'dms-cusquish'); void this.cuBox.offsetWidth; this.cuBox.classList.add(cls);
     this.later(fast ? 620 : 460, () => this.cuBox.classList.remove(cls));
   };
+  // v4 · a friend's tickle at the same time (x, y = where their finger rubbed, fractions of the close-up): their head
+  // with a little feather lands there, «+1» pops (everyone on the board sees every tickle live)
+  Stage.prototype.otherStroke = function (x, y, skin, pts, fast) {
+    if (x == null || !isFinite(x)) { const h = this.cuHead(); x = h[0] + (Math.random() - 0.5) * 0.2; y = h[1] + (Math.random() - 0.5) * 0.12; }
+    const [px, py] = this.cuPoint(x, y);
+    const g = this.geo || { W: 300, H: 300 };
+    const cx = Math.max(24, Math.min(g.W - 24, px)), cy = Math.max(30, Math.min(g.H - 30, py));
+    const o = el('span', 'dms-other' + (fast ? ' fast' : ''));
+    o.style.left = cx + 'px'; o.style.top = cy + 'px';
+    o.appendChild(img('dms-ohead', head(skin)));
+    o.appendChild(img('dms-ofeather', A + 'feather.webp'));
+    o.appendChild(el('b', null, fast ? '¡Uy!' : '+' + (pts || 1)));
+    if (this.cuPops.childElementCount > 14) this.cuPops.firstChild.remove();
+    this.cuPops.appendChild(o);
+    this.later(1150, () => o.remove());
+  };
+  // v4 · every tickle visibly does something to him: a giggle-squish, a squirm, or the snore bubble pops (rotated)
+  Stage.prototype.tickled = function (mine) {
+    if (reduced() || !this.isCu) return;
+    this.tickN = ((this.tickN || 0) + 1 + (Math.random() < 0.35 ? 1 : 0)) % 3;
+    if (this.tickN === 2) {                                      // the snore bubble at his nose pops
+      if (!this.snoreBub) { this.snoreBub = el('i', 'dms-snorebub'); this.cuBox.appendChild(this.snoreBub); }
+      const b = this.snoreBub;
+      b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop');
+      return;
+    }
+    if (mine) return;                                            // (my own stroke already squishes him)
+    const cls = this.tickN === 1 ? 'dms-squirm' : 'dms-cusquish';
+    this.cuBox.classList.remove('dms-squirm', 'dms-cusquish'); void this.cuBox.offsetWidth; this.cuBox.classList.add(cls);
+    this.later(520, () => this.cuBox.classList.remove(cls));
+  };
   Stage.prototype.headAt = function () {
     const g = this.geo;
     if (!g) return [0, 0];

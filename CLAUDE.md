@@ -944,7 +944,12 @@ the checklist for any new game mode.
   2-minute game, sometimes in the first round; only each board's very first turn is safe), 2 / 3 / 4 min (default 2),
   a wrong, late or blind answer costs a feather and makes him shift, he wakes up ANGRY on every screen for ~4 s (filmed
   beside the video's red Wiggler: `scripts/record-dormilon-wake.js`), and the projector lobby fits and scrolls at every
-  laptop size and zoom (`scripts/check-dormilon-lobby.js`).
+  laptop size and zoom (`scripts/check-dormilon-lobby.js`). **v4 (2026-10-24, branch `dormilon-v4`, his «every kid in,
+  every moment; build, then the reveal»)**: the Windows rhythm, no turns: a question window (everyone answers; a feather
+  per right answer, max 4), then a 10-s play window where EVERY kid of the board rubs at once, each tickle = +1 coin on
+  the kid's tower and a roll of the shared wake-up dice (he wakes in ~70 % of play windows); the waker's tower of that
+  round falls, «¡Me retiro!» banks it, the window waits while he rages; the towers rise side by side at the end;
+  «🤖 Probar con robots»; the play window filmed at 4 fps by `scripts/check-dormilon-screens.js` (turn-frames/).
   «¡Atrapa a Fénec!» (new 2026-10-23, `teamcrab`, #4 of the Mario Party series, his video 7:30-8:16 «Team Crab», spec
   `docs/specs/atrapa-a-fenec.md`, deployed 2026-10-23 c8bdf147b): his design turned the clip around: crews of 3-4 pilot a
   giant red robot crab on a Dubai beach (a cockpit with each kid's face, a wooden hammer each) and Fénec, el ladrón de
@@ -997,6 +1002,20 @@ the checklist for any new game mode.
   screen… make it feel like he's angry, that's what Mario does really good, the feelings"): a wake-up, a fall, a hit, a
   win floods every screen with its feeling (colour, shake, rays, particles that move around, sound) for a beat, on the
   phones as much as on the projector.
+  **Every kid in, every moment; build, then the reveal; little on screen** (his words 2026-10-24 after playing Draly
+  Siesta: "how do you get all the kids involved… very little window time to answer questions… every time you use the
+  feather nothing happens… Mario Party gives you… when it's your turn you build, construct, and at the end you see who
+  wins… don't make it too overwhelming, not too many things on the screen, otherwise kids get lost… the dragon needs to
+  awaken more often, otherwise kids do not feel the tension"): every kid has something real to do at every moment
+  (their turn, a bet, a reaction that counts), and a question gives enough time to read and answer; each action builds
+  something the kid SEES grow (points stacking, a tower, a pile) toward a reveal at the end; one focus per screen (the
+  task or the question, never both fighting), few labels; the game's threat comes often enough to keep the tension.
+- **Every pin game is playable with robots** (his rule 2026-10-24: "make all games from here on be playable with robots
+  so that I understand what's going on"): a teacher-only «🤖 Probar con robots» in the projector lobby fills the room or
+  his board with robot players marked 🤖 who play like an average kid and never count (no record, coin, star, podium or
+  ranking), so he can play the real game alone with one phone. New games have it from the start; each existing game gets
+  it in its next pass (he is going through them one by one). Draly Cangrejo's (`robotTick` in core/teamcrab.js) is the
+  pattern to reuse.
 - **A wrong or late answer always costs you something** (his standing rule 2026-10-22: "make the whole point of the game
   make sense, you somehow get punished if you don't answer correctly / in time"; then, shown a per-game plan for the 11
   existing games: "just do it in this one you're working on, and from here forward"). It applies to «¡No despiertes a

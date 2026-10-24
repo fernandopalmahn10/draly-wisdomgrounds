@@ -1,3 +1,5 @@
+// ⚠ v3 ONLY (turns + «¿Se despierta?»): v4 (2026-10-24, the Windows rhythm) has no turns; its play window is filmed at
+// 4 fps by scripts/check-dormilon-screens.js (turn-frames/) and its wake-up by the same run (k31 / k31b). Kept for the record.
 // ¡No despiertes a Dralingo! · one kid's ordinary turn filmed at 4 fps on a real phone (390×844, headless Chrome through
 // playwright-core) against a RUNNING local server, for the side-by-side with the original minigame's turn (his rule
 // «Never call it done unless it FEELS like Mario Party»: frames of both, where it wins and where we lose).

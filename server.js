@@ -7739,7 +7739,7 @@ function nextQuestionFor(game, playerId) {
 
   // 6-7 Swing v2: its room tick deals every sum (ssDeal, core/sixseven.js); never a generic question
   if (game.gameType === 'sixseven') return null;
-  if (game.gameType === 'dormilon') return null;   // ¡No despiertes a Dralingo!: its tick deals the turn kid's questions (dm:q)
+  if (game.gameType === 'dormilon') return null;   // Draly Siesta: its tick deals every kid's questions (dm:q)
   if (game.gameType === 'teamcrab') return null;   // ¡Atrapa a Fénec!: its tick deals every kid's questions (tc:q)
 
   const q = game.questions[p.queueIdx % game.questions.length];
@@ -8015,18 +8015,22 @@ function mnFinish(pin, g) {
   _zocoGameEnd(pin, g, end);   // 🪙 El Zoco: a game played for real and its bonus stars pay (core/zoco.js PAY; after the ceremony is sent)
 }
 
-// === 😴 ¡NO DESPIERTES A DRALINGO! (gameType 'dormilon') — Super Mario Party «Don't Wake Wiggler», boards of 4 ===
-// Rules in core/dormilon.js (spec docs/specs/no-despiertes-a-dralingo.md). The boards are dealt when the countdown
-// starts (each phone runs in with its own board, dm:init); one 200 ms tick per room runs the clock: intro → play (each
-// board runs its own turns: «Turno de X» → the turn kid RUBS his head with a finger (player:dm-stroke = one completed
-// stroke; its finger's position travels as player:dm-feather and is relayed live to the board and the projector) →
-// «¡Me retiro!» / out of feathers / time / a wake-up → the next kid) → the last 30 s ×2 → «¡FINAL!» → game-end (each
-// phone its board's ceremony and card, the projector every board's champion + the class podium). v2 (his pick
-// 2026-10-22): every kid who is not playing answers quiz questions (dm:q to that kid only, the right answer kept here)
-// to earn feathers; the board and the projector see the feather counts (dm:plume). Each board is a socket.io room of
-// its own (the game id in its name, so «Otra ronda» never mixes boards). No full-room 'state' push on answers; the
-// class top 3 rides on dm:top to the projector.
-const DM_TICK_MS = 200;
+// === 😴 DRALY SIESTA · ¡NO DESPIERTES A DRALINGO! (gameType 'dormilon') — Super Mario Party «Don't Wake Wiggler», boards of 4 ===
+// Rules in core/dormilon.js (spec docs/specs/no-despiertes-a-dralingo.md). v4 (2026-10-24, his «every kid in, every
+// moment; build, then the reveal»): the Windows rhythm. The boards are dealt when the countdown starts (each phone runs
+// in with its own board, dm:init); one 100 ms tick per room runs everything: intro → rounds: dm:round 'qw' (each kid's
+// questions to them only, dm:q → a right answer = a golden feather, a miss = a feather flies off and he shifts: dm:qr to
+// me, dm:plume + dm:shift to the board) → dm:ready + dm:round 'pwin' «¡A hacerle cosquillas!» → dm:round 'pw': EVERY
+// kid rubs at once (player:dm-stroke with the finger's x, y = one completed stroke: dm:pat to the board, every phone
+// sees whose tower grew and where), «¡Me retiro!» (player:dm-stop → dm:bank), a stroke that wakes him (dm:wake: the
+// waker's tower falls, the ANGRY wake-up on the board's phones, then dm:sleep) → dm:round 'pwout' with the tally → …
+// the final round ×2 (dm:frenzy) → «¡FINAL!» → game-end (each phone its board's ceremony and card, the projector every
+// board's champion + the class podium). «🤖 Probar con robots» (host:dm-robots, lobby, teacher only): robots fill a
+// board of 1-2 phones and play like an average kid; they never count. Each board is a socket.io room of its own (the
+// game id in its name, so «Otra ronda» never mixes boards). The class top 3 rides on dm:top to the projector.
+const DM_TICK_MS = 100;
+const DM_ROBOTS = [['🤖 Robi', 'hamdan'], ['🤖 Roba', 'latifa'], ['🤖 Robo', 'aileen']];
+const dmRobotNames = (n) => DM_ROBOTS.slice(0, Math.max(0, Math.min(DM_ROBOTS.length, n || 0))).map(([name, skin]) => ({ name, skin }));
 function dmEnsureId(g, p) { if (!p.dmK) p.dmK = (g.dmNextK = (g.dmNextK || 0) + 1); return p.dmK; }
 const dmRoom = (pin, m, bid) => `${pin}:dm:${m.id}:${bid}`;
 function dmJoinRoom(pin, g, pid, p) {
@@ -8047,7 +8051,7 @@ function dmPidOf(g, k) {
 }
 const dmClock = (m) => (m.paused ? m.pausedAt : Date.now());
 function dmTop(g, n) {
-  return Object.values(g.dm.kids).slice().sort((a, b) => b.score - a.score || b.pats - a.pats || a.k - b.k).slice(0, n)
+  return Object.values(g.dm.kids).filter((r) => !r.robot).sort((a, b) => b.score - a.score || b.big - a.big || a.k - b.k).slice(0, n)
     .map((r) => ({ k: r.k, name: r.name, skin: r.skin, score: r.score, b: r.b }));
 }
 function dmInitPayload(g, pid) {
@@ -8057,7 +8061,7 @@ function dmInitPayload(g, pid) {
   const out = {
     id: m.id, phase: m.phase, phaseMs: Math.max(0, m.phaseUntil - clock), paused: !!m.paused,
     endsMs: m.endsAt ? Math.max(0, m.endsAt - clock) : null, frenzy: !!m.frenzy, duration: m.duration, boardsN: m.boards.length,
-    top: dmTop(g, 3),
+    top: dmTop(g, 3), round: Dorm.roundView(m, clock),
   };
   if (!pid) { out.boards = m.boards.map((b) => Dorm.boardView(m, b, online, clock)); return out; }
   const p = g.players[pid];
@@ -8065,22 +8069,19 @@ function dmInitPayload(g, pid) {
   if (!r) return out;
   const b = Dorm.boardOf(m, r.b);
   out.board = b ? Dorm.boardView(m, b, online, clock) : null;
-  out.you = { k: r.k, b: r.b, score: r.score, pats: r.pats, feathers: r.feathers, first: !!r.first, guess: b && b.guesses[r.k] ? b.guesses[r.k] : null };
-  out.q = Dorm.openQ(m, r.k, clock);                                // my open quiz question again (same qid, the time left)
-  const c = b && b.cur;
-  if (c) out.turnMs = Math.max(0, c.until - clock);
+  out.you = { k: r.k, b: r.b, score: r.score, pile: r.pile, got: r.got, safe: r.safe, feathers: r.feathers, pats: r.pats, first: !!r.first };
+  out.q = Dorm.openQ(m, r.k, clock);                                // my open question again (same qid, the time left)
   return out;
 }
 function dmStop(g) { if (g && g.dm && g.dm.timer) { clearInterval(g.dm.timer); g.dm.timer = null; } }
-// The events of the rules (core/dormilon.js) to the screens: the board's phones (its room) + the projector; the open
-// question only to the kid who plays (the others get it without the right answer).
+// The events of the rules (core/dormilon.js) to the screens: the board's phones (its room) + the projector; a question
+// only to its kid (never its right answer); the rounds to the whole room.
 function dmEmit(pin, g, evs) {
   const m = g.dm;
   if (!m || !evs || !evs.length) return;
   let scored = false;
   evs.forEach((e) => {
     try {
-      // the quiz: the question only to its kid; its result to that kid, the new feather count to the board + projector
       if (e.t === 'q') {
         const pid = dmPidOf(g, e.k);
         if (pid) io.to(pid).emit('dm:q', Object.assign({ b: e.b, feathers: e.feathers, ms: e.ms }, Dorm.qPublic(e.q)));
@@ -8097,12 +8098,14 @@ function dmEmit(pin, g, evs) {
         io.to(g.hostId).emit('dm:plume', plume);
         return;
       }
+      if (e.t === 'round') { io.to(pin).emit('dm:round', Object.assign({ id: m.id }, e, { t: undefined })); return; }
       if (e.t === 'frenzy') { io.to(pin).emit('dm:frenzy', { id: m.id, endsMs: e.endsMs, off: !!e.off }); return; }
       if (e.t === 'final') { io.to(pin).emit('dm:final', { id: m.id, ms: e.ms }); return; }
-      if (e.t === 'pat' || e.t === 'wake' || e.t === 'end') {
+      if (e.t === 'pwmore') { io.to(pin).emit('dm:pwmore', { id: m.id, ms: e.ms, add: e.add }); return; }   // (the play window waited for a wake-up: everyone's count gets the time back)
+      if (e.t === 'pat' || e.t === 'wake' || e.t === 'bank') {
         const r = Dorm.kid(m, e.k);
         Object.values(g.players).forEach((p) => { if (r && p.dmK === r.k) p.score = r.score; });
-        scored = true;
+        if (e.t !== 'pat') scored = true;
       }
       const name = 'dm:' + e.t;
       const payload = Object.assign({ id: m.id }, e);
@@ -8111,7 +8114,7 @@ function dmEmit(pin, g, evs) {
       io.to(g.hostId).emit(name, payload);
     } catch (err) { console.error('[dormilon] emit', e && e.t, err); }
   });
-  if (scored) io.to(g.hostId).emit('dm:top', { top: dmTop(g, 3) });
+  if (scored || evs.some((e) => e.t === 'round' && e.phase === 'pwout')) io.to(g.hostId).emit('dm:top', { top: dmTop(g, 3) });
 }
 // The countdown starts: the boards are dealt now, so every phone runs in with its own board and the projector with all.
 function dmDeal(pin, g) {
@@ -8123,6 +8126,8 @@ function dmDeal(pin, g) {
   g.dm = m;
   Object.values(g.players).forEach((p) => { dmEnsureId(g, p); p.currentQ = null; });
   Dorm.deal(m, Object.values(g.players).filter((p) => !p.disconnected).map((p) => [p.dmK, p.name, hcSkin(p), p.studentCode || '']));
+  // «🤖 Probar con robots»: they sit in the smallest board of 1-2 phones (his own when he plays with one phone)
+  dmRobotNames(g.dmRobots).forEach((x) => Dorm.seatRobot(m, (g.dmNextK = (g.dmNextK || 0) + 1), x.name, x.skin));
   Object.entries(g.players).forEach(([pid, p]) => {
     if (p.disconnected || !Dorm.inGame(m, p.dmK)) return;
     dmJoinRoom(pin, g, pid, p);
@@ -8130,8 +8135,8 @@ function dmDeal(pin, g) {
   });
   io.to(g.hostId).emit('dm:init', dmInitPayload(g, null));
 }
-// A kid who wasn't dealt in (joined late, came back after the deal) sits at the smallest board, last in its turn order;
-// that board's phones and the projector get the new kid. Returns true when the kid got a new seat.
+// A kid who wasn't dealt in (joined late, came back after the deal) sits at the smallest board; that board's phones and
+// the projector get the new kid. Returns true when the kid got a new seat.
 function dmSeatLate(pin, g, pid, p) {
   const m = g.dm;
   const b = Dorm.seatLate(m, dmEnsureId(g, p), p.name, hcSkin(p), p.studentCode || '');
@@ -8187,7 +8192,7 @@ function dmTick(pin, m) {
     }
   } catch (e) { console.error('[dormilon] tick', e); }
 }
-// «¡FINAL!» on every screen (a turn still running ends safely); the tick ends the game FINAL_MS later.
+// «¡FINAL!» on every screen (the standing towers go to the safe); the tick ends the game FINAL_MS later.
 function dmFinal(pin, g) {
   const m = g.dm;
   if (!m || m.phase === 'final' || m.phase === 'done') return;
@@ -8210,23 +8215,23 @@ function dmPause(pin, g, paused) {
   }
   const clock = dmClock(m);
   io.to(pin).emit('dm:pause', { id: m.id, paused: !!m.paused, phase: m.phase, endsMs: m.endsAt ? Math.max(0, m.endsAt - clock) : null });
-  // every board again with its time left (the turn's countdown on the phones stands still / runs on)
+  // every board again with its time left (the window's countdown on the phones stands still / runs on)
   Object.entries(g.players).forEach(([pid, p]) => { if (!p.disconnected && Dorm.inGame(m, p.dmK)) io.to(pid).emit('dm:init', dmInitPayload(g, pid)); });
   io.to(g.hostId).emit('dm:init', dmInitPayload(g, null));
   g._lastBcast = 0;
   broadcast(pin);
 }
-// The end: each board's ranking, bonus stars and winner; the class podium; each phone its own board + its card (built
-// again on demand for a reconnect).
+// The end: each board's ranking, bonus stars and winner (people only: robots are listed apart); the class podium; each
+// phone its own board + its card (built again on demand for a reconnect).
 function dmEndPayloads(g) {
   const m = g.dm;
   const fin = Dorm.finish(m);
   const lite = (x) => x && {
-    k: x.k, name: x.name, skin: x.skin, b: x.b, score: x.score, pats: x.pats, wakes: x.wakes, lost: x.lost, rank: x.rank,
-    classRank: x.classRank, stars: x.stars, best: x.best, big: x.big, safe: x.safe, guessOk: x.guessOk,
+    k: x.k, name: x.name, skin: x.skin, b: x.b, score: x.score, pats: x.pats, wakes: x.wakes, falls: x.falls, lost: x.lost, rank: x.rank,
+    classRank: x.classRank, stars: x.stars, best: x.best, big: x.big, saved: x.saved,
   };
   const boards = fin.boards.map((bd) => ({
-    id: bd.id, nights: bd.nights, winners: bd.winners, rows: bd.rows.map((k) => lite(fin.byK[k])),
+    id: bd.id, nights: bd.nights, wakes: bd.wakes, winners: bd.winners, rows: bd.rows.map((k) => lite(fin.byK[k])), robots: bd.robots,
     stars: bd.stars.map((s) => ({ id: s.id, name: s.name, unit: s.unit, value: s.value, winners: s.winners })),
   }));
   const podium = fin.order.slice(0, 3).map((k) => lite(fin.byK[k]));
@@ -8242,15 +8247,15 @@ function dmEndPayloads(g) {
     forPlayer(pid) {
       const p = g.players[pid];
       const x = p && fin.byK[p.dmK];
-      if (!x) return null;
+      if (!x || x.robot) return null;
       const board = boards.find((bd) => bd.id === x.b) || null;
       return Object.assign({}, common, {
         scores: { [pid]: x.score },
         dormilon: { board, podium, count: fin.count, boardsN: boards.length },
         me: {
           k: x.k, b: x.b, skin: x.skin, rank: x.rank, of: board ? board.rows.length : 1, classRank: x.classRank, classOf: fin.count,
-          score: x.score, pats: x.pats, wakes: x.wakes, lost: x.lost, stars: x.stars, answered: x.answered, right: x.right,
-          best: x.best, big: x.big, safe: x.safe, guessOk: x.guessOk, won: !!(board && board.winners.includes(x.k)),
+          score: x.score, pats: x.pats, wakes: x.wakes, falls: x.falls, lost: x.lost, stars: x.stars, answered: x.answered, right: x.right,
+          best: x.best, big: x.big, saved: x.saved, won: !!(board && board.winners.includes(x.k)),
         },
       });
     },
@@ -13447,10 +13452,12 @@ io.on('connection', (socket) => {
     // next tick, as if the clock got there
     if (g.gameType === 'dormilon' && g.dm) {
       const clock = dmClock(g.dm);
-      const d = Dorm.addTime(g.dm, add, clock);
+      const dev = [];
+      const d = Dorm.addTime(g.dm, add, clock, dev);
       if (!d) { if (add < 0) io.to(socket.id).emit('host:time-refused', { cut: true }); return; }
       g.endsAt = g.dm.endsAt;
       io.to(pin).emit('dm:time', { id: g.dm.id, endsMs: Math.max(0, g.dm.endsAt - clock), frenzy: g.dm.frenzy, add: said(d) });
+      dmEmit(pin, g, dev);   // (the open window takes its new length: a final round ×2 that still fits the clock)
       g._lastBcast = 0;
       broadcast(pin);
       return;
@@ -14650,10 +14657,11 @@ io.on('connection', (socket) => {
       else if (g.state === 'ended') io.to(pin).except(g.hostId).emit('dr:skip', { id: g.dr.id });
     } catch (e) { console.error('[host:dr-skip]', e); }
   });
-  // ¡No despiertes a Dralingo!: the turn kid's answer (its qid; a stale or double tap is ignored and the phone hears why),
-  // «¡Me retiro!», the watchers' «¿Se despierta?» guess and their reactions (🤫 😱 😂 👏).
-  // v2: one completed stroke of the turn kid's finger on his head (the phone counts a back-and-forth rub); the server
-  // judges gentle / scribble by the time since the last stroke, spends the feather, and may wake him
+  // Draly Siesta · ¡No despiertes a Dralingo!: a kid's answer (its qid; a stale or double tap is ignored and the phone
+  // hears why), the stroke, «¡Me retiro!» and the reactions (🤫 😱 😂 👏).
+  // v4: one completed stroke of a kid's finger on his head in the play window (the phone counts a back-and-forth rub;
+  // x, y = where, 0-1 of his face picture, so the board sees whose tickle landed where); the server judges gentle /
+  // scribble by the time since my last stroke, spends the feather, builds my tower, and may wake him
   socket.on('player:dm-stroke', (data) => {
     try {
       const pin = data && data.pin;
@@ -14663,28 +14671,10 @@ io.on('connection', (socket) => {
       if (!p || !p.dmK) return;
       const res = Dorm.stroke(g.dm, p.dmK, Date.now());
       if (!res.ok) { io.to(socket.id).emit('dm:nostroke', { why: res.why }); return; }
+      const fx = Math.max(0, Math.min(1, Number(data.x) || 0.5)), fy = Math.max(0, Math.min(1, Number(data.y) || 0.4));
+      res.ev.forEach((e) => { if (e.t === 'pat') { e.x = Math.round(fx * 1000) / 1000; e.y = Math.round(fy * 1000) / 1000; } });
       dmEmit(pin, g, res.ev);
     } catch (e) { console.error('[player:dm-stroke]', e); }
-  });
-  // v2: the turn kid's feather (its finger) at x, y (0-1 of his face picture), ~12 a second: relayed live to the other
-  // phones of the board and the projector (volatile: a late one is just dropped)
-  socket.on('player:dm-feather', (data) => {
-    try {
-      const { pin, x, y } = data || {};
-      const g = games[pin];
-      if (!g || g.gameType !== 'dormilon' || !g.dm || g.state !== 'active') return;
-      const p = g.players[socket.id];
-      const r = p && Dorm.kid(g.dm, p.dmK);
-      const b = r && Dorm.boardOf(g.dm, r.b);
-      if (!b || b.phase !== 'turn' || !b.cur || b.cur.k !== r.k) return;
-      const now = Date.now();
-      if (now - (p.dmFeatherAt || 0) < 50) return;
-      p.dmFeatherAt = now;
-      const fx = Math.max(0, Math.min(1, Number(x) || 0)), fy = Math.max(0, Math.min(1, Number(y) || 0));
-      const ev = { b: b.id, k: r.k, x: Math.round(fx * 1000) / 1000, y: Math.round(fy * 1000) / 1000 };
-      socket.to(dmRoom(pin, g.dm, b.id)).volatile.emit('dm:fe', ev);
-      io.to(g.hostId).volatile.emit('dm:fe', ev);
-    } catch (e) { console.error('[player:dm-feather]', e); }
   });
   socket.on('player:dm-answer', (data) => {
     try {
@@ -14698,7 +14688,7 @@ io.on('connection', (socket) => {
       dmEmit(pin, g, res.ev);
     } catch (e) { console.error('[player:dm-answer]', e); }
   });
-  // the phone shows its quiz question on a visible screen (only then can it run out and cost a feather)
+  // the phone shows its question on a visible screen (only then can it run out and cost a feather)
   socket.on('player:dm-seen', (data) => {
     try {
       const { pin, qid } = data || {};
@@ -14709,6 +14699,7 @@ io.on('connection', (socket) => {
       Dorm.seen(g.dm, p.dmK, String(qid || ''));
     } catch (e) { console.error('[player:dm-seen]', e); }
   });
+  // «¡Me retiro!»: my tower of this round goes to the safe
   socket.on('player:dm-stop', (data) => {
     try {
       const pin = data && data.pin;
@@ -14716,22 +14707,8 @@ io.on('connection', (socket) => {
       if (!g || g.gameType !== 'dormilon' || !g.dm || g.state !== 'active') return;
       const p = g.players[socket.id];
       if (!p || !p.dmK) return;
-      dmEmit(pin, g, Dorm.stop(g.dm, p.dmK, Date.now()));
+      dmEmit(pin, g, Dorm.bank(g.dm, p.dmK));
     } catch (e) { console.error('[player:dm-stop]', e); }
-  });
-  socket.on('player:dm-guess', (data) => {
-    try {
-      const { pin, g: pick } = data || {};
-      const g = games[pin];
-      if (!g || g.gameType !== 'dormilon' || !g.dm || g.state !== 'active') return;
-      const p = g.players[socket.id];
-      if (!p || !p.dmK) return;
-      const r = Dorm.guess(g.dm, p.dmK, pick, Date.now());
-      if (!r) { io.to(socket.id).emit('dm:guess-no', {}); return; }
-      const ev = { id: g.dm.id, b: r.b, k: r.k, g: r.g, tally: r.tally };
-      io.to(dmRoom(pin, g.dm, r.b)).emit('dm:guess', ev);
-      io.to(g.hostId).emit('dm:guess', ev);
-    } catch (e) { console.error('[player:dm-guess]', e); }
   });
   socket.on('player:dm-react', (data) => {
     try {
@@ -14746,8 +14723,8 @@ io.on('connection', (socket) => {
       io.to(g.hostId).emit('dm:react', r);
     } catch (err) { console.error('[player:dm-react]', err); }
   });
-  // ¡No despiertes a Dralingo! teacher «Saltar»: the intro → play now; in play every board's moment ends now (a turn's
-  // strokes stand); after the end → every phone jumps to its own card.
+  // Draly Siesta teacher «Saltar»: the intro → play now; in play the current window ends now; after the end → every
+  // phone jumps to its own card.
   socket.on('host:dm-skip', (data) => {
     try {
       const pin = data && data.pin;
@@ -14756,11 +14733,22 @@ io.on('connection', (socket) => {
       const m = g.dm;
       if (g.state === 'active' && m.phase === 'intro' && !m.paused) dmPlay(pin, g);
       else if (g.state === 'active' && m.phase === 'play' && !m.paused) {
-        if (Date.now() - (m.skipAt || 0) < 700) return;      // a double tap must not jump over the next kid's turn
+        if (Date.now() - (m.skipAt || 0) < 700) return;      // a double tap must not jump over the next window
         m.skipAt = Date.now();
         dmEmit(pin, g, Dorm.skip(m, Date.now(), dmOpts(g)));
       } else if (g.state === 'ended') io.to(pin).except(g.hostId).emit('dm:skip', { id: m.id });
     } catch (e) { console.error('[host:dm-skip]', e); }
+  });
+  // «🤖 Probar con robots» (the projector's lobby, teacher only): 3 robots join the next game at his board (he can try it
+  // with one phone); off again with a second tap. They are never a player: no coins, record, star, podium or ranking.
+  socket.on('host:dm-robots', (data) => {
+    try {
+      const pin = data && data.pin;
+      const g = games[pin];
+      if (!g || g.hostId !== socket.id || g.gameType !== 'dormilon' || g.state !== 'lobby') return;
+      g.dmRobots = data && data.on ? DM_ROBOTS.length : 0;
+      io.to(socket.id).emit('dm:robots', { on: !!g.dmRobots, robots: dmRobotNames(g.dmRobots) });
+    } catch (e) { console.error('[host:dm-robots]', e); }
   });
   // Draly Cangrejo · ¡Atrapa a Fénec!: a quiz answer (its qid; a stale or double tap is ignored and the phone hears why),
   // the phone showed its question (only then can it run out and cost), the Capitán's steer (the crab walks there; relayed
