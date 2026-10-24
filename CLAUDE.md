@@ -117,7 +117,10 @@ the checklist for any new game mode.
   «here»… can go in red and in bold"): the word or phrase inside «…» («¿Qué significa «jiějie»?»), on every phone and
   projector of every pin game. The toned forms live in `core/packs/<level>-tones.json`, made from the books by
   `scripts/packs/tones/resolve.js` (a new pack line: run it, look at its list, then `node scripts/test-pack-tones.js`);
-  rooms get them through `Packs.forGames()` and draw a question with `DralyQ.fill()` (`js/qtext.js`).
+  rooms get them through `Packs.forGames()` and draw a question with `DralyQ.fill()` (`js/qtext.js`). An item with
+  hanzi (every sim line, option and bank word; a sum's numbers) is toned from ITS OWN hanzi, per item, never from one
+  map per spelling (2026-10-24: «mai cai» is 买菜 mǎi cài in New HSK 1 sim 1, 卖菜 mài cài in sim 2); a new sim or word
+  with hanzi: `hanzi.js --list` + `readings.py` (pypinyin) first, and the test checks every one against its hanzi.
   `node scripts/test-packs.js` must pass before a deploy.
 - **Every question says exactly what it asks** (his correction 2026-10-11: "who is him? … how are we going to know just by a
   picture? Completely out of context"). Name the word («¿Cómo se dice «hermano mayor» en Chino Mandarín?»), never a bare

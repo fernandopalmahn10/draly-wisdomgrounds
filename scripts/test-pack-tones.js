@@ -6,6 +6,11 @@
 //     line (an «…» or a tile), each written question, and a per-question tile (`items`) only for a key the pack has
 //   · the toned form, stripped of its tone marks, is the plain form letter for letter (spaces, capitals, punctuation)
 //   · a toned form equal to its plain form only where nothing in it takes a mark (ma, ne, de… or Spanish)
+//   · per item (2026-10-24, 买菜 mǎi cài in New HSK 1 sim 1, 卖菜 mài cài in sim 2): every string with hanzi (a sim's
+//     line, option or bank word, a sum's numbers, a word) is decided for its own item and reads ITS hanzi: a reading the
+//     character has (hanzi-readings.json, made by readings.py with pypinyin) and its reading in that phrase, unless a
+//     person checked otherwise (reviewed.json); every simulacro string is keyed per item; a simulacro question shows
+//     its item's own forms
 //   · every built round's `show` lines up with its plain question (same text and tiles once the marks are stripped),
 //     and forGames() hands the rooms the toned text and tiles with the right answer still among them
 //   · the rooms load packs through forGames (server.js host:load-set); homework and El Entrenamiento stay plain
@@ -15,6 +20,8 @@ const fs = require('fs');
 const path = require('path');
 const ROOT = path.join(__dirname, '..');
 const Packs = require('../core/packs');
+const HZ = require('./packs/tones/hanzi');    // each item's hanzi (the sims, the sums' numbers, the words)
+const CK = require('./packs/tones/check');   // does a toned string read its hanzi
 
 let passed = 0, failed = 0;
 const fails = [];
@@ -67,13 +74,60 @@ for (const level of Packs.LEVELS) {
       ok(v.includes('«') && !v.includes(seg) || bareOnly(seg), `${level.id} texts: the pinyin «…» of «${t}» got its tones`);
     });
   }
+  // per item (T.items['<world>/<round>|<item text>']): every key is an item of the pack, every form its own letters
+  const occ = HZ.levelItems(level);
+  const occKeys = new Set(occ.map((x) => x.key));
   Object.entries(T.items || {}).forEach(([key, tiles]) => {
-    ok(keys.has(key), `${level.id} items: «${key}» is a question of the pack`);
+    ok(occKeys.has(key), `${level.id} items: «${key}» is an item of the pack`);
     Object.entries(tiles).forEach(([a, v]) => ok(strip(v) === strip(a), `${level.id} items: «${v}» stripped is «${a}»`));
   });
+  // every string an item shows that has hanzi (a sim's line, option or bank word; a sum's numbers) is decided for THAT
+  // item and reads ITS hanzi (买菜 mǎi cài in one sim, 卖菜 mài cài in the next): the character's own readings, and its
+  // reading in that phrase unless a person checked otherwise (scripts/packs/tones/reviewed.json)
+  let nHz = 0;
+  for (const x of occ) {
+    const own = (T.items || {})[x.key] || {};
+    for (const st of x.strings) {
+      if (!/[a-z]/i.test(st.s)) continue;
+      const seg = st.role.endsWith(':seg');
+      if (x.world === 'simulacro' && !seg) ok(typeof own[st.s] === 'string', `${level.id} ${x.key}: «${st.s}» is decided for this sim item`);
+      if (!st.hz) continue;
+      nHz++;
+      const shown = seg ? null : own[st.s];
+      if (!seg) ok(typeof shown === 'string', `${level.id} ${x.key}: «${st.s}» (${st.hz}) has its per-item form`);
+      // a «…» part of a written question: as the item's own toned text shows it
+      const v = seg ? (((own[x.it.t] || '').match(/«([^«»]+)»/g) || []).map((m) => m.slice(1, -1)).concat([((own[x.it.t] || '').match(/^Lees: «[^»]*» (.+)$/) || [])[1]]).find((m) => m && strip(m) === strip(st.s))) : shown;
+      if (seg) ok(typeof v === 'string', `${level.id} ${x.key}: the part «${st.s}» (${st.hz}) is toned in this item's text`);
+      if (typeof v !== 'string') continue;
+      const r = CK.readsAs(v, st.hz);
+      ok(!r.missing.length, `${level.id} ${x.key}: ${st.hz} is in hanzi-readings.json (run scripts/packs/tones/readings.py)`);
+      ok(r.ok, `${level.id} ${x.key}: «${v}» reads ${st.hz} (${r.problems.join('; ')})`);
+    }
+  }
+  // the pack's words with their own hanzi read them
+  for (const world of level.worlds) for (const round of world.rounds) for (const w of round.words || []) {
+    if (!w.hz) continue;
+    const v = (T.words || {})[w.py + '|' + w.es];
+    if (typeof v !== 'string') continue;
+    nHz++;
+    const r = CK.readsAs(v, w.hz);
+    ok(r.ok, `${level.id} word «${v}» = «${w.es}» reads ${w.hz} (${r.problems.join('; ')})`);
+  }
+  console.log(`· ${level.id}: ${nHz} strings with hanzi read their hanzi`);
   // every round, as built: `show` lines up with the plain question, and the rooms get the toned one
   for (const world of level.worlds) for (const round of world.rounds) {
     const qs = Packs.buildRound(level, world, round);
+    // a round kept in order (the simulacros): each question is its item, and shows that item's own forms
+    if (round.keepOrder && qs.length === (round.items || []).length) {
+      qs.forEach((q, i) => {
+        const it = round.items[i];
+        const own = (T.items || {})[HZ.itemKey(world, round, it)] || {};
+        q.answers.forEach((a, j) => { if (own[a]) ok(q.show.answers[j] === own[a], `${level.id} ${world.id}/${round.id} «${HZ.itemText(it)}»: the tile ${a} shows its own ${own[a]} (${q.show.answers[j]})`); });
+        const main = it.k === 'r' ? it.a : it.k === 'f' && !it.t ? it.s : it.k === 'w' || it.k === 'm' ? it.py : null;
+        if (main && own[main]) ok(q.show.text.includes('«' + own[main] + '»'), `${level.id} ${world.id}/${round.id}: the question shows its own «${own[main]}» (${q.show.text})`);
+        if (it.t && own[it.t]) ok(q.show.text === own[it.t], `${level.id} ${world.id}/${round.id}: the written question shows its own toned text (${q.show.text})`);
+      });
+    }
     qs.forEach((q) => {
       const where = `${level.id} ${world.id}/${round.id} «${q.text}»`;
       ok(q.show && typeof q.show.text === 'string' && Array.isArray(q.show.answers) && q.show.answers.length === q.answers.length, where + ': has its toned show');

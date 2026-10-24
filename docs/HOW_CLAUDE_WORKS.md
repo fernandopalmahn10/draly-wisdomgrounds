@@ -59,8 +59,10 @@ platform they appear as glossy 3D stickers (`public/assets/cast/`, made with Hig
 and the asked part, inside «…», in red and bold, on the phones and the projector. The tones come from the books
 (La Base, the vocabulary modules, the golden books) into `core/packs/<level>-tones.json` with
 `scripts/packs/tones/resolve.js`; every word, line and question a game shows has its entry
-(`scripts/test-pack-tones.js`), and what was decided by meaning was listed for a human check. Homework and El
-Entrenamiento keep the plain form they always used.
+(`scripts/test-pack-tones.js`), and what was decided by meaning was listed for a human check. A simulacro item (and a
+sum) takes its tones from its own hanzi, item by item (`scripts/packs/tones/hanzi.js`, `check.js`): the same plain
+«mai cai» is 买菜 mǎi cài in one sim and 卖菜 mài cài in the next. Homework and El Entrenamiento keep the plain form
+they always used.
 
 The teacher opens a game on the big screen, kids join with the PIN on phones or tablets, and
 everyone plays at once. On 2026-10-10 he retired 11 older games to make room for a new generation;

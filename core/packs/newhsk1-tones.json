@@ -587,20 +587,512 @@
   "Lees: «Duibuqi, wo xiawu shuijiao le, mei tingjian ni de dianhua.» Shuohuaren xiawu zuo le shenme?": "Lees: «Duìbuqǐ, wǒ xiàwǔ shuìjiào le, méi tīngjiàn nǐ de diànhuà.» Shuōhuàrén xiàwǔ zuò le shénme?"
  },
  "items": {
-  "Ni he shui ___?": {
+  "tienda/r4|¿Cuánto es «wu» + «san»?": {
+   "ba": "bā",
+   "qi": "qī",
+   "liu": "liù",
+   "jiu": "jiǔ",
+   "¿Cuánto es «wu» + «san»?": "¿Cuánto es «wǔ» + «sān»?"
+  },
+  "tienda/r4|Wo mai le san ___ pingguo.": {
+   "ge": "ge"
+  },
+  "magicas/r5|Ni he shui ___?": {
    "ba": "ba"
   },
-  "Wo hen hao, ni ___?": {
+  "magicas/r5|Wo hen hao, ni ___?": {
    "ba": "ba"
   },
-  "Women qu chaoshi ___.": {
+  "magicas/r5|Women qu chaoshi ___.": {
    "ba": "ba"
   },
-  "Wo chi ___ fan.": {
+  "magicas/r5|Wo chi ___ fan.": {
    "ba": "ba"
   },
-  "Zhe shi wo ___ shu.": {
+  "magicas/r5|Zhe shi wo ___ shu.": {
    "ba": "ba"
+  },
+  "simulacro/s1e|chuan yifu": {
+   "chuan yifu": "chuān yīfu"
+  },
+  "simulacro/s1e|mai jidan": {
+   "mai jidan": "mài jīdàn"
+  },
+  "simulacro/s1e|mei tingjian": {
+   "mei tingjian": "méi tīngjiàn"
+  },
+  "simulacro/s1e|meimei de gou": {
+   "meimei de gou": "mèimei de gǒu"
+  },
+  "simulacro/s1e|haizimen": {
+   "haizimen": "háizimen"
+  },
+  "simulacro/s1e|Jiejie ai chi shenme?": {
+   "Jiejie ai chi shenme?": "Jiějie ài chī shénme?",
+   "Pingguo": "Píngguǒ",
+   "Shuijiao": "Shuìjiào",
+   "Mei kanjian": "Méi kànjiàn",
+   "Nin hao": "Nín hǎo"
+  },
+  "simulacro/s1e|Women hui jia le, zaijian!": {
+   "Women hui jia le, zaijian!": "Wǒmen huí jiā le, zàijiàn!",
+   "Zaijian": "Zàijiàn",
+   "Nin hao": "Nín hǎo",
+   "Bu keqi": "Bú kèqi",
+   "Tamen": "Tāmen"
+  },
+  "simulacro/s1e|Ta erzi zai nar gongzuo?": {
+   "Ta erzi zai nar gongzuo?": "Tā érzi zài nǎr gōngzuò?",
+   "Fandian li": "Fàndiàn lǐ",
+   "Tamen": "Tāmen",
+   "Xiaban le": "Xiàbān le",
+   "Mai cai": "Mǎi cài"
+  },
+  "simulacro/s1e|Women zhongwu qu nali mai dongxi?": {
+   "Women zhongwu qu nali mai dongxi?": "Wǒmen zhōngwǔ qù nǎlǐ mǎi dōngxi?",
+   "Shangdian": "Shāngdiàn",
+   "Mai cai": "Mǎi cài",
+   "Hen pianyi": "Hěn piányi",
+   "Kan dianying": "Kàn diànyǐng"
+  },
+  "simulacro/s1e|Zhege diannao zenmeyang?": {
+   "Zhege diannao zenmeyang?": "Zhège diànnǎo zěnmeyàng?",
+   "Wo hen xihuan": "Wǒ hěn xǐhuan",
+   "Kan dianying": "Kàn diànyǐng",
+   "Wo you shijian": "Wǒ yǒu shíjiān",
+   "Shuijiao": "Shuìjiào"
+  },
+  "simulacro/s1e|Wang nüshi, ni he shenme?": {
+   "Wang nüshi, ni he shenme?": "Wáng nǚshì, nǐ hē shénme?",
+   "Lai yi bei cha ba, xiexie.": "Lái yì bēi chá ba, xièxie."
+  },
+  "simulacro/s1e|Wo zhidao, zhege shi ni nü'er.": {
+   "Wo zhidao, zhege shi ni nü'er.": "Wǒ zhīdào, zhège shì nǐ nǚ'ér.",
+   "Dui, na shihou ta shijiu sui.": "Duì, nà shíhou tā shíjiǔ suì."
+  },
+  "simulacro/s1e|Wei, jia li meiyou niunai le?": {
+   "Wei, jia li meiyou niunai le?": "Wèi, jiā lǐ méiyǒu niúnǎi le?",
+   "Wo zai shangdian, wo mai yixie ba.": "Wǒ zài shāngdiàn, wǒ mǎi yìxiē ba."
+  },
+  "simulacro/s1e|Wo bu renshi ta baba.": {
+   "Wo bu renshi ta baba.": "Wǒ bú rènshi tā bàba.",
+   "Wo renshi, ta shi yisheng.": "Wǒ rènshi, tā shì yīshēng."
+  },
+  "simulacro/s1e|Qing zai zheli xie ni de mingzi.": {
+   "Qing zai zheli xie ni de mingzi.": "Qǐng zài zhèlǐ xiě nǐ de míngzi.",
+   "Hao de.": "Hǎo de."
+  },
+  "simulacro/s1e|Escuchas: «Zuotian baitian xia le yu.» Pregunta: «Zuotian baitian de tianqi zenmeyang?»": {
+   "xia yu le": "xià yǔ le",
+   "xia xue le": "xià xuě le",
+   "youdianr re": "yǒudiǎnr rè",
+   "Escuchas: «Zuotian baitian xia le yu.» Pregunta: «Zuotian baitian de tianqi zenmeyang?»": "Escuchas: «Zuótiān báitiān xià le yǔ.» Pregunta: «Zuótiān báitiān de tiānqì zěnmeyàng?»"
+  },
+  "simulacro/s1e|Escuchas: «Xianzai shi liu dian ershi fen, wo ban xiaoshi hou hui gongsi.» Pregunta: «Xianzai ji dian?»": {
+   "zuo fan": "zuò fàn",
+   "Escuchas: «Xianzai shi liu dian ershi fen, wo ban xiaoshi hou hui gongsi.» Pregunta: «Xianzai ji dian?»": "Escuchas: «Xiànzài shì liù diǎn èrshí fēn, wǒ bàn xiǎoshí hòu huí gōngsī.» Pregunta: «Xiànzài jǐ diǎn?»"
+  },
+  "simulacro/s1e|Escuchas: «Xiao Xie zhengzai kan dianshi ne, wo qu jiao ta.» Pregunta: «Xiao Xie zai zuo shenme?»": {
+   "kan dianshi": "kàn diànshì",
+   "zuo fan": "zuò fàn",
+   "da dianhua": "dǎ diànhuà",
+   "kaiche": "kāichē",
+   "Escuchas: «Xiao Xie zhengzai kan dianshi ne, wo qu jiao ta.» Pregunta: «Xiao Xie zai zuo shenme?»": "Escuchas: «Xiǎo Xiè zhèngzài kàn diànshì ne, wǒ qù jiào tā.» Pregunta: «Xiǎo Xiè zài zuò shénme?»"
+  },
+  "simulacro/s1e|Escuchas: «Xiawu didi xiang zuo chuzuche qu xuexiao.» Pregunta: «Didi xiang zenme qu xuexiao?»": {
+   "zuo chuzuche": "zuò chūzūchē",
+   "kaiche": "kāichē",
+   "zuo feiji": "zuò fēijī",
+   "jiaren de": "jiārén de",
+   "Escuchas: «Xiawu didi xiang zuo chuzuche qu xuexiao.» Pregunta: «Didi xiang zenme qu xuexiao?»": "Escuchas: «Xiàwǔ dìdi xiǎng zuò chūzūchē qù xuéxiào.» Pregunta: «Dìdi xiǎng zěnme qù xuéxiào?»"
+  },
+  "simulacro/s1e|Escuchas: «Zhexie Hanyu shu shi wo xuesheng de.» Pregunta: «Naxie Hanyu shu shi shei de?»": {
+   "xuesheng de": "xuésheng de",
+   "jiaren de": "jiārén de",
+   "nanpengyou de": "nánpéngyou de",
+   "xia xue le": "xià xuě le",
+   "Escuchas: «Zhexie Hanyu shu shi wo xuesheng de.» Pregunta: «Naxie Hanyu shu shi shei de?»": "Escuchas: «Zhèxiē Hànyǔ shū shì wǒ xuésheng de.» Pregunta: «Nàxiē Hànyǔ shū shì shéi de?»"
+  },
+  "simulacro/s1l|Wo houbian you si ge ren.": {
+   "Wo houbian you si ge ren.": "Wǒ hòubian yǒu sì ge rén."
+  },
+  "simulacro/s1l|Tamen mai le xin de zhuozi he yizi.": {
+   "Tamen mai le xin de zhuozi he yizi.": "Tāmen mǎi le xīn de zhuōzi hé yǐzi."
+  },
+  "simulacro/s1l|Zai zher keyi kanjian liang zhi xiao mao.": {
+   "Zai zher keyi kanjian liang zhi xiao mao.": "Zài zhèr kěyǐ kànjiàn liǎng zhī xiǎo māo."
+  },
+  "simulacro/s1l|Li xiansheng shangwu hen bu gaoxing.": {
+   "Li xiansheng shangwu hen bu gaoxing.": "Lǐ xiānsheng shàngwǔ hěn bù gāoxìng."
+  },
+  "simulacro/s1l|Ni de mifan tai shao le, zai gei ni yixie ba.": {
+   "Ni de mifan tai shao le, zai gei ni yixie ba.": "Nǐ de mǐfàn tài shǎo le, zài gěi nǐ yìxiē ba."
+  },
+  "simulacro/s1l|Ni na tian qu yiyuan?": {
+   "Ni na tian qu yiyuan?": "Nǐ nǎ tiān qù yīyuàn?",
+   "Xingqitian.": "Xīngqītiān.",
+   "Zhen haoting!": "Zhēn hǎotīng!",
+   "Dou hen piaoliang.": "Dōu hěn piàoliang.",
+   "Zhongxue qianbian.": "Zhōngxué qiánbian.",
+   "33 yuan.": "33 yuán.",
+   "Hao de, xiexie!": "Hǎo de, xièxie!"
+  },
+  "simulacro/s1l|Zhe ben shu duoshao qian?": {
+   "Zhe ben shu duoshao qian?": "Zhè běn shū duōshao qián?",
+   "33 yuan.": "33 yuán.",
+   "Zhen haoting!": "Zhēn hǎotīng!",
+   "Xingqitian.": "Xīngqītiān.",
+   "Dou hen piaoliang.": "Dōu hěn piàoliang.",
+   "Zhongxue qianbian.": "Zhōngxué qiánbian.",
+   "Hao de, xiexie!": "Hǎo de, xièxie!"
+  },
+  "simulacro/s1l|Wo chang de ge zenmeyang?": {
+   "Wo chang de ge zenmeyang?": "Wǒ chàng de gē zěnmeyàng?",
+   "Zhen haoting!": "Zhēn hǎotīng!",
+   "Xingqitian.": "Xīngqītiān.",
+   "Dou hen piaoliang.": "Dōu hěn piàoliang.",
+   "Zhongxue qianbian.": "Zhōngxué qiánbian.",
+   "33 yuan.": "33 yuán.",
+   "Hao de, xiexie!": "Hǎo de, xièxie!"
+  },
+  "simulacro/s1l|Qingwen, na jia shudian zai nali?": {
+   "Qingwen, na jia shudian zai nali?": "Qǐngwèn, nà jiā shūdiàn zài nǎlǐ?",
+   "Zhongxue qianbian.": "Zhōngxué qiánbian.",
+   "Zhen haoting!": "Zhēn hǎotīng!",
+   "Xingqitian.": "Xīngqītiān.",
+   "Dou hen piaoliang.": "Dōu hěn piàoliang.",
+   "33 yuan.": "33 yuán.",
+   "Hao de, xiexie!": "Hǎo de, xièxie!"
+  },
+  "simulacro/s1l|Zhe liang ge beizi, nage haokan?": {
+   "Zhe liang ge beizi, nage haokan?": "Zhè liǎng ge bēizi, nǎge hǎokàn?",
+   "Dou hen piaoliang.": "Dōu hěn piàoliang.",
+   "Zhen haoting!": "Zhēn hǎotīng!",
+   "Xingqitian.": "Xīngqītiān.",
+   "Zhongxue qianbian.": "Zhōngxué qiánbian.",
+   "33 yuan.": "33 yuán.",
+   "Hao de, xiexie!": "Hǎo de, xièxie!"
+  },
+  "simulacro/s1l|Xiexie ___ jintian lai kan wo.": {
+   "Xiexie ___ jintian lai kan wo.": "Xièxie ___ jīntiān lái kàn wǒ.",
+   "dajia": "dàjiā",
+   "du": "dú",
+   "da": "dà",
+   "jiao": "jiào",
+   "zai": "zài",
+   "Zhongguo": "Zhōngguó"
+  },
+  "simulacro/s1l|Zhe jian yifu you ___ yidianr de ma?": {
+   "Zhe jian yifu you ___ yidianr de ma?": "Zhè jiàn yīfu yǒu ___ yìdiǎnr de ma?",
+   "da": "dà",
+   "du": "dú",
+   "dajia": "dàjiā",
+   "jiao": "jiào",
+   "zai": "zài",
+   "Zhongguo": "Zhōngguó"
+  },
+  "simulacro/s1l|Mama, wo mingtian zhu ___ tongxue jia.": {
+   "Mama, wo mingtian zhu ___ tongxue jia.": "Māma, wǒ míngtiān zhù ___ tóngxué jiā.",
+   "zai": "zài",
+   "du": "dú",
+   "dajia": "dàjiā",
+   "da": "dà",
+   "jiao": "jiào",
+   "Zhongguo": "Zhōngguó"
+  },
+  "simulacro/s1l|Wo shi jinnian 8 yue 7 hao lai ___ de.": {
+   "Wo shi jinnian 8 yue 7 hao lai ___ de.": "Wǒ shì jīnnián 8 yuè 7 hào lái ___ de.",
+   "Zhongguo": "Zhōngguó",
+   "du": "dú",
+   "dajia": "dàjiā",
+   "da": "dà",
+   "jiao": "jiào",
+   "zai": "zài"
+  },
+  "simulacro/s1l|Duibuqi, wo ye bu hui ___ zhege Hanzi. — Mei guanxi.": {
+   "Duibuqi, wo ye bu hui ___ zhege Hanzi. — Mei guanxi.": "Duìbuqǐ, wǒ yě bú huì ___ zhège Hànzì. — Méi guānxi.",
+   "du": "dú",
+   "dajia": "dàjiā",
+   "da": "dà",
+   "jiao": "jiào",
+   "zai": "zài",
+   "Zhongguo": "Zhōngguó"
+  },
+  "simulacro/s1l|Lees: «Jintian wanshang, women dianyingyuan jian!» Tamen jinwan:": {
+   "qu dianyingyuan": "qù diànyǐngyuàn",
+   "meishi": "méishì",
+   "yao shangxue": "yào shàngxué",
+   "haowanr": "hǎowánr",
+   "Lees: «Jintian wanshang, women dianyingyuan jian!» Tamen jinwan:": "Lees: «Jīntiān wǎnshang, wǒmen diànyǐngyuàn jiàn!» Tāmen jīnwǎn:"
+  },
+  "simulacro/s1l|Lees: «Nage shouji yao 5500 kuai, zhen gui!» Ta juede nage shouji:": {
+   "hen gui": "hěn guì",
+   "haowanr": "hǎowánr",
+   "feichang hao": "fēicháng hǎo",
+   "baozi": "bāozi",
+   "Lees: «Nage shouji yao 5500 kuai, zhen gui!» Ta juede nage shouji:": "Lees: «Nàge shǒujī yào 5500 kuài, zhēn guì!» Tā juéde nàge shǒujī:"
+  },
+  "simulacro/s1l|Lees: «Women jintian de zaofan shi miantiaor, wufan shi jiaozi.» Tamen zaoshang chi shenme?": {
+   "miantiaor": "miàntiáor",
+   "baozi": "bāozi",
+   "mianbao": "miànbāo",
+   "shuiguodian": "shuǐguǒdiàn",
+   "Lees: «Women jintian de zaofan shi miantiaor, wufan shi jiaozi.» Tamen zaoshang chi shenme?": "Lees: «Wǒmen jīntiān de zǎofàn shì miàntiáor, wǔfàn shì jiǎozi.» Tāmen zǎoshang chī shénme?"
+  },
+  "simulacro/s1l|Lees: «Waibian hen leng, women zai fangjian li xiuxi ba.» Tamen zai nar xiuxi?": {
+   "fangjian li": "fángjiān lǐ",
+   "shuiguodian": "shuǐguǒdiàn",
+   "daxue li": "dàxué lǐ",
+   "hen mang": "hěn máng",
+   "Lees: «Waibian hen leng, women zai fangjian li xiuxi ba.» Tamen zai nar xiuxi?": "Lees: «Wàibian hěn lěng, wǒmen zài fángjiān lǐ xiūxi ba.» Tāmen zài nǎr xiūxi?"
+  },
+  "simulacro/s1l|Lees: «Gege jintian shengbing le, mei qu gongsi shangban.» Gege jintian:": {
+   "bing le": "bìng le",
+   "hen mang": "hěn máng",
+   "qu shangke le": "qù shàngkè le",
+   "meishi": "méishì",
+   "Lees: «Gege jintian shengbing le, mei qu gongsi shangban.» Gege jintian:": "Lees: «Gēge jīntiān shēngbìng le, méi qù gōngsī shàngbān.» Gēge jīntiān:"
+  },
+  "simulacro/s2e|zuo fan": {
+   "zuo fan": "zuò fàn"
+  },
+  "simulacro/s2e|shiyi dian": {
+   "shiyi dian": "shíyī diǎn"
+  },
+  "simulacro/s2e|liang zhi xiao gou": {
+   "liang zhi xiao gou": "liǎng zhī xiǎo gǒu"
+  },
+  "simulacro/s2e|yixie shuiguo": {
+   "yixie shuiguo": "yìxiē shuǐguǒ"
+  },
+  "simulacro/s2e|zuo huoche": {
+   "zuo huoche": "zuò huǒchē"
+  },
+  "simulacro/s2e|Ni kanjian wo de shu le ma?": {
+   "Ni kanjian wo de shu le ma?": "Nǐ kànjiàn wǒ de shū le ma?",
+   "Zai zhuozi shang": "Zài zhuōzi shàng",
+   "Xingqitian": "Xīngqītiān",
+   "Duoshao qian": "Duōshao qián",
+   "Haowanr": "Hǎowánr"
+  },
+  "simulacro/s2e|Zhege zi zenme du?": {
+   "Zhege zi zenme du?": "Zhège zì zěnme dú?",
+   "Wo bu hui": "Wǒ bú huì",
+   "Haowanr": "Hǎowánr",
+   "Di er ge": "Dì èr ge",
+   "You yixie": "Yǒu yìxiē"
+  },
+  "simulacro/s2e|Ni he dian shenme?": {
+   "Ni he dian shenme?": "Nǐ hē diǎn shénme?",
+   "Niunai": "Niúnǎi",
+   "You yixie": "Yǒu yìxiē",
+   "Xia yu le": "Xià yǔ le",
+   "Hen re": "Hěn rè"
+  },
+  "simulacro/s2e|Shangwu ni qu nar le?": {
+   "Shangwu ni qu nar le?": "Shàngwǔ nǐ qù nǎr le?",
+   "Shudian": "Shūdiàn",
+   "Hen re": "Hěn rè",
+   "Tai da le": "Tài dà le",
+   "Mei shijian": "Méi shíjiān"
+  },
+  "simulacro/s2e|Ni xingqiri zenme qu Beijing?": {
+   "Ni xingqiri zenme qu Beijing?": "Nǐ xīngqīrì zěnme qù Běijīng?",
+   "Zuo feiji": "Zuò fēijī",
+   "Mei shijian": "Méi shíjiān",
+   "Xiake hou": "Xiàkè hòu",
+   "Xingqitian": "Xīngqītiān"
+  },
+  "simulacro/s2e|Qianmian nage xiaoxuesheng shi shei?": {
+   "Qianmian nage xiaoxuesheng shi shei?": "Qiánmiàn nàge xiǎoxuéshēng shì shéi?",
+   "Wo renshi, ta jiao Xiaoyue.": "Wǒ rènshi, tā jiào Xiǎoyuè."
+  },
+  "simulacro/s2e|Xia yu le, hen leng.": {
+   "Xia yu le, hen leng.": "Xià yǔ le, hěn lěng.",
+   "Shi de, jintian tianqi bu tai hao.": "Shì de, jīntiān tiānqì bú tài hǎo."
+  },
+  "simulacro/s2e|Yizi shang na jian yifu bu shi wo de.": {
+   "Yizi shang na jian yifu bu shi wo de.": "Yǐzi shàng nà jiàn yīfu bú shì wǒ de.",
+   "Ye bu shi wo de.": "Yě bú shì wǒ de."
+  },
+  "simulacro/s2e|Wanfan, wo xiang chi miantiao.": {
+   "Wanfan, wo xiang chi miantiao.": "Wǎnfàn, wǒ xiǎng chī miàntiáo.",
+   "Jidan mian zenmeyang?": "Jīdàn miàn zěnmeyàng?"
+  },
+  "simulacro/s2e|Zhe shi ni de erzi ba?": {
+   "Zhe shi ni de erzi ba?": "Zhè shì nǐ de érzi ba?",
+   "Dui, ta jinnian ershiwu sui le.": "Duì, tā jīnnián èrshíwǔ suì le."
+  },
+  "simulacro/s2e|Escuchas: «Zhe bei shui shi gege de, bu shi baba de.» Pregunta: «Na bei shui shi shei de?»": {
+   "gege de": "gēge de",
+   "mama de": "māma de",
+   "nü pengyou de": "nǚ péngyou de",
+   "laoshi": "lǎoshī",
+   "Escuchas: «Zhe bei shui shi gege de, bu shi baba de.» Pregunta: «Na bei shui shi shei de?»": "Escuchas: «Zhè bēi shuǐ shì gēge de, bú shì bàba de.» Pregunta: «Nà bēi shuǐ shì shéi de?»"
+  },
+  "simulacro/s2e|Escuchas: «Wo shi yisheng, zai yiyuan gongzuo.» Pregunta: «Shuohuaren shi zuo shenme de?»": {
+   "yisheng": "yīshēng",
+   "laoshi": "lǎoshī",
+   "xuesheng": "xuésheng",
+   "daxue": "dàxué",
+   "Escuchas: «Wo shi yisheng, zai yiyuan gongzuo.» Pregunta: «Shuohuaren shi zuo shenme de?»": "Escuchas: «Wǒ shì yīshēng, zài yīyuàn gōngzuò.» Pregunta: «Shuōhuàrén shì zuò shénme de?»"
+  },
+  "simulacro/s2e|Escuchas: «Mingtian zhongwu, wo he tongxue qu dianyingyuan.» Pregunta: «Shuohuaren he tongxue mingtian qu nar?»": {
+   "dianyingyuan": "diànyǐngyuàn",
+   "daxue": "dàxué",
+   "fandian": "fàndiàn",
+   "Escuchas: «Mingtian zhongwu, wo he tongxue qu dianyingyuan.» Pregunta: «Shuohuaren he tongxue mingtian qu nar?»": "Escuchas: «Míngtiān zhōngwǔ, wǒ hé tóngxué qù diànyǐngyuàn.» Pregunta: «Shuōhuàrén hé tóngxué míngtiān qù nǎr?»"
+  },
+  "simulacro/s2e|Escuchas: «Wo jiao le chuzuche, che liu dian ban neng lai.» Pregunta: «Che ji dian lai?»": {
+   "xuexi": "xuéxí",
+   "Escuchas: «Wo jiao le chuzuche, che liu dian ban neng lai.» Pregunta: «Che ji dian lai?»": "Escuchas: «Wǒ jiào le chūzūchē, chē liù diǎn bàn néng lái.» Pregunta: «Chē jǐ diǎn lái?»"
+  },
+  "simulacro/s2e|Escuchas: «Haizi xiang shuijiao le, bu xiang xuexi le.» Pregunta: «Haizi xiang zuo shenme?»": {
+   "shuijiao": "shuìjiào",
+   "xuexi": "xuéxí",
+   "wan diannao": "wán diànnǎo",
+   "mama de": "māma de",
+   "Escuchas: «Haizi xiang shuijiao le, bu xiang xuexi le.» Pregunta: «Haizi xiang zuo shenme?»": "Escuchas: «Háizi xiǎng shuìjiào le, bù xiǎng xuéxí le.» Pregunta: «Háizi xiǎng zuò shénme?»"
+  },
+  "simulacro/s2l|Erzi bu tai gaoxing.": {
+   "Erzi bu tai gaoxing.": "Érzi bú tài gāoxìng."
+  },
+  "simulacro/s2l|Wo renshi na si ge xuesheng.": {
+   "Wo renshi na si ge xuesheng.": "Wǒ rènshi nà sì ge xuésheng."
+  },
+  "simulacro/s2l|Qing zai zheli xie ni de mingzi.": {
+   "Qing zai zheli xie ni de mingzi.": "Qǐng zài zhèlǐ xiě nǐ de míngzi."
+  },
+  "simulacro/s2l|Xiexie nimen, wo xianzai hao duo le.": {
+   "Xiexie nimen, wo xianzai hao duo le.": "Xièxie nǐmen, wǒ xiànzài hǎo duō le."
+  },
+  "simulacro/s2l|Xiao mao zai yizi shangmian, ni kanjian le ma?": {
+   "Xiao mao zai yizi shangmian, ni kanjian le ma?": "Xiǎo māo zài yǐzi shàngmiàn, nǐ kànjiàn le ma?"
+  },
+  "simulacro/s2l|Wei, ni na tian qu gongsi?": {
+   "Wei, ni na tian qu gongsi?": "Wèi, nǐ nǎ tiān qù gōngsī?",
+   "2 yue 14 hao.": "2 yuè 14 hào.",
+   "Bu keqi.": "Bú kèqi.",
+   "Wo meishi.": "Wǒ méishì.",
+   "Pengyou jia.": "Péngyou jiā.",
+   "Wo didi.": "Wǒ dìdi.",
+   "Hao de, xiexie!": "Hǎo de, xièxie!"
+  },
+  "simulacro/s2l|Li nüshi, jintian xiexie nin!": {
+   "Li nüshi, jintian xiexie nin!": "Lǐ nǚshì, jīntiān xièxie nín!",
+   "Bu keqi.": "Bú kèqi.",
+   "Wo meishi.": "Wǒ méishì.",
+   "Pengyou jia.": "Péngyou jiā.",
+   "2 yue 14 hao.": "2 yuè 14 hào.",
+   "Wo didi.": "Wǒ dìdi.",
+   "Hao de, xiexie!": "Hǎo de, xièxie!"
+  },
+  "simulacro/s2l|Ni zenme le?": {
+   "Ni zenme le?": "Nǐ zěnme le?",
+   "Wo meishi.": "Wǒ méishì.",
+   "Bu keqi.": "Bú kèqi.",
+   "Pengyou jia.": "Péngyou jiā.",
+   "2 yue 14 hao.": "2 yuè 14 hào.",
+   "Wo didi.": "Wǒ dìdi.",
+   "Hao de, xiexie!": "Hǎo de, xièxie!"
+  },
+  "simulacro/s2l|Ni zuotian zhu nar le?": {
+   "Ni zuotian zhu nar le?": "Nǐ zuótiān zhù nǎr le?",
+   "Pengyou jia.": "Péngyou jiā.",
+   "Bu keqi.": "Bú kèqi.",
+   "Wo meishi.": "Wǒ méishì.",
+   "2 yue 14 hao.": "2 yuè 14 hào.",
+   "Wo didi.": "Wǒ dìdi.",
+   "Hao de, xiexie!": "Hǎo de, xièxie!"
+  },
+  "simulacro/s2l|Naxie dongxi shi shei mai de?": {
+   "Naxie dongxi shi shei mai de?": "Nàxiē dōngxi shì shéi mǎi de?",
+   "Wo didi.": "Wǒ dìdi.",
+   "Bu keqi.": "Bú kèqi.",
+   "Wo meishi.": "Wǒ méishì.",
+   "Pengyou jia.": "Péngyou jiā.",
+   "2 yue 14 hao.": "2 yuè 14 hào.",
+   "Hao de, xiexie!": "Hǎo de, xièxie!"
+  },
+  "simulacro/s2l|Zhege shouji hen piaoliang, ye hen ___.": {
+   "Zhege shouji hen piaoliang, ye hen ___.": "Zhège shǒujī hěn piàoliang, yě hěn ___.",
+   "gui": "guì",
+   "kuai": "kuài",
+   "shuohua": "shuōhuà",
+   "feichang": "fēicháng",
+   "jiao": "jiào",
+   "qing": "qǐng"
+  },
+  "simulacro/s2l|Wo ___ ai wo de jiaren.": {
+   "Wo ___ ai wo de jiaren.": "Wǒ ___ ài wǒ de jiārén.",
+   "feichang": "fēicháng",
+   "kuai": "kuài",
+   "shuohua": "shuōhuà",
+   "jiao": "jiào",
+   "qing": "qǐng",
+   "gui": "guì"
+  },
+  "simulacro/s2l|Zhexie pingguo 57 ___ qian.": {
+   "Zhexie pingguo 57 ___ qian.": "Zhèxiē píngguǒ 57 ___ qián.",
+   "kuai": "kuài",
+   "shuohua": "shuōhuà",
+   "feichang": "fēicháng",
+   "jiao": "jiào",
+   "qing": "qǐng",
+   "gui": "guì"
+  },
+  "simulacro/s2l|Shangke le, dajia bu yao ___ le.": {
+   "Shangke le, dajia bu yao ___ le.": "Shàngkè le, dàjiā bú yào ___ le.",
+   "shuohua": "shuōhuà",
+   "kuai": "kuài",
+   "feichang": "fēicháng",
+   "jiao": "jiào",
+   "qing": "qǐng",
+   "gui": "guì"
+  },
+  "simulacro/s2l|Ni hao, zher you ren ma? Wo keyi zuo zher ma? — Meiyou, ___ zuo.": {
+   "Ni hao, zher you ren ma? Wo keyi zuo zher ma? — Meiyou, ___ zuo.": "Nǐ hǎo, zhèr yǒu rén ma? Wǒ kěyǐ zuò zhèr ma? — Méiyǒu, ___ zuò.",
+   "qing": "qǐng",
+   "kuai": "kuài",
+   "shuohua": "shuōhuà",
+   "feichang": "fēicháng",
+   "jiao": "jiào",
+   "gui": "guì"
+  },
+  "simulacro/s2l|Lees: «Meimei, xiao mao qu nar le, ni kanjian ta le ma?» Shuohuaren zai zhao:": {
+   "xiao mao": "xiǎo māo",
+   "dianying": "diànyǐng",
+   "mianbao": "miànbāo",
+   "bu mang": "bù máng",
+   "Lees: «Meimei, xiao mao qu nar le, ni kanjian ta le ma?» Shuohuaren zai zhao:": "Lees: «Mèimei, xiǎo māo qù nǎr le, nǐ kànjiàn tā le ma?» Shuōhuàrén zài zhǎo:"
+  },
+  "simulacro/s2l|Lees: «Wo baitian yao qu kanbing, bu neng qu xuexiao le.» Ta zenme le?": {
+   "shengbing le": "shēngbìng le",
+   "bu mang": "bù máng",
+   "yao shangxue": "yào shàngxué",
+   "zuo baozi": "zuò bāozi",
+   "Lees: «Wo baitian yao qu kanbing, bu neng qu xuexiao le.» Ta zenme le?": "Lees: «Wǒ báitiān yào qù kànbìng, bù néng qù xuéxiào le.» Tā zěnme le?"
+  },
+  "simulacro/s2l|Lees: «Jintian dian li mei cai le, ni mingzao zai lai mai ba.» Shuohuaren zai:": {
+   "mai cai": "mài cài",
+   "zuo baozi": "zuò bāozi",
+   "mai jiaozi": "mǎi jiǎozi",
+   "zuo fan": "zuò fàn",
+   "Lees: «Jintian dian li mei cai le, ni mingzao zai lai mai ba.» Shuohuaren zai:": "Lees: «Jīntiān diàn lǐ méi cài le, nǐ míngzǎo zài lái mǎi ba.» Shuōhuàrén zài:"
+  },
+  "simulacro/s2l|Lees: «Jiejie, ni chang de Zhongwen ge zhen haoting!» Jiejie hui:": {
+   "chang ge": "chàng gē",
+   "zuo fan": "zuò fàn",
+   "xie mingzi": "xiě míngzi",
+   "shangban": "shàngbān",
+   "Lees: «Jiejie, ni chang de Zhongwen ge zhen haoting!» Jiejie hui:": "Lees: «Jiějie, nǐ chàng de Zhōngwén gē zhēn hǎotīng!» Jiějie huì:"
+  },
+  "simulacro/s2l|Lees: «Duibuqi, wo xiawu shuijiao le, mei tingjian ni de dianhua.» Shuohuaren xiawu zuo le shenme?": {
+   "xiuxi": "xiūxi",
+   "shangban": "shàngbān",
+   "da dianhua": "dǎ diànhuà",
+   "dianying": "diànyǐng",
+   "Lees: «Duibuqi, wo xiawu shuijiao le, mei tingjian ni de dianhua.» Shuohuaren xiawu zuo le shenme?": "Lees: «Duìbuqǐ, wǒ xiàwǔ shuìjiào le, méi tīngjiàn nǐ de diànhuà.» Shuōhuàrén xiàwǔ zuò le shénme?"
   }
  }
 }

@@ -139,7 +139,7 @@ function buildRound(level, world, round) {
       show: { text: `¿Qué significa «${tWord(x)}»?`, answers: answers.slice() } });
   });
 
-  const ctx = { level, world, items, worldItems, allItems, levelWords, worldWords, spanishClash, T, tWord, tLine };
+  const ctx = { level, world, round, items, worldItems, allItems, levelWords, worldWords, spanishClash, T, tWord, tLine };
   const authored = items.map((it) => itemQuestion(it, ctx));
 
   let out;
@@ -157,36 +157,39 @@ function buildRound(level, world, round) {
 }
 
 function itemQuestion(it, ctx) {
-  const { level, world, items, worldItems, allItems, levelWords, worldWords, spanishClash, T, tWord, tLine } = ctx;
+  const { level, world, round, items, worldItems, allItems, levelWords, worldWords, spanishClash, T, tWord, tLine } = ctx;
   const single = (s) => plain(s) || undefined;   // the answer's spelling is its key (no same word twice in a row)
   // a pinyin tile: its own tone in this question when it reads differently here (吧 ba in a particle fill-in), else the
   // level's tile form; a written question: its toned text
-  const own = T.items[it.s || it.t || it.a] || {};
+  // this item's own toned strings first (T.items['<world>/<round>|<its text>']: a simulacro item read from its own hanzi,
+  // 买菜 mǎi cài in one sim and 卖菜 mài cài in the next; a fill-in's answer as its sentence reads it), then the maps
+  const own = T.items[world.id + '/' + round.id + '|' + (it.s || it.t || it.a || it.py || '')] || {};
   const tile = (a) => own[a] || tLine(a);
-  const tText = (s) => T.texts[s] || s;
+  const line = (s) => own[s] || tLine(s);
+  const tText = (s) => own[s] || T.texts[s] || s;
   if (it.k === 'w') {                                           // exam word → its meaning
     const word = levelWords.find((x) => plain(x.py) === plain(it.py) && !x.gram && (!it.es || x.es === it.es));
     const correct = it.es || (word && word.es);
     const answers = [correct, ...options(correct, [meanings(worldWords), meanings(levelWords)], 3, spanishClash(it.py, correct))];
     return { kind: 'w', key: plain(it.py), text: `¿Qué significa «${it.py}»?`, correct, answers, image: 'none',
-      show: { text: `¿Qué significa «${word && plain(word.py) === plain(it.py) && word.py === it.py ? tWord(word) : tLine(it.py)}»?`, answers: answers.slice() } };
+      show: { text: `¿Qué significa «${own[it.py] || (word && plain(word.py) === plain(it.py) && word.py === it.py ? tWord(word) : tLine(it.py))}»?`, answers: answers.slice() } };
   }
   if (it.k === 'm') {                                           // phrase / sentence → meaning
     const other = (list) => list.filter((x) => x.k === 'm' && plain(x.py) !== plain(it.py)).map((x) => x.es);
     const answers = [it.es, ...options(it.es, [it.w, other(items), other(worldItems), other(allItems)], 3)];
     return { kind: 'm', text: `¿Qué significa «${it.py}»?`, correct: it.es, answers, image: picture(level, world, it.img),
-      show: { text: `¿Qué significa «${tLine(it.py)}»?`, answers: answers.slice() } };
+      show: { text: `¿Qué significa «${line(it.py)}»?`, answers: answers.slice() } };
   }
   if (it.k === 'r') {                                           // dialogue → best reply: hand-picked or same-world options
     const other = (list) => list.filter((x) => x.k === 'r' && x !== it).map((x) => x.b);
     const answers = [it.b, ...options(it.b, it.w ? [it.w] : [other(items), other(worldItems)], 3)];
     return { kind: 'r', key: single(it.b), text: `Alguien te dice: «${it.a}» ¿Qué respondes?`, correct: it.b, answers, image: 'none',
-      show: { text: `Alguien te dice: «${tLine(it.a)}» ¿Qué respondes?`, answers: answers.map(tile) } };
+      show: { text: `Alguien te dice: «${line(it.a)}» ¿Qué respondes?`, answers: answers.map(tile) } };
   }
   if (it.k === 'f') {                                           // fill the blank from the exam's word bank
     const answers = [it.a, ...options(it.a, [it.bank], 3)];
     return { kind: 'f', key: single(it.a), text: it.t || `Completa la frase: «${it.s}»`, correct: it.a, answers, image: 'none',
-      show: { text: it.t ? tText(it.t) : `Completa la frase: «${tLine(it.s)}»`, answers: answers.map(tile) } };
+      show: { text: it.t ? tText(it.t) : `Completa la frase: «${line(it.s)}»`, answers: answers.map(tile) } };
   }
   const answers = [it.a, ...(it.w || []).slice(0, 3)];
   return { kind: 'q', key: single(it.a), text: it.t, correct: it.a, answers, image: picture(level, world, it.img),

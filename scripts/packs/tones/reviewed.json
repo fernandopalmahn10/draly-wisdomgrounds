@@ -1,0 +1,20 @@
+{
+ "about": "Readings a person checked where pypinyin's reading in context is not the right one (2026-10-24). The pin games show the books' reading; scripts/packs/tones/check.js accepts these and nothing else. chars: a reading right wherever the character is (no meaning hangs on it); phrases: a reading right in that phrase only; mismatch: a sim line whose hanzi and pinyin are not the same words (the tones follow the pinyin, which is what the game shows).",
+ "chars": {
+  "谁 shei2": "shéi: the reading every book prints (pypinyin reads the older shuí); same word, same meaning"
+ },
+ "phrases": {
+  "长": { "长 chang2": "the word «largo»: cháng (pypinyin reads zhǎng, «to grow»)" },
+  "长耳朵": { "长 chang2": "long ears: cháng (pypinyin reads zhǎng)" },
+  "哪个___你姐姐？ — 长头发的那个。": { "长 chang2": "long hair: cháng (pypinyin reads zhǎng)" },
+  "哪个是你___狗？ — 长耳朵这个。": { "长 chang2": "long ears: cháng (pypinyin reads zhǎng)" },
+  "他的头发很长。": { "长 chang2": "his hair is long: cháng (pypinyin reads zhǎng)" },
+  "我的头发很长。": { "长 chang2": "my hair is long: cháng (pypinyin reads zhǎng)" },
+  "妈妈的头发很长。": { "长 chang2": "Mom's hair is long: cháng (pypinyin reads zhǎng)" },
+  "在这儿可以看见两只小猫。": { "只 zhi1": "the measure word for animals: zhī (pypinyin reads zhǐ, «only»)" },
+  "两只小狗": { "只 zhi1": "the measure word for animals: zhī (pypinyin reads zhǐ, «only»)" }
+ },
+ "mismatch": {
+  "那不是我的猫，是我朋友的猫": "old HSK sim 3: the hanzi ends «…我朋友的猫», its pinyin «…wǒ péngyou de» (no māo); the game shows the pinyin, toned as the golden book prints it"
+ }
+}
