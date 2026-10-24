@@ -964,7 +964,7 @@
     if (gameType === 'trapdoor') return;   // Las Trampillas: the question is a card under the platform (player-trapdoor.js)
     // 6-7 Swing: its own screen (the sum + two giant buttons), drawn by player-sixseven.js (it listens to 'question')
     if (q.gameMode === 'sixseven' || gameType === 'sixseven') return;
-    $('question-text').textContent = q.text;
+    if (window.DralyQ) window.DralyQ.fill($('question-text'), q.text); else $('question-text').textContent = q.text;   // «…» red and bold (js/qtext.js)
     // Show image (or placeholder while loading)
     const imgWrap = $('question-image-wrap');
     const img = $('question-image');

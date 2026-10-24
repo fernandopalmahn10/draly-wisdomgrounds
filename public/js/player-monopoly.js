@@ -331,7 +331,7 @@
     const img = $('mnq-img');
     if (q.image) { img.src = q.image; img.alt = ''; }
     else img.removeAttribute('src');
-    $('mnq-text').textContent = q.text || '';
+    if (window.DralyQ) window.DralyQ.fill($('mnq-text'), q.text || ''); else $('mnq-text').textContent = q.text || '';   // «…» red and bold (js/qtext.js)
     const v = $('mnq-verdict');
     v.className = 'mnq-verdict';
     v.textContent = '';

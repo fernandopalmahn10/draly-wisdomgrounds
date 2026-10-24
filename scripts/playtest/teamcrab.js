@@ -27,7 +27,7 @@ function rightOf(ctx) {
   try {
     if (!process.env.DRALY_DATA_DIR) process.env.DRALY_DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'tc-bots-'));
     const setId = ctx.report.set && ctx.report.set.setId;
-    (require('../../core/sets').loadSet(setId).questions || []).forEach((q) => RIGHT.set(String(q.text), String(q.correct)));
+    require('../../core/packs').forGames(require('../../core/sets').loadSet(setId).questions || []).forEach((q) => RIGHT.set(String(q.text), String(q.correct)));
   } catch (_) { /* no pack: the bots guess */ }
   return RIGHT;
 }

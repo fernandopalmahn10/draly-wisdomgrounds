@@ -41,7 +41,7 @@ if (!PW) { console.log('SKIP · no playwright-core here (set PLAYWRIGHT_CORE)');
 fs.mkdirSync(OUT, { recursive: true });
 const SET = 'pack:yct1-familia-r1';
 const RIGHT = {};
-try { (require('../core/packs').loadPack('yct1-familia-r1').questions || []).forEach((q) => { RIGHT[q.text] = String(q.correct); }); } catch (_) {}
+try { require('../core/packs').forGames(require('../core/packs').loadPack('yct1-familia-r1').questions || []).forEach((q) => { RIGHT[q.text] = String(q.correct); }); } catch (_) {}
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let checks = 0, bad = 0;
 const ok = (c, m) => { checks++; if (!c) { bad++; console.log('FAIL ' + m); } };

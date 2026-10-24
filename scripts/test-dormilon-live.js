@@ -67,7 +67,7 @@ async function answerOpen(x, right, wait) {
   // the pack's right answers (a test-only map by question text: the server never sends them)
   const P = require('../core/packs');
   const pk = P.loadPack('yct1-familia-r1');
-  const qs = (pk && pk.questions) || [];
+  const qs = P.forGames((pk && pk.questions) || []);   // as the room shows them: toned (2026-10-24)
   const answerOf = {};
   qs.forEach((q) => { answerOf[q.text] = String(q.correct); });
   const kids = [];

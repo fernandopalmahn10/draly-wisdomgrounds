@@ -268,7 +268,7 @@
 .hcb-band.show { transform: translateY(-50%) scaleY(1); opacity: 1; }
 .hcb-band.show span { display: inline-block; animation: hcb-band-in .3s var(--hc-ease-out) both; }
 @keyframes hcb-band-in { from { transform: translateX(-12%); opacity: 0; } }
-.hcb-band .key { display: inline-block; margin: 0 .12em; font-style: normal; font-size: 1.45em; line-height: 1; color: var(--hc-gold);
+.hcb-band .key { display: inline-block; margin: 0 .12em; font-style: normal; font-weight: 900; font-size: 1.45em; line-height: 1; color: #ff8f8f;   /* the asked part: red and bold on the dark band (2026-10-24) */
   -webkit-text-stroke: 2px var(--hc-ink); paint-order: stroke fill; }
 .hcb-band.go span, .hcb-band.final span { font-size: 2.1em; letter-spacing: .02em; color: var(--hc-gold);
   -webkit-text-stroke: 3px var(--hc-ink); paint-order: stroke fill; text-shadow: 0 4px 0 var(--hc-ink); }

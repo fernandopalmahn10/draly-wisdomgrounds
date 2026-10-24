@@ -241,7 +241,7 @@
     seenQ();
     const qf = $('tc-qfeed');
     if (qf.classList.contains('ans')) { const age = Date.now() - (+qf.dataset.at || 0); if (age > 1100) { qf.textContent = ''; qf.className = 'tc-qfeed'; } else later(1100 - age, () => { if (+qf.dataset.at && Date.now() - +qf.dataset.at >= 1000) { qf.textContent = ''; qf.className = 'tc-qfeed'; } }); }
-    $('tc-mq-text').textContent = myQ.text;
+    if (window.DralyQ) window.DralyQ.fill($('tc-mq-text'), myQ.text); else $('tc-mq-text').textContent = myQ.text;   // «…» red and bold (js/qtext.js)
     const im = $('tc-mq-img');
     if (myQ.image) { im.src = myQ.image; im.classList.remove('hidden'); } else { im.classList.add('hidden'); im.removeAttribute('src'); }
     const tiles = $('tc-tiles');

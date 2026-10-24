@@ -21,12 +21,14 @@
   <link rel="stylesheet" href="/css/warmup.css?v=20261015s">
   <link rel="stylesheet" href="/css/reading.css?v=20260603d">
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@800&display=swap" rel="stylesheet">
+  <!-- the tone-marked pinyin vowels Baloo 2 draws wrong, from Noto Sans: AFTER the Baloo 2 link (the last face defined wins) -->
+  <link rel="stylesheet" href="/css/pinyin-tones.css?v=20261024q">
   <link rel="stylesheet" href="/css/kingdoms.css?v=20261017pv2">
   <link rel="stylesheet" href="/css/paint.css?v=20261017pv2">
   <link rel="stylesheet" href="/css/trapdoor.css?v=20261019tf">
   <link rel="stylesheet" href="/css/snow.css?v=20261018a">
   <link rel="stylesheet" href="/css/escape.css?v=20261019ch">
-  <link rel="stylesheet" href="/css/halcon.css?v=20261019zc">
+  <link rel="stylesheet" href="/css/halcon.css?v=20261024q">
   <!-- ¡No despiertes a Dralingo! -->
   <link rel="stylesheet" href="/css/dormilon.css?v=20261024v41">
   <link rel="stylesheet" href="/css/teamcrab.css?v=20261023tc5">
@@ -304,7 +306,7 @@
         </div>
         <div class="ssx-gang" id="ssx-gang" aria-live="polite"><img alt="" id="ssx-gang-img"><b id="ssx-gang-say"></b></div>
         <div class="ssx-who" id="ssx-who" aria-hidden="true"></div>
-        <div class="ssx-six" id="ssx-six" aria-hidden="true"><b>¡SIX SEVEN!</b><span>liu · qi</span></div>
+        <div class="ssx-six" id="ssx-six" aria-hidden="true"><b>¡SIX SEVEN!</b><span>liù · qī</span></div>
         <div class="ssx-plus" id="ssx-plus" aria-hidden="true"></div>
         <div class="ssx-dral" id="ssx-dral" aria-hidden="true"></div>
         <div class="ssx-j67" id="ssx-j67" aria-hidden="true"></div>
@@ -320,8 +322,8 @@
         <div class="ssx-chip hidden" id="ssx-chip"><span>Doble oro</span><b>0:30</b></div>
       </div>
       <div class="ssx-btns">
-        <button class="ssx-btn b6" id="ssx-b6" type="button" aria-label="6, liu"><b>6</b><span>liu</span></button>
-        <button class="ssx-btn b7" id="ssx-b7" type="button" aria-label="7, qi"><b>7</b><span>qi</span></button>
+        <button class="ssx-btn b6" id="ssx-b6" type="button" aria-label="6, liù"><b>6</b><span>liù</span></button>
+        <button class="ssx-btn b7" id="ssx-b7" type="button" aria-label="7, qī"><b>7</b><span>qī</span></button>
         <i class="ssx-hand ssx-teach" aria-hidden="true"></i>
         <div class="ssx-lock" id="ssx-lock" aria-live="polite"></div>
       </div>
@@ -867,39 +869,40 @@
   <script src="/js/player-kingdoms.js?v=20261016eq"></script>
   <script src="/js/paint-worlds.js?v=20261017pv2"></script>
   <script src="/js/paint-render.js?v=20261017pv2"></script>
-  <script src="/js/player-paint.js?v=20261017pv2"></script>
+  <script src="/js/player-paint.js?v=20261024q"></script>
   <script src="/js/trapdoor-arena.js?v=20261019tf"></script>
   <script src="/js/trapdoor-render.js?v=20261019tf"></script>
-  <script src="/js/player-trapdoor.js?v=20261023end"></script>
+  <script src="/js/player-trapdoor.js?v=20261024q"></script>
   <script src="/js/snow-map.js?v=20261019zc"></script>
   <script src="/js/snow-render.js?v=20261019zc"></script>
   <script src="/js/player-snow.js?v=20261019tf"></script>
   <script src="/js/escape-map.js?v=20261017ev2"></script>
   <script src="/js/escape-render.js?v=20261019zc"></script>
   <script src="/js/player-escape.js?v=20261023names"></script>
+  <script src="/js/qtext.js?v=20261024q"></script>
   <script src="/js/halcon-board.js?v=20261019zc"></script>
-  <script src="/js/player-halcon.js?v=20261023names"></script>
+  <script src="/js/player-halcon.js?v=20261024q"></script>
   <script src="/js/dormilon-stage.js?v=20261024v4"></script>
-  <script src="/js/player-dormilon.js?v=20261024v41"></script>
+  <script src="/js/player-dormilon.js?v=20261024q"></script>
   <script src="/js/teamcrab-stage.js?v=20261023tc5"></script>
-  <script src="/js/player-teamcrab.js?v=20261023tc6"></script>
+  <script src="/js/player-teamcrab.js?v=20261024q"></script>
   <script src="/js/monopoly-map.js?v=20261016a"></script>
   <script src="/js/monopoly-board.js?v=20261023names"></script>
-  <script src="/js/player-monopoly.js?v=20261023end"></script>
+  <script src="/js/player-monopoly.js?v=20261024q"></script>
   <script src="/js/mochi-stage.js?v=20261014a"></script>
   <script src="/js/party.js?v=20261023names"></script>
   <script src="/js/player-mochi.js?v=20261023end"></script>
   <script src="/js/pinata-stage.js?v=20261015b"></script>
   <script src="/js/player-pinata.js?v=20261023end"></script>
-  <script src="/js/sixseven-stage.js?v=20261020fx"></script>
-  <script src="/js/player-sixseven.js?v=20261023end"></script>
+  <script src="/js/sixseven-stage.js?v=20261024q"></script>
+  <script src="/js/player-sixseven.js?v=20261024q"></script>
   <script src="/js/dragon-course.js?v=20261016dr"></script>
   <script src="/js/dragon-sky.js?v=20261019zc"></script>
-  <script src="/js/player-dragon.js?v=20261023end"></script>
+  <script src="/js/player-dragon.js?v=20261024q"></script>
   <script src="/js/cast.js?v=20261017td"></script>
   <script src="/js/dralingo-fx.js?v=20261017art"></script>
   <script src="/js/saga.js?v=20261020z3d3"></script>
-  <script src="/js/player.js?v=20261023coin"></script>
+  <script src="/js/player.js?v=20261024q"></script>
   <script src="/js/pwa.js?v=20261012a" defer></script>
 </body>
 </html>

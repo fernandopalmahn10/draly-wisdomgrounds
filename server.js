@@ -11968,7 +11968,9 @@ io.on('connection', (socket) => {
         if (cb) cb({ ok: false, error: 'Set not found: ' + setId });
         return;
       }
-      g.questions = set.questions;
+      // (2026-10-24, his rule: pinyin WITH tone marks in the pin games) a curriculum pack's questions as the rooms show
+      // them, toned (core/packs.js forGames); homework and El Entrenamiento keep the plain ones
+      g.questions = Packs.forGames(set.questions);
       g.setTitle = set.title;
       g.setId = String(setId);          // Ojos de Halcón finds the level's word pictures from it
       broadcast(pin);

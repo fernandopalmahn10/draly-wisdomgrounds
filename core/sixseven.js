@@ -22,7 +22,7 @@ const R = {
   Q_MS: 12000,               // the phone's clock for one question (time up = a wrong answer)
   RIGHT_MS: 650,             // a right answer: the in-between beat (the coin lands in the team's pan, the phone does the
                              // 6-7 swing, the next sum swings in). Was 500 until 2026-10-16: "there's nothing in between"
-  WRONG_MS: 1600,            // a wrong answer / time up: the wobble + «Era 7 · qi», then the next question
+  WRONG_MS: 1600,            // a wrong answer / time up: the wobble + «Era 7 · qī», then the next question
   WRONG2_MS: 2600,           // …a second wrong in a row waits longer («¡Respira! Piensa y toca»)
   MIN_THINK_MS: 400,         // nobody reads a sum and taps faster (server clock, round trip included): a tap under this is wrong
   GOLD_CHANCE: 0.08,         // a question is golden (+GOLD_BONUS when right)…
@@ -73,8 +73,9 @@ const waveAt = (m, n) => (n <= 0 ? R.WAVE_FIRST : R.WAVE_FIRST + n * m.waveStep)
 const cleanStyle = (s) => (R.STYLES.includes(s) ? s : R.STYLE);
 
 // ---------- the questions ----------
-// pinyin of 0-10, WITHOUT tone marks (games' rule: CLAUDE.md «Pinyin without tone marks in games»)
-const PINYIN = ['ling', 'yi', 'er', 'san', 'si', 'wu', 'liu', 'qi', 'ba', 'jiu', 'shi'];
+// pinyin of 0-10 WITH tone marks (his rule 2026-10-24: «Pinyin in the pin games WITH tone marks»; each number alone,
+// so its own tone: yī, never a changed one). Display only: the answer is the 6 or the 7 button.
+const PINYIN = ['líng', 'yī', 'èr', 'sān', 'sì', 'wǔ', 'liù', 'qī', 'bā', 'jiǔ', 'shí'];
 const MINUS = '−';          // U+2212, the real minus sign (a hyphen looks like a dash on a phone)
 // every sum whose answer is 6 or 7 with numbers 1-10 only: a + b (a, b ≥ 1) and a − b (a ≤ 10, b ≥ 1)
 const POOL = (() => {

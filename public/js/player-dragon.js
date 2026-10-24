@@ -413,7 +413,7 @@
     const img = $('drq-img');
     if (q.image) { img.src = q.image; img.alt = ''; }
     else img.removeAttribute('src');
-    $('drq-text').textContent = q.text || '';
+    if (window.DralyQ) window.DralyQ.fill($('drq-text'), q.text || ''); else $('drq-text').textContent = q.text || '';   // «…» red and bold (js/qtext.js)
     const v = $('drq-verdict');
     v.className = 'drq-verdict';
     v.textContent = '';

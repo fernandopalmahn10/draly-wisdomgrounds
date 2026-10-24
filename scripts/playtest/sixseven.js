@@ -15,7 +15,7 @@
 // tappers must end below the thinkers) and events per kid.
 'use strict';
 
-const PINYIN = ['ling', 'yi', 'er', 'san', 'si', 'wu', 'liu', 'qi', 'ba', 'jiu', 'shi'];
+const PINYIN = require('../../core/sixseven').PINYIN;   // the number words as the game writes them (with tones since 2026-10-24)
 const mult = (s) => (s >= 10 ? 4 : s >= 6 ? 3 : s >= 3 ? 2 : 1);
 
 module.exports = (bot, ctx) => {
@@ -75,7 +75,7 @@ module.exports = (bot, ctx) => {
     if (!(s.a >= 1 && s.a <= 10 && s.b >= 1 && s.b <= 10)) fail('only the numbers 1-10', s);
     if (s.zh) {
       E.zh++;
-      if (!s.words || s.words[0] !== PINYIN[s.a] || s.words[1] !== PINYIN[s.b]) fail('pinyin words without tone marks', s);
+      if (!s.words || s.words[0] !== PINYIN[s.a] || s.words[1] !== PINYIN[s.b]) fail('the pinyin number words', s);
       if (!/^[a-z]+ [+−] [a-z]+ = \?$/.test(q.text)) fail('an «En Chino» sum is written in pinyin', q.text);
     } else {
       E.num++;

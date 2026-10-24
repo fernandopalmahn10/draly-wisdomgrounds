@@ -13,7 +13,7 @@
 //         pan dips, Dralingo does the 6-7). The server's verdict follows and settles the coins (it always wins).
 //       - between my sums my teammates' coins fly into our pan (the server's meter feed: who scored), their figures
 //         swing, «Sofía +3» pops over the pan, the balance tips live; the next sum swings in like a palm (wipe)
-//       - a wrong answer: a wobble, «Era 7 · qi», my captain says something kind, the buttons «¡Recargando!» (rocking
+//       - a wrong answer: a wobble, «Era 7 · qī», my captain says something kind, the buttons «¡Recargando!» (rocking
 //         gently, a gold bar fills) while the world keeps going above
 //       - «¡SIX SEVEN!»: a 6 then a 7 right (a mini stamp), racha 7 and my 67th coin (the big one: Dralingo slides in
 //         doing the 6-7, the crowd shout, the palms double-swing, gold confetti), and my team's waves (ss:wave: the
@@ -35,8 +35,8 @@
   const buzz = (p) => { try { if (navigator.vibrate) navigator.vibrate(p); } catch (_) {} };
   const later = (ms, fn, list) => { const t = setTimeout(fn, Math.max(0, ms)); (list || timers).push(t); return t; };
   const STYLE_NAME = { num: 'Números', zh: 'En Chino', mix: 'Mezcla' };
-  const STYLE_EX = { num: '3 + 4', zh: 'san + si', mix: '3 + 4 · san + si' };
-  const PY = ['ling', 'yi', 'er', 'san', 'si', 'wu', 'liu', 'qi', 'ba', 'jiu', 'shi'];    // no tone marks (games' rule)
+  const STYLE_EX = { num: '3 + 4', zh: 'sān + sì', mix: '3 + 4 · sān + sì' };
+  const PY = ['líng', 'yī', 'èr', 'sān', 'sì', 'wǔ', 'liù', 'qī', 'bā', 'jiǔ', 'shí'];    // with tone marks (2026-10-24)
   const multOf = (s) => (s >= 10 ? 4 : s >= 6 ? 3 : s >= 3 ? 2 : 1);                   // core/sixseven.js streakMult
   const DRAL_AT = { 3: 2, 10: 4 };      // rachas where Dralingo slides in (6 = ×3 is a chip; 7 = «six seven», the big one)
   // the server's beats (R in core/sixseven.js, sent again in ss:init `w`); its verdict corrects a guess anyway
@@ -548,7 +548,7 @@
     else if (DRAL_AT[r.streak] || (r.streak > 10 && r.streak % 5 === 0)) milestone(r);
     else if (r.streak === 6) { play('combo', 1.1, 0.5); bump($('ssx-combo')); }
     if (r.pair && !r.six && Date.now() - lastMini > 2500) {
-      lastMini = Date.now(); sixStamp('mini', 'liu · qi'); X().palms($('ssx-b6'), $('ssx-b7'), 6, 2, [btnFr[6], btnFr[7]]); buzz([12, 40, 12]);
+      lastMini = Date.now(); sixStamp('mini', 'liù · qī'); X().palms($('ssx-b6'), $('ssx-b7'), 6, 2, [btnFr[6], btnFr[7]]); buzz([12, 40, 12]);
       if (btnFr[6]) { btnFr[6].react('cheer', 1100); later(140, () => btnFr[7] && btnFr[7].react('cheer', 1000)); }   // a 6 then a 7: both friends
     }
     // now and then (and on the first one) my captain cheers me on
@@ -646,7 +646,7 @@
     const s = $('ssx-six');
     if (!s) return;
     s.className = 'ssx-six ' + kind;
-    s.querySelector('span').textContent = sub || 'liu · qi';
+    s.querySelector('span').textContent = sub || 'liù · qī';
     void s.offsetWidth;
     s.classList.add('show');
   }
@@ -656,7 +656,7 @@
     const racha = r.six & 1, coin67 = r.six & 2;
     quietUntil = Date.now() + 1400;                      // (the next banner waits: this moment is mine)
     if ($('ssx-who')) { clearTimeout(whoT); $('ssx-who').classList.remove('show'); }   // (no teammate chip over my stamp)
-    sixStamp('big', racha ? `Racha ${r.streak} · liu qi` : coin67 ? '67 monedas · liu qi' : 'liu · qi');
+    sixStamp('big', racha ? `Racha ${r.streak} · liù qī` : coin67 ? '67 monedas · liù qī' : 'liù · qī');
     play('shout', 1, 0.85, 60);
     play('liuqi', 1, 0.75, 1000);
     buzz([30, 40, 30, 40, 30, 40, 90]);
@@ -847,9 +847,9 @@
     card.append(X().sum({ a: 3, b: 4, op: '+', zh: style === 'zh' }, 'ssi-pic-sum'), el('span', 'ssi-pic-q', '= ?'));
     const btns = el('div', 'ssi-pic-btns');
     const b6 = el('span', 'ssi-pic-b b6');
-    b6.append(el('b', null, '6'), el('small', null, 'liu'));
+    b6.append(el('b', null, '6'), el('small', null, 'liù'));
     const b7 = el('span', 'ssi-pic-b b7');
-    b7.append(el('b', null, '7'), el('small', null, 'qi'));
+    b7.append(el('b', null, '7'), el('small', null, 'qī'));
     btns.append(b6, b7);
     X().friendOnPic(b6, 6, true);                         // Liu on the 6, Qi on the 7: the buttons as they really look
     X().friendOnPic(b7, 7, true);
@@ -1135,7 +1135,7 @@
     crewCheer(d.team, ours ? 2400 : 1600);
     if (bal) bal.rock(ours);
     if (ours) {
-      banner('six', [bold('¡SIX SEVEN!'), span(`¡El Equipo ${teamName(d.team)} llegó a ${fmt(d.gold)} de oro! Liu, qi`)], null, 2600);   // (gold: ours)
+      banner('six', [bold('¡SIX SEVEN!'), span(`¡El Equipo ${teamName(d.team)} llegó a ${fmt(d.gold)} de oro! Liù, qī`)], null, 2600);   // (gold: ours)
       play('shout', 1, 0.8, 40);
       play('liuqi', 1, 0.7, 1050);
       buzz([30, 40, 30, 40, 30, 40, 90]);
@@ -1205,7 +1205,7 @@
         + '<div class="ssh-style" id="ssh-style"></div>'
         + '<div class="ssh-title">Así se juega</div><ol>'
         + '<li><div class="ssh-step s1" id="ssh-s1"></div><span><b>Mira la cuenta</b>siempre da 6 o 7</span></li>'
-        + '<li><div class="ssh-step s2"><span class="ssi-pic-b b6"><b>6</b><small>liu</small></span><span class="ssi-pic-b b7"><b>7</b><small>qi</small></span><i class="ssx-hand"></i></div><span><b>Toca 6 o 7</b>6 es liu, 7 es qi en Chino Mandarín</span></li>'
+        + '<li><div class="ssh-step s2"><span class="ssi-pic-b b6"><b>6</b><small>liù</small></span><span class="ssi-pic-b b7"><b>7</b><small>qī</small></span><i class="ssx-hand"></i></div><span><b>Toca 6 o 7</b>6 es liù, 7 es qī en Chino Mandarín</span></li>'
         + '<li><div class="ssh-step s3" id="ssh-s3"></div><span><b>¡Llena tu balanza de oro!</b>En racha, cada acierto vale más</span></li>'
         + '</ol>';
       head.after(box);
@@ -1443,7 +1443,7 @@
     rules: (ms) => showRules(ms),
     sim: (ev, d) => { if (handlers[ev]) handlers[ev](d); },
     milestone: (n) => milestone({ streak: n || 3 }),
-    six: (kind) => (kind === 'mini' ? sixStamp('mini', 'liu · qi') : mySix({ six: kind === 'coins' ? 2 : 1, streak: 7 })),
+    six: (kind) => (kind === 'mini' ? sixStamp('mini', 'liù · qī') : mySix({ six: kind === 'coins' ? 2 : 1, streak: 7 })),
     gang: (mood) => gang(mood || 'swing', { force: true }),
     feed: (list) => feed(list),
   };

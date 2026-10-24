@@ -485,15 +485,15 @@
     sumCard.append(X.sum({ a: 3, b: 4, op: '+', zh: style === 'zh' }, 'ssi-pic-sum'), node('span', '= ?', 'ssi-pic-q'));
     const btns = node('div', null, 'ssi-pic-btns');
     const b6 = node('span', null, 'ssi-pic-b b6');
-    b6.append(node('b', '6'), node('small', 'liu'));
+    b6.append(node('b', '6'), node('small', 'liù'));
     const b7 = node('span', null, 'ssi-pic-b b7');
-    b7.append(node('b', '7'), node('small', 'qi'));
+    b7.append(node('b', '7'), node('small', 'qī'));
     btns.append(b6, b7);
     X.friendOnPic(b6, 6);                    // Liu on the 6, Qi on the 7: the buttons as every phone shows them
     X.friendOnPic(b7, 7);
     pic.append(sumCard, btns, node('i', null, 'ssx-hand ssi-pic-hand'));
     const txt = node('div');
-    txt.append(node('h2', '¡Toca el resultado!'), node('p', 'Cada cuenta da 6 o 7: 6 es liu, 7 es qi. Piensa bien: en racha, cada acierto vale más oro.'));
+    txt.append(node('h2', '¡Toca el resultado!'), node('p', 'Cada cuenta da 6 o 7: 6 es liù, 7 es qī. Piensa bien: en racha, cada acierto vale más oro.'));
     const sayEl = node('div', '', 'ssp-rules-say');
     txt.appendChild(sayEl);
     card.append(pic, txt);
@@ -623,7 +623,7 @@
     const t = TEAM_NAME[d.team];
     crewCheer(d.team, 2600);
     friendsJoin(2600, d.team);               // Liu and Qi jump together: el 67 cheers on that team's side
-    band('six', [node('b', '¡SIX SEVEN!'), node('span', `¡El Equipo ${t} llegó a ${X.fmt(d.gold)} de oro! Liu, qi`)], d.team, 2400);
+    band('six', [node('b', '¡SIX SEVEN!'), node('span', `¡El Equipo ${t} llegó a ${X.fmt(d.gold)} de oro! Liù, qī`)], d.team, 2400);
     sfx('shout', 0.9);
     later(1050, () => sfx('liuqi', 0.8));
     if (bal) {

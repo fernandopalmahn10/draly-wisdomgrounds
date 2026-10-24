@@ -577,7 +577,7 @@
     $('tp-q-head').textContent = headFor(q.td);
     const img = $('tp-q-img');
     if (q.image) { img.src = q.image; img.alt = ''; } else img.removeAttribute('src');
-    $('tp-q-text').textContent = q.text || '';
+    if (window.DralyQ) window.DralyQ.fill($('tp-q-text'), q.text || ''); else $('tp-q-text').textContent = q.text || '';   // «…» red and bold (js/qtext.js)
     $('tp-verdict').className = 'tp-verdict';
     $('tp-verdict').textContent = '';
     const ans = $('tp-ans');

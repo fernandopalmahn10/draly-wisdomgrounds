@@ -38,7 +38,7 @@ function next(s, ev, ms, match) {
 
 (async () => {
   const set = await fetch(URL + '/api/sets/' + encodeURIComponent(SET)).then((r) => r.json());
-  const correctOf = (q) => { const x = set.questions.find((y) => y.text === q.text); return x ? q.answers.indexOf(x.correct) : -1; };
+  const correctOf = (q) => { const x = require('../core/packs').forGames(set.questions).find((y) => y.text === q.text);   /* as rooms show them: toned (2026-10-24) */ return x ? q.answers.indexOf(x.correct) : -1; };
   ok(set.questions.length > 5, 'the pack loads');
 
   // ---------- the room, the route picked in the lobby ----------

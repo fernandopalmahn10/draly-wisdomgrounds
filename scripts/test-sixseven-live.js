@@ -161,7 +161,8 @@ async function answer(kid, right, waitMs) {
   const A = kids[0];
   const r1 = await answer(A, true);
   ok(r1.correct && r1.sixseven.right && r1.sixseven.coins === 1 + r1.sixseven.goldExtra && r1.sixseven.streak === 1, 'right: 1 coin (+ a golden extra on a golden sum), streak 1');
-  ok(/^(6 · liu|7 · qi)$/.test(r1.correctText), 'the verdict names the number in pinyin: ' + r1.correctText);
+  const PY = require('../core/sixseven').PINYIN;   // with tone marks since 2026-10-24: liù / qī
+  ok(['6 · ' + PY[6], '7 · ' + PY[7]].includes(r1.correctText) && /[ùī]/.test(r1.correctText), 'the verdict names the number in pinyin: ' + r1.correctText);
   const nq = await next(A.s, 'question', 3000);
   const gap = Date.now() - r1._at;
   ok(gap >= 380 && gap < 1400, `the next sum after the short beat (${gap} ms)`);
@@ -320,7 +321,7 @@ async function answer(kid, right, waitMs) {
   ok(ri.id !== hi.id && ri.you.coins === 0 && ri.style === 'zh', '«Otra ronda»: a new game, fresh gold, the new style');
   host.emit('host:ss-skip', { pin });
   const zq = await next(again, 'question', 4000);
-  ok(zq.ss.zh && /^[a-z]+ [+−] [a-z]+ = \?$/.test(zq.text), '«En Chino»: pinyin sums (' + zq.text + ')');
+  ok(zq.ss.zh && /^\p{L}+ [+−] \p{L}+ = \?$/u.test(zq.text), '«En Chino»: pinyin sums (' + zq.text + ')');
 
   host.emit('host:end-now', { pin });
   await sleep(300);

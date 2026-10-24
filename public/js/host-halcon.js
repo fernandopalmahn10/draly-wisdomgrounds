@@ -405,7 +405,7 @@
     });
   }
   function setQ(text, image) {
-    $('hq-text').textContent = text || '';
+    if (window.DralyQ) window.DralyQ.fill($('hq-text'), text || ''); else $('hq-text').textContent = text || '';   // «…» red and bold (js/qtext.js)
     const im = $('hq-img');
     if (image) { im.src = image; im.classList.remove('hidden'); } else { im.classList.add('hidden'); im.removeAttribute('src'); }
     const old = $('hq').querySelector('.ans');

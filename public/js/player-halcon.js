@@ -56,7 +56,7 @@
   }
   function setQ(text, image, fresh) {
     const box = $('hc-q');
-    $('hc-q-text').textContent = text || '¡Atentos!';
+    if (window.DralyQ) window.DralyQ.fill($('hc-q-text'), text || '¡Atentos!'); else $('hc-q-text').textContent = text || '¡Atentos!';   // «…» red and bold (js/qtext.js)
     const im = $('hc-q-img');
     if (image) { im.src = image; im.classList.remove('hidden'); } else { im.classList.add('hidden'); im.removeAttribute('src'); }
     box.classList.toggle('wait', !text);

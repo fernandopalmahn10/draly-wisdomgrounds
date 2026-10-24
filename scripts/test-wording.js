@@ -42,8 +42,8 @@ const RULES = [
   { re: /(?<!New )\bHSK ?2\b/, why: 'kids/parents see "New HSK 1", never "HSK 2" (root CLAUDE.md, 2026-10-11)' },
   { re: /pollinations/i, why: 'no outside AI pictures drawn at runtime (mochi-mash CLAUDE.md, 2026-10-11)' },
   { re: /\bChinese\b/, why: 'Spanish text says "Chino Mandarín", never "Chinese"', only: /\.(html)$/ },
-  // (Spanish never uses macrons or carons: any of these in a game file is pinyin WITH tone marks)
-  { re: /[āēīōūǎěǐǒǔǖǘǚǜ]/, why: 'games show pinyin without tone marks (mochi-mash CLAUDE.md)', only: /sixseven|dragon|party|paint|trapdoor|dormilon|teamcrab/ },
+  // (2026-10-24, his rule: the pin games show pinyin WITH tone marks; the rule that forbade them here is gone, and
+  // scripts/test-pack-tones.js checks that every question a room shows has its tones)
   // (the old Vuelo del Dragón showed hanzi on the projector and the phone: the remake must never bring them back)
   { re: /[㐀-鿿]/, why: 'no hanzi on game screens (root CLAUDE.md: games show pinyin, no hanzi)', only: /dragon|party|paint|trapdoor|dormilon|teamcrab/ },
   { re: /[㐀-鿿]/, why: 'no hanzi on Papás (the parents\' view shows pinyin + Spanish, 2026-10-18)', only: /papas/ },

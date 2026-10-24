@@ -433,7 +433,7 @@
     seenQ();
     const qf = $('dm-qfeed');                                  // a new question: the last answer's «+1 pluma» / «¡Casi!» goes
     if (qf.classList.contains('ans')) { qf.textContent = ''; qf.className = 'dm-qfeed'; }
-    $('dm-mq-text').textContent = myQ.text;
+    if (window.DralyQ) window.DralyQ.fill($('dm-mq-text'), myQ.text); else $('dm-mq-text').textContent = myQ.text;   // «…» red and bold (js/qtext.js)
     const im = $('dm-mq-img');
     if (myQ.image) { im.src = myQ.image; im.classList.remove('hidden'); } else { im.classList.add('hidden'); im.removeAttribute('src'); }
     const tiles = $('dm-tiles');

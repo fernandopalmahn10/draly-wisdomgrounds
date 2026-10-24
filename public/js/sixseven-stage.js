@@ -15,7 +15,7 @@
   const reduced = () => !!(root.matchMedia && root.matchMedia('(prefers-reduced-motion: reduce)').matches);
   const S = () => root.MochiStage;
   const TEAM = { red: { name: 'Fuego', full: 'Equipo Fuego' }, gold: { name: 'Mar', full: 'Equipo Mar' } };
-  const PINYIN = ['ling', 'yi', 'er', 'san', 'si', 'wu', 'liu', 'qi', 'ba', 'jiu', 'shi'];   // no tone marks (games' rule)
+  const PINYIN = ['líng', 'yī', 'èr', 'sān', 'sì', 'wǔ', 'liù', 'qī', 'bā', 'jiǔ', 'shí'];   // with tone marks (2026-10-24)
   const MAX_DEG = 15;
   function el(tag, cls, txt) {
     const e = document.createElement(tag);
@@ -242,8 +242,8 @@
   // slow school Wi-Fi never shows a blank friend: until then the friend keeps the pose it has.
   const FR = A + 'friends/';
   const FRIENDS = {
-    liu: { alt: 'Liu, el seis', stand: 'liu.webp', b: 'liu-b.webp', cheer: 'liu-cheer', dance: 'liu-dance', uy: 'liu-uy.webp', run: 'liu-run.webp' },
-    qi: { alt: 'Qi, el siete', stand: 'qi.webp', b: 'qi-b.webp', cheer: 'qi-cheer', dance: 'qi-dance', uy: 'qi-uy.webp', run: 'qi-run.webp' },
+    liu: { alt: 'Liù, el seis', stand: 'liu.webp', b: 'liu-b.webp', cheer: 'liu-cheer', dance: 'liu-dance', uy: 'liu-uy.webp', run: 'liu-run.webp' },
+    qi: { alt: 'Qī, el siete', stand: 'qi.webp', b: 'qi-b.webp', cheer: 'qi-cheer', dance: 'qi-dance', uy: 'qi-uy.webp', run: 'qi-run.webp' },
     j67: { alt: 'El 67: Liu y Qi juntos', stand: '67.webp', b: '67.webp', cheer: '67-cheer', dance: '67-dance', uy: '67.webp', run: '67.webp' },
   };
   const fpic = {};
@@ -331,7 +331,7 @@
   function numTag(n) {
     const tag = el('span', 'ssfr-tag ' + (n === 6 ? 'six' : 'seven'));
     tag.setAttribute('translate', 'no');
-    tag.append(el('b', null, String(n)), el('small', null, n === 6 ? 'liu' : 'qi'));
+    tag.append(el('b', null, String(n)), el('small', null, n === 6 ? 'liù' : 'qī'));
     return tag;
   }
   // a pictured button (rules cards) gets its friend in the same corner as on the real phone buttons

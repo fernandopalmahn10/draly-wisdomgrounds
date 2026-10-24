@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Rules test for 6-7 Swing v2 «La Balanza de Oro» (core/sixseven.js): the sum generator (every answer is 6 or 7, only
-// the numbers 1-10 and + / −, the pinyin words without tone marks, the three styles, 6 and 7 equally likely, never the
+// the numbers 1-10 and + / −, the pinyin words (with tone marks since 2026-10-24), the three styles, 6 and 7 equally likely, never the
 // same sum twice in a row), what a phone gets (never the answer), the judge (right / wrong / time up / too fast, the
 // streak multiplier, the waits, «¡Respira!» after two wrong in a row), team split + late joiners + size weighting,
 // golden sums and the comeback cap, the frenzy ×2, lead hysteresis + alarm gap, the landmark race, rescale, pause
@@ -34,8 +34,10 @@ const valueOf = (e) => (e.op === '+' ? e.a + e.b : e.a - e.b);
 
 // ---------- the sums ----------
 {
-  eq(M.PINYIN, ['ling', 'yi', 'er', 'san', 'si', 'wu', 'liu', 'qi', 'ba', 'jiu', 'shi'], 'the number words 0-10 in pinyin');
-  ok(M.PINYIN.every((w) => /^[a-z]+$/.test(w)), 'pinyin WITHOUT tone marks (plain a-z, the games\' rule)');
+  // (2026-10-24, his rule: pinyin WITH tone marks in the pin games) the number words 0-10, each with its own tone
+  const bare = (w) => w.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  eq(M.PINYIN.map(bare), ['ling', 'yi', 'er', 'san', 'si', 'wu', 'liu', 'qi', 'ba', 'jiu', 'shi'], 'the number words 0-10 in pinyin');
+  ok(M.PINYIN.every((w) => /[\u0300-\u036f]/.test(w.normalize('NFD'))), 'pinyin WITH tone marks (the pin games\' rule since 2026-10-24)');
   eq(M.POOL.length, 18, 'every sum with answer 6 or 7 and numbers 1-10: 11 additions + 7 subtractions');
   M.POOL.forEach((e) => {
     ok(e.ans === 6 || e.ans === 7, 'answer 6 or 7');
@@ -60,7 +62,7 @@ const valueOf = (e) => (e.op === '+' ? e.a + e.b : e.a - e.b);
       if (q.zh) {
         zh++;
         ok(q.text === `${M.PINYIN[q.a]} ${q.op === '+' ? '+' : M.MINUS} ${M.PINYIN[q.b]}`, 'En Chino: pinyin words');
-        ok(/^[a-z]+ [+−] [a-z]+$/.test(q.text), 'no digits, no tone marks in an En Chino sum');
+        ok(/^\p{L}+ [+−] \p{L}+$/u.test(q.text), 'no digits in an En Chino sum (words with their tones)');
       } else {
         ok(/^\d+ [+−] \d+$/.test(q.text), 'Números: digits');
       }

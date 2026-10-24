@@ -524,7 +524,7 @@
     $('pp-q-head').textContent = me && me.fire <= 0 ? '¡Sin fuego! Responde y vuelve a volar' : `🔥 Responde bien: +${frenzy ? 20 : 10} s de fuego`;
     const img = $('pp-q-img');
     if (q.image) { img.src = q.image; img.alt = ''; } else img.removeAttribute('src');
-    $('pp-q-text').textContent = q.text || '';
+    if (window.DralyQ) window.DralyQ.fill($('pp-q-text'), q.text || ''); else $('pp-q-text').textContent = q.text || '';   // «…» red and bold (js/qtext.js)
     $('pp-verdict').className = 'pp-verdict';
     $('pp-verdict').textContent = '';
     const ans = $('pp-ans');

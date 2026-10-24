@@ -53,7 +53,7 @@ function guard(s, who) {
   });
 }
 const right = new Map();
-try { (require('../core/packs').loadPack('yct1-familia-r1').questions || []).forEach((q) => right.set(q.text, String(q.correct))); } catch (_) {}
+try { require('../core/packs').forGames(require('../core/packs').loadPack('yct1-familia-r1').questions || []).forEach((q) => right.set(q.text, String(q.correct))); } catch (_) {}
 
 (async () => {
   const host = connect();

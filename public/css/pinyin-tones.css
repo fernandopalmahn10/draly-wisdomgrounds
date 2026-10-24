@@ -1,0 +1,12 @@
+/* pinyin-tones.css · the pinyin vowels with tone marks that Baloo 2 draws wrong: it puts the macron of «ā» / «ī» over
+   the next letter («jiārén» read «jiarēn»; Fredoka does the same, root CLAUDE.md). Since 2026-10-24 the pin games show
+   pinyin WITH tones, so these 32 letters (ā ē ě ī ō ū and ǎ ǐ ǒ ǔ ǖ ǘ ǚ ǜ, both cases) come from Noto Sans ExtraBold
+   (OFL, /assets/fonts/pinyin/, made from study/fonts/NotoSans-ExtraBold.ttf, ~5 KB): the face below joins the
+   'Baloo 2' family for those characters only (unicode-range), so every Baloo 2 text of a game (a question card, a tile,
+   a band: all weight 800) shows them right and everything else stays Baloo 2. ONE weight on purpose: 800 is the Baloo
+   weight every game page loads; a face at a weight Google doesn't load on a page would catch that weight's text and
+   send its other letters to the next font (seen 2026-10-24 at 900). Bolder or lighter Baloo text rounds to 800 as before.
+   Load it AFTER the page's last Google Fonts link: for a character, the face defined last is tried first. Nunito draws
+   them well and needs nothing. */
+@font-face { font-family: 'Baloo 2'; font-weight: 800; font-display: swap; src: url('/assets/fonts/pinyin/noto-tones-800.woff2') format('woff2');
+  unicode-range: U+0100-0101, U+0112-0113, U+011A-011B, U+012A-012B, U+014C-014D, U+016A-016B, U+01CD-01DC; }

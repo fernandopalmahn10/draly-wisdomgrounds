@@ -115,7 +115,10 @@ the checklist for any new game mode.
   in pinyin when you're asking the question"), in the question and in its pinyin answer tiles; answers are still checked
   on the plain form. **The part a question asks about is red and bold** (same day: "everything that's in the question…
   «here»… can go in red and in bold"): the word or phrase inside «…» («¿Qué significa «jiějie»?»), on every phone and
-  projector of every pin game. `node scripts/test-packs.js` must pass before a deploy.
+  projector of every pin game. The toned forms live in `core/packs/<level>-tones.json`, made from the books by
+  `scripts/packs/tones/resolve.js` (a new pack line: run it, look at its list, then `node scripts/test-pack-tones.js`);
+  rooms get them through `Packs.forGames()` and draw a question with `DralyQ.fill()` (`js/qtext.js`).
+  `node scripts/test-packs.js` must pass before a deploy.
 - **Every question says exactly what it asks** (his correction 2026-10-11: "who is him? … how are we going to know just by a
   picture? Completely out of context"). Name the word («¿Cómo se dice «hermano mayor» en Chino Mandarín?»), never a bare
   picture with «¿Quién es?»; pronouns go in a scene with the cast («Dralingo saluda a Hamdan: "___ hao!"»). Test-day

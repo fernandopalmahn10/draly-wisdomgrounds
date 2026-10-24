@@ -1,7 +1,11 @@
 // Question packs organised like the curriculum: test family → level → experience (world) → round.
 // GET /api/packs returns the tree for the picker (public/packs.html); a round points either to a built-in pack
 // ('pack:<level>-<world>-<round>', questions built here from core/packs/<level>.js) or to an older uploaded set
-// file (setId). Game rule: pinyin without tone marks, no hanzi, every question names exactly what it asks.
+// file (setId). Rules: no hanzi, every question names exactly what it asks; the pack data keeps pinyin WITHOUT tone
+// marks (the plain form every check uses: grading, homework, El Entrenamiento), and the pin games show it WITH tones
+// (his rule 2026-10-24): each question carries `show` = its text and answers toned, from core/packs/<level>-tones.json
+// (the books' own pinyin: La Base, the vocabulary modules, the golden books; how it was made and what a person checked:
+// that file's `about`), and forGames() swaps it in for the rooms only.
 'use strict';
 
 const fs = require('fs');
@@ -9,6 +13,17 @@ const path = require('path');
 
 const PUBLIC = path.join(__dirname, '..', 'public');
 const LEVELS = [require('./packs/yct1'), require('./packs/hsk1'), require('./packs/newhsk1')];
+
+// the toned forms of a level (null = none: the question shows its plain form)
+const _tones = {};
+function tonesOf(level) {
+  if (!(level.id in _tones)) {
+    let t = null;
+    try { t = JSON.parse(fs.readFileSync(path.join(__dirname, 'packs', level.id + '-tones.json'), 'utf8')); } catch (_) { /* none */ }
+    _tones[level.id] = t ? { words: t.words || {}, lines: t.lines || {}, texts: t.texts || {}, items: t.items || {} } : null;
+  }
+  return _tones[level.id] || { words: {}, lines: {}, texts: {}, items: {} };
+}
 
 // ---------- helpers ----------
 // "Ni hao!" → "nihao", "na'er" → "nar": spelling without tones (homograph and duplicate checks)
@@ -93,6 +108,15 @@ function buildRound(level, world, round) {
   // a pinyin option can never be a word that also means the asked Spanish (kan / kanjian → ver)
   const pinyinClash = (askedEs) => (opt) => levelWords.some((x) => plain(x.py) === plain(opt) && sharesPart(x.es, askedEs));
 
+  // the toned forms the pin games show (`show`): a word by its own pinyin + meaning, a pinyin option tile by the first
+  // word of the pools spelled like it, a line or a written question by its exact text
+  const T = tonesOf(level);
+  const tWord = (x) => T.words[x.py + '|' + x.es] || T.lines[x.py] || x.py;
+  const tLine = (s) => T.lines[s] || s;
+  const pyTile = new Map();
+  [roundWords, worldWords, levelWords].forEach((l) => l.forEach((x) => { const k = x.py.toLowerCase(); if (!pyTile.has(k)) pyTile.set(k, tWord(x).toLowerCase()); }));
+  const tPy = (s) => pyTile.get(s) || tLine(s);
+
   const asked = [];      // es2zh: Spanish → pinyin (with the word's own picture)
   const meaning = [];    // zh2es: pinyin → Spanish (no picture: it would give the answer away)
   const askedEs = new Set();                                   // zher / zheli are both «aquí»: ask «aquí» once per round
@@ -100,21 +124,22 @@ function buildRound(level, world, round) {
     if (askedEs.has(x.es)) return;
     askedEs.add(x.es);
     const correct = x.py.toLowerCase();
-    asked.push({ kind: 'es2zh', key: plain(x.py), text: `¿Cómo se dice «${x.es}» en Chino Mandarín?`, correct,
-      answers: [correct, ...options(correct, [py(roundWords), py(worldWords), py(levelWords)], 3, pinyinClash(x.es))],
-      image: picture(level, world, x.img) });
+    const answers = [correct, ...options(correct, [py(roundWords), py(worldWords), py(levelWords)], 3, pinyinClash(x.es))];
+    asked.push({ kind: 'es2zh', key: plain(x.py), text: `¿Cómo se dice «${x.es}» en Chino Mandarín?`, correct, answers,
+      image: picture(level, world, x.img),
+      show: { text: `¿Cómo se dice «${x.es}» en Chino Mandarín?`, answers: answers.map((a, i) => (i === 0 ? tWord(x).toLowerCase() : tPy(a))) } });
   });
   const seenPy = new Set();
   roundWords.filter((x) => !x.gram).forEach((x) => {
     if (seenPy.has(plain(x.py))) return;                       // ta (él / ella): one meaning question
     seenPy.add(plain(x.py));
     const correct = roundWords.filter((y) => plain(y.py) === plain(x.py) && !y.gram).map((y) => y.es).join(' / ');
-    meaning.push({ kind: 'zh2es', key: plain(x.py), text: `¿Qué significa «${x.py}»?`, correct,
-      answers: [correct, ...options(correct, [meanings(roundWords), meanings(worldWords), meanings(levelWords)], 3, spanishClash(x.py, correct))],
-      image: 'none' });
+    const answers = [correct, ...options(correct, [meanings(roundWords), meanings(worldWords), meanings(levelWords)], 3, spanishClash(x.py, correct))];
+    meaning.push({ kind: 'zh2es', key: plain(x.py), text: `¿Qué significa «${x.py}»?`, correct, answers, image: 'none',
+      show: { text: `¿Qué significa «${tWord(x)}»?`, answers: answers.slice() } });
   });
 
-  const ctx = { level, world, items, worldItems, allItems, levelWords, worldWords, spanishClash };
+  const ctx = { level, world, items, worldItems, allItems, levelWords, worldWords, spanishClash, T, tWord, tLine };
   const authored = items.map((it) => itemQuestion(it, ctx));
 
   let out;
@@ -132,30 +157,53 @@ function buildRound(level, world, round) {
 }
 
 function itemQuestion(it, ctx) {
-  const { level, world, items, worldItems, allItems, levelWords, worldWords, spanishClash } = ctx;
+  const { level, world, items, worldItems, allItems, levelWords, worldWords, spanishClash, T, tWord, tLine } = ctx;
   const single = (s) => plain(s) || undefined;   // the answer's spelling is its key (no same word twice in a row)
+  // a pinyin tile: its own tone in this question when it reads differently here (吧 ba in a particle fill-in), else the
+  // level's tile form; a written question: its toned text
+  const own = T.items[it.s || it.t || it.a] || {};
+  const tile = (a) => own[a] || tLine(a);
+  const tText = (s) => T.texts[s] || s;
   if (it.k === 'w') {                                           // exam word → its meaning
     const word = levelWords.find((x) => plain(x.py) === plain(it.py) && !x.gram && (!it.es || x.es === it.es));
     const correct = it.es || (word && word.es);
-    return { kind: 'w', key: plain(it.py), text: `¿Qué significa «${it.py}»?`, correct,
-      answers: [correct, ...options(correct, [meanings(worldWords), meanings(levelWords)], 3, spanishClash(it.py, correct))], image: 'none' };
+    const answers = [correct, ...options(correct, [meanings(worldWords), meanings(levelWords)], 3, spanishClash(it.py, correct))];
+    return { kind: 'w', key: plain(it.py), text: `¿Qué significa «${it.py}»?`, correct, answers, image: 'none',
+      show: { text: `¿Qué significa «${word && plain(word.py) === plain(it.py) && word.py === it.py ? tWord(word) : tLine(it.py)}»?`, answers: answers.slice() } };
   }
   if (it.k === 'm') {                                           // phrase / sentence → meaning
     const other = (list) => list.filter((x) => x.k === 'm' && plain(x.py) !== plain(it.py)).map((x) => x.es);
-    return { kind: 'm', text: `¿Qué significa «${it.py}»?`, correct: it.es,
-      answers: [it.es, ...options(it.es, [it.w, other(items), other(worldItems), other(allItems)], 3)], image: picture(level, world, it.img) };
+    const answers = [it.es, ...options(it.es, [it.w, other(items), other(worldItems), other(allItems)], 3)];
+    return { kind: 'm', text: `¿Qué significa «${it.py}»?`, correct: it.es, answers, image: picture(level, world, it.img),
+      show: { text: `¿Qué significa «${tLine(it.py)}»?`, answers: answers.slice() } };
   }
   if (it.k === 'r') {                                           // dialogue → best reply: hand-picked or same-world options
     const other = (list) => list.filter((x) => x.k === 'r' && x !== it).map((x) => x.b);
-    return { kind: 'r', key: single(it.b), text: `Alguien te dice: «${it.a}» ¿Qué respondes?`, correct: it.b,
-      answers: [it.b, ...options(it.b, it.w ? [it.w] : [other(items), other(worldItems)], 3)], image: 'none' };
+    const answers = [it.b, ...options(it.b, it.w ? [it.w] : [other(items), other(worldItems)], 3)];
+    return { kind: 'r', key: single(it.b), text: `Alguien te dice: «${it.a}» ¿Qué respondes?`, correct: it.b, answers, image: 'none',
+      show: { text: `Alguien te dice: «${tLine(it.a)}» ¿Qué respondes?`, answers: answers.map(tile) } };
   }
   if (it.k === 'f') {                                           // fill the blank from the exam's word bank
-    return { kind: 'f', key: single(it.a), text: it.t || `Completa la frase: «${it.s}»`, correct: it.a,
-      answers: [it.a, ...options(it.a, [it.bank], 3)], image: 'none' };
+    const answers = [it.a, ...options(it.a, [it.bank], 3)];
+    return { kind: 'f', key: single(it.a), text: it.t || `Completa la frase: «${it.s}»`, correct: it.a, answers, image: 'none',
+      show: { text: it.t ? tText(it.t) : `Completa la frase: «${tLine(it.s)}»`, answers: answers.map(tile) } };
   }
-  return { kind: 'q', key: single(it.a), text: it.t, correct: it.a, answers: [it.a, ...(it.w || []).slice(0, 3)],
-    image: picture(level, world, it.img) };
+  const answers = [it.a, ...(it.w || []).slice(0, 3)];
+  return { kind: 'q', key: single(it.a), text: it.t, correct: it.a, answers, image: picture(level, world, it.img),
+    show: { text: tText(it.t), answers: answers.map(tile) } };
+}
+
+// the questions as a pin-game room shows them: `show`'s toned text and answers in place of the plain ones (the right
+// answer is the same tile, so every game judges as before). Questions without `show` (an uploaded set) are unchanged.
+function forGames(questions) {
+  return (questions || []).map((q) => {
+    if (!q || !q.show || !Array.isArray(q.show.answers) || q.show.answers.length !== (q.answers || []).length) return q;
+    const at = q.answers.indexOf(q.correct);
+    if (at < 0) return q;
+    const out = Object.assign({}, q, { text: q.show.text, answers: q.show.answers.slice(), correct: q.show.answers[at] });
+    delete out.show;
+    return out;
+  });
 }
 
 // ---------- lookup ----------
@@ -222,4 +270,4 @@ function buildWordLists(levelId) {
   }).filter((w) => w.words.length);
 }
 
-module.exports = { loadPack, catalog, buildRound, wordLists, LEVELS, plain };
+module.exports = { loadPack, catalog, buildRound, wordLists, forGames, tonesOf, LEVELS, plain };

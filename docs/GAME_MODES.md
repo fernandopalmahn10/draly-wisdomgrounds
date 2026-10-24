@@ -78,6 +78,14 @@ In `public/js/player.js`:
 The watchdog (`player:resync`) handles all stuck-state recovery — your mode
 doesn't need its own timeout logic.
 
+**How a question is written (his rules 2026-10-24):** the pinyin comes WITH tone marks and the part a question asks
+about, inside «…», is red and bold, on every phone and projector. The server does the tones: a curriculum pack's
+questions reach a room through `Packs.forGames()` (`host:load-set`), which swaps in each question's `show` (its text
+and tiles toned, from `core/packs/<level>-tones.json`; the plain form stays for homework and El Entrenamiento, and the
+right answer is the same tile). The page does the red and bold: draw a question's text with
+`DralyQ.fill(el, text)` (`js/qtext.js`, loaded by player.html and host-halcon.html), never `textContent`; it picks the
+platform red on a light card and a light red on a dark one by itself. A new game draws its question the same way.
+
 ---
 
 ## Host contract

@@ -1,0 +1,18 @@
+{
+  "yct1": {
+    "shi": ["shì", "a fill-in tile: 是 (the answer of «Nàge ___ nǐ jiějie?»; elsewhere a distractor); the books also have shí (十)"],
+    "Shi": ["Shì", "a distractor tile beside Dà / Diǎn / Sān / Ma, from the exam's bank: 是"],
+    "ma": ["ma", "the question particle 吗 (the answer of «Nǐ ài chī yú ___?»; the books also have mā 妈)"],
+    "Ma": ["Ma", "a distractor tile from the exam's bank: the particle 吗"],
+    "Ni he jiejie shei ___ gao? — Wo gao.": ["Nǐ hé jiějie shéi ___ gāo? — Wǒ gāo.", "和 hé: «tú y tu hermana, ¿quién es más alto?» (the word-by-word reading took hē 喝)"]
+  },
+  "hsk1": {
+    "ma": ["ma", "the question particle 吗 (the answer of «Nǐ shì xuésheng ___?»)"],
+    "he": ["hé", "和: the answer of «Yo y tú» = «Wǒ ___ nǐ.» (the base also has hē 喝)"]
+  },
+  "newhsk1": {
+    "ma": ["ma", "the question particle 吗 (the answer of «Nǐ hē shuǐ ___?»)"],
+    "mai cai": ["mài cài", "the golden book prints mài cài: the shop SELLS vegetables (卖菜), «Jīntiān diàn li méi cài le…»"],
+    "Zhege beizi duoshao qian?": ["Zhège bēizi duōshao qián?", "the New HSK 1 golden book prints duōshao («Zhè běn shū duōshao qián?»); the other books also have duōshǎo"]
+  }
+}

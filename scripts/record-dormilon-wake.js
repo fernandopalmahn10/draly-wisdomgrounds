@@ -33,7 +33,7 @@ const PW = loadPw();
 if (!PW) { console.log('SKIP · no playwright-core here (set PLAYWRIGHT_CORE)'); process.exit(0); }
 process.env.DRALY_DATA_DIR = process.env.DRALY_DATA_DIR || fs.mkdtempSync(path.join(os.tmpdir(), 'dm-rec-'));
 const RIGHT = new Map();
-(require('../core/sets').loadSet(SET).questions || []).forEach((q) => RIGHT.set(q.text, q.correct));
+require('../core/packs').forGames(require('../core/sets').loadSet(SET).questions || []).forEach((q) => RIGHT.set(q.text, q.correct));
 fs.mkdirSync(OUT, { recursive: true });
 fs.readdirSync(OUT).filter((f) => /^(mine|watch)-w\d+\.png$/.test(f)).forEach((f) => fs.unlinkSync(path.join(OUT, f)));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
